@@ -1,0 +1,13 @@
+const { chromium } = require('./_pw');
+(async()=>{const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+ const [file,dif,boss,names]=[process.argv[2],process.argv[3],+process.argv[4],(process.argv[5]||'drawScene,updateBoss,monFinish,drawBossBar').split(',')];
+ const p=await (await b.newContext({viewport:{width:1280,height:800}})).newPage();
+ p.on('pageerror',e=>console.log('PAGEERR',e.message));
+ await p.goto(require('./_pw').url(file));await p.waitForTimeout(1000);
+ await p.evaluate(([d,i])=>{document.getElementById('splash')?.remove();diff=d;saveData.done=true;saveData.ch4={ci:10,best:{9:'A'}};setInterval(()=>{if(dlg.active)dlgAdvance();P.hp=P.maxhp},200);
+  if(i<20)startRush(i);else if(i<30)c3RushFight(i-20);else if(i<40)s4RushFight(i-30);else s5Fight(i-40,true,true)},[dif,boss]);
+ await p.waitForTimeout(4500);
+ await p.evaluate(names=>{window.__T={};for(const n of names){let f;try{f=eval(n)}catch(e){continue}if(typeof f!=='function')continue;const w=function(){const s=performance.now();try{return f.apply(this,arguments)}finally{__T[n]=(__T[n]||0)+performance.now()-s}};eval(n+'=w')}window.__f=0;const c=()=>{__f++;requestAnimationFrame(c)};c()},names);
+ await p.waitForTimeout(4000);
+ console.log(dif,boss,await p.evaluate(()=>JSON.stringify(Object.fromEntries(Object.entries(__T).map(([k,v])=>[k,(v/__f).toFixed(2)])))+' frames '+__f+' state '+G.state));
+ await b.close()})();

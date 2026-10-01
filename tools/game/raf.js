@@ -1,0 +1,14 @@
+const { chromium } = require('./_pw');
+(async()=>{const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+ const vp=process.argv[3]==='mob'?{viewport:{width:844,height:390},deviceScaleFactor:3,isMobile:true,hasTouch:true}:{viewport:{width:1280,height:800}};
+ const p=await (await b.newContext(vp)).newPage();
+ await p.addInitScript(()=>{const o=window.requestAnimationFrame.bind(window);window.__rc={};window.__rt={};window.requestAnimationFrame=function(f){const k=(new Error().stack.split('\n')[2]||'').trim().slice(0,90);return o(t=>{const s=performance.now();try{f(t)}finally{__rc[k]=(__rc[k]||0)+1;__rt[k]=(__rt[k]||0)+performance.now()-s}})}});
+ await p.goto(require('./_pw').url(process.argv[2]));await p.waitForTimeout(1000);
+ await p.evaluate(()=>{document.getElementById('splash')?.remove()});
+ await p.waitForTimeout(2000);
+ const dump=async tag=>{await p.evaluate(()=>{__rc={};__rt={}});await p.waitForTimeout(3000);const r=await p.evaluate(()=>Object.entries(__rt).map(([k,v])=>[k,__rc[k],v.toFixed(0)]).sort((a,b)=>b[2]-a[2]));console.log('--',tag);r.forEach(x=>console.log(x.join('  ')))};
+ await dump('lobby');
+ await p.evaluate(()=>{setInterval(()=>{if(dlg.active)dlgAdvance();P.hp=P.maxhp},200);startRush(9)});await p.waitForTimeout(3000);
+ await dump('battle');
+ await p.evaluate(()=>toLobby());await p.waitForTimeout(1500);await dump('lobby-after');
+ await b.close()})();

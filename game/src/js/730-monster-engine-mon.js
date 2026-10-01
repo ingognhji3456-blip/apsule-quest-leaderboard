@@ -1,0 +1,74 @@
+/* ================= 몬스터 리디자인 엔진 (v94) =================
+   셀 단위로 작은 캔버스에 그린 뒤 → 자동 외곽선 → 확대해서 붙임 → 빛(글로우)은 화면 위에 따로.
+   모든 보스 그리기(전투 · 보스 러시 · 명예의 전당 · 로비 · 컷신)는 drawRobot / drawBeast / c3Art 를 거치므로 여기서 한 번에 바뀜. */
+const MON={alias:{gearRail:'gearLaunch',voltGrid:'teslaArc',voltStrike:'currentBarrier',geyserWave:'doorBlast',fireBomb:'chimneyEmber',trainRun:'steamWhistle',frostNova:'crystalGrow',iceWave:'shardLaunch',droneSwarm:'droneLaunch',magnetField:'scrapPull',hourStrike:'windSpiral',scanCones:'focusLens',prism:'spectrum',beatCollapse:'omegaMedley',
+ rootBurst:'seedBloom',rootLine:'vineWhip',thornVolley:'seedBloom',sapSpit:'fangLunge',branchSweep:'vineWhip',tremor:'seedBloom',sporeCloud:'sporeWaltz',capSpin:'sporeWaltz',sporeShot:'mushroomRing',gazePollen:'mushroomRing',mireRoot:'sporeWaltz',sporeNova:'mushroomRing',
+ lureHypno:'lureHypno',tongueLash:'bubbleTongue',bileLob:'bubbleTongue',tentacleWhip:'lilyHop',frogLeap:'lilyHop',mireGrasp:'lilyHop',boneHowl:'boneHowl',ribSpikes:'skullRoll',fangLunge:'fangLunge',boneShard:'boneBoomerang',pounce:'fangLunge',tailSpin:'skullRoll',
+ webCage:'webPluck',venomRain:'spiderDrop',silkShot:'webPluck',fangBite:'fangLunge',eggLay:'spiderDrop',stingSwarm:'waggleDance',diveStrike:'diveStrike',stingShot:'diveStrike',shardStorm:'prismWall',eyeVolley:'facetBeam',crystalShot:'facetBeam',prismSpike:'prismWall',crystalRain:'prismWall',
+ tideCrush:'bubbleStream',abyssPull:'inkCloud',bubbleBarrage:'bubbleStream',mawBite:'fangLunge',lureFlash:'inkCloud',emberWail:'ashBloom',phantomDash:'phantomDash',wailCone:'ashBloom',ashDrift:'lanternDance',convergeRing:'lanternDance',voidHunger:'worldBite',primalGaze:'primalGaze',mouthVolley:'hungerMedley',doomBite:'worldBite'},noArm:{b1:1,b4:1,b5:1,b8:1,b11:1,b12:1,b13:1,b14:1,b15:1,b16:1,b17:1,b18:1,c_pendulum:1,c_panopticon:1,c_moth:1,c_calendar:1,c_echo:1,c_stillness:1},reg:{},hand:{},scl:{b10:1.18,b11:1.25,b12:1.15,b13:1.2,b14:1.2,b15:1.3,b16:1.25,b17:1.15,b18:1.3,b19:1.2,b19m:1.2},D:3,OX:30,OY:44,SW:60,SH:52,S:null,F:null};
+function monCv(){if(!MON.S){for(const k of ['S','F','T']){const cv=document.createElement('canvas');cv.width=MON.SW*MON.D;cv.height=MON.SH*MON.D;MON[k]=cv}}return MON}
+/* 현재 공격 패턴 기록 → 준비 동작에 사용 */
+function monPatWrap(){if(typeof MV==='undefined'||MON.wrapped)return;MON.wrapped=true;for(const n of Object.keys(MV)){const f=MV[n];if(typeof f!=='function')continue;MV[n]=function(t){try{sch(t,()=>{if(typeof G!=='undefined'&&G)G.curPat={n,chan:(typeof CHAN!=='undefined'&&CHAN[n])||'',at:performance.now()}})}catch(e){}return f.apply(this,arguments)}}}
+function monMix(a,b,k){const A=parseInt(a.slice(1),16),B2=parseInt(b.slice(1),16),f=(s)=>Math.round(((A>>s)&255)*(1-k)+((B2>>s)&255)*k);return '#'+[16,8,0].map(s=>f(s).toString(16).padStart(2,'0')).join('')}
+function monAPI(c,B,x,y,t,o,u){const M=monCv(),S=M.S.getContext('2d'),D=M.D,OX=M.OX,OY=M.OY;S.setTransform(1,0,0,1,0,0);S.globalCompositeOperation='source-over';S.globalAlpha=1;S.clearRect(0,0,M.S.width,M.S.height);S.imageSmoothingEnabled=false;
+ const px=v=>Math.round(v*D);const A={c:S,t:t/1000,now:t,o,u,B,dm:!!o.dorm,fl:!!o.flash,pul:o.pulse||0,warn:(o.warn||0),open:o.open||0,eyeC:o.eye||0,expose:!!o.expose,still:!!o.still,glows:[],sx:x,sy:y};
+ A.R=(a,b,w,h,col,al)=>{if(al!=null)S.globalAlpha=al;S.fillStyle=col;S.fillRect(px(a+OX),px(b+OY),Math.max(1,px(w)),Math.max(1,px(h)));if(al!=null)S.globalAlpha=1};
+ A.C=(a,b,r,col,al)=>{if(al!=null)S.globalAlpha=al;S.fillStyle=col;const cx=(a+OX)*D,cy=(b+OY)*D,R=r*D;for(let yy=Math.floor(-R);yy<Math.ceil(R);yy++){const dx=Math.sqrt(Math.max(0,R*R-(yy+.5)*(yy+.5)));if(dx<=0)continue;S.fillRect(Math.round(cx-dx),Math.round(cy+yy),Math.max(1,Math.round(dx*2)),1)}if(al!=null)S.globalAlpha=1};
+ A.E=(a,b,rx,ry,col,al)=>{if(al!=null)S.globalAlpha=al;S.fillStyle=col;const cx=(a+OX)*D,cy=(b+OY)*D,RX=rx*D,RY=ry*D;for(let yy=Math.floor(-RY);yy<Math.ceil(RY);yy++){const dx=RX*Math.sqrt(Math.max(0,1-((yy+.5)/RY)**2));if(dx<=0)continue;S.fillRect(Math.round(cx-dx),Math.round(cy+yy),Math.max(1,Math.round(dx*2)),1)}if(al!=null)S.globalAlpha=1};
+ A.L=(a0,b0,a1,b1,col,w,al)=>{w=w||1;const n=Math.max(1,Math.ceil(Math.hypot(a1-a0,b1-b0)*D));for(let i=0;i<=n;i++){const k=i/n;A.R(a0+(a1-a0)*k-w/2,b0+(b1-b0)*k-w/2,w,w,col,al)}};
+ A.P=(pts,col,al)=>{if(al!=null)S.globalAlpha=al;S.fillStyle=col;S.beginPath();pts.forEach((p,i)=>{const X=Math.round((p[0]+OX)*D),Y=Math.round((p[1]+OY)*D);i?S.lineTo(X,Y):S.moveTo(X,Y)});S.closePath();S.fill();if(al!=null)S.globalAlpha=1};
+ A.ring=(a,b,r,th,col,al)=>{if(al!=null)S.globalAlpha=al;S.fillStyle=col;const cx=(a+OX)*D,cy=(b+OY)*D,R=r*D,Ri=(r-th)*D;for(let yy=Math.floor(-R);yy<Math.ceil(R);yy++){const y2=(yy+.5)*(yy+.5),dx=Math.sqrt(Math.max(0,R*R-y2)),di=Ri*Ri-y2>0?Math.sqrt(Ri*Ri-y2):0;if(dx<=0)continue;if(di<=0)S.fillRect(Math.round(cx-dx),Math.round(cy+yy),Math.max(1,Math.round(dx*2)),1);else{S.fillRect(Math.round(cx-dx),Math.round(cy+yy),Math.max(1,Math.round(dx-di)),1);S.fillRect(Math.round(cx+di),Math.round(cy+yy),Math.max(1,Math.round(dx-di)),1)}}if(al!=null)S.globalAlpha=1};
+ A.gear=(a,b,r,n,ang,col,dk,hole)=>{for(let i=0;i<n;i++){const q=ang+i*TAU/n;A.R(a+Math.cos(q)*(r+.35)-.6,b+Math.sin(q)*(r+.35)-.6,1.2,1.2,col)}A.C(a,b,r,col);if(dk)A.ring(a,b,r,.5,dk);if(hole!==false)A.C(a,b,r*.36,hole||dk||'#0a0c12')};
+ A.box=(a,b,w,h,base,dk,lt)=>{A.R(a,b,w,h,base);A.R(a,b,w,.5,lt);A.R(a,b,.5,h,lt);A.R(a,b+h-.5,w,.5,dk);A.R(a+w-.5,b,.5,h,dk)};
+ A.orb=(a,b,r,base,dk,lt)=>{A.C(a,b,r,dk);A.C(a-r*.12,b-r*.12,r*.86,base);A.C(a-r*.35,b-r*.35,r*.32,lt)};
+ A.push=(k,a,b)=>{const X=(a+OX)*D,Y=(b+OY)*D;S.save();S.setTransform(k,0,0,k,X*(1-k),Y*(1-k))};A.pop=()=>{S.restore()};
+ A.glow=(a,b,r,col,al)=>{A.glows.push([a,b,r,col,al==null?1:al])};A.parts=[];A.beams=[];A.beam=(pts,col,al)=>{A.beams.push([pts,col,al])};A.spark=(a,b,sz,col,al)=>{A.parts.push([a,b,sz,col,al==null?1:al])};
+ /* 떠오르는 입자: n개, 영역, 속도 */A.rise=(n,x0,x1,y0,h,sp,col,sz,seed)=>{for(let i=0;i<n;i++){const q=((t/1000)*sp+i/n+(seed||0))%1,xx=x0+((i*37.3+(seed||0)*11)%1000)/1000*(x1-x0)+Math.sin(q*6+i)*.8;A.spark(xx,y0-q*h,sz*(1-q*.5),col,Math.sin(q*Math.PI)*.9)}};
+ /* 위협감 있는 도형들 */
+ A.spike=(a,b,ang,len,w,col,tip)=>{const ca=Math.cos(ang),sa=Math.sin(ang),nx=-sa*w/2,ny=ca*w/2;A.P([[a+nx,b+ny],[a-nx,b-ny],[a+ca*len,b+sa*len]],col);if(tip)A.L(a+ca*len*.55,b+sa*len*.55,a+ca*len,b+sa*len,tip,.45)};
+ A.plate=(pts,base,dk,lt)=>{A.P(pts,dk);const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length,cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;A.P(pts.map(p=>[cx+(p[0]-cx)*.86,cy+(p[1]-cy)*.86-.15]),base);if(lt){for(let i=0;i<pts.length;i++){const p=pts[i],q=pts[(i+1)%pts.length];if((q[0]-p[0])*1+(q[1]-p[1])*-1>0&&q[1]<=cy+.1&&p[1]<=cy+.1)A.L(cx+(p[0]-cx)*.86,cy+(p[1]-cy)*.86-.15,cx+(q[0]-cx)*.86,cy+(q[1]-cy)*.86-.15,lt,.35)}}};
+ A.slit=(a,b,w,h,col,ang)=>{if(A.dm){A.R(a-w/2,b-h/2,w,h,'#1a2028');return}ang=ang||0;const pts=[[a-w/2,b+ang],[a,b-h/2],[a+w/2,b-ang],[a,b+h/2]];A.P(pts,col);A.R(a-w*.18,b-h*.18,w*.36,Math.max(.4,h*.36),'#ffffff');A.glow(a,b,w*1.6,col,1)};
+ A.brow=(a,b,w,dir,col)=>{A.P([[a-w/2,b-.6*dir],[a+w/2,b+.6*dir],[a+w/2,b+.6*dir-.9],[a-w/2,b-.6*dir-.9]],col)};
+ A.vent=(a,b,w,h,col,on)=>{A.R(a,b,w,h,'#07080c');for(let i=0;i<h;i+=1.1)A.R(a+.3,b+i+.2,w-.6,.4,on?col:'#1c2028',on?.9:1);if(on)A.glow(a+w/2,b+h/2,Math.max(w,h),col,.6)};
+ /* 눈: 흰자 + 플레이어를 보는 눈동자 + 깜빡임 */
+ A.look=(()=>{try{if(typeof mode!=='undefined'&&mode==='boss'&&typeof P!=='undefined'&&P&&typeof G!=='undefined'&&G&&G.B===B){const dx=P.x-x,dy=P.y-(y-12*u),l=Math.hypot(dx,dy)||1;return [dx/l,dy/l]}}catch(e){}return [Math.sin(t/1400)*.6,Math.sin(t/1900)*.3]})();
+ A.blink=!A.dm&&((t+(B&&B.c?parseInt(B.c.slice(1,3),16)*37:0))%3700)<140;
+ A.eye=(a,b,r,iris,look)=>{look=look==null?1:look;if(A.dm||A.blink){A.R(a-r,b-.3,r*2,.7,'#0a0c12');return}A.C(a,b,r,'#f4f6f8');const lx=A.look[0]*r*.38*look,ly=A.look[1]*r*.3*look;A.C(a+lx,b+ly,r*.6,iris);A.C(a+lx,b+ly,r*.3,'#0a0c12');A.R(a+lx-r*.35,b+ly-r*.4,Math.max(.5,r*.25),Math.max(.5,r*.25),'#ffffff')};
+ /* 준비 동작 정보 */let pat=null;try{if(typeof mode!=='undefined'&&mode==='boss'&&G&&G.B===B&&G.curPat){const e=(performance.now()-G.curPat.at)/1000;if(e<3.2)pat={n:G.curPat.n,chan:G.curPat.chan,e}}}catch(e){}if(o.__pat)pat=o.__pat;A.pat=pat;
+ const pn=pat?(MON.alias[pat.n]||pat.n):null;A.pn=pn;A.any=pat?(pat.e<1.3?pat.e/1.3:Math.max(0,1-(pat.e-1.3)/.5)):0;
+ A.win=(name,dur)=>{/* 이 패턴의 준비 정도 0~1 (예고 동안 차오름) */if(!pat||(name&&pn!==name&&!(Array.isArray(name)&&name.includes(pn))))return 0;const d=dur||1.3;return pat.e<d?pat.e/d:Math.max(0,1-(pat.e-d)/.5)};
+ A.rel=(name)=>{if(!pat||(name&&pn!==name&&!(Array.isArray(name)&&name.includes(pn))))return 0;const d=1.3;return pat.e>=d&&pat.e<d+.5?1-(pat.e-d)/.5:0};
+ A.shake=k=>k>0&&!A.still?(Math.floor(t/45)%2?k:-k):0;
+ A.bob=(A.still||A.dm)?0:Math.sin(t/320)*.5-A.pul*.6;
+ return A}
+function monFinish(c,A,x,y,u,outline){u=u*(A.sc||1);const M=monCv(),S=M.S,F=M.F,T=M.T,f=F.getContext('2d'),tt=T.getContext('2d'),W2=F.width,H2=F.height;
+ const reset=g=>{g.setTransform(1,0,0,1,0,0);g.globalCompositeOperation='source-over';g.globalAlpha=1};reset(f);reset(tt);f.clearRect(0,0,W2,H2);
+ /* 1) 입체 음영: 위쪽 빛, 아래쪽 그늘 (스프라이트 위에만) */const sg=S.getContext('2d');reset(sg);sg.globalCompositeOperation='source-atop';const bb=A.bbox||[-14,-30,14,0];
+ const gy0=(bb[1]+M.OY)*M.D,gy1=(bb[3]+M.OY)*M.D,lg=sg.createLinearGradient(0,gy0,0,gy1);lg.addColorStop(0,'rgba(255,245,230,.10)');lg.addColorStop(.45,'rgba(0,0,0,0)');lg.addColorStop(1,'rgba(0,0,10,.38)');sg.fillStyle=lg;sg.fillRect(0,0,W2,H2);
+ const cx0=M.OX*M.D,rg=sg.createLinearGradient(cx0-40,0,cx0+60,0);rg.addColorStop(0,'rgba(255,255,255,.05)');rg.addColorStop(1,'rgba(0,0,20,.18)');sg.fillStyle=rg;sg.fillRect(0,0,W2,H2);sg.globalCompositeOperation='source-over';
+ /* 1b) 금속 질감: 고정 노이즈 + 긁힘 (스프라이트 위에만) */{if(!MON.tex){const tc=document.createElement('canvas');tc.width=W2;tc.height=H2;const q=tc.getContext('2d'),r=rng(hash('montex'));for(let i=0;i<W2*H2*.09;i++){const X=Math.floor(r()*W2),Y=Math.floor(r()*H2);q.fillStyle=r()<.5?'rgba(0,0,0,.35)':'rgba(255,255,255,.18)';q.fillRect(X,Y,1,1)}for(let i=0;i<40;i++){const X=r()*W2,Y=r()*H2,L=4+r()*10,a=r()*TAU;q.strokeStyle='rgba(255,255,255,.12)';q.beginPath();q.moveTo(X,Y);q.lineTo(X+Math.cos(a)*L,Y+Math.sin(a)*L);q.stroke()}MON.tex=tc}
+  sg.globalCompositeOperation='source-atop';sg.globalAlpha=A.texA==null?.8:A.texA;sg.drawImage(MON.tex,0,0);sg.globalAlpha=1;sg.globalCompositeOperation='source-over'}
+ /* 2) 테두리 빛(왼쪽 위 모서리) · 아래 모서리 그늘 */tt.clearRect(0,0,W2,H2);tt.drawImage(S,0,0);tt.globalCompositeOperation='destination-out';tt.drawImage(S,1,1);tt.globalCompositeOperation='source-in';tt.fillStyle=A.rim||'rgba(255,255,255,.55)';tt.fillRect(0,0,W2,H2);reset(tt);
+ /* 3) 두꺼운 외곽선 */const ol=outline||'#05060a';for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1],[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1],[1,-1],[-1,1]])f.drawImage(S,dx,dy);f.globalCompositeOperation='source-in';f.fillStyle=ol;f.fillRect(0,0,W2,H2);f.globalCompositeOperation='source-over';
+ f.drawImage(S,0,0);f.globalAlpha=.9;f.drawImage(T,0,0);f.globalAlpha=1;
+ if(A.dm){f.globalCompositeOperation='source-atop';f.fillStyle='rgba(8,12,18,.62)';f.fillRect(0,0,W2,H2);f.globalCompositeOperation='source-over'}
+ if(A.fl){f.globalCompositeOperation='source-atop';f.fillStyle='rgba(255,255,255,.9)';f.fillRect(0,0,W2,H2);f.globalCompositeOperation='source-over'}
+ const k=u/M.D,sm=c.imageSmoothingEnabled,ga=c.globalAlpha,gco=c.globalCompositeOperation;
+ /* 4) 바닥 그림자 + 뒤쪽 어두운 기운 */if(!A.noShadow&&!A.dm){const sw=((bb[2]-bb[0])/2+2)*u;c.globalAlpha=ga*.45;c.fillStyle='#000';c.beginPath();c.ellipse(x,y+u*.3,sw,u*1.6,0,0,TAU);c.fill();c.globalAlpha=ga;
+  if(A.aura){const R=((bb[2]-bb[0])/2+6)*u,cy=y+((bb[1]+bb[3])/2)*u,g=c.createRadialGradient(x,cy,R*.2,x,cy,R);g.addColorStop(0,A.aura);g.addColorStop(1,'rgba(0,0,0,0)');c.globalCompositeOperation='lighter';c.globalAlpha=ga*(.18+A.pul*.12+(A.any||0)*.15);c.fillStyle=g;c.fillRect(x-R,cy-R,R*2,R*2);c.globalCompositeOperation=gco;c.globalAlpha=ga}}
+ c.imageSmoothingEnabled=false;c.drawImage(F,Math.round(x-M.OX*u),Math.round(y-M.OY*u),Math.round(W2*k),Math.round(H2*k));c.imageSmoothingEnabled=sm;
+ /* 5) 빛 번짐 + 입자 */if(!A.dm){c.globalCompositeOperation='lighter';for(const [a,b,r,col,al] of A.glows){const X=x+a*u,Y=y+b*u,R=r*u;if(R<1)continue;const g=c.createRadialGradient(X,Y,0,X,Y,R);g.addColorStop(0,col);g.addColorStop(1,'rgba(0,0,0,0)');c.globalAlpha=ga*Math.min(1,al)*.55;c.fillStyle=g;c.fillRect(X-R,Y-R,R*2,R*2)}
+  for(const [pts,col,al] of (A.beams||[])){c.globalAlpha=ga*al;c.fillStyle=col;c.beginPath();pts.forEach((q,i)=>{const X=x+q[0]*u,Y=y+q[1]*u;i?c.lineTo(X,Y):c.moveTo(X,Y)});c.closePath();c.fill()}
+  for(const p of (A.parts||[])){c.globalAlpha=ga*p[4];c.fillStyle=p[3];const s2=Math.max(1,p[2]*u);c.fillRect(Math.round(x+p[0]*u-s2/2),Math.round(y+p[1]*u-s2/2),Math.round(s2),Math.round(s2))}c.globalAlpha=ga;c.globalCompositeOperation=gco}}
+/* 등록된 디자인으로 그리기 */
+function monDraw(key,c,B,x,y,t,o,u){const d=MON.reg[key];if(!d)return false;monPatWrap();const A=monAPI(c,B,x,y,t,o||{},u||U);A.sc=MON.scl[key]||1;try{d(A)}catch(e){if(!MON.err){MON.err=1;console.error('mon',key,e)}}monFinish(c,A,x,y,u||U,d.ol);return true}
+/* 손(팔) 공용: 어깨 → 손 사이를 이어주는 관절 + 디자인별 손 모양 (화면 좌표, sc 배율) */
+function monHandDraw(key,c,B,h,sx,sy,t,dorm,sc){const d=MON.hand[key];if(!d)return false;const noArm=MON.noArm[key];if(noArm&&(!h.mode||h.mode==='idle')&&!h.stuck&&!(h.charge>0))return true;sc=sc||1;const x=Math.round(h.x),y=Math.round(h.y),s=2*sc,T=t/1000;
+ const H={c,x,y,s,t:T,h,dorm,sc,sx,sy,
+  R:(a,b,w,hh,col,al)=>{if(al!=null)c.globalAlpha=al;c.fillStyle=dorm?monMix(col,'#10161c',.6):col;c.fillRect(Math.round(x+a*s),Math.round(y+b*s),Math.max(1,Math.round(w*s)),Math.max(1,Math.round(hh*s)));if(al!=null)c.globalAlpha=1},
+  C:(a,b,r,col,al)=>{pcirc(x+a*s,y+b*s,Math.max(.6,r*s),dorm?monMix(col,'#10161c',.6):col,al==null?1:al,c)},
+  chain:(col1,col2,w,step)=>{if(noArm)return;const n=Math.max(1,Math.ceil(Math.hypot(x-sx,y-sy)/((step||3)*sc)));for(let i=0;i<=n;i++){const k=i/n,px=sx+(x-sx)*k,py=sy+(y-sy)*k+Math.sin(k*Math.PI)*4*sc,ww=(w||3)*sc;c.fillStyle=dorm?'#161c22':(i%2?col1:col2);c.fillRect(Math.round(px-ww/2),Math.round(py-ww/2),Math.max(1,Math.round(ww)),Math.max(1,Math.round(ww)))}},
+  glow:(a,b,r,col,al)=>{if(dorm)return;const X=x+a*s,Y=y+b*s,R=r*s,g=c.createRadialGradient(X,Y,0,X,Y,R);g.addColorStop(0,col);g.addColorStop(1,'rgba(0,0,0,0)');const gc=c.globalCompositeOperation,ga=c.globalAlpha;c.globalCompositeOperation='lighter';c.globalAlpha=ga*(al==null?.5:al);c.fillStyle=g;c.fillRect(X-R,Y-R,R*2,R*2);c.globalCompositeOperation=gc;c.globalAlpha=ga}};
+ try{d(H)}catch(e){if(!MON.herr){MON.herr=1;console.error('monHand',key,e)}}
+ if(h.stuck){c.fillStyle='#0b0f11';c.fillRect(Math.round(x-12*sc),Math.round(y+9*sc),Math.round(24*sc),Math.round(3*sc))}return true}
+
