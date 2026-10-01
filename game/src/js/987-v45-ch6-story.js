@@ -104,6 +104,8 @@
  /* 막 카드 */
  function actCard(n,title,sub,tone){return {d:2600,draw(c,T){sky(c,tone,T);windLines(c,T,.4);c.globalAlpha=.55;c.fillStyle='#000';c.fillRect(0,100,480,70);c.globalAlpha=1;const q=scE(scCl(T/.7));c.fillStyle='#ffd08a';c.fillRect(Math.round(240-q*170),100,Math.round(q*340),1);c.fillRect(Math.round(240-q*170),169,Math.round(q*340),1);
   scTxt(c,'CHAPTER 6 · ZENITH  ·  '+n+'막',240,120,9,'#ffd08a',q,'center',800);scTxt(c,title,240,145,18,'#ffffff',q);scTxt(c,sub,240,162,9,'#e8e0d0',scCl((T-.6)*2),'center',700)}}}
+ /* 로비·명예의 전당(990)에서 같은 그림 도구를 씀 */
+ window.S6SC={sky,windLines,city,ship,kite,raon,TONE};
  /* ---------- 프롤로그 ---------- */
  function prologue(){return [
   {d:4600,lines:[['','종소리가 돌아온 지 사흘째. 바다에서 떠오른 소리들이 흩어지지 않고 시계골 하늘에 쌓였다.'],['','웃음소리, 종소리, 파도 소리가 겹쳐 천둥처럼 울린다.']],draw(c,T){sky(c,4,T);echoes(c,240,60,T,9,false);notes(c,240,60,T,false);hills(c,T);if(Math.sin(T*2.3)>.9)SC4.shake=Math.max(SC4.shake,.3)}},

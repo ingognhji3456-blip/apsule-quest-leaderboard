@@ -17100,6 +17100,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* 막 카드 */
  function actCard(n,title,sub,tone){return {d:2600,draw(c,T){sky(c,tone,T);windLines(c,T,.4);c.globalAlpha=.55;c.fillStyle='#000';c.fillRect(0,100,480,70);c.globalAlpha=1;const q=scE(scCl(T/.7));c.fillStyle='#ffd08a';c.fillRect(Math.round(240-q*170),100,Math.round(q*340),1);c.fillRect(Math.round(240-q*170),169,Math.round(q*340),1);
   scTxt(c,'CHAPTER 6 · ZENITH  ·  '+n+'막',240,120,9,'#ffd08a',q,'center',800);scTxt(c,title,240,145,18,'#ffffff',q);scTxt(c,sub,240,162,9,'#e8e0d0',scCl((T-.6)*2),'center',700)}}}
+ /* 로비·명예의 전당(990)에서 같은 그림 도구를 씀 */
+ window.S6SC={sky,windLines,city,ship,kite,raon,TONE};
  /* ---------- 프롤로그 ---------- */
  function prologue(){return [
   {d:4600,lines:[['','종소리가 돌아온 지 사흘째. 바다에서 떠오른 소리들이 흩어지지 않고 시계골 하늘에 쌓였다.'],['','웃음소리, 종소리, 파도 소리가 겹쳐 천둥처럼 울린다.']],draw(c,T){sky(c,4,T);echoes(c,240,60,T,9,false);notes(c,240,60,T,false);hills(c,T);if(Math.sin(T*2.3)>.9)SC4.shake=Math.max(SC4.shake,.3)}},
@@ -17322,4 +17324,147 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    const lv={easy:0,normal:1,hard:2,extreme:3}[diff]||0,mk=(n,tag,need)=>'<span class="rpChip s6ex" title="'+((ATK_TIP[n]||'').replace(/"/g,''))+'" style="'+(lv>=need?'':'opacity:.45')+'">'+(ATK_NAME[n]||n)+'<i>'+tag+'</i></span>';
    box.insertAdjacentHTML('beforeend',mk(ex[0],'어려움+',2)+mk(ex[1],'익스트림',3))}}}catch(e){}return r}}
 }catch(e){console.error('v46 ch6 hard',e)}})();
+/* ================= v47 챕터 6 ZENITH 음악: 보스 10명 각자 3분짜리 "하늘 섬" 곡 =================
+   - 전투 박자와 같은 빠르기로 연주한다(공격 박자와 음악 박자가 맞음). 약 3분 뒤 처음으로 돌아간다.
+   - 곡 구성: 바람 소리 전주 → 주제(A) → 대답(B) → 주제 변주 → 떠 있는 섬(조용한 다리) → 고조 → 절정 → 되돌림 → 마무리
+   - 하늘 섬 느낌: 하프 아르페지오 · 플루트 · 종소리 반짝임 · 현악/합창 깔개 · 바람 소리. 3막(폭풍)은 북과 금관이 커짐.
+   - playSlot(n)은 반 박자마다 불린다. 한 칸 = 16분음표, 반 박자 = 2칸. */
+(function(){try{
+ const L6=window.S6ART;if(!L6||typeof c3MakeSong!=='function')return;
+ const SCL={maj:[0,2,4,5,7,9,11],mix:[0,2,4,5,7,9,10],dor:[0,2,3,5,7,9,10],lyd:[0,2,4,6,7,9,11],min:[0,2,3,5,7,8,10],hmin:[0,2,3,5,7,8,11]};
+ /* 가락: 8분음표 하나가 한 글자. 숫자=음계 칸, .=쉼, -=앞 음 늘이기. 4/4는 16글자(2마디), 3/4는 12글자(2마디) */
+ const M6=[
+  {title:'구름 선착장의 아침',root:62,sc:'mix',meter:16,lead:'flute',lead2:'glide',arp:'harp',pad:'strings',bass:'pizz',spark:'bell',drum:'light',
+   A:'4 - 2 4 5 - 4 2 1 - . 2 4 - - .',B:'7 - 6 4 5 - . 4 2 - 4 5 4 - - .',pA:[0,6,3,0],pB:[3,0,6,4],pBr:[3,4,5,4],pC:[0,6,3,4]},
+  {title:'연이 노는 언덕',root:55,sc:'maj',meter:16,lead:'pluck',lead2:'flute',arp:'harp',pad:'strings',bass:'pizz',spark:'bell',drum:'skip',
+   A:'0 2 4 . 4 5 4 2 4 - 7 . 5 4 2 .',B:'7 . 7 5 4 . 5 7 9 - 7 5 4 - - .',pA:[0,4,5,3],pB:[3,4,0,5],pBr:[5,3,4,4],pC:[0,4,5,3]},
+  {title:'번개구름의 노래',root:52,sc:'dor',meter:16,lead:'flute',lead2:'strings',arp:'harp',pad:'choir',bass:'sub',spark:'bell',drum:'deep',
+   A:'0 - - 2 4 - 3 2 1 - - - 0 - - .',B:'4 - 5 4 7 - - 6 5 - 4 2 4 - - .',pA:[0,3,0,6],pB:[3,6,0,4],pBr:[5,3,6,4],pC:[0,6,3,4]},
+  {title:'바람개비호 출항',root:57,sc:'mix',meter:16,lead:'brass',lead2:'flute',arp:'harp',pad:'strings',bass:'pizz',spark:'bell',drum:'march',
+   A:'0 . 0 2 4 . 4 5 7 - 5 4 2 - . .',B:'4 . 4 5 7 . 7 9 8 - 7 5 4 - - .',pA:[0,6,3,4],pB:[3,0,6,4],pBr:[5,3,4,4],pC:[0,3,6,4]},
+  {title:'거꾸로 흐르는 정오',root:53,sc:'lyd',meter:16,lead:'harpsi',lead2:'flute',arp:'harp',pad:'strings',bass:'pluck',spark:'bell',drum:'tick',
+   A:'4 3 4 6 7 - 6 4 3 - 1 3 4 - - .',B:'7 8 7 6 4 - 6 7 8 - 9 8 7 - - .',pA:[0,1,0,4],pB:[3,1,5,4],pBr:[5,1,3,4],pC:[0,1,5,4]},
+  {title:'바람 오르간 성가',root:60,sc:'maj',meter:12,lead:'flute',lead2:'choir',arp:'harp',pad:'organ',bass:'sub',spark:'bell',drum:'waltz',
+   A:'0 - 2 4 - 5 4 - 2 0 - .',B:'7 - 5 4 - 2 3 - 4 2 - .',pA:[0,3,4,0],pB:[5,3,1,4],pBr:[3,5,3,4],pC:[0,5,3,4]},
+  {title:'일곱 빛 다리',root:58,sc:'lyd',meter:16,lead:'glide',lead2:'flute',arp:'harp',pad:'strings',bass:'pizz',spark:'bell',drum:'spark',
+   A:'7 4 9 7 11 - 9 7 6 4 6 7 4 - - .',B:'11 - 9 - 7 - 6 - 7 9 7 6 4 - - .',pA:[0,1,5,4],pB:[3,1,0,4],pBr:[5,1,3,1],pC:[0,1,5,4]},
+  {title:'메아리 사냥',root:50,sc:'dor',meter:16,lead:'flute',lead2:'pluck',arp:'harp',pad:'strings',bass:'pizz',spark:'bell',drum:'falcon',
+   A:'0 2 3 4 - 3 2 0 -2 - 0 2 0 - - .',B:'4 5 7 - 5 4 3 4 2 - 3 2 1 - - .',pA:[0,6,3,0],pB:[3,6,4,4],pBr:[5,3,6,4],pC:[0,6,5,6]},
+  {title:'폭풍의 눈 속으로',root:48,sc:'hmin',meter:16,lead:'brass',lead2:'strings',arp:'harp',pad:'choir',bass:'sub',spark:'bell',drum:'storm',
+   A:'0 . 0 2 3 - 2 0 -1 - 0 . 0 - - .',B:'4 - 3 4 5 - 4 3 2 - 1 -1 0 - - .',pA:[0,5,3,4],pB:[5,3,4,4],pBr:[3,5,1,4],pC:[0,5,3,4]},
+  {title:'첫 번째 노래',root:50,sc:'maj',meter:16,lead:'flute',lead2:'brass',arp:'harp',pad:'choir',bass:'sub',spark:'bell',drum:'spire',
+   A:'0 - 4 - 7 - 6 5 4 - 2 4 5 - - .',B:'7 - 9 7 8 - 7 5 4 - 5 6 7 - - .',pA:[0,4,5,3],pB:[3,4,5,4],pBr:[5,3,1,4],pC:[0,4,5,3]}];
+ /* 가락 글자 → [칸별 음, 길이(8분음표 수)] */
+ const parse=s=>{const t=s.trim().split(/\s+/),out=[];for(let i=0;i<t.length;i++){if(t[i]==='.'||t[i]==='-'){out.push(null);continue}let n=1;while(t[i+n]==='-')n++;out.push([+t[i],n])}return out};
+ for(const m of M6){m.a=parse(m.A);m.b=parse(m.B);m.S=SCL[m.sc]}
+ const nt=(m,d)=>{const L=7,i=((d%L)+L)%L;return m.root+m.S[i]+12*Math.floor(d/L)};
+ /* 드럼: 16칸(또는 12칸) 마디 안의 자리 */
+ const DR={
+  light:{k:[0,8],s:[4,12],h:[2,6,10,14],sh:2},skip:{k:[0,6,10],s:[4,12],h:[0,2,4,6,8,10,12,14],sh:2},
+  deep:{k:[0],t:[8],s:[12],h:[4,12],sh:4},march:{k:[0,8],s:[4,12,14,15],h:[0,2,4,6,8,10,12,14],sh:4},
+  tick:{k:[0,8],s:[12],tk:[0,2,4,6,8,10,12,14],h:[],sh:4},waltz:{k:[0],s:[4,8],h:[2,6,10],sh:2},
+  spark:{k:[0,7,10],s:[4,12],h:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],sh:2},falcon:{k:[0,3,8,11],s:[4,12],t:[14],h:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],sh:2},
+  storm:{k:[0,8],t:[0,6,10],s:[4,12],h:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],sh:4},spire:{k:[0,8,10],s:[4,12],tim:[0],h:[0,2,4,6,8,10,12,14],sh:2}};
+ /* 곡 구성 비율 (합 1) */
+ const FORM=[['intro',.06],['A',.15],['B',.13],['A2',.12],['bridge',.12],['build',.07],['C',.18],['A3',.09],['outro',.08]];
+ function form(bars){const f=FORM.map(([n,w])=>[n,Math.max(2,Math.round(bars*w/2)*2)]);const sum=f.reduce((a,x)=>a+x[1],0);f[6][1]+=bars-sum;return f}
+ /* 바람 소리: 잡음을 띠 필터로 쓸어 올림/내림 */
+ let wbuf=null;function wind(at,len,g,f0,f1){if(!audio||!(len>0))return;if(!wbuf){wbuf=audio.createBuffer(1,audio.sampleRate*2,audio.sampleRate);const d=wbuf.getChannelData(0);let v=0;for(let i=0;i<d.length;i++){v=v*.97+(Math.random()*2-1)*.03;d[i]=v*6}}
+  const s=audio.createBufferSource(),bp=audio.createBiquadFilter(),e=audio.createGain();s.buffer=wbuf;s.loop=true;bp.type='bandpass';bp.Q.value=1.2;bp.frequency.setValueAtTime(f0,at);bp.frequency.exponentialRampToValueAtTime(f1,at+len);
+  e.gain.setValueAtTime(.0001,at);e.gain.linearRampToValueAtTime(g,at+len*.45);e.gain.exponentialRampToValueAtTime(.0001,at+len);s.connect(bp);bp.connect(e);vOut(e,.5);s.start(at);s.stop(at+len+.1)}
+ const note=(kind,p,len,g,at)=>{if(kind==='pulse'||kind==='triangle')chipNote(kind,p,len,g,at,{duty:.25,sus:.5});else voice(kind,p,len,g,at)};
+ /* 악기 크기 (5장 곡과 비슷한 음량이 되도록 맞춤) */
+ const GAIN={flute:.15,glide:.085,pluck:.13,brass:.075,harpsi:.11,strings:.095,choir:.11,organ:.065,harp:.09,bell:.075,pizz:.13,sub:.15};
+
+ function s6Music(n,delay,S){if(!audio||!Number.isFinite(delay))return;musVol(S.vol);const k=S.s6Mix,m=M6[k],q=S.ms/4000,origin=audio.currentTime+delay,me=m.meter,bars=S.s6Bars,F=S.s6Form,total=bars*me,act3=k>=7;
+  if(n<0){perc('shaker',origin,.8);return}
+  for(let j=n*2;j<n*2+2;j++){if(RPM.routing&&j>=total)continue;const jj=j%total,bar=Math.floor(jj/me),s=jj%me,at=origin+(j-n*2)*q;
+   let b=bar,sec=F[0];for(const f of F){if(b<f[1]){sec=f;break}b-=f[1]}const name=sec[0],L=sec[1],last=b>=L-2&&name==='outro',left=(total-jj)*q;
+   const prog=name==='B'||name==='A3'?m.pB:name==='bridge'||name==='build'?m.pBr:name==='C'?m.pC:m.pA,d=last?0:prog[Math.floor(b)%prog.length],fade=name==='outro'?Math.max(.25,1-b/L):name==='intro'?Math.min(1,.4+b/L):1;
+   const E=(kind,p,len,g)=>{if(left<.4)return;note(kind,p,Math.min(len,left-.3),g*fade,at)};
+   const beat=me===12?4:4,half=me/2;
+   /* 바람 */if(s===0&&(name==='intro'||name==='bridge'||name==='outro'||(name==='build'&&b%2===0)||(b%8===0)))wind(at,q*me*(name==='build'?2:1.6),name==='intro'||name==='bridge'?.05:.03,name==='build'?300:500,name==='build'?2400:900+((b*137)%700));
+   /* 깔개(현악·합창·오르간) */if(s===0&&name!=='build'){const pk=name==='bridge'?'choir':m.pad,gg=GAIN[pk]*(name==='C'?1.1:name==='A'||name==='B'?.7:1);for(const v of [0,2,4])E(pk,nt(m,d+v)+(pk==='choir'?0:-12),q*me*.95,gg*.55)}
+   /* 하프 아르페지오: 섬 위로 흐르는 물결 */{const fast=name==='build'||name==='C',step=fast?1:2;if(s%step===0&&name!=='outro'||(name==='outro'&&!last&&s%2===0)){const pat=[0,2,4,7,9,7,4,2],i=(s/step)%8,up=name==='outro'?pat.length-1-i:i,oct=name==='C'?12:0;E(m.arp,nt(m,d+pat[up])+oct,q*3,GAIN.harp*(fast?.75:1)*(name==='intro'||name==='bridge'?.8:1))}}
+   /* 베이스 */if(name!=='intro'&&name!=='bridge'&&!last){const bs=me===12?[0,6]:name==='C'||act3?[0,6,8,14]:[0,8];if(bs.includes(s))E(m.bass,nt(m,d)-24+(s===6||s===14?12:0),q*(m.bass==='sub'?6:2),GAIN[m.bass])}
+   /* 드럼 */{const D=DR[m.drum],lv=name==='A'||name==='B'||name==='A3'?1:name==='A2'?2:name==='C'?3:0;
+    if(lv){if(D.k.includes(s))chipDrum('kick',at,.75);if(D.s.includes(s))chipDrum('snare',at,(s===14||s===15?.25:.55)*(lv>1?1:.8));if(lv>=2&&D.h.includes(s))chipDrum('hat',at,s%4===0?.22:.13);if(s%D.sh===0)perc('shaker',at,lv>1?.6:.45);
+     if(D.t&&D.t.includes(s)&&lv>=2)perc('taiko',at,act3?.7:.45);if(D.tk&&D.tk.includes(s))perc(s%4===0?'tock':'tick',at,.35);if(D.tim&&D.tim.includes(s)&&b%2===0)perc('timp',at,.6,nt(m,d)<60?55:73);
+     if(lv===3&&s===0&&b%4===0)chipDrum('crash',at,.4);if(b%4===3&&s>=me-3&&lv>=2)perc('tom',at,.4,[180,150,120][s-(me-3)])}
+    if(name==='build'){const pr=(b+s/me)/L;if(s%(pr>.5?1:2)===0)chipDrum('snare',at,.08+.4*pr);if(s===0)chipDrum('kick',at,.5)}
+    if(name==='bridge'&&s===0&&b%2===0)perc('timp',at,.25,55)}
+   /* 반짝이는 종소리 */if((name==='intro'||name==='bridge'||name==='B')&&((s*7+b*5)%me===3)){E(m.spark,nt(m,d+[4,7,9,11][(b+s)%4])+12,q*4,GAIN.bell*(name==='B'?.6:1))}
+   /* 가락 */{let mot=null,kind=m.lead,g=GAIN[m.lead]||.1,oct=12,tr=0;
+    if(name==='A'||name==='A2'||name==='C'){mot=m.a}else if(name==='B'||name==='A3'){mot=m.b;kind=name==='A3'?m.arp:m.lead2;g=GAIN[kind]||.1}
+    if(name==='intro'&&b>=L-2)mot=null;
+    if(mot){const pos=(b%2)*me+s;if(pos%2===0){const tok=mot[(pos/2)%mot.length];if(tok){let [v,len]=tok;const ph=Math.floor(b/2)%4;if(ph===1)tr=1;if(ph===3&&pos>=me){v=pos>=me+half?0:v}
+      if(name==='A2'&&ph===2)oct=24;const p=nt(m,v+tr)+oct,dur=q*2*len*.95;E(kind,p,dur,g);
+      if(name==='C'){E(m.lead2,nt(m,v+tr-2)+oct,dur,(GAIN[m.lead2]||.04)*.7);if(act3)E('brass',nt(m,v+tr)+oct-12,dur,.06)}
+      if(name==='A2'&&m.lead2!==kind)E(m.lead2,nt(m,v+tr+2)+oct,dur,(GAIN[m.lead2]||.04)*.45)}}}
+    /* 떠 있는 섬: 플루트가 긴 숨으로 */if(name==='bridge'&&s===0)E('flute',nt(m,d+[4,2,0,1][b%4])+12,q*me*.9,.11)}
+   /* 마무리 화음 */if(last&&b===L-2&&s===0){for(const v of [0,2,4,7])E(m.pad==='choir'?'strings':m.pad,nt(m,v),Math.min(left-.4,q*me*2),.07);E(m.arp,nt(m,7)+12,q*8,.1);E('bell',nt(m,11)+12,q*12,.08);E(m.bass,m.root-24,q*me*2,.12)}
+  }}
+
+ /* 노래 만들기: 6장 보스면 3분 곡 정보를 붙임 */
+ {const base=c3MakeSong;c3MakeSong=function(art,bi){const S=base.apply(this,arguments);try{const k=L6.findIndex(b=>b.art===art);if(k<0)return S;const m=M6[k],barSec=S.ms/1000*(m.meter/4),bars=Math.max(24,Math.round(180/barSec/2)*2);
+  S.s6Mix=k;S.s6Bars=bars;S.s6Form=form(bars);S.s6Dur=bars*barSec;S.vol=.27;S.root=m.root;S.scale=m.S;S.title=m.title+' · ZENITH';S.musicBpm=Math.round(S.bpm)}catch(e){console.error('v47 song',e)}return S}}
+ {const base=playSlot;playSlot=function(n,delay,S){if(S&&S.s6Mix!=null){try{s6Music(n,delay,S)}catch(e){console.error('v47 music',e)}return}return base.apply(this,arguments)}}
+ {const base=rpMusLoad;rpMusLoad=function(){const ok=base.apply(this,arguments);try{if(ok&&RPM.S&&RPM.S.s6Mix!=null){RPM.duration=RPM.S.s6Dur;RPM.loopOnly=false}}catch(e){}return ok}}
+ /* 곡 이름: 러시 화면 · 결과 등에 쓰이는 C3MUS 제목 */
+ try{L6.forEach((b,k)=>{const C=C3MUS[b.art];if(C){C.title=M6[k].title;C.tag='하늘 섬의 노래 · 3분'}})}catch(e){}
+ window.S6MUS=M6;
+}catch(e){console.error('v47 ch6 music',e)}})();
+/* ================= v47 챕터 6을 로비 배경 · 명예의 전당 · 내 이미지로 바꾸기에 추가 ================= */
+(function(){try{
+ const L6=window.S6ART,SC=window.S6SC;if(!L6||!SC)return;
+ const unlocked=()=>typeof s6Unlocked==='function'&&s6Unlocked(),ci=()=>{try{return (s6Save().ci)||0}catch(e){return 0}};
+
+ /* ---------- 1) 로비 배경: '바람이 머무는 곳' ---------- */
+ try{LB_THEMES.push(['c6','🪁','바람이 머무는 곳','CHAPTER 6 · ZENITH']);LV_COL.c6=['#ffd08a','#8ad8ff','#ff8ab0','#a6f5c6'];
+  if(typeof LP_ALB!=='undefined')LP_ALB.c6=LP_ALB.c6||Object.assign({},LP_ALB.c3||LP_ALB.c1,{t:'ZENITH'});if(typeof LW_P!=='undefined')LW_P.c6=LW_P.c6||LW_P.c3||LW_P.c1}catch(e){}
+ {const base=lbLocked;lbLocked=function(th){if(th==='c6')return !unlocked();return base.apply(this,arguments)}}
+ {const base=lbTheme;lbTheme=function(){let v='auto';try{v=saveData.lobbyBg||'auto'}catch(e){}if(v==='c6')return unlocked()?'c6':'c1';if(v==='auto'&&ci()>0&&unlocked())return 'c6';return base.apply(this,arguments)}}
+ {const base=lbCv;lbCv=function(th){return th==='c6'?$('titleCv6'):base.apply(this,arguments)}}
+ /* 로비 화면 속 장면: 지금 바람길의 하늘과 그 보스 */
+ function lobbyTitle(now){const cv=$('titleCv6');if(!cv)return;const c=cv.getContext('2d'),T=now/1000,k=Math.min(9,ci()),b=L6[k],tone=SC.TONE(k);c.imageSmoothingEnabled=false;c.save();c.scale(1,190/270);SC.sky(c,tone,T);SC.windLines(c,T,tone===2?.25:.4);SC.city(c,120,80,.7,T,false);c.restore();
+  const g=c.createRadialGradient(330,120,4,330,120,90);g.addColorStop(0,b.c+'55');g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.fillRect(230,20,200,170);
+  try{c3ArtOn(c,b.art,330,184+Math.sin(T*1.6)*2,now,6.2,{pulse:.15})}catch(e){}for(let i=0;i<3;i++)SC.kite(c,(i*170+T*18)%560-40,40+i*24+Math.sin(T*2+i)*5,1.3,['#ff6a5a','#ffd08a','#5ad0b0'][i],Math.sin(T+i)*.4,.8)}
+ {const base=menuTick;menuTick=function(now){try{if(GM.scr==='main'&&mode==='menu'&&lbTheme()==='c6')lobbyTitle(now)}catch(e){}return base.apply(this,arguments)}}
+ /* 로비 무대 장식: 흘러가는 구름 · 연 · 바람 줄기 */
+ {const base=lvDraw;lvDraw=function(now){const r=base.apply(this,arguments);try{if(lbTheme()!=='c6')return r;const cv=$('lvCv'),c=cv.getContext('2d'),w=cv.width,h=cv.height,t=now/1000,u=h/540;c.save();c.setTransform(1,0,0,1,0,0);
+  c.globalAlpha=.07;c.fillStyle='#ffd8a0';c.fillRect(0,0,w,h);
+  for(let i=0;i<6;i++){const x=((i*.23+t*.012*(1+i%3))%1.3-.15)*w,y=h*(.08+i*.07);c.globalAlpha=.12;c.fillStyle='#ffffff';for(let j=0;j<4;j++){c.beginPath();c.ellipse(x+j*w*.03,y+Math.sin(j*1.7)*u*4,w*.04,h*.018,0,0,TAU);c.fill()}}
+  for(let i=0;i<18;i++){const q=(t*.35+i*.137)%1,x=q*w*1.2-w*.1,y=h*(.1+((i*53)%60)/100);c.globalAlpha=Math.sin(q*Math.PI)*.35;c.fillStyle='#ffffff';c.fillRect(Math.round(x),Math.round(y),Math.round(w*.05),Math.max(1,Math.round(u)))}
+  for(let i=0;i<3;i++){const x=w*(.15+i*.33)+Math.sin(t*.5+i)*w*.03,y=h*(.12+i*.05)+Math.sin(t*1.3+i)*h*.015;c.strokeStyle='#ffffff';c.globalAlpha=.25;c.lineWidth=Math.max(1,u);c.beginPath();c.moveTo(x,y+12*u);c.quadraticCurveTo(x-20*u,y+60*u,x-8*u,h*.55);c.stroke();SC.kite(c,x,y,2.2*u,['#ff6a5a','#ffd08a','#8ad8ff'][i],Math.sin(t+i)*.3,.85)}
+  c.restore()}catch(e){}return r}}
+
+ /* ---------- 2) 명예의 전당: 여섯 번째 별자리 '연자리' ---------- */
+ try{HF_CON.push({name:'연자리',en:'THE KITE',col:'#ffd08a',pts:[[.5,.04],[.22,.32],[.78,.32],[.5,.3],[.5,.62],[.44,.72],[.56,.8],[.45,.88],[.36,.76],[.6,.96]],edges:[[0,1],[0,2],[1,4],[2,4],[0,3],[3,4],[1,3],[3,2],[4,5],[5,6],[6,7],[7,9],[5,8]]});HF_W.push([1350,-30])}catch(e){console.error('v47 hf con',e)}
+ {const base=hfData;hfData=function(){const out=base.apply(this,arguments);try{if(out.length<50)return out;const o='PSABC',sealed=!unlocked(),sv=s6Save().best||{},r=saveData.s6rush||{};
+  for(let k=0;k<10;k++){const b=L6[k];let rk=null,per={};for(const [d] of HF_DIFF){const v=r[k+'|'+d];per[d]=v||null;if(v&&(rk===null||o.indexOf(v)<o.indexOf(rk)))rk=v}const st=sv[k]||null;if(st&&(rk===null||o.indexOf(st)<o.indexOf(rk)))rk=st;
+   out.push({ch:5,k,art:b.art,rk:sealed?null:rk,per:sealed?{}:per,name:b.name,en:b.en,c:b.c==='#ffffff'?'#e8f0ff':b.c,key:'z'+k,epi:(window.S6STORY&&S6STORY[k].title)||'',story:!!st,sealed})}}catch(e){console.error('v47 hf',e)}return out}}
+ HF_BADGE=function(){try{const D=hfData();const n=D.length>50&&!D[50].sealed?60:D.length>40&&!D[40].sealed?50:D.length>30&&!D[30].sealed?40:30;return D.filter(x=>x.rk).length+'/'+n}catch(e){return ''}};
+ /* 별자리 그림: 바람에 흔들리는 연 + 연줄 */
+ {const base=hfFigure;hfFigure=function(c,ch,cc,sz,a,col,t){if(ch!==5)return base.apply(this,arguments);c.save();c.globalAlpha=a;c.strokeStyle=col;c.lineWidth=1;c.translate(cc.x,cc.y-sz*.12);const sw=Math.sin(t*.8)*.07;c.rotate(sw);
+  c.beginPath();c.moveTo(0,-sz*.46);c.lineTo(sz*.3,-sz*.16);c.lineTo(0,sz*.22);c.lineTo(-sz*.3,-sz*.16);c.closePath();c.stroke();c.beginPath();c.moveTo(0,-sz*.46);c.lineTo(0,sz*.22);c.moveTo(-sz*.3,-sz*.16);c.lineTo(sz*.3,-sz*.16);c.stroke();
+  c.beginPath();c.moveTo(0,sz*.22);for(let i=1;i<=8;i++)c.lineTo(Math.sin(t*1.5+i*.9)*sz*.06,sz*.22+i*sz*.05);c.stroke();for(let i=0;i<3;i++){const y=sz*(.32+i*.1),x=Math.sin(t*1.5+i*2.4)*sz*.06;c.beginPath();c.moveTo(x-sz*.04,y-sz*.02);c.lineTo(x,y);c.lineTo(x-sz*.04,y+sz*.02);c.stroke()}
+  c.restore();c.globalAlpha=1}}
+ /* 별 설명 문구 */
+ {const base=hfPlaque;hfPlaque=function(){const r=base.apply(this,arguments);try{const pl=$('hfPlaque'),x=HF.data&&HF.data[HF.sel];if(!pl||!x||x.ch!==5)return r;const known=!!x.rk;
+  if(x.sealed){const en=pl.querySelector('.hfEn');if(en)en.textContent='챕터 5의 마지막 수문을 해방하면 봉인이 풀려요'}
+  const g=pl.querySelector('.hfGoal');if(g&&!known)g.textContent=x.sealed?'챕터 5의 마지막 수문을 해방하면 여섯 번째 챕터 「바람이 머무는 곳」이 열려요':'챕터 6 · '+(x.k+1)+'번째 바람길의 보스를 쓰러뜨리면 이 별이 켜져요'}catch(e){}return r}}
+
+ /* ---------- 3) 내 이미지로 바꾸기: 챕터 6 전투 배경 + 보스 10명 ---------- */
+ {const base=modSlots;modSlots=function(){return base().concat([{id:'bg6',name:'전투 배경 · 챕터 6',hint:''}],L6.map((b,k)=>({id:'c6boss'+k,name:'ZENITH '+String(k+1).padStart(2,'0')+' '+b.name,c6:k,hint:'아래쪽 가운데가 발밑이 되게'})))}}
+ /* 보스 그림 */
+ {const base=c3Art;c3Art=function(c,B,x,y,t,o,u,id){const k=L6.findIndex(b=>b.art===id),M=k>=0&&MODS['c6boss'+k];if(M){modDrawBossImg(c,M,B,x,y,t,o||{},u||U);return}return base.apply(this,arguments)}}
+ /* 전투 배경: 하늘 전장 위에 내 그림을 경기장 크기로 */
+ const AC6=new Map();
+ {const base=arenaCanvas;arenaCanvas=function(bi){const cv=base.apply(this,arguments);try{if(!(typeof G!=='undefined'&&G&&G.s6!=null))return cv;const M=MODS.bg6;if(!M||!cv)return cv;const key=G.s6+'|'+_modVer;let c2=AC6.get(key);if(c2)return c2;
+  c2=document.createElement('canvas');c2.width=W*2;c2.height=H*2;c2._hd=true;const x=c2.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(cv,0,0,W*2,H*2);x.setTransform(2,0,0,2,0,0);const sc=Math.max(AW/M.fw,AH/M.fh),w=M.fw*sc,h=M.fh*sc;x.save();x.beginPath();x.rect(AX,AY,AW,AH);x.clip();x.drawImage(M.img,0,0,M.fw,M.fh,AX+(AW-w)/2,AY+(AH-h)/2,w,h);x.restore();AC6.set(key,c2);return c2}catch(e){return cv}}}
+ /* 이미지 창: '챕터 6 보스' 칸을 따로 만들고 미리보기 그림을 채움 */
+ {const base=modOpen;modOpen=function(){const r=base.apply(this,arguments);try{const m=$('modPanel');if(!m)return r;const box=m.querySelector('.mBox');if(!box||m.querySelector('#modG6'))return r;
+  const sec=document.createElement('div');sec.className='sec';sec.textContent='챕터 6 보스';const g=document.createElement('div');g.className='grid';g.id='modG6';box.appendChild(sec);box.appendChild(g);
+  m.querySelectorAll('.slot').forEach(d=>{const nm=d.querySelector('.nm');if(!nm||nm.textContent.indexOf('ZENITH ')!==0)return;const k=+nm.textContent.slice(7,9)-1;g.appendChild(d);const th=d.querySelector('.th');if(th&&!th.querySelector('img')){th.textContent='';const cv=document.createElement('canvas');cv.width=48;cv.height=48;const x=cv.getContext('2d');x.imageSmoothingEnabled=false;try{c3ArtOn(x,L6[k].art,24,44,0,1.6,{still:true})}catch(e){}th.appendChild(cv)}})}catch(e){console.error('v47 mod',e)}return r}}
+}catch(e){console.error('v47 ch6 extras',e)}})();
 </script></body></html>
