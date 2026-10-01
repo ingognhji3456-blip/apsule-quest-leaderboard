@@ -9973,7 +9973,7 @@ function rqPreview(now){if(GM.scr!=='rush')return;const cv=$('gmPrevCv');if(!cv)
  /* 떠오르는 불씨 */for(let i=0;i<22;i++){const q=((t*.18)+i/22)%1,x=(i*67%460)+10+Math.sin(q*6+i)*8,y=330-q*320;c.globalAlpha=(1-q)*.8;c.fillStyle=i%3?o.c:'#ffffff';c.fillRect(Math.round(x),Math.round(y),i%4?2:3,i%4?2:3)}c.globalAlpha=1;
  /* 공격 예고 번쩍 (4초마다) */if((t%4)>3.3){const q=((t%4)-3.3)/.7;c.globalAlpha=(1-q)*.5;c.strokeStyle='#ff4d6d';c.lineWidth=2;for(let r=0;r<3;r++){c.beginPath();c.arc(240,200,30+q*120+r*18,0,TAU);c.stroke()}c.globalAlpha=1;c.font='900 14px '+FONT_STACK;c.textAlign='center';c.fillStyle='#ff4d6d';c.fillText('⚠',240,86)}
  c.restore();/* 스캔라인 · 비네트 */c.globalAlpha=.08;c.fillStyle='#000';for(let y=0;y<290;y+=3)c.fillRect(0,y,480,1);c.globalAlpha=1;const vg=c.createRadialGradient(240,160,110,240,150,300);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.7)');c.fillStyle=vg;c.fillRect(0,0,480,290);
- /* 이름판 */c.font='900 11px '+FONT_STACK;c.textAlign='left';const nt=(GM.rushCh===4?'ABYSS ':GM.rushCh===3?'ECLIPSE ':GM.rushCh===2?'ORIGIN ':'GUARDIAN ')+String(k+1+(GM.rushCh===1?10:0)).padStart(2,'0')+'  ·  '+o.en,nw=c.measureText(nt).width;c.fillStyle='#05080acc';c.fillRect(10,10,nw+18,22);c.fillStyle=o.c;c.fillRect(10,10,3,22);c.fillStyle='#fff';c.fillText(nt,18,25);
+ /* 이름판 */c.font='900 11px '+FONT_STACK;c.textAlign='left';const nt=(GM.rushCh===5?'ZENITH ':GM.rushCh===4?'ABYSS ':GM.rushCh===3?'ECLIPSE ':GM.rushCh===2?'ORIGIN ':'GUARDIAN ')+String(k+1+(GM.rushCh===1?10:0)).padStart(2,'0')+'  ·  '+o.en,nw=c.measureText(nt).width;c.fillStyle='#05080acc';c.fillRect(10,10,nw+18,22);c.fillStyle=o.c;c.fillRect(10,10,3,22);c.fillStyle='#fff';c.fillText(nt,18,25);
  c.textAlign='right';c.fillStyle='#ffd166';c.fillText('♩ '+Math.round(o.bpm),470,25);c.fillStyle=Math.floor(beat)%2?'#ffd166':'#5a4a20';c.fillRect(478-4,34,4,4);c.textAlign='left';
  if(locked){c.fillStyle='rgba(5,8,10,.88)';c.fillRect(0,0,480,290);c.fillStyle='#eaf6ef';c.font='900 40px '+FONT_STACK;c.textAlign='center';c.fillText('🔒',240,150);c.font='700 13px '+FONT_STACK;c.fillText('챕터 1을 클리어하면 열려요',240,180);c.textAlign='left'}}
 gmPrevDraw=function(now){try{rqPreview(now)}catch(e){}};
@@ -16122,7 +16122,7 @@ EXU.c_s5_heart={
    보스마다 다른 '움직임'(솟아오름·낙하·조립 등)은 기존 정의를 그대로 쓰고, 그 위의 연출층(어둠·전조·이름판)을 새로 만든다. */
 (function(){
  const IN={boom:0,boomN:0,last:null};
- const chOf=()=>{try{if(G.s5!=null||G._s5hold!=null)return 5;if(G.s4!=null||G.s4Rush!=null)return 4;if(typeof _c3Swap!=='undefined'&&_c3Swap&&_c3Swap.art)return 3;return G.bi<10?1:2}catch(e){return 1}};
+ const chOf=()=>{try{if(G.s6!=null)return 6;if(G.s5!=null||G._s5hold!=null)return 5;if(G.s4!=null||G.s4Rush!=null)return 4;if(typeof _c3Swap!=='undefined'&&_c3Swap&&_c3Swap.art)return 3;return G.bi<10?1:2}catch(e){return 1}};
  const ease=k=>{k=clamp(k,0,1);return 1-Math.pow(1-k,3)},sm=k=>{k=clamp(k,0,1);return k*k*(3-2*k)};
  const txt=(s,x,y,size,col,stroke,align,wt)=>{ctx.font=(wt||'900')+' '+size+'px '+FONT_STACK;ctx.textAlign=align||'center';ctx.lineJoin='round';if(stroke){ctx.lineWidth=Math.max(2,size*.18);ctx.strokeStyle=stroke;ctx.strokeText(s,x,y)}ctx.fillStyle=col;ctx.fillText(s,x,y)};
  const hexA=(h,a)=>{h=(h||'#ffffff').replace('#','');const n=parseInt(h.slice(0,6),16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'};
@@ -16151,6 +16151,10 @@ EXU.c_s5_heart={
    const pts=[];for(let i=0;i<9;i++){const an=i*TAU/9+.3,rr=60+(hash(i+'k')%30);pts.push([cx+Math.cos(an)*rr,cy+Math.sin(an)*rr*.8])}const n=Math.floor(clamp(t/1.7,0,1)*9);
    for(let i=0;i<n;i++){const [x0,y0]=pts[i],[x1,y1]=pts[(i+1)%9];line(x0,y0,x1,y1,3,(px,py)=>cPx(px,py,1,col,a*.8));e2Star(x0,y0,3,'#ffffff',a)}
    const ec=sm(t/1.8);pcirc(cx,cy-30,Math.round(26*ec),'#000000',a*.9);cRing(cx,cy-30,Math.round(27*ec)+1,acc,a*ec,2);e2Glow(cx,cy-30,60*ec,hexA(acc,.5),a*.6)}
+  else if(ch===6){/* 하늘: 구름이 갈라지고 바람 줄기가 보스 자리로 휘감기며 모임 */
+   RA(0,0,W,H,'#f0a070',a*.12);for(let i=0;i<8;i++){const x=((i*83+t*30)%(W+120))-60,y=50+i*24;for(let j=0;j<4;j++)pcirc(Math.round(x+j*14),Math.round(y+Math.sin(j)*3),10-j,'#ffffff',a*.18)}
+   for(let i=0;i<30;i++){const q=((t*.6)+i/30)%1,ang=i*2.4+t*2,r=(1-q)*240;line(cx+Math.cos(ang)*r,cy+Math.sin(ang)*r*.5,cx+Math.cos(ang+.25)*(r-14),cy+Math.sin(ang+.25)*(r-14)*.5,3,(px,py)=>cPx(px,py,1,'#ffffff',a*q*.8))}
+   for(let k=0;k<2;k++){const q=((t*.5)+k/2)%1;cRing(cx,cy,Math.round(10+q*120),col,a*(1-q)*.5,2,.5)}}
   else{/* 심해: 위에서 흔들리는 빛줄기, 거품이 오르고, 소나 고리가 보스 자리에서 퍼진다 */
    RA(0,0,W,H,'#03141f',a*.25);for(let i=0;i<5;i++){const x=60+i*95+Math.sin(t*.7+i)*25;ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=a*.07;ctx.fillStyle='#bff4ff';ctx.beginPath();ctx.moveTo(x-8,0);ctx.lineTo(x+8,0);ctx.lineTo(x+40,H);ctx.lineTo(x-20,H);ctx.fill();ctx.restore()}
    for(let i=0;i<30;i++){const q=((t*.35)+i/30)%1;cRing((i*61)%W+Math.sin(t*2+i)*5,H-q*H,1+(i%3),'#bff4ff',a*.6*(1-q*.5),1)}
@@ -16183,7 +16187,7 @@ EXU.c_s5_heart={
   /* 5) 레터박스 (익스트림은 경고 줄무늬) */
   const bin=ease(T/450),bout=T>D-450?ease((D-T)/450):1,bh=Math.round((ex?40:32)*Math.min(bin,bout));R(0,0,W,bh,'#000');R(0,H-bh,W,bh,'#000');
   if(bh>4){RA(0,bh-1,W,1,col,.8);RA(0,H-bh,W,1,col,.8);if(ex){for(let x=-20;x<W+20;x+=14){const xo=((x-now/30)%(W+28)+W+28)%(W+28)-14;RA(Math.round(xo),bh-6,7,3,'#ffcf3a',.7);RA(Math.round(W-xo),H-bh+3,7,3,'#ffcf3a',.7)}}
-   ctx.globalAlpha=Math.min(1,T/800);txt((ch===5?'CHAPTER 5 · ABYSS':ch===4?'CHAPTER 4 · ECLIPSE':ch===3?'CHAPTER 3 · ORIGIN':ch===2?'CHAPTER 2 · THE HUNGER':'CHAPTER 1 · BEAT MACHINA')+(ex?'   ·  EXTREME':''),10,bh-11,8,ex?'#ff8a9a':'#a8b8b4',null,'left','700');
+   ctx.globalAlpha=Math.min(1,T/800);txt((ch===6?'CHAPTER 6 · ZENITH':ch===5?'CHAPTER 5 · ABYSS':ch===4?'CHAPTER 4 · ECLIPSE':ch===3?'CHAPTER 3 · ORIGIN':ch===2?'CHAPTER 2 · THE HUNGER':'CHAPTER 1 · BEAT MACHINA')+(ex?'   ·  EXTREME':''),10,bh-11,8,ex?'#ff8a9a':'#a8b8b4',null,'left','700');
    if(T>900)txt('클릭하면 건너뜁니다',W-8,H-bh+14,7,'#7a8a8c',null,'right','400');ctx.globalAlpha=1}
   /* 6) 이름 카드: 아래쪽 1/3에 비스듬한 띠가 쓸고 들어오고, 이름 글자가 하나씩 박힌다 */
   const nameAt=Math.max(landed?(boomT>=0?now-boomT+250:c.t0+2700):c.t0+2900,c.t0+(ex?2900:2400)),nT=now-nameAt;
@@ -16191,7 +16195,7 @@ EXU.c_s5_heart={
    ctx.beginPath();const bx=-40+(1-k)*-W;ctx.moveTo(bx,y0+6);ctx.lineTo(bx+W*.82,y0);ctx.lineTo(bx+W*.82+26,y0+50);ctx.lineTo(bx,y0+56);ctx.closePath();ctx.fillStyle='rgba(4,6,10,.82)';ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.stroke();
    ctx.fillStyle=col;ctx.fillRect(bx,y0+56,W*.82*k+20,2);ctx.restore();
    if(nT>180){ctx.save();ctx.globalAlpha=out;
-    const tag=(ch===5?'ABYSS '+String((G.s5!=null?G.s5:0)+1).padStart(2,'0')+' / 10':ch===4?'ECLIPSE '+String((G.s4!=null?G.s4:G.s4Rush||0)+1).padStart(2,'0')+' / 10':ch===3?'ORIGIN':'GUARDIAN '+String(G.bi+1).padStart(2,'0')+' / 20');
+    const tag=(ch===6?'ZENITH '+String((G.s6||0)+1).padStart(2,'0')+' / 10':ch===5?'ABYSS '+String((G.s5!=null?G.s5:0)+1).padStart(2,'0')+' / 10':ch===4?'ECLIPSE '+String((G.s4!=null?G.s4:G.s4Rush||0)+1).padStart(2,'0')+' / 10':ch===3?'ORIGIN':'GUARDIAN '+String(G.bi+1).padStart(2,'0')+' / 20');
     const tk=ease((nT-180)/260),tagC=(c2=>{const n=parseInt(c2.slice(1,7),16);return ((n>>16&255)*.3+(n>>8&255)*.59+(n&255)*.11)<120?'#f4d996':c2})(acc);ctx.globalAlpha=out*tk;txt(tag,22-(1-tk)*30,y0+15,8,tagC,null,'left','800');ctx.globalAlpha=out;
     const name=B.name||'',n=[...name],cw=21;ctx.font='900 24px '+FONT_STACK;const full=ctx.measureText(name).width;let x=22;
     n.forEach((chr,i)=>{const lt=nT-260-i*55;if(lt<0)return;const pk=Math.min(1,lt/140),sc=1+(1-pk)*1.6;ctx.save();ctx.translate(x+ctx.measureText(chr).width/2,y0+40);ctx.scale(sc,sc);ctx.globalAlpha=out*Math.min(1,pk*1.5);txt(chr,0,0,24,'#ffffff',col);ctx.restore();ctx.font='900 24px '+FONT_STACK;x+=ctx.measureText(chr).width;if(lt>0&&lt<30)once('l'+i,()=>sfx(200+i*30,.05,'square',.025,120))});
@@ -16211,8 +16215,8 @@ EXU.c_s5_heart={
 
 /* ================= v43 전투 맵 퀄리티: 깊이감 있는 대기층 (빛줄기 · 보스 발밑 광원 · 챕터별 떠다니는 입자 · 박자 바닥 파동 · 바닥 안개 · 비네트) ================= */
 (function(){
- const chOf=()=>{try{if(G.s5!=null||G._s5hold!=null)return 5;if(G.s4!=null||G.s4Rush!=null)return 4;if(typeof _c3Swap!=='undefined'&&_c3Swap&&_c3Swap.art)return 3;return G.bi<10?1:2}catch(e){return 1}};
- const TH={1:{ray:'#ffe2b0',mote:['#ffb050','#ffe79a','#ffffff'],fog:'#0b1418',kind:'spark'},2:{ray:'#ffb0c8',mote:['#ff5d8f','#ffb070','#caff6b'],fog:'#14060c',kind:'ember'},3:{ray:'#ffe8c0',mote:['#e8d8b0','#c8b088','#ffffff'],fog:'#140f08',kind:'dust'},4:{ray:'#d8d0ff',mote:['#ffffff','#c8b8ff','#9af0ff'],fog:'#05040e',kind:'star'},5:{ray:'#bff4ff',mote:['#bff4ff','#8ae8ff','#ffffff'],fog:'#021018',kind:'bubble'}};
+ const chOf=()=>{try{if(G.s6!=null)return 6;if(G.s5!=null||G._s5hold!=null)return 5;if(G.s4!=null||G.s4Rush!=null)return 4;if(typeof _c3Swap!=='undefined'&&_c3Swap&&_c3Swap.art)return 3;return G.bi<10?1:2}catch(e){return 1}};
+ const TH={1:{ray:'#ffe2b0',mote:['#ffb050','#ffe79a','#ffffff'],fog:'#0b1418',kind:'spark'},2:{ray:'#ffb0c8',mote:['#ff5d8f','#ffb070','#caff6b'],fog:'#14060c',kind:'ember'},3:{ray:'#ffe8c0',mote:['#e8d8b0','#c8b088','#ffffff'],fog:'#140f08',kind:'dust'},4:{ray:'#d8d0ff',mote:['#ffffff','#c8b8ff','#9af0ff'],fog:'#05040e',kind:'star'},6:{ray:'#fff0d8',mote:['#ffffff','#ffd8b0','#bfeaff'],fog:'#3a2a40',kind:'dust'},5:{ray:'#bff4ff',mote:['#bff4ff','#8ae8ff','#ffffff'],fog:'#021018',kind:'bubble'}};
  const AR={vg:null,vgKey:''};
  function layers(now,beat){if(!G||!G.B)return;const ch=chOf(),T=TH[ch],t=now/1000,g=bgeo(),col=G.B.c||'#ffffff';
   ctx.save();
@@ -16590,4 +16594,613 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
     _dk.call(this,c,x,y,s,dfl,wt,idleT)}finally{c.restore();HV.view='front';HV.sw=null}
    try{if(HV.pend&&now-HV.pend.t<40)drawPendingSword(c,X,Y,kk,fl,side,lean,cx,fy,dfl);else HV.pend=null}catch(e){HV.pend=null}}}
 })();
+/* ================= v45 챕터 6 ZENITH 「바람이 머무는 곳」 — 하늘 도시의 수호자 10명 디자인 =================
+   그림은 보스 엔진(MON)에 'c_s6_*' 키로 등록한다. 모두 넓은 그림판(80×70칸)을 쓴다.
+   색: 새벽 주황 · 구름 흰색 · 하늘색 · 황동 / 3막은 폭풍 남색 · 번개 노랑 */
+(function(){try{
+ const K='#0c1220',W1='#f4f7fb',W2='#d6e0ea',W3='#a8b8c8',W4='#6a7c90',BR='#c8964a',BR2='#f0c878',BR3='#7a5428',SK='#7ad0f0',SK2='#bfeaff',OR='#ff9a4a',OR2='#ffd08a';
+ const S6=window.S6ART=[
+  {art:'s6_vane',name:'풍향계 기사',en:'WEATHERVANE KNIGHT',c:'#5ad0b0',dark:'#1e3a3a'},
+  {art:'s6_kite',name:'연줄의 거인',en:'KITE COLOSSUS',c:'#ff6a5a',dark:'#3a2418'},
+  {art:'s6_cloudwhale',name:'번개구름 고래',en:'THUNDERHEAD WHALE',c:'#ffe25a',dark:'#2a3448'},
+  {art:'s6_captain',name:'비행선 함장',en:'SKYSHIP CAPTAIN',c:'#ff5a6a',dark:'#1a2440'},
+  {art:'s6_clock',name:'깃털 시계탑',en:'FEATHER CLOCKTOWER',c:'#8ad8ff',dark:'#2a3a52'},
+  {art:'s6_organ',name:'풍금 합창단',en:'WIND-ORGAN CHOIR',c:'#c8a0ff',dark:'#2a2040'},
+  {art:'s6_prism',name:'무지개 다리 수문장',en:'PRISM GATEKEEPER',c:'#ffffff',dark:'#24304a'},
+  {art:'s6_falcon',name:'메아리 사냥매',en:'ECHO FALCON',c:'#ffb84a',dark:'#2a2420'},
+  {art:'s6_storm',name:'폭풍의 눈',en:'EYE OF THE STORM',c:'#7af0ff',dark:'#141c38'},
+  {art:'s6_spire',name:'공명탑 · 첫 번째 노래',en:'THE RESONANT SPIRE',c:'#ffe8a0',dark:'#1c2238'}];
+ /* 공용 도구 */
+ const lim=(A,x0,y0,x1,y1,w,c,lt)=>{A.L(x0,y0,x1,y1,K,w+.9);A.L(x0,y0,x1,y1,c,w);if(lt)A.L(x0-.2,y0-.3,x1-.2,y1-.3,lt,Math.max(.3,w*.3),.8)};
+ const cloud=(A,x,y,r,t,seed,c1,c2,c3)=>{for(let i=0;i<5;i++){const a=i*1.26+seed,rr=r*(.55+.2*((i*7+seed*3)%3)),px=x+Math.cos(a)*r*.7,py=y+Math.sin(a)*r*.35+Math.sin(t*1.3+i+seed)*.4;A.C(px,py,rr,c1)}A.C(x,y,r*.75,c1);for(let i=0;i<3;i++)A.C(x-r*.3+i*r*.3,y-r*.25,r*.42,c2);A.C(x-r*.35,y-r*.42,r*.22,c3)};
+ const bolt=(A,x0,y0,x1,y1,seed,col,al)=>{let px=x0,py=y0;for(let i=1;i<=5;i++){const k=i/5,nx=x0+(x1-x0)*k+(i<5?((seed*31+i*17)%7-3)*.6:0),ny=y0+(y1-y0)*k;A.L(px,py,nx,ny,col,.6,al);A.L(px,py,nx,ny,'#ffffff',.25,al);px=nx;py=ny}};
+ const R={};
+
+ /* 1. 풍향계 기사 — 녹청 낀 구리 갑옷 · 수탉 풍향계 투구 · 화살 창 · 나침반 방패 · 바람 깃발 망토 */
+ R.c_s6_vane=A=>{const t=A.t,b=A.bob*.4,C={g1:'#1e3a3a',g2:'#2e5a54',g3:'#4a8a7a',g4:'#7ac0a8',cu:'#b8683a',cu2:'#e0965a',cu3:'#7a3a1e'},sp=t*1.6;
+  A.E(0,1,16,1.8,'#000',.35);
+  /* 바람 깃발 망토 */for(let i=0;i<5;i++){const w=Math.sin(t*4+i*.8)*1.6;A.P([[-6+i*1.2,-30+b],[-4+i*1.2,-30+b],[-13-i*2.2+w,-10+b+i*1.4],[-15-i*2.2+w,-12+b+i*1.4]],i%2?'#e8f0f8':'#7ad0f0',.95)}
+  for(const s of [-1,1]){lim(A,s*3.2,-12+b,s*4.2,-6,2.4,C.g2,C.g4);lim(A,s*4.2,-6,s*4.6,-1.2,2.2,C.g2);A.R(s*4.6-2,-1.6,4,1.8,C.cu3);A.R(s*4.6-2,-1.6,4,.5,C.cu2)}
+  A.plate([[-7,-30+b],[7,-30+b],[6,-14+b],[3.6,-11+b],[-3.6,-11+b],[-6,-14+b]],C.g2,K,C.g4);A.P([[-1,-29+b],[1,-29+b],[.6,-13+b],[-.6,-13+b]],C.cu);
+  for(let i=0;i<3;i++)A.R(-5.6,-24+b+i*3.4,11.2,.5,C.g1,.8);A.C(0,-21+b,1.6,C.cu2);A.C(0,-21+b,.8,'#fff6d0');A.glow(0,-21+b,4,'#7af0d0',.5+A.pul*.4);
+  for(const s of [-1,1]){A.E(s*8,-28.5+b,3.6,2.6,C.g3);A.E(s*8,-29.2+b,3,1.6,C.g4);A.spike(s*10.6,-29+b,s>0?-.3:Math.PI+.3,2.4,1.2,C.cu2)}
+  /* 투구 */{const y=-36+b;A.plate([[-5,y+6],[5,y+6],[5.4,y-1],[2.6,y-4],[-2.6,y-4],[-5.4,y-1]],C.g3,K,C.g4);A.R(-4,y+.6,8,1.4,K);if(!A.dm&&!A.blink){A.R(-3.4+A.look[0],y+.9,2.4,.7,'#bffff0');A.R(1+A.look[0],y+.9,2.4,.7,'#bffff0');A.glow(0,y+1.2,5,'#7af0d0',.7)}
+   /* 나침반 장식 + 수탉 */A.L(0,y-4,0,y-8,C.cu3,.6);for(let i=0;i<4;i++){const a=i*Math.PI/2+.0;A.L(Math.cos(a)*2.6,y-8+Math.sin(a)*.9,-Math.cos(a)*2.6,y-8-Math.sin(a)*.9,C.cu,.35)}
+   for(const [ch,a] of [['N',0],['E',1],['S',2],['W',3]]){const aa=a*Math.PI/2;A.R(Math.sin(aa)*3.2-.3,y-8-Math.cos(aa)*1.1-.3,.6,.6,C.cu2)}
+   const fx=Math.cos(sp)*1;A.P([[-3+fx,y-9],[2+fx,y-9.4],[3.4+fx,y-12],[1.4+fx,y-14],[-.2+fx,y-12.4],[-2.6+fx,y-13],[-3.6+fx,y-10.6]],C.cu);A.P([[1.4+fx,y-14],[2.4+fx,y-15.4],[3+fx,y-13.6]],'#ff5a3a');A.R(2.2+fx,y-12.6,.5,.5,K);A.P([[-3.6+fx,y-10.6],[-6+fx,y-13.6],[-5+fx,y-9.8]],C.cu2)}
+  /* 나침반 방패 (왼손) */{const x=-11,y=-19+b;A.C(x,y,5.4,K);A.C(x,y,4.8,C.cu);A.ring(x,y,4.8,.6,C.cu2);A.C(x,y,3.6,'#f0e8d0');for(let i=0;i<8;i++){const a=i*Math.PI/4;A.L(x,y,x+Math.cos(a)*(i%2?2:3.4),y+Math.sin(a)*(i%2?2:3.4),i%2?C.cu3:C.g2,.5)}const na=t*.7+Math.sin(t*3)*.3;A.L(x,y,x+Math.cos(na)*3,y+Math.sin(na)*3,'#ff4a3a',.6);A.C(x,y,.6,C.cu3)}
+  /* 화살 창 (오른손) */{const x=11,y=-18+b,a=-1.25+Math.sin(t*1.2)*.05,L=26,ex=x+Math.cos(a)*L*.62,ey=y+Math.sin(a)*L*.62,bx=x-Math.cos(a)*L*.38,by=y-Math.sin(a)*L*.38;lim(A,bx,by,ex,ey,1,C.cu3,C.cu2);
+   A.P([[ex+Math.cos(a)*3.6,ey+Math.sin(a)*3.6],[ex+Math.cos(a+1.9)*2.2,ey+Math.sin(a+1.9)*2.2],[ex+Math.cos(a-1.9)*2.2,ey+Math.sin(a-1.9)*2.2]],C.cu2);for(const s of [-1,1])A.P([[bx,by],[bx-Math.cos(a+s*.6)*3.6,by-Math.sin(a+s*.6)*3.6],[bx+Math.cos(a)*2,by+Math.sin(a)*2]],s>0?'#e8f0f8':'#7ad0f0');A.C(x,y,1.4,C.g3)}
+  A.rise(6,-14,14,-4,30,.5,'#e8fbff',.6,.2);A.bbox=[-18,-52,18,2]};
+
+ /* 2. 연줄의 거인 — 대나무 뼈대 · 종이 몸 · 손에 쥔 수많은 연줄 · 머리 위로 나부끼는 연들 */
+ R.c_s6_kite=A=>{const t=A.t,b=A.bob*.3,C={bm:'#c8a060',bm2:'#8a6a3a',bm3:'#ecd0a0',pp:'#f4ead8',pp2:'#d8c8b0'};
+  A.E(0,1,18,2,'#000',.35);
+  /* 하늘의 연들 (줄은 양손에서) */const kites=[[-23,-44,'#ff5a4a'],[-13,-49,'#4a8aff'],[1,-51,'#ffd04a'],[15,-48,'#5ad08a'],[25,-41,'#c86aff']];
+  for(const [i,[kx,ky,kc]] of kites.entries()){const x=kx+Math.sin(t*1.4+i)*2,y=ky+Math.cos(t*1.1+i*2)*1.4,hx=kx<0?-14:14,hy=-26+b;A.L(hx,hy,x,y+3,'#f0e8d8',.18,.7);
+   A.P([[x,y-3.4],[x+2.6,y],[x,y+3.4],[x-2.6,y]],K);A.P([[x,y-2.8],[x+2.1,y],[x,y+2.8],[x-2.1,y]],kc);A.P([[x,y-2.8],[x+2.1,y],[x,y]],'#ffffff',.35);A.L(x,y-2.8,x,y+2.8,'#3a2a1a',.2);A.L(x-2.1,y,x+2.1,y,'#3a2a1a',.2);
+   for(let j=1;j<=3;j++){const w=Math.sin(t*5+i+j)*.8;A.R(x+w-.4,y+3+j*1.6,.8,.6,j%2?'#ffffff':kc)}}
+  /* 다리: 묶은 대나무 */for(const s of [-1,1]){lim(A,s*4,-14+b,s*7,-1,2.2,A.B?C.bm2:C.bm2,C.bm3);for(let i=0;i<3;i++)A.R(s*(4.6+i*1)-1.1,-11+b+i*4,2.2,.5,'#5a3a1e');A.P([[s*7-2.4,0],[s*7+2.4,0],[s*7+1.6,-1.6],[s*7-1.6,-1.6]],C.bm2)}
+  /* 몸: 마름모 종이 연 (대나무 십자 뼈대) */{const y=-26+b;A.P([[0,y-15],[13,y],[0,y+13],[-13,y]],K);A.P([[0,y-14],[12,y],[0,y+12],[-12,y]],C.pp);A.P([[0,y-14],[12,y],[0,y]],C.pp2,.6);
+   for(const [x0,y0,x1,y1] of [[0,y-14,0,y+12],[-12,y,12,y]])lim(A,x0,y0,x1,y1,.7,C.bm,C.bm3);A.P([[-9,y+2],[-3,y+2],[-6,y+8]],'#ff5a4a',.85);A.P([[3,y+2],[9,y+2],[6,y+8]],'#4a8aff',.85);
+   /* 그려 넣은 얼굴 */const ey=y-5;for(const s of [-1,1]){A.E(s*3.4,ey,2,1.5,'#1a1410');if(!A.blink&&!A.dm){A.C(s*3.4+A.look[0]*.6,ey,.8,'#ff5a4a');A.R(s*3.4+A.look[0]*.6-.3,ey-.5,.4,.4,'#ffffff')}A.L(s*1.6,ey-2.6,s*5,ey-3.2,'#1a1410',.45)}A.E(0,y+.4,2.4,.8+A.open*1.4,'#1a1410');A.R(-1.6,y,3.2,.3,'#ff5a4a',.8)}
+  /* 팔: 연줄 다발 + 주먹 */for(const s of [-1,1]){const sx=s*10,sy=-28+b,hx=s*14,hy=-26+b+Math.sin(t*2+s)*.6;lim(A,sx,sy,s*16,-34+b,1.6,C.bm2,C.bm3);lim(A,s*16,-34+b,hx,hy,1.4,C.bm2,C.bm3);A.C(hx,hy,2.4,K);A.C(hx,hy,1.9,C.bm);A.R(hx-1.4,hy-.4,2.8,.4,'#5a3a1e');
+   for(let i=0;i<4;i++)A.L(hx,hy,hx+s*(1+i*.6),hy+3+i*1.2,'#f0e8d8',.18,.7)}
+  /* 머리 장식: 꼬리 리본 */for(let i=0;i<3;i++){const w=Math.sin(t*3+i)*1.4;A.L(0,-40+b,-3+i*3+w,-46+b,['#ff5a4a','#ffd04a','#4a8aff'][i],.5)}
+  A.bbox=[-28,-60,28,2]};
+
+ /* 3. 번개구름 고래 — 뭉게구름 몸 · 몸속 번개 · 금빛 눈 · 아래로 내리는 비 */
+ R.c_s6_cloudwhale=A=>{const t=A.t,y=-24+A.bob*.8,C={c1:'#3a4660',c2:'#5a6a88',c3:'#8a9ab8',c4:'#c8d4e8',y1:'#ffe25a'};
+  /* 비 */for(let i=0;i<14;i++){const q=((t*1.6)+i*.137)%1,x=-20+i*3+Math.sin(i*3)*1;A.L(x,y+8+q*18,x-.6,y+10+q*18,'#9ad0ff',.25,.6*(1-q))}
+  /* 꼬리 */{const tw=Math.sin(t*1.6)*1.6;A.P([[18,y-2],[27,y-9+tw],[31,y-13+tw],[29,y-6+tw],[33,y-2+tw],[26,y+1+tw],[18,y+3]],C.c2);A.P([[18,y-2],[27,y-9+tw],[24,y-3]],C.c3,.7)}
+  /* 몸통 구름 덩어리 (아래 짙게, 위 밝게) */cloud(A,-6,y+2,13,t,1,C.c1,C.c2,C.c3);cloud(A,8,y+1,12,t,2,C.c1,C.c2,C.c3);cloud(A,-2,y-6,13,t,3,C.c2,C.c3,C.c4);cloud(A,10,y-6,9,t,4,C.c2,C.c3,C.c4);cloud(A,-14,y-4,8,t,5,C.c2,C.c3,C.c4);
+  /* 몸속 번개 */const fl=(Math.floor(t*5)%3===0)||A.pul>.4;bolt(A,-12,y-6,-2,y+4,Math.floor(t*5),C.y1,fl?.95:.4);bolt(A,4,y-8,14,y+2,Math.floor(t*5)+3,C.y1,fl?.8:.3);if(fl)A.glow(0,y,22,C.y1,.35);
+  /* 입: 고래 수염판 */A.P([[-24,y+1],[-8,y+4],[-10,y+6],[-24,y+4]],'#1a2034');for(let i=0;i<6;i++)A.R(-22+i*2.4,y+2.4,.5,1.8,C.c4,.8);
+  /* 머리 쪽 큰 구름 + 눈 */cloud(A,-19,y-3,8,t,6,C.c2,C.c3,C.c4);{const ex=-17,ey=y-3;A.E(ex,ey,2.6,2,'#1a2034');if(!A.dm&&!A.blink){A.C(ex+A.look[0]*.6,ey+A.look[1]*.3,1.4,C.y1);A.R(ex+A.look[0]*.6-.2,ey-1,.4,2,'#3a2a00');A.R(ex-1,ey-1.2,.6,.6,'#ffffff')}A.glow(ex,ey,5,C.y1,.7);A.L(ex-3,ey-3,ex+2.6,ey-3.6,'#1a2034',.6)}
+  /* 등 위 분수공: 번개 불꽃 */{const by=y-16;for(let i=0;i<5;i++){const q=((t*1.2)+i/5)%1;A.spark(-6+Math.sin(i*2)*2,by-q*8,1.1*(1-q),i%2?C.y1:'#ffffff',1-q)}}
+  for(const [x,yy] of [[-2,y+10],[10,y+9]])A.R(x,yy,.4,.4,'#ffffff',.6);A.bbox=[-30,-48,33,2]};
+
+ /* 4. 비행선 함장 — 머리 위 줄무늬 기구 · 곤돌라 하체 · 프로펠러 · 망원경 팔 · 금단추 외투 */
+ R.c_s6_captain=A=>{const t=A.t,b=A.bob*.9,C={nv:'#1e2a4a',nv2:'#2e4070',nv3:'#4a62a0',rd:'#d8384a',rd2:'#ff6a74',wd:'#6a4424',wd2:'#9a6a3a'};
+  A.E(0,1,14,1.6,'#000',.3);
+  /* 기구 (풍선) */{const y=-45+b,RX=14,RY=8;A.E(0,y,RX+.8,RY+.8,K);for(let xi=-RX;xi<RX;xi+=.5){const h=RY*Math.sqrt(Math.max(0,1-((xi+.25)/RX)**2)),band=Math.floor((Math.asin(Math.max(-1,Math.min(1,(xi+.25)/RX)))/(Math.PI/2))*3.5+3.5);A.R(xi,y-h,.5,h*2,band%2?C.rd:W1)}
+   for(let xi=-RX;xi<RX;xi+=.5){const h=RY*Math.sqrt(Math.max(0,1-((xi+.25)/RX)**2));A.R(xi,y+h*.55,.5,h*.45,'#000',.18)}A.E(-5,y-3.6,4.4,2.2,'#ffffff',.45);A.R(-15,y-.3,30,.6,BR3,.8);for(const s of [-1,1,0])A.L(s*10,y+5,s*5.6,-30+b,'#3a2a1a',.25);A.P([[-2,y+6.6],[2,y+6.6],[0,y+8]],BR)}
+  /* 프로펠러 (양옆) */for(const s of [-1,1]){const x=s*13,y=-24+b;A.L(s*7,y,x,y,BR3,.9);A.C(x,y,1,BR);const r=Math.floor(t*20)%2;A.R(x-.3,y-(r?3.6:.6),.6,r?7.2:1.2,'#d0d8e0',.8);A.R(x-(r?.6:3.6),y-.3,r?1.2:7.2,.6,'#d0d8e0',.8)}
+  /* 곤돌라 하체 */{const y=-12+b;A.plate([[-9,y-6],[9,y-6],[7,y+3],[-7,y+3]],C.wd,K,C.wd2);for(let i=0;i<4;i++)A.R(-7.4,y-4.6+i*2,14.8,.35,'#3a2410',.8);for(let i=-2;i<=2;i++){A.C(i*3,y-1.6,.9,K);A.C(i*3,y-1.6,.6,'#ffe8a0',.9)}A.R(-9.6,y-6.6,19.2,1,BR);A.P([[-7,y+3],[7,y+3],[3,y+6],[-3,y+6]],C.wd2)}
+  /* 상체: 외투 */{const y=-30+b;A.plate([[-6,y],[6,y],[7,y+12],[-7,y+12]],C.nv2,K,C.nv3);A.P([[-1.6,y],[1.6,y],[0,y+4]],W1);for(let i=0;i<3;i++)for(const s of [-1,1])A.C(s*2.6,y+5+i*2.4,.45,BR2);
+   for(const s of [-1,1]){A.E(s*6.6,y+1,2.8,1.6,BR);for(let i=0;i<3;i++)A.R(s*6.6-1.6+i*1.2,y+2,.35,1.6,BR2)}A.R(-6.6,y+9,13.2,1.2,K);A.R(-1,y+9,2,1.2,BR2)}
+  /* 머리: 수염 · 함장 모자 */{const y=-36+b;A.E(0,y,4,4,'#f0c8a0');A.E(0,y+2.6,4.2,2,W2);if(!A.blink&&!A.dm){A.R(-2.4+A.look[0]*.4,y-.8,1,1,K);A.R(1.4+A.look[0]*.4,y-.8,1,1,K)}A.R(-3,y-1.8,2.4,.4,W3);A.R(.6,y-1.8,2.4,.4,W3);
+   A.P([[-5.6,y-3],[5.6,y-3],[4.4,y-6.4],[-4.4,y-6.4]],C.nv);A.R(-6.4,y-3.4,12.8,1,K);A.R(-4.4,y-4.6,8.8,.7,BR);A.C(0,y-5,1,BR2)}
+  /* 망원경 팔 (오른) · 키 손잡이 (왼) */lim(A,6.6,-28+b,12,-22+b,1.4,C.nv2,C.nv3);lim(A,12,-22+b,18,-26+b,1.6,BR3,BR2);A.C(18.4,-26.2+b,1.1,K);A.C(18.4,-26.2+b,.7,'#bfeaff');A.glow(18.4,-26.2+b,3,'#bfeaff',.6+A.pul*.4);
+  lim(A,-6.6,-28+b,-11,-21+b,1.4,C.nv2,C.nv3);{const x=-12,y=-20+b,r=t*1.4;A.ring(x,y,2.6,.5,C.wd2);for(let i=0;i<6;i++){const a=r+i*Math.PI/3;A.L(x,y,x+Math.cos(a)*3.4,y+Math.sin(a)*3.4,C.wd2,.4)}A.C(x,y,.6,BR)}
+  A.bbox=[-16,-56,20,2]};
+
+ /* 5. 깃털 시계탑 — 거꾸로 매달린 탑 · 정오에 멈춘 문자판 · 깃털 날개 · 깃펜 바늘 */
+ R.c_s6_clock=A=>{const t=A.t,y=-24+A.bob*.7,C={m1:'#e8eef6',m2:'#c0ccd8',m3:'#8a9cb0',f1:'#8ad8ff',f2:'#4aa0e0',f3:'#2a5a9a'};
+  /* 날개 (깃털 여러 장) */for(const s of [-1,1])for(let i=0;i<7;i++){const fl=Math.sin(t*2+i*.3)*.08,a=-Math.PI/2+s*(.5+i*.24)+s*fl,L=14-i*.9,x0=s*7,y0=y-6+i*.6,x1=x0+Math.cos(a)*L,y1=y0+Math.sin(a)*L*.85;
+   lim(A,x0,y0,x1,y1,1.6-i*.08,i<3?C.f1:i<5?C.f2:C.f3);A.L(x0,y0,x1,y1,'#ffffff',.2,.6)}
+  /* 탑 몸 (위는 받침, 아래로 뾰족 지붕 = 거꾸로) */A.plate([[-8,y-18],[8,y-18],[7,y+6],[-7,y+6]],C.m1,K,'#ffffff');for(let i=0;i<4;i++)A.R(-7,y-14+i*5,14,.4,C.m3,.7);for(const s of [-1,1])A.R(s*6-1,y-17,2,22,C.m2,.6);
+  A.R(-9,y-19.4,18,1.6,BR);A.R(-9,y-19.4,18,.5,BR2);/* 매달린 사슬 */for(let i=0;i<6;i++)A.E(0,y-21-i*1.6,.6,.9,i%2?BR2:BR3);A.R(-3,y-31,6,1,BR3);
+  /* 거꾸로 지붕 */A.P([[-8,y+6],[8,y+6],[0,y+18]],K);A.P([[-7.2,y+6.4],[7.2,y+6.4],[0,y+17]],C.f3);A.P([[0,y+6.4],[7.2,y+6.4],[0,y+17]],C.f2);for(let i=1;i<4;i++)A.R(-7+i*1.8,y+6.6+i*2.4,14-i*3.6,.35,C.f1,.6);A.C(0,y+18.4,.9,BR2);
+  /* 문자판 */{const cy=y-8,R0=5.6;A.C(0,cy,R0+.8,K);A.C(0,cy,R0+.4,BR);A.C(0,cy,R0,'#fffaf0');for(let i=0;i<12;i++){const a=i*Math.PI/6;A.R(Math.cos(a)*(R0-1)-.25,cy+Math.sin(a)*(R0-1)-.25,.5,.5,i%3?C.m3:'#2a3a52')}
+   /* 정오에서 떨리는 깃펜 바늘 */const jit=Math.sin(t*14)*.04,a1=-Math.PI/2+jit,a2=-Math.PI/2-.02;lim(A,0,cy,Math.cos(a1)*4.6,cy+Math.sin(a1)*4.6,.5,'#2a3a52');A.P([[Math.cos(a2)*3.4-.8,cy+Math.sin(a2)*3.4],[Math.cos(a2)*3.4+.8,cy+Math.sin(a2)*3.4],[0,cy-4.8]],C.f2);A.C(0,cy,.7,BR2);
+   if(!A.dm){A.glow(0,cy,8,'#bfeaff',.35+A.pul*.4)}}
+  /* 아래 창문 = 눈 */for(const s of [-1,1]){const ex=s*3,ey=y+1.6;A.R(ex-1.3,ey-1.6,2.6,3.2,K);A.R(ex-1,ey-1.3,2,2.6,'#1a2840');if(!A.blink&&!A.dm){A.R(ex-.6+A.look[0]*.3,ey-.6,1.2,1.2,'#8ad8ff');A.glow(ex,ey,2.6,'#8ad8ff',.6)}}
+  /* 떨어지는 깃털 */for(let i=0;i<4;i++){const q=((t*.3)+i/4)%1,x=-12+i*8+Math.sin(t*2+i)*2,yy=y+4+q*20;A.P([[x,yy],[x+1,yy+.4],[x,yy+2.4]],C.f1,1-q)}
+  A.bbox=[-20,-58,20,2]};
+
+ /* 6. 풍금 합창단 — 부채꼴 오르간 파이프 · 파이프마다 노래하는 가면 · 풀무 날개 */
+ R.c_s6_organ=A=>{const t=A.t,b=A.bob*.3,C={iv:'#f0e8dc',iv2:'#c8bca8',lv:'#8a6ac8',lv2:'#c8a0ff',lv3:'#4a3478',gd:BR2};
+  A.E(0,1,18,1.8,'#000',.35);
+  /* 받침 (오르간 상자) */A.plate([[-14,-10+b],[14,-10+b],[13,0],[-13,0]],'#5a3a28',K,'#8a5a3a');for(let i=-5;i<=5;i++)A.R(i*2.2-.8,-6+b,1.6,3.6,i%2?W1:K);A.R(-14,-11+b,28,1.4,BR);
+  /* 풀무 날개 (숨쉬기) */const br=.5+.5*Math.sin(t*2);for(const s of [-1,1]){for(let i=0;i<5;i++){const a=s*(.3+i*.16+br*.06);A.P([[s*12,-14+b],[s*12+Math.sin(a)*14,-14+b-Math.cos(a)*10],[s*12+Math.sin(a+s*.14)*14,-14+b-Math.cos(a+s*.14)*10]],i%2?C.lv:C.lv3)}A.C(s*12,-14+b,1.4,BR)}
+  /* 파이프 부채꼴 */const N=9;for(let i=0;i<N;i++){const k=i-(N-1)/2,h=18+(4-Math.abs(k))*4.4,x=k*2.8,top=-11+b-h;A.R(x-1.3,top,2.6,h,K);A.R(x-1,top+.2,2,h-.4,i%2?C.iv:C.iv2);A.R(x-1,top+.2,.6,h-.4,'#ffffff',.6);A.P([[x-1,top+h*.55],[x+1,top+h*.55],[x,top+h*.55-1.2]],K);
+   /* 파이프 위 가면 얼굴 (노래) */const fy=top+3.2,sing=Math.max(0,Math.sin(t*3+i*.9));A.E(x,fy,1.5,1.9,K);A.E(x,fy,1.2,1.6,'#fff6ee');A.R(x-.8,fy-.6,.5,.35,K);A.R(x+.3,fy-.6,.5,.35,K);A.E(x,fy+.7,.4,.2+sing*.5,K);
+   if(sing>.6)A.ring(x,top-1.6,1+sing*1.6,.25,C.lv2,.7)}
+  /* 가운데 지휘 가면 */{const y=-30+b;A.E(0,y,4,4.6,K);A.E(0,y,3.5,4.1,'#fff6ee');A.P([[-3.5,y-1],[3.5,y-1],[0,y-5]],C.lv);for(const s of [-1,1]){A.P([[s*.8,y-.6],[s*2.8,y-1.4],[s*2.4,y+.2]],K);if(!A.blink&&!A.dm)A.R(s*1.8-.3+A.look[0]*.3,y-.8,.6,.5,C.lv2)}A.E(0,y+2,1.2,.5+A.open*1.2,K);A.glow(0,y,8,C.lv2,.4+A.pul*.4)}
+  A.rise(6,-16,16,-20,24,.4,C.lv2,.7,.5);A.bbox=[-28,-52,28,2]};
+
+ /* 7. 무지개 다리 수문장 — 깨진 무지개 다리를 등에 진 거대 결정 거인 · 외눈 프리즘 · 빛의 대검 · 아치 방패 */
+ R.c_s6_prism=A=>{const t=A.t,b=A.bob*.25,C={g0:'#0e1428',g1:'#1c2848',g2:'#2e4878',g3:'#5a88c8',g4:'#a8d8ff'},RB=['#ff4a5a','#ff9a3a','#ffe04a','#4ae08a','#3aa8ff','#6a5aff','#c85aff'],cs=Math.floor(t*4)%7,BL=A.win('beam')||0;
+  /* 깨진 무지개 아치 (조각이 떠 있음) */for(let i=0;i<7;i++){const r=24.5-i*1.2;for(let a=0;a<=80;a++){const q=Math.PI+a*Math.PI/80,gap=(a>30&&a<38)||(a>58&&a<63);if(gap)continue;const fl=(a>38&&a<58)?Math.sin(t*1.5+a*.1)*1.2-1.6:0;A.R(Math.cos(q)*r-.7,-28+Math.sin(q)*r*1.05-.7+fl,1.4,1.4,RB[i],.85)}}
+  /* 다리 받침 */A.P([[-22,0],[22,0],[18,-4.4],[-18,-4.4]],'#3a3a4e');for(let i=-5;i<=5;i++)A.R(i*3.4-.3,-4.4,.6,4.4,'#24243a');A.R(-22,-5,44,1,'#8a8aa8');for(const s of [-1,1])A.P([[s*18,-5],[s*21,-5],[s*20,-10],[s*18.4,-10]],'#5a5a78');
+  /* 다리 (기둥 같은 결정) */for(const s of [-1,1]){A.P([[s*3,-18+b],[s*9,-18+b],[s*8,-5],[s*3.4,-5]],K);A.P([[s*3.6,-17.4+b],[s*8.4,-17.4+b],[s*7.4,-5.6],[s*4,-5.6]],C.g2);A.P([[s*6,-17.4+b],[s*8.4,-17.4+b],[s*7.4,-5.6],[s*5.6,-5.6]],C.g1,.8);A.L(s*4,-16+b,s*4.6,-7,C.g4,.3,.7);A.spike(s*8.6,-12+b,s>0?-.2:Math.PI+.2,3,1.8,C.g3)}
+  /* 몸통: 넓은 역삼각 결정 흉갑 + 속 빛 */{const y=-18+b;A.P([[-14,y-22],[14,y-22],[9,y-2],[0,y+2],[-9,y-2]],K);A.P([[-13,y-21.4],[13,y-21.4],[8.4,y-2.4],[0,y+1.2],[-8.4,y-2.4]],C.g1);A.P([[0,y-21.4],[13,y-21.4],[8.4,y-2.4],[0,y+1.2]],C.g0,.7);
+   for(const [x0,y0,x1,y1] of [[-13,y-21.4,0,y-10],[13,y-21.4,0,y-10],[0,y-10,0,y+1.2],[-8.4,y-2.4,0,y-10],[8.4,y-2.4,0,y-10]])A.L(x0,y0,x1,y1,C.g3,.35,.8);
+   for(let i=0;i<5;i++){const cx=(i-2)*4.2,cy2=y-14+Math.abs(i-2)*1.6;A.L(cx,cy2,cx+((i*7)%3-1)*2,cy2+5,RB[(i+cs)%7],.4,.9)}
+   A.P([[0,y-15],[3.4,y-10],[0,y-5],[-3.4,y-10]],'#ffffff');A.P([[0,y-14],[2.6,y-10],[0,y-6],[-2.6,y-10]],RB[cs]);A.glow(0,y-10,10+A.pul*6,RB[cs],.8)}
+  /* 어깨: 거대한 결정 견갑 */for(const s of [-1,1]){const x=s*14,y=-38+b;A.P([[x-s*3,y+5],[x+s*5,y+3],[x+s*8,y-6],[x+s*2,y-9],[x-s*2,y-4]],K);A.P([[x-s*2.4,y+4.4],[x+s*4.4,y+2.6],[x+s*7.2,y-5.6],[x+s*2,y-8.2],[x-s*1.6,y-3.6]],C.g2);A.P([[x+s*2,y-8.2],[x+s*7.2,y-5.6],[x+s*3,y-2]],C.g4,.7);
+   A.spike(x+s*4,y-7,-Math.PI/2+s*.5,7,2.4,C.g3,'#ffffff');A.spike(x+s*7,y-4,-Math.PI/2+s*1,5,1.8,C.g2,C.g4)}
+  /* 머리: 외눈 프리즘 왕관 */{const y=-44+b;A.P([[-5,y+5],[5,y+5],[6,y-1],[0,y-5],[-6,y-1]],K);A.P([[-4.4,y+4.4],[4.4,y+4.4],[5.4,y-1],[0,y-4.4],[-5.4,y-1]],C.g1);A.R(-4,y-.4,8,2.4,K);
+   if(!A.dm&&!A.blink){const lx=A.look[0]*1.2;A.P([[lx-2.6,y+.8],[lx,y-.6],[lx+2.6,y+.8],[lx,y+2]],'#ffffff');A.C(lx,y+.7,.8,RB[cs]);A.glow(lx,y+.8,7,RB[cs],.9);A.L(-4,y+.8,4,y+.8,RB[cs],.2,.6)}
+   for(let i=-2;i<=2;i++)A.spike(i*2.2,y-3.4+Math.abs(i)*.8,-Math.PI/2+i*.22,i?4.4:7,1.4,i%2?C.g3:C.g4,'#ffffff');A.brow(0,y-.6,9,.6,K)}
+  /* 오른팔: 빛의 대검 (위로 치켜듦) */{lim(A,14,-36+b,20,-26+b,2.6,C.g2,C.g4);lim(A,20,-26+b,22,-34+b,2.2,C.g2,C.g4);A.C(22,-34+b,2.2,C.g3);const a=-1.75+BL*.6,L=30,hx=22,hy=-35+b,ex=hx+Math.cos(a)*L,ey=hy+Math.sin(a)*L*.6;
+   A.L(hx-Math.cos(a)*3,hy-Math.sin(a)*3,ex,ey,K,3.6);for(let i=0;i<7;i++){const k=i/7,k2=(i+1)/7;A.L(hx+(ex-hx)*k,hy+(ey-hy)*k,hx+(ex-hx)*k2,hy+(ey-hy)*k2,RB[(i+cs)%7],2.4)}A.L(hx,hy,ex,ey,'#ffffff',.6,.9);A.R(hx-3,hy-.6,6,1.2,'#d8d8f0');A.glow(ex,ey,6,'#ffffff',.5)}
+  /* 왼팔: 다리 아치 모양 탑 방패 */{lim(A,-14,-36+b,-19,-26+b,2.6,C.g2,C.g4);const x=-21,y=-22+b;A.P([[x-6,y-10],[x+5,y-10],[x+5,y+8],[x-.5,y+11],[x-6,y+8]],K);A.P([[x-5.4,y-9.4],[x+4.4,y-9.4],[x+4.4,y+7.6],[x-.5,y+10.2],[x-5.4,y+7.6]],C.g1);
+   for(let i=0;i<7;i++){for(let a=0;a<=14;a++){const q=Math.PI+a*Math.PI/14,r=4-i*.45;A.R(x-.5+Math.cos(q)*r-.3,y+2+Math.sin(q)*r-.3,.6,.6,RB[i],.9)}}A.R(x-5,y+2.6,9,.6,C.g3);A.spike(x-.5,y-9.4,-Math.PI/2,3,1.6,C.g3,'#ffffff')}
+  A.rise(8,-24,24,-6,40,.35,'#ffffff',.6,.3);A.bbox=[-30,-56,30,2]};
+
+ /* 8. 메아리 사냥매 — 칼날 깃털의 거대한 전투 맹금 · 날개를 활짝 편 위협 자세 · 세 개의 눈 투구 · 비명 지르는 부리 · 쇠사슬 종을 움켜쥔 발톱 */
+ R.c_s6_falcon=A=>{const t=A.t,y=-28+A.bob*1.1,C={s0:'#141820',s1:'#262e3c',s2:'#3e4a5e',s3:'#6a7a92',b1:'#6a4018',b2:'#b8782a',b3:'#ffc860',ey:'#ff7a2a'},fl=Math.sin(t*3)*.12,SC=A.win('screech')||0;
+  /* 날개: 칼날 깃털 3단 (펼친 위협 자세) */for(const s of [-1,1]){for(let row=0;row<3;row++)for(let i=0;i<9;i++){const a=-Math.PI/2+s*(.35+i*.15+row*.05)-s*fl*(1+row*.3),L=(31-i*1.8)*(1-row*.22),x0=s*(5+row*1.4),y0=y-3+i*.6+row*1.6,x1=x0+Math.cos(a)*L,y1=y0+Math.sin(a)*L*.62+i*.6;
+     const col=row===0?(i<4?C.b2:C.s2):row===1?C.s1:C.s0;A.P([[x0,y0-.8],[x1+s*.6,y1-.6],[x1+s*2.4,y1+1.4],[x0,y0+1]],K);A.P([[x0,y0-.4],[x1,y1-.2],[x1+s*1.8,y1+1],[x0,y0+.6]],col);if(row===0){A.L(x0,y0-.2,x1,y1,C.s3,.25,.8);A.R(x1-.4+s*1,y1,.8,.8,i<4?C.b3:'#c8d4e8')}}
+   /* 날개 뼈대 (황동 팔) */lim(A,s*4,y-4,s*13,y-12-fl*8,1.3,C.b1,C.b2);lim(A,s*13,y-12-fl*8,s*22,y-12-fl*10,.9,C.b1,C.b2);A.C(s*13,y-12-fl*8,1.3,C.b2);A.C(s*13,y-12-fl*8,.6,C.ey)}
+  /* 꼬리 칼깃 */for(let i=-3;i<=3;i++){const a=Math.PI/2+i*.16;A.P([[i*1.2,y+8],[i*1.2+Math.cos(a)*14+1,y+8+Math.sin(a)*14],[i*1.2+Math.cos(a)*14-1,y+8+Math.sin(a)*14]],i%2?C.s1:C.s2)}
+  /* 몸통: 장갑 가슴 */A.E(0,y+2,7.4,10,K);A.E(0,y+2,6.8,9.4,C.s1);A.P([[-5,y-4],[5,y-4],[3.6,y+9],[-3.6,y+9]],C.s2);for(let i=0;i<5;i++){A.P([[-4+i*.3,y-2+i*2.4],[4-i*.3,y-2+i*2.4],[0,y+i*2.4]],i%2?C.s3:C.s2);}A.R(-5.4,y-5,10.8,1,C.b2);A.C(0,y+1,1.6,C.ey);A.glow(0,y+1,5,C.ey,.5+A.pul*.5);
+  /* 다리 + 발톱이 움켜쥔 쇠사슬 종 */for(const s of [-1,1]){lim(A,s*3,y+9,s*4,y+15,1.6,C.b1,C.b2);for(let k=-1;k<=1;k++)A.spike(s*4+k*1.1,y+15,Math.PI/2+k*.4,2.6,.9,'#e8e0d0')}
+  {const by=y+19,sw=Math.sin(t*2)*.4;for(let i=0;i<3;i++)A.E(sw*i*.4,y+15.6+i*1.2,.7,.5,'#8a8a94');A.P([[-3.6+sw,by+5],[3.6+sw,by+5],[2.4+sw,by+.6],[-2.4+sw,by+.6]],K);A.P([[-3.1+sw,by+4.6],[3.1+sw,by+4.6],[2+sw,by+1],[-2+sw,by+1]],C.b2);A.R(-3.1+sw,by+4,6.2,.6,C.b3);A.C(sw,by+5.6,.7,C.b3);A.glow(sw,by+3,5,C.b3,.3+A.pul*.4)}
+  /* 머리: 세 눈 투구 · 볏 칼날 · 갈고리 부리 */{const hy=y-12;for(let i=-2;i<=2;i++)A.spike(i*1.4,hy-3+Math.abs(i)*.6,-Math.PI/2-i*.32,i?4:6,1.2,i%2?C.b2:C.b3,'#ffffff');
+   A.E(0,hy,5,4.2,K);A.E(0,hy,4.4,3.7,C.s2);A.P([[-4.4,hy-1.6],[4.4,hy-1.6],[3,hy+1.4],[-3,hy+1.4]],C.s0);
+   const op=.6+SC*2+A.open*1.6;A.P([[-1.8,hy+1.6],[1.8,hy+1.6],[0,hy+5.6]],K);A.P([[-1.4,hy+1.8],[1.4,hy+1.8],[.4,hy+5.2],[0,hy+5.6]],C.b3);A.P([[-1.2,hy+2.6+op*.3],[1.2,hy+2.6+op*.3],[0,hy+4+op]],'#1a0a0a');
+   if(!A.dm&&!A.blink){for(const [ex,ey,r] of [[-2.2,hy-.2,.8],[2.2,hy-.2,.8],[0,hy-1.6,.6]]){A.C(ex+A.look[0]*.3,ey,r,C.ey);A.R(ex+A.look[0]*.3-.15,ey-.4,.3,.3,'#ffffff');A.glow(ex,ey,3,C.ey,.8)}}A.brow(-2.2,hy-1.4,2.6,.5,K);A.brow(2.2,hy-1.4,2.6,-.5,K)}
+  /* 비명 음파 */for(let k=1;k<=3;k++){const q=((t*1.2)+k/3)%1;A.ring(0,y-8,3+q*(10+SC*14),.3,C.ey,(.35+SC*.4)*(1-q))}
+  A.bbox=[-24,-52,24,2]};
+
+ /* 9. 폭풍의 눈 — 나선 구름띠 · 가운데 고요한 거대 눈 · 소용돌이에 휩쓸린 기왓장·연·톱니 · 번개 */
+ R.c_s6_storm=A=>{const t=A.t,y=-26+A.bob*.5,C={s1:'#141c38',s2:'#24305a',s3:'#3a4c80',s4:'#6a80b8',s5:'#a8bce0'},sp=t*.9;
+  /* 바깥 나선 구름띠 */for(let k=0;k<3;k++)for(let i=0;i<40;i++){const a=sp*(1+k*.3)+i*TAU/40+k*1.1,rr=21-k*4.6+Math.sin(i*1.7+t)*1.2,x=Math.cos(a)*rr,yy=y+Math.sin(a)*rr*.62;A.C(x,yy,2.4-k*.4,[C.s2,C.s3,C.s4][k],.85)}
+  for(let i=0;i<30;i++){const a=-sp*1.4+i*TAU/30,rr=10.6,x=Math.cos(a)*rr,yy=y+Math.sin(a)*rr*.62;A.C(x,yy,1.5,C.s5,.7)}
+  /* 휩쓸린 잔해 */const deb=[['tile','#a84a3a'],['kite','#ff5a4a'],['gear','#c8a060'],['tile','#a84a3a'],['kite','#5ad08a'],['gear','#c8a060']];for(const [i,[k,c]] of deb.entries()){const a=sp*1.6+i*TAU/6,rr=24+Math.sin(i)*2,x=Math.cos(a)*rr,yy=y+Math.sin(a)*rr*.5-2;
+   if(k==='tile')A.P([[x-1.6,yy-.6],[x+1.6,yy-1],[x+1.4,yy+.8],[x-1.4,yy+1]],c);else if(k==='kite')A.P([[x,yy-1.6],[x+1.2,yy],[x,yy+1.6],[x-1.2,yy]],c);else A.gear(x,yy,1.3,6,a,c,'#6a4a2a')}
+  /* 가운데 고요한 눈 */{const r=6.6;A.C(0,y,r+1.2,K);A.E(0,y,r+.6,r*.62+.6,C.s1);A.E(0,y,r,A.blink?.6:r*.6,'#eef6ff');if(!A.blink&&!A.dm){const lx=A.look[0]*2.4,ly=A.look[1]*1.2;A.C(lx,y+ly,3,'#2a6ab8');A.C(lx,y+ly,2.2,'#7af0ff');A.C(lx,y+ly,1.2,K);A.R(lx-1.2,y+ly-1.4,.8,.8,'#ffffff');A.glow(0,y,14,'#7af0ff',.4+A.pul*.4)}
+   A.L(-r-1,y-r*.6-.6,r+1,y-r*.6-1.4,C.s1,.9)}
+  /* 번개 */if(Math.floor(t*4)%4===0){bolt(A,-14,y-14,-20,y+14,Math.floor(t*4),'#ffe25a',.9);A.glow(-17,y,10,'#ffe25a',.4)}
+  /* 아래 회오리 꼬리 (땅에 닿음) */for(let i=0;i<10;i++){const q=i/10,w=6-q*5,yy=y+12+q*14,ox=Math.sin(t*3+q*6)*q*3;A.E(ox,yy,w,1,i%2?C.s3:C.s2,.85)}
+  A.bbox=[-28,-50,28,2]};
+
+ /* 10. 공명탑 · 첫 번째 노래 — 소리굽쇠 왕관 · 종 고리들 · 가운데 노래 결정 · 하프 줄 팔 · 1~5장의 소리 조각 */
+ R.c_s6_spire=A=>{const t=A.t,b=A.bob*.25,C={w1:'#f4f0e4',w2:'#d8d0bc',w3:'#a89c84',g1:'#e0b860',g2:'#ffe8a0',g3:'#8a6a2a',cy:'#7af0ff'};
+  A.E(0,1,16,1.8,'#000',.35);
+  /* 하프 줄 팔 (양쪽 곡선 틀 + 떨리는 줄) */for(const s of [-1,1]){const pts=[];for(let i=0;i<=8;i++){const q=i/8;pts.push([s*(7+Math.sin(q*Math.PI)*15),-44+b+q*34])}for(let i=0;i<8;i++){lim(A,pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1],1.1,C.g1,C.g2)}
+   for(let j=1;j<8;j++){const [px,py]=pts[j],v=Math.sin(t*12+j)*.4*A.pul;A.L(s*7,py,px,py+v,'#ffffff',.18,.8)}A.C(pts[0][0],pts[0][1],1,C.g2);A.C(pts[8][0],pts[8][1],1,C.g2)}
+  /* 탑 몸 */A.plate([[-7,-8+b],[7,-8+b],[5,-40+b],[-5,-40+b]],C.w1,K,'#ffffff');for(let i=0;i<6;i++){A.R(-6.4+i*.35,-12+b-i*5,12.8-i*.7,.5,C.w3,.8);A.R(-6.4+i*.35,-11.5+b-i*5,12.8-i*.7,.4,C.g1,.6)}
+  A.plate([[-10,-8+b],[10,-8+b],[12,0],[-12,0]],C.w2,K,C.w1);for(let i=-3;i<=3;i++)A.R(i*3.2-.8,-6+b,1.6,6,C.w3,.6);
+  /* 종 고리 (세 겹, 돈다) */for(let r=0;r<3;r++){const yy=-16+b-r*8,rr=7.6-r*.8;for(let i=0;i<6;i++){const a=t*(r%2?-1:1)*.8+i*Math.PI/3,x=Math.cos(a)*rr,front=Math.sin(a)>0;if(!front)continue;const bx=x,by=yy+Math.sin(a)*1.2;A.P([[bx-1.2,by+1.4],[bx+1.2,by+1.4],[bx+.7,by-.6],[bx-.7,by-.6]],C.g1);A.R(bx-1.2,by+1.1,2.4,.35,C.g2);A.C(bx,by+1.7,.3,C.g3)}A.ring(0,yy+.4,rr,.25,C.g3,.5)}
+  /* 노래 결정 (심장) */{const y=-24+b,p=.5+.5*Math.sin(t*3);A.P([[0,y-4.6],[3,y],[0,y+4.6],[-3,y]],K);A.P([[0,y-4],[2.5,y],[0,y+4],[-2.5,y]],C.cy);A.P([[0,y-4],[2.5,y],[0,y]],'#ffffff',.6);A.glow(0,y,8+p*6,C.cy,.6+A.pul*.4);
+   if(!A.dm&&!A.blink){A.R(-.5+A.look[0]*.5,y-.5,1,1,'#ffffff')}}
+  /* 소리굽쇠 왕관 */{const y=-40+b;A.P([[-5,y],[5,y],[3.6,y-3],[-3.6,y-3]],C.g1);for(const s of [-1,1]){lim(A,s*2.2,y-3,s*2.2,y-14,1.1,C.g2,'#ffffff');const v=Math.sin(t*20)*.3*(.3+A.pul);A.L(s*2.2+v,y-14,s*2.2+v,y-15,'#ffffff',.6)}A.C(0,y-3.4,1.3,C.g2);
+   for(let k=1;k<=3;k++){const q=((t*.8)+k/3)%1;A.ring(0,y-10,2+q*4.4,.3,C.g2,.55*(1-q))}}
+  /* 1~5장의 소리 조각 (톱니 · 송곳니 · 시계바늘 · 별 · 물방울) 공전 */for(let i=0;i<5;i++){const a=t*.6+i*TAU/5,x=Math.cos(a)*16,yy=-30+b+Math.sin(a)*4,c=['#8eda9e','#ff6a8a','#e8c070','#c8b8ff','#7ad0f0'][i];
+   if(i===0)A.gear(x,yy,1.4,6,t*2,c,'#3a5a44');else if(i===1)A.P([[x-1,yy-1.2],[x+1,yy-1.2],[x,yy+1.6]],c);else if(i===2){A.ring(x,yy,1.3,.35,c);A.L(x,yy,x+1,yy-.6,c,.3)}else if(i===3)A.P([[x,yy-1.8],[x+.6,yy-.4],[x+1.8,yy],[x+.6,yy+.4],[x,yy+1.8],[x-.6,yy+.4],[x-1.8,yy],[x-.6,yy-.4]],c);else A.P([[x,yy-1.8],[x+1.1,yy+.4],[x,yy+1.4],[x-1.1,yy+.4]],c);A.glow(x,yy,2.6,c,.5)}
+  A.bbox=[-23,-58,23,2]};
+
+
+ /* ---------- 난이도 단계: 보통 = post(몸 위 장식) · 어려움 = pre(몸 뒤 큰 부위)+post · 익스트림 = 전부 + 각성 리마스터 ---------- */
+ const U6={
+  c_s6_vane:{pre(A){const t=A.t,b=A.bob*.4;for(let k=0;k<2;k++)for(let i=0;i<24;i++){const a=t*(k?-1.2:1.6)+i*TAU/24,r=20+k*4;if(i%3===2)continue;A.R(Math.cos(a)*r-.5,-22+b+Math.sin(a)*r*.4-.5,1,1,k?'#bfeaff':'#5ad0b0',.6)}for(let i=0;i<4;i++){const w=Math.sin(t*4+i)*1.4;A.P([[6+i*1.4,-30+b],[8+i*1.4,-30+b],[16+i*2+w,-14+b+i],[14+i*2+w,-15+b+i]],i%2?'#ffffff':'#5ad0b0',.9)}},
+   post(A){const b=A.bob*.4;for(const [x,y] of [[-5,-28],[5,-28],[-5,-16],[5,-16]])A.C(x,y+b,.45,'#f0c878');for(let i=0;i<4;i++)A.L(-4+i*2.6,-14+b,-4.2+i*2.6,-11+b+(i%2),'#5ad0b0',.3,.8);A.R(-7,-30.6+b,14,.6,'#f0c878')}},
+  c_s6_kite:{pre(A){const t=A.t;for(let i=0;i<8;i++){const a=t*.5+i*TAU/8,x=Math.cos(a)*30,y=-30+Math.sin(a)*12,c=['#ff5a4a','#ffd04a','#4a8aff','#5ad08a'][i%4];A.P([[x,y-2],[x+1.4,y],[x,y+2],[x-1.4,y]],c,.85)}for(let i=0;i<5;i++){const q=((t*.8)+i/5)%1;A.L(-30+q*60,-48+i*6,-24+q*60,-48+i*6,'#ffffff',.2,.5*(1-q))}},
+   post(A){const b=A.bob*.3,y=-26+b;A.C(0,y+6,2.2,'#ffd04a');for(let i=0;i<8;i++){const a=i*Math.PI/4;A.L(Math.cos(a)*2.4,y+6+Math.sin(a)*2.4,Math.cos(a)*3.6,y+6+Math.sin(a)*3.6,'#ff8a3a',.35)}for(const s of [-1,1])for(let i=0;i<3;i++)A.R(s*14-1+i*.6,-23+b+i*1.4,.6,1,['#ff5a4a','#ffd04a','#4a8aff'][i])}},
+  c_s6_cloudwhale:{pre(A){const t=A.t,y=-24+A.bob*.8;cloud(A,-4,y-2,20,t,9,'#1a2234','#283450','#3a4a6a');for(let i=0;i<3;i++)if(Math.floor(t*6+i)%5===0)bolt(A,-24+i*20,y-14,-28+i*20,y+12,Math.floor(t*6)+i,'#ffe25a',.8)},
+   post(A){const t=A.t,y=-24+A.bob*.8;for(const [x,yy,r] of [[-8,-10,2.6],[6,-11,2.2],[-16,-8,1.8]])A.C(x,y+yy,r,'#e8f0fa',.8);for(let i=0;i<3;i++){const a=-Math.PI/2+(i-1)*.5;bolt(A,-19,y-9,-19+Math.cos(a)*6,y-9+Math.sin(a)*6,i+Math.floor(t*4),'#ffe25a',.8)}}},
+  c_s6_captain:{pre(A){const t=A.t,b=A.bob*.9;for(const s of [-1,1]){const x=s*20,y=-36+b;A.E(x,y,5,3,'#1a2440');A.E(x,y,4.4,2.4,s>0?'#d8384a':'#f4f7fb');A.L(x,y+3,s*12,-26+b,'#3a2a1a',.2)}for(let i=0;i<6;i++){const q=((t*.6)+i/6)%1;A.C(-8+Math.sin(i)*3,-6-q*-14,1+q*2,'#c8c8d0',.5*(1-q))}},
+   post(A){const b=A.bob*.9;for(let i=0;i<3;i++)A.C(-3.4+i*1.6,-27+b,.6,['#ffd04a','#ff5a6a','#7ad0f0'][i]);A.R(-14,-45.3+b,28,.5,'#f0c878');A.L(0,-52+b,0,-55+b,'#7a5428',.3);A.P([[0,-55+b],[2.6,-54.2+b],[0,-53.4+b]],'#ff5a6a')}},
+  c_s6_clock:{pre(A){const t=A.t,y=-24+A.bob*.7;A.gear(0,y-8,15,18,t*.3,'#c8964a','#7a5428',false);A.ring(0,y-8,12,.8,'#f0c878',.8)},
+   post(A){const y=-24+A.bob*.7;for(let i=0;i<12;i++){const a=i*Math.PI/6;A.R(Math.cos(a)*7.4-.3,y-8+Math.sin(a)*7.4-.3,.6,.6,'#f0c878')}A.P([[0,y+11],[1,y+12.4],[0,y+13.8],[-1,y+12.4]],'#8ad8ff');A.R(-8,y-3,16,.4,'#f0c878',.8)}},
+  c_s6_organ:{pre(A){const t=A.t,b=A.bob*.3;for(let i=0;i<11;i++){const k=i-5,h=26+(5-Math.abs(k))*3,x=k*3.4;A.R(x-1,-11+b-h,2,h,'#4a3478',.9);A.R(x-1,-11+b-h,2,.8,'#c8a0ff')}for(let i=0;i<5;i++){const q=((t*.5)+i/5)%1,x=-18+i*9;A.P([[x,-40-q*10],[x+1.4,-40-q*10],[x+1.4,-36-q*10]],'#c8a0ff',1-q)}},
+   post(A){const b=A.bob*.3;for(let i=0;i<9;i++){const k=i-4,x=k*2.8;A.R(x-1,-12+b-3,2,.5,'#f0c878')}A.P([[0,-35.4+b],[.8,-34.4+b],[0,-33.4+b],[-.8,-34.4+b]],'#ff6aa8')}},
+  c_s6_prism:{pre(A){const t=A.t;for(let i=0;i<8;i++){const a=t*.7+i*TAU/8,x=Math.cos(a)*29,y=-26+Math.sin(a)*9,h=3+(i%3);A.P([[x,y-h],[x+1.4,y],[x,y+h*.6],[x-1.4,y]],['#a8d8ff','#ffffff','#c85aff'][i%3],.85);A.glow(x,y,3,'#a8d8ff',.4)}},
+   post(A){const t=A.t,b=A.bob*.25,RB=['#ff4a5a','#ff9a3a','#ffe04a','#4ae08a','#3aa8ff','#6a5aff','#c85aff'];for(let i=0;i<7;i++){const x=-10+i*3.3,y=-36+b+Math.abs(i-3)*1.2;A.R(x-.4,y,.8,.8,RB[(i+Math.floor(t*4))%7])}for(const s of [-1,1])A.L(s*6,-26+b,s*3,-20+b,'#a8d8ff',.3,.8)}},
+  c_s6_falcon:{pre(A){const t=A.t,y=-28+A.bob*1.1,o=Math.sin(t*2)*2;for(const s of [-1,1])for(let i=0;i<7;i++){const a=-Math.PI/2+s*(.3+i*.17),L=36-i*2,x0=s*6,y0=y-2+i;A.L(x0,y0,x0+Math.cos(a)*L+s*o,y0+Math.sin(a)*L*.62,'#ff7a2a',.6,.3)}},
+   post(A){const y=-28+A.bob*1.1;for(const s of [-1,1]){for(let i=0;i<4;i++)A.C(s*(8+i*4.4),y-6-i*1.4,.4,'#ffc860')}A.R(-5.4,y-5.6,10.8,.4,'#ffe8a0');A.P([[-1,y+5],[1,y+5],[0,y+7]],'#ff7a2a')}},
+  c_s6_storm:{pre(A){const t=A.t,y=-26+A.bob*.5;for(let i=0;i<48;i++){const a=t*.5+i*TAU/48,r=29+Math.sin(i*2.3+t)*1.6;A.C(Math.cos(a)*r,y+Math.sin(a)*r*.55,2,'#0c1228',.9)}for(let i=0;i<16;i++){const q=((t*1.4)+i*.13)%1,x=-26+i*3.4;A.L(x,y+14+q*12,x-.6,y+16+q*12,'#7af0ff',.2,.5*(1-q))}},
+   post(A){const y=-26+A.bob*.5;for(let i=-3;i<=3;i++)A.L(i*1.8,y-4.6,i*2.4,y-7-Math.abs(i)*.2,'#ffe25a',.3);for(let i=-3;i<=3;i++)A.L(i*1.8,y+4.6,i*2.2,y+6.4,'#ffe25a',.25,.7)}},
+  c_s6_spire:{pre(A){const t=A.t;for(let k=0;k<3;k++){let px=-30,py=-36+k*5;for(let i=1;i<=20;i++){const x=-30+i*3,y=-36+k*5+Math.sin(t*1.2+i*.4+k)*3;A.L(px,py,x,y,['#7af0ff','#c8a0ff','#ffe8a0'][k],.6,.35);px=x;py=y}}},
+   post(A){const b=A.bob*.25;for(let i=0;i<5;i++)A.C(-4+i*2,-9+b,.5,'#ffe8a0');for(const s of [-1,1])A.P([[s*5,-40+b],[s*6.4,-38+b],[s*5,-36+b]],'#7af0ff')}}};
+ for(const k in U6)EXU[k]=U6[k];
+ Object.assign(EXF,{c_s6_vane:['#7af0d0',['crown']],c_s6_kite:['#ffd04a',['orbit']],c_s6_cloudwhale:['#ffe25a',['arcs']],c_s6_captain:['#ff6a74',['rays']],c_s6_clock:['#bfeaff',['halo']],c_s6_organ:['#e0c0ff',['rings']],c_s6_prism:['#ffffff',['rays','crystals']],c_s6_falcon:['#ff9a3a',['wings']],c_s6_storm:['#7af0ff',['rings']],c_s6_spire:['#ffe8a0',['halo','rays']]});
+ /* 엔진 등록: 넓은 그림판 · 보스 정보(색) */
+ for(const k in R){MON.reg[k]=R[k];MON.hand[k]=()=>{};MON.noArm[k]=1}
+ /* 전투 크기 (5장과 같은 기준): 그림판 단위 × 0.5 */Object.assign(MON.scl,{c_s6_vane:.52,c_s6_kite:.5,c_s6_cloudwhale:.52,c_s6_captain:.5,c_s6_clock:.52,c_s6_organ:.5,c_s6_prism:.5,c_s6_falcon:.5,c_s6_storm:.52,c_s6_spire:.48});
+ try{if(window.__V43BIG)for(const k in R)window.__V43BIG[k]=1}catch(e){}
+ for(const b of S6){if(!C3BOSS[b.art])C3BOSS[b.art]={base:0,c:b.c,pal:[b.dark,K,b.c,'#f4f7fb'],cfg:{bw:18,bh:18,base:'hover',head:'visor',arms:'piston',ex:[]},th:0,deck:[]}}
+}catch(e){console.error('v45 ch6 designs',e)}})();
+/* ================= v45 챕터 6 ZENITH 공격 패턴 40종 (보스당 4개) · 바람 기믹 · 하늘 전장 · 전투 시작/끝 =================
+   공격은 보스 그림의 실제 부위(창끝·연줄·입·포문·문자판·파이프·눈·날개…)에서 나온다. 모두 예고가 먼저.
+   바람: 화살표로 방향을 예고한 뒤 주인공을 그 방향으로 민다(G.pull을 아주 먼 점으로 써서 한 방향 힘). */
+(function(){try{
+ const L6=window.S6ART;if(!L6)return;
+ const tel=()=>n4T(),spd=()=>n4S(),ph=()=>G.phase||0;
+ /* 보스 그림 좌표 → 화면 좌표 (그림이 그려진 실제 위치 기록) */
+ const POS={};{const _md=monDraw;monDraw=function(key,c,B,x,y,t,o,u){const r=_md.apply(this,arguments);if(key&&key.indexOf('c_s6_')===0&&typeof ctx!=='undefined'&&c===ctx)POS[key]={x,y,u:(u||U)*(MON.scl[key]||1)};return r}}
+ const P6=(ax,ay)=>{try{const p=POS['c_'+L6[G.s6].art];if(p)return [p.x+ax*p.u,p.y+ay*p.u]}catch(e){}const g=bgeo();return [g.x+ax*U*.6,g.y+ay*U*.6]};
+ const toP=(x,y)=>Math.atan2(P.y-y,P.x-x);
+ const shot=(T0,x,y,a,v,o)=>npShot(T0,T0+tel(),x,y,a,v*spd(),Object.assign({r:5,rayL:46,chg:false,dmg:10},o||{}));
+ const circ=(T0,x,y,r,col,o)=>{const [cx,cy]=npIn(x,y,r*.6);return NP(Object.assign({k:'circ',x:cx,y:cy,r,t0:T0,t1:T0+tel(),t2:T0+tel()+.4,col,dmg:12},o||{}))};
+ const snd=(T,f,l,w,v,f2)=>sch(T,()=>{try{sfx(f,l||.15,w||'square',v||.05,f2||f*.5)}catch(e){}});
+ const shake=(T,v)=>sch(T,()=>{G.shake=Math.max(G.shake||0,v)});
+ /* ---------- 바람 ---------- */
+ function wind(T0,dur,dx,dy,str){const tl=tel()+.3;sch(T0,()=>{G.s6w={t0:T0,t1:T0+tl,t2:T0+tl+dur,dx,dy};G.pull={x:AX+AW/2+dx*6000,y:AY+AH/2+dy*6000,str:(str||46)*(diff==='easy'?.7:diff==='extreme'?1.25:1),t0:T0+tl,t1:T0+tl+dur,tp:T0+tl,kind:'wind'};try{sfx(220,1.2,'sine',.03,120)}catch(e){}});return tl}
+ function drawWind(now,beat){const w=G.s6w;if(!w||beat<w.t0||beat>=w.t2+.2)return;const t=now/1000;
+  if(beat<w.t1){/* 예고: 큰 화살표 깜빡임 */const p=(beat-w.t0)/(w.t1-w.t0),bl=Math.floor(now/120)%2,a=Math.atan2(w.dy,w.dx);for(let k=-1;k<=1;k++){const cx=AX+AW/2+Math.cos(a)*k*60,cy=AY+AH/2+Math.sin(a)*k*60;for(let j=0;j<3;j++)cChevron(cx+Math.cos(a)*j*9,cy+Math.sin(a)*j*9,a,bl?'#ffffff':'#bfeaff',.35+.5*p,4)}
+   ctx.font='bold 9px '+FONT_STACK;ctx.textAlign='center';ctx.fillStyle='#ffffff';ctx.globalAlpha=.6+.4*p;ctx.fillText('바람 '+(Math.abs(w.dx)>Math.abs(w.dy)?(w.dx>0?'→':'←'):(w.dy>0?'↓':'↑')),AX+AW/2,AY+22);ctx.globalAlpha=1;ctx.textAlign='left';return}
+  /* 실제 바람: 흐르는 바람 줄기 */const fade=beat>w.t2?1-(beat-w.t2)/.2:1;for(let i=0;i<26;i++){const q=((t*1.4)+i*.137)%1,len=18+(i%3)*10,x=w.dx?(w.dx>0?AX+q*AW:AX+AW-q*AW):AX+((i*53)%AW),y=w.dy?(w.dy>0?AY+q*AH:AY+AH-q*AH):AY+((i*37)%AH);
+   line(x,y,x-w.dx*len,y-w.dy*len,3,(px,py)=>cPx(px,py,1,'#ffffff',.35*fade*Math.sin(q*Math.PI)))}}
+ /* ---------- 패턴 ---------- */
+ const D=(n,kr,ch,est,tip,fn)=>defPat(n,kr,ch,est,tip,fn);
+ /* 1 풍향계 기사 */
+ D('s6VaneLance','돌풍 창격','hands',11,'바람이 부는 쪽에서 화살 창이 줄지어 날아옴 → 바람에 밀리지 말고 빈 줄로',t=>{const dir=P.x<HOME.x?1:-1,wl=wind(t,5,dir,0,40),n=4+ph();
+  for(let i=0;i<n;i++){const T0=t+wl*.5+i*.9,gap=Math.floor(RND()*5);sch(T0,()=>{for(let r=0;r<5;r++){if(r===gap)continue;const y=AY+30+r*(AH-50)/4,x=dir>0?AX+4:AX+AW-4;shot(T0,x,y,dir>0?0:Math.PI,110,{sty:'light',col:'#5ad0b0',r:6})}});snd(T0+tel(),300,.12,'sawtooth',.04,120)}
+  return wl*.5+n*.9+tel()+1});
+ D('s6CompassSpin','나침반 회전','hands',10,'방패의 나침반이 돌며 8방향으로 쏨 → 바늘 사이 빈 방향으로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.1;sch(T0,()=>{const [x,y]=P6(-11,-19),off=k*.2;for(let i=0;i<8;i++)shot(T0,x,y,off+i*TAU/8,70,{sty:'spark',col:'#e0965a',rayL:30})});snd(T0+tel(),660,.08,'square',.04,990)}
+  return n*1.1+tel()+1});
+ D('s6WeatherTurn','풍향 전환','field',12,'바람이 반대로 바뀌며 회오리 기둥이 행진 → 바뀌는 순간 반대쪽으로 버텨',t=>{const w1=wind(t,2.4,1,0,44);wind(t+w1+2.4,2.4,-1,0,44);
+  for(let i=0;i<6;i++){const T0=t+i*.75,x=AX+40+i*(AW-80)/5;circ(T0,x,AY+AH*.5+Math.sin(i)*40,16,'#bfeaff',{label:'⟲',t2:T0+tel()+.8})}
+  return w1+5.2});
+ D('s6Rooster','수탉의 외침','head',10,'투구 위 수탉이 울면 깃털 고리가 퍼짐 → 고리의 틈으로',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.3;sch(T0,()=>{const [x,y]=P6(0,-48),gap=toP(x,y)+(k%2?Math.PI:0);for(let i=0;i<24;i++){const a=i*TAU/24;if(Math.abs(((a-gap+Math.PI*3)%TAU)-Math.PI)<.45)continue;shot(T0,x,y,a,64,{sty:'light',col:'#ff9a4a',r:4,rayL:20})}});snd(T0+tel(),880,.3,'sawtooth',.04,1320)}
+  return n*1.3+tel()+1});
+ /* 2 연줄의 거인 */
+ D('s6KiteDive','연 급강하','all',11,'하늘의 연이 내 자리를 찍고 내리꽂힘 → 원이 차오르면 벗어나',t=>{const n=6+ph()*2;
+  for(let i=0;i<n;i++){const T0=t+i*.45;sch(T0,()=>{const [hx,hy]=P6(i%2?14:-14,-26),x=P.x+(RND()-.5)*30,y=P.y+(RND()-.5)*20;const c=circ(T0,x,y,15,['#ff5a4a','#ffd04a','#4a8aff','#5ad08a'][i%4],{label:'◆'});
+   NP({k:'orb',sty:'light',col:'#ffffff',r:4,harm:false,noTel:true,t0:T0+tel()-.5,t1:T0+tel()-.5,t2:T0+tel(),pos:b=>{const q=Math.min(1,(b-(T0+tel()-.5))/.5);return [hx+(c.x-hx)*q,hy+(c.y-hy)*q-Math.sin(q*Math.PI)*40]}})});shake(T0+tel(),.18)}
+  return n*.45+tel()+1});
+ D('s6StringCut','연줄 가르기','hands',11,'양손의 연줄이 대각선으로 화면을 가름 → 두 줄이 엇갈리는 틈으로',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.4;for(const s of [-1,1]){const [hx,hy]=P6(s*14,-26),off=(k%2?1:-1)*s*60;NP({k:'seg',sty:'laser',col:'#f0e8d8',w:4,t0:T0,t1:T0+tel(),t2:T0+tel()+.6,a:()=>[hx,hy],b:()=>[hx-s*AW*.9,AY+AH+off],dmg:11})}snd(T0+tel(),1200,.12,'triangle',.04,300)}
+  return n*1.4+tel()+1});
+ D('s6TailRibbon','꼬리 리본','head',11,'머리의 리본 세 줄이 물결치며 내려옴 → 물결 사이로',t=>{const n=3;
+  for(let k=0;k<n;k++){const T0=t+k*.5,[x,y]=P6(0,-44),c=['#ff5a4a','#ffd04a','#4a8aff'][k],ph0=k*2.1;for(let i=0;i<10;i++){const tf=T0+tel()+i*.12;NP({k:'orb',sty:'default',col:c,r:5,t0:T0,t1:tf,t2:tf+4,noTel:i>0,ray:Math.PI/2,rayL:40,pos:b=>{const q=Math.max(0,b-tf)*70*spd();return [x+Math.sin(q*.05+ph0)*60,y+q]},dmg:9})}}
+  return tel()+4});
+ D('s6WindLift','상승 기류','field',11,'아래에서 위로 바람 + 위에서 연이 떨어짐 → 떨어지는 줄을 피해 바람을 이용해',t=>{const wl=wind(t,4,0,-1,34),cols=7,cw=AW/cols;
+  for(let k=0;k<3+ph();k++){const T0=t+wl*.6+k*1.1,gap=Math.floor(RND()*cols);sch(T0,()=>{for(let c=0;c<cols;c++){if(c===gap)continue;NP({k:'rect',x:AX+c*cw+2,y:AY,w:cw-4,h:AH,sty:'light',t0:T0,t1:T0+tel(),t2:T0+tel()+.3,col:'#ffd04a',dmg:10})}})}
+  return wl*.6+(3+ph())*1.1+tel()+.6});
+ /* 3 번개구름 고래 */
+ D('s6ThunderRain','번개 비','field',11,'구름 속 번개가 세로 줄로 내리침 → 빛나는 줄을 피해',t=>{const n=5+ph()*2;
+  for(let i=0;i<n;i++){const T0=t+i*.5;sch(T0,()=>{const x=i%3===2?P.x-12:AX+20+RND()*(AW-40);NP({k:'rect',x:x-12,y:AY,w:24,h:AH,sty:'elec',t0:T0,t1:T0+tel(),t2:T0+tel()+.25,col:'#ffe25a',dmg:13})});sch(T0+tel(),()=>{G.flash=Math.max(G.flash||0,.12);sfx(70,.3,'sawtooth',.06,40)})}
+  return n*.5+tel()+.5});
+ D('s6CloudBreath','구름 숨','head',10,'고래 입에서 구름 덩어리가 부채꼴로 → 덩어리 사이 틈으로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*.9;sch(T0,()=>{const [x,y]=P6(-22,-22),a0=toP(x,y);for(let i=-3;i<=3;i++)shot(T0,x,y,a0+i*.16,58,{sty:'steam',col:'#c8d4e8',r:7})})}
+  return n*.9+tel()+1.6});
+ D('s6RainCurtain','빗줄기 장막','field',11,'빗줄기 장막이 위에서 내려옴 → 줄마다 뚫린 칸으로',t=>{const n=3+ph(),cols=9,cw=AW/cols;
+  for(let k=0;k<n;k++){const T0=t+k*1.4,gap=Math.floor(RND()*cols);sch(T0,()=>{for(let c=0;c<cols;c++){if(c===gap)continue;NP({k:'rect',x:AX+c*cw+1,y:AY,w:cw-2,h:14,t0:T0,t1:T0+tel(),t2:T0+tel()+2.4,col:'#9ad0ff',sty:'ice',dmg:10,live:true,step:(o,b)=>{if(b>=o.t1)o.y=AY+(b-o.t1)*100*spd()}})}})}
+  return n*1.4+tel()+2.6});
+ D('s6StaticOrbs','정전기 구슬','all',11,'번개 구슬이 나를 둘러싸고 돌다가 바깥으로 튐 → 돌 때 빈 틈으로 빠져나가',t=>{const dur=2.6;
+  sch(t,()=>{const cx=P.x,cy=P.y,n=10+ph()*2;for(let i=0;i<n;i++){const a0=i*TAU/n;NP({k:'orb',sty:'spark',col:'#ffe25a',r:5,t0:t,t1:t+tel(),t2:t+tel()+dur,noTel:true,pos:b=>{const q=Math.max(0,b-t),r=70-Math.min(30,q*10)+Math.max(0,b-t-tel()-dur*.6)*120;return [cx+Math.cos(a0+q*.9)*r,cy+Math.sin(a0+q*.9)*r*.8]},dmg:10})}});
+  return tel()+dur+.4});
+ /* 4 비행선 함장 */
+ D('s6Broadside','일제 포격','hands',11,'곤돌라 포문이 세 번 일제 사격 → 포탄 사이 틈으로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1;sch(T0,()=>{for(let i=-2;i<=2;i++){const [x,y]=P6(i*3,-14);shot(T0,x,y,Math.PI/2+i*.22+(k%2?.11:0),80,{sty:'coal',col:'#3a2a1a',r:5})}});snd(T0+tel(),90,.25,'square',.06,40);shake(T0+tel(),.2)}
+  return n+tel()+1});
+ D('s6AnchorDrop','닻 투하','all',11,'내 자리에 닻이 떨어지고 충격파 → 원 밖으로, 충격파는 대시로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.1;sch(T0,()=>{const c=circ(T0,P.x,P.y,18,'#8a9aac',{label:'⚓'});sch(T0+tel(),()=>{for(let i=0;i<14;i++)npShot(T0+tel(),T0+tel(),c.x,c.y,i*TAU/14,70*spd(),{sty:'default',col:'#8a9aac',r:4,noTel:true,dmg:9})})});shake(T0+tel(),.3)}
+  return n*1.1+tel()+1.2});
+ D('s6PropWind','프로펠러 바람','field',11,'프로펠러가 강한 바람을 보내며 탄을 실어 보냄 → 바람을 거슬러 빈 줄로',t=>{const dir=P.x<HOME.x?-1:1,wl=wind(t,4,dir,0,56),n=6+ph()*2;
+  for(let i=0;i<n;i++){const T0=t+wl*.5+i*.5;sch(T0,()=>{const [x,y]=P6(-dir*13,-24);shot(T0,x,y+(RND()-.5)*30,dir>0?0:Math.PI,90,{sty:'steam',col:'#d0d8e0',r:5})})}
+  return wl*.5+n*.5+tel()+1});
+ D('s6ScopeSnipe','망원경 저격','hands',10,'망원경이 나를 조준한 붉은 선을 따라 저격 → 선이 굳으면 옆으로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.2;sch(T0,()=>{const [x,y]=P6(18,-26),a=toP(x,y);NP({k:'seg',sty:'laser',col:'#ff5a6a',w:6,t0:T0,t1:T0+tel()+.2,t2:T0+tel()+.5,a:()=>[x,y],b:()=>[x+Math.cos(a)*600,y+Math.sin(a)*600],dmg:13})});snd(T0+tel()+.2,1400,.1,'square',.05,200)}
+  return n*1.2+tel()+.8});
+ /* 5 깃털 시계탑 */
+ D('s6NoonStrike','정오의 종','head',12,'문자판에서 열두 바늘이 뻗어 돎 → 바늘 사이를 따라 돌아',t=>{const dur=3+ph(),n=6+ph()*2;
+  sch(t,()=>{const [x,y]=P6(0,-32);for(let i=0;i<n;i++){const a0=i*TAU/n;NP({k:'seg',sty:'laser',col:'#8ad8ff',w:5,live:true,t0:t,t1:t+tel(),t2:t+tel()+dur,a:()=>[x,y],b:b=>{const a=a0+Math.max(0,b-t-tel())*.6*spd();return [x+Math.cos(a)*400,y+Math.sin(a)*400]},dmg:11})}});snd(t+tel(),523,1,'triangle',.06,523);
+  return tel()+dur+.3});
+ D('s6FeatherRain','깃털비','field',10,'날개에서 깃털이 비스듬히 쏟아짐 → 깃털 줄 사이로',t=>{const n=10+ph()*4;
+  for(let i=0;i<n;i++){const T0=t+i*.25,s=i%2?1:-1;sch(T0,()=>{const [x,y]=P6(s*16,-28);shot(T0,x,y,Math.PI/2-s*.5+(RND()-.5)*.6,70,{sty:'light',col:'#8ad8ff',r:4})})}
+  return n*.25+tel()+1.4});
+ D('s6ReverseHands','거꾸로 바늘','head',12,'긴 바늘 두 개가 서로 반대로 돌며 화면을 쓺 → 엇갈리는 틈을 따라',t=>{const dur=3.5+ph();
+  sch(t,()=>{const cx=AX+AW/2,cy=AY+AH*.55;for(const [dir,L,col] of [[1,260,'#2a3a52'],[-1,180,'#c8964a']])NP({k:'seg',sty:'laser',col,w:7,live:true,t0:t,t1:t+tel(),t2:t+tel()+dur,a:b=>{const a=dir*Math.max(0,b-t-tel())*.7*spd()+(dir>0?0:Math.PI/2);return [cx-Math.cos(a)*L,cy-Math.sin(a)*L]},b:b=>{const a=dir*Math.max(0,b-t-tel())*.7*spd()+(dir>0?0:Math.PI/2);return [cx+Math.cos(a)*L,cy+Math.sin(a)*L]},dmg:12})});
+  return tel()+dur+.3});
+ D('s6Pendulum','시계추','all',11,'거대한 추가 좌우로 흔들림 → 추가 지나간 뒤 그 자리로',t=>{const dur=4+ph();
+  sch(t,()=>{const [px,py]=P6(0,-10);NP({k:'orb',sty:'bob',col:'#c8964a',r:16,t0:t,t1:t+tel(),t2:t+tel()+dur,prev:.8,pos:b=>{const q=Math.max(0,b-t-tel())*1.8*spd(),a=Math.PI/2+Math.sin(q)*1.1;return [px+Math.cos(a)*170,py+Math.sin(a)*150]},dmg:14})});
+  return tel()+dur+.3});
+ /* 6 풍금 합창단 */
+ D('s6ChordWall','화음 벽','field',11,'파이프에서 세로 음파 기둥이 화음처럼 셋씩 내리침 → 기둥 사이로',t=>{const n=4+ph(),cols=9,cw=AW/cols;
+  for(let k=0;k<n;k++){const T0=t+k*.9,base=Math.floor(RND()*cols);sch(T0,()=>{for(const d of [0,2,4]){const c=(base+d)%cols;NP({k:'rect',x:AX+c*cw+3,y:AY,w:cw-6,h:AH,sty:'light',t0:T0,t1:T0+tel(),t2:T0+tel()+.3,col:'#c8a0ff',dmg:11})}});snd(T0+tel(),[262,330,392][k%3],.3,'triangle',.05,262)}
+  return n*.9+tel()+.6});
+ D('s6ChoirRings','합창 고리','head',10,'가면들이 노래하면 음표 고리가 퍼짐 → 고리의 빈 칸으로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.1;sch(T0,()=>{const [x,y]=P6((k%3-1)*8,-34),gap=RND()*TAU;for(let i=0;i<20;i++){const a=i*TAU/20;if(Math.abs(((a-gap+Math.PI*3)%TAU)-Math.PI)<.5)continue;shot(T0,x,y,a,58,{sty:'note',col:'#e0c0ff',r:4,rayL:16})}})}
+  return n*1.1+tel()+1.6});
+ D('s6Bellows','풀무 바람','field',11,'풀무가 숨을 내쉬며 좌우로 바람 + 음표 → 바람 방향을 읽어',t=>{const w1=wind(t,2,-1,0,48);wind(t+w1+2.2,2,1,0,48);
+  for(let i=0;i<8;i++){const T0=t+i*.6;sch(T0,()=>{const [x,y]=P6((i%2?1:-1)*14,-16);shot(T0,x,y,toP(x,y),64,{sty:'note',col:'#c8a0ff',r:4})})}
+  return w1+4.6});
+ D('s6Fugue','돌림노래','hands',12,'두 줄기 음표 나선이 시간차로 돎 → 나선 바깥으로 돌아',t=>{const dur=3+ph();
+  for(const [s,d] of [[-1,0],[1,.6]]){const T0=t+d;for(let i=0;i<14;i++){const T1=T0+i*.2;sch(T1,()=>{const [x,y]=P6(s*12,-30);shot(T1,x,y,s*T1*1.4+i*.45,66,{sty:'note',col:s>0?'#ffe0a0':'#c8a0ff',r:4,rayL:14})})}}
+  return 3.4+tel()+1.4});
+ /* 7 무지개 다리 수문장 */
+ D('s6PrismSplit','분광','head',12,'외눈 프리즘의 빛이 일곱 색 광선으로 갈라짐 → 광선 사이 틈으로',t=>{const n=2+ph(),RB=['#ff4a5a','#ff9a3a','#ffe04a','#4ae08a','#3aa8ff','#6a5aff','#c85aff'];
+  for(let k=0;k<n;k++){const T0=t+k*1.6;sch(T0,()=>{const [x,y]=P6(0,-44),a0=toP(x,y)+(k%2?.13:0);for(let i=0;i<7;i++){const a=a0+(i-3)*.26;NP({k:'seg',sty:'laser',col:RB[i],w:5,t0:T0,t1:T0+tel(),t2:T0+tel()+.5,a:()=>[x,y],b:()=>[x+Math.cos(a)*500,y+Math.sin(a)*500],dmg:12})}});snd(T0+tel(),1047,.4,'triangle',.05,523)}
+  return n*1.6+tel()+.6});
+ D('s6BridgeFall','무너지는 다리','field',11,'다리 바닥이 줄줄이 무너짐 → 아직 안전한 칸으로 옮겨가',t=>{const rows=5,rh=AH/rows,n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.2,safe=Math.floor(RND()*rows);sch(T0,()=>{for(let r=0;r<rows;r++){if(r===safe)continue;NP({k:'rect',x:AX,y:AY+r*rh+2,w:AW,h:rh-4,sty:'light',t0:T0,t1:T0+tel()+r*.08,t2:T0+tel()+r*.08+.35,col:'#a8d8ff',dmg:11})}});shake(T0+tel(),.25)}
+  return n*1.2+tel()+.8});
+ D('s6LightSword','빛의 대검','hands',11,'치켜든 무지개 대검이 크게 내려침 → 칼이 지나는 반대편으로',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.6,dir=k%2?-1:1;sch(T0,()=>{const [x,y]=P6(22,-35);NP({k:'seg',sty:'laser',col:'#ffffff',w:14,live:true,t0:T0,t1:T0+tel(),t2:T0+tel()+.6,a:()=>[x,y],b:b=>{const q=clamp((b-T0-tel())/.6,0,1),a=-Math.PI/2+dir*(.2+q*2.6);return [x+Math.cos(a)*420,y+Math.sin(a)*420]},dmg:15})});shake(T0+tel()+.3,.4)}
+  return n*1.6+tel()+.8});
+ D('s6ShardGuard','결정 파편','all',11,'결정 파편이 보스를 돌다가 하나씩 나를 향해 날아옴 → 날아오는 순서를 보고 비켜',t=>{const n=8+ph()*2,dur=2.4;
+  sch(t,()=>{for(let i=0;i<n;i++){const a0=i*TAU/n,Tf=t+tel()+i*.22;NP({k:'orb',sty:'crystal',col:'#a8d8ff',r:6,t0:t,t1:t+tel(),t2:Tf+2.6,noTel:true,pos:b=>{const [cx,cy]=P6(0,-24),q=Math.max(0,b-t);if(b<Tf)return [cx+Math.cos(a0+q*1.2)*60,cy+Math.sin(a0+q*1.2)*40];const o=o6[i]||(o6[i]={x:cx+Math.cos(a0+(Tf-t)*1.2)*60,y:cy+Math.sin(a0+(Tf-t)*1.2)*40,a:toP(cx+Math.cos(a0+(Tf-t)*1.2)*60,cy+Math.sin(a0+(Tf-t)*1.2)*40)});const s=(b-Tf)*120*spd();return [o.x+Math.cos(o.a)*s,o.y+Math.sin(o.a)*s]},dmg:10})}const o6={}});
+  return tel()+n*.22+2.4});
+ /* 8 메아리 사냥매 */
+ D('s6EchoDive','메아리 급강하','all',12,'사냥매가 조준선을 긋고 급강하, 메아리 잔상이 뒤따름 → 선 밖으로, 잔상까지 피해',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.8;sch(T0,()=>{const [x,y]=P6(0,-28),a=toP(x,y),L=520;NP({k:'seg',sty:'laser',col:'#ff9a3a',w:16,t0:T0,t1:T0+tel(),t2:T0+tel()+.25,a:()=>[x,y],b:()=>[x+Math.cos(a)*L,y+Math.sin(a)*L],dmg:14});
+   for(let e=1;e<=2;e++){const Te=T0+tel()+e*.35,o=e*.18*(k%2?1:-1);NP({k:'seg',sty:'laser',col:'#ffc860',w:10,t0:T0+e*.2,t1:Te,t2:Te+.2,a:()=>[x,y],b:()=>[x+Math.cos(a+o)*L,y+Math.sin(a+o)*L],dmg:11})}});shake(T0+tel(),.35);snd(T0+tel(),1600,.3,'sawtooth',.05,200)}
+  return n*1.8+tel()+1});
+ D('s6Screech','비명','head',10,'부리를 벌려 비명 → 음파 고리가 연달아 퍼짐, 틈이 돌아감',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*.8;sch(T0,()=>{const [x,y]=P6(0,-36),gap=toP(x,y)+k*.7;for(let i=0;i<22;i++){const a=i*TAU/22;if(Math.abs(((a-gap+Math.PI*3)%TAU)-Math.PI)<.42)continue;shot(T0,x,y,a,74,{sty:'echo',col:'#ff7a2a',r:4,rayL:14})}});snd(T0+tel(),1800,.25,'sawtooth',.04,900)}
+  return n*.8+tel()+1.4});
+ D('s6BladeFeather','칼깃 투척','hands',11,'양 날개에서 칼날 깃털이 부채꼴로 → 부채 사이로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*.9;sch(T0,()=>{for(const s of [-1,1]){const [x,y]=P6(s*24,-38),a0=toP(x,y);for(let i=-2;i<=2;i++)shot(T0,x,y,a0+i*.2,84,{sty:'light',col:'#c8d4e8',r:4})}})}
+  return n*.9+tel()+1.2});
+ D('s6BellChain','사슬 종','all',11,'발톱의 종이 크게 휘둘러지고 울림 고리가 퍼짐 → 종이 지나간 뒤 고리 틈으로',t=>{const dur=3+ph();
+  sch(t,()=>{const [px,py]=P6(0,-8);NP({k:'orb',sty:'bob',col:'#ffc860',r:12,t0:t,t1:t+tel(),t2:t+tel()+dur,prev:.6,pos:b=>{const q=Math.max(0,b-t-tel())*2*spd(),a=Math.PI/2+Math.sin(q)*1.2;return [px+Math.cos(a)*140,py+Math.sin(a)*120]},dmg:13})});
+  for(let k=0;k<3;k++){const T0=t+tel()+k*1.1;sch(T0,()=>{const [x,y]=P6(0,-8);for(let i=0;i<16;i++)npShot(T0,T0+.01,x,y,i*TAU/16+k*.2,60*spd(),{sty:'echo',col:'#ffc860',r:4,noTel:true,dmg:9})})}
+  return tel()+dur+.4});
+ /* 9 폭풍의 눈 */
+ D('s6Vortex','소용돌이','field',12,'눈이 나를 끌어당기고 잔해가 돎 → 반대로 대시하며 잔해 틈으로',t=>{const dur=4+ph();
+  sch(t,()=>{const [x,y]=P6(0,-26);G.pull={x,y,str:44+ph()*8,t0:t+tel(),t1:t+tel()+dur,tp:t,kind:'suck'};for(let i=0;i<12;i++){const a0=i*TAU/12;NP({k:'orb',sty:['crate','light','scrap'][i%3],col:'#c8a060',r:5,t0:t,t1:t+tel(),t2:t+tel()+dur,noTel:true,pos:b=>{const q=Math.max(0,b-t),r=90-Math.max(0,b-t-tel())*8;return [x+Math.cos(a0+q*1.4)*r,y+Math.sin(a0+q*1.4)*r*.7]},dmg:10})}sfx(60,2,'sawtooth',.05,30)});
+  return tel()+dur+.4});
+ D('s6EyeBeam','고요의 시선','head',11,'고요한 눈이 나를 따라 시선을 그음 → 시선보다 빠르게 옆으로',t=>{const dur=3+ph()*.6;
+  sch(t,()=>{const [x,y]=P6(0,-26);let a=toP(x,y);NP({k:'seg',sty:'laser',col:'#7af0ff',w:9,live:true,t0:t,t1:t+tel(),t2:t+tel()+dur,a:()=>P6(0,-26),b:b=>{const [ex,ey]=P6(0,-26);if(b>=t+tel()){const want=toP(ex,ey),d=((want-a+Math.PI*3)%TAU)-Math.PI;a+=clamp(d,-.03*spd(),.03*spd())}return [ex+Math.cos(a)*500,ey+Math.sin(a)*500]},dmg:13})});
+  return tel()+dur+.3});
+ D('s6LightningGrid','번개 격자','field',12,'가로·세로 번개 줄이 번갈아 내리침 → 교차하지 않는 칸으로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.1,vert=k%2===0,cnt=vert?6:4,off=RND();sch(T0,()=>{for(let i=0;i<cnt;i++){if(vert){const x=AX+(i+off*.5)*(AW/cnt);NP({k:'rect',x:x,y:AY,w:14,h:AH,sty:'elec',t0:T0,t1:T0+tel(),t2:T0+tel()+.3,col:'#ffe25a',dmg:12})}else{const y=AY+(i+off*.5)*(AH/cnt);NP({k:'rect',x:AX,y,w:AW,h:12,sty:'elec',t0:T0,t1:T0+tel(),t2:T0+tel()+.3,col:'#ffe25a',dmg:12})}}});sch(T0+tel(),()=>{G.flash=Math.max(G.flash||0,.1)})}
+  return n*1.1+tel()+.5});
+ D('s6DebrisStorm','잔해 폭풍','field',11,'바람에 실린 기왓장·연·톱니가 날아옴 → 바람을 버티며 빈 곳으로',t=>{const dir=RND()<.5?1:-1,wl=wind(t,4.5,dir,0,52),n=10+ph()*3;
+  for(let i=0;i<n;i++){const T0=t+wl*.5+i*.35;sch(T0,()=>{const x=dir>0?AX+4:AX+AW-4,y=AY+20+RND()*(AH-30);shot(T0,x,y,(dir>0?0:Math.PI)+(RND()-.5)*.3,100,{sty:['crate','scrap','light'][i%3],col:'#c8a060',r:6})})}
+  return wl*.5+n*.35+tel()+1});
+ /* 10 공명탑 · 첫 번째 노래 */
+ D('s6FirstSong','첫 번째 노래','field',12,'하프 줄이 가로로 차례차례 울림 → 울리기 전에 빈 줄로 옮겨',t=>{const rows=7,rh=AH/rows,n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*2,safe=Math.floor(RND()*rows);for(let r=0;r<rows;r++){if(r===safe)continue;const Tr=T0+r*.18,y=AY+rh*(r+.5);NP({k:'seg',sty:'laser',col:['#7af0ff','#c8a0ff','#ffe8a0'][r%3],w:7,t0:Tr,t1:Tr+tel(),t2:Tr+tel()+.35,a:()=>[AX,y],b:()=>[AX+AW,y],dmg:12});snd(Tr+tel(),[262,294,330,349,392,440,494][r],.25,'triangle',.04,[262,294,330,349,392,440,494][r])}}
+  return n*2+tel()+1.6});
+ D('s6BellRings','종 고리','hands',11,'세 겹의 종 고리가 돌며 퍼짐 → 고리 틈이 겹칠 때 통과',t=>{const dur=4;
+  sch(t,()=>{const [x,y]=P6(0,-24);for(let r=0;r<3;r++)for(let i=0;i<10;i++){if(i===r*3)continue;const a0=i*TAU/10,dir=r%2?-1:1;NP({k:'orb',sty:'bob',col:'#e0b860',r:5,t0:t,t1:t+tel(),t2:t+tel()+dur,noTel:true,pos:b=>{const q=Math.max(0,b-t-tel()),rr=24+r*14+q*(36+r*8)*spd();return [x+Math.cos(a0+dir*q*.8)*rr,y+Math.sin(a0+dir*q*.8)*rr*.8]},dmg:10})}});
+  return tel()+dur+.3});
+ D('s6EchoOfAll','모든 소리의 메아리','all',13,'1~5장의 소리가 차례로 공격이 됨: 톱니 → 송곳니 → 시곗바늘 → 별 → 물결',t=>{const tl=tel();
+  /* 톱니 */sch(t,()=>{const [x,y]=P6(-16,-30);for(let i=0;i<6;i++)shot(t,x,y,toP(x,y)+(i-2.5)*.2,70,{sty:'gear',col:'#8eda9e',r:6})});
+  /* 송곳니 */sch(t+1.2,()=>{for(let i=0;i<6;i++){const T0=t+1.2+i*.12;circ(T0,AX+40+i*(AW-80)/5,P.y,14,'#ff6a8a',{label:'▼'})}});
+  /* 시곗바늘 */sch(t+2.6,()=>{const cx=AX+AW/2,cy=AY+AH/2;NP({k:'seg',sty:'laser',col:'#e8c070',w:7,live:true,t0:t+2.6,t1:t+2.6+tl,t2:t+2.6+tl+1.6,a:()=>[cx,cy],b:b=>{const a=Math.max(0,b-t-2.6-tl)*1.6*spd()-Math.PI/2;return [cx+Math.cos(a)*300,cy+Math.sin(a)*300]},dmg:12})});
+  /* 별 */sch(t+4.4,()=>{for(let i=0;i<7;i++)circ(t+4.4+i*.15,AX+30+RND()*(AW-60),AY+30+RND()*(AH-50),14,'#c8b8ff',{label:'★'})});
+  /* 물결 */sch(t+5.8,()=>{const gap=Math.floor(RND()*8),cw=AW/8;for(let c=0;c<8;c++){if(c===gap)continue;NP({k:'rect',x:AX+c*cw+1,y:AY,w:cw-2,h:14,sty:'ice',t0:t+5.8,t1:t+5.8+tl,t2:t+5.8+tl+2.4,col:'#7ad0f0',dmg:10,live:true,step:(o,b)=>{if(b>=o.t1)o.y=AY+(b-o.t1)*100*spd()}})}});
+  return 5.8+tl+2.6});
+ D('s6Resonance','공명','all',11,'내 자리에 공명이 연달아 울리고 바람이 휘몰아침 → 멈추지 말고 계속 움직여',t=>{const wl=wind(t,4,RND()<.5?1:-1,0,40),n=5+ph();
+  for(let i=0;i<n;i++){const T0=t+i*.6;sch(T0,()=>{const c=circ(T0,P.x,P.y,16,'#ffe8a0',{label:'♪'});sch(T0+tel(),()=>{for(let k=0;k<8;k++)npShot(T0+tel(),T0+tel(),c.x,c.y,k*TAU/8,60*spd(),{sty:'note',col:'#ffe8a0',r:4,noTel:true,dmg:9})})})}
+  return Math.max(wl+4,n*.6+tel()+1)});
+ /* ---------- 보스별 공격 목록 (대표 기술 · 기본 · 2페이즈 · 3페이즈) ---------- */
+ const DK={s6_vane:['s6VaneLance','s6CompassSpin','s6WeatherTurn','s6Rooster'],s6_kite:['s6KiteDive','s6StringCut','s6TailRibbon','s6WindLift'],s6_cloudwhale:['s6ThunderRain','s6CloudBreath','s6RainCurtain','s6StaticOrbs'],
+  s6_captain:['s6Broadside','s6AnchorDrop','s6PropWind','s6ScopeSnipe'],s6_clock:['s6NoonStrike','s6FeatherRain','s6ReverseHands','s6Pendulum'],s6_organ:['s6ChordWall','s6ChoirRings','s6Bellows','s6Fugue'],
+  s6_prism:['s6PrismSplit','s6BridgeFall','s6LightSword','s6ShardGuard'],s6_falcon:['s6EchoDive','s6Screech','s6BladeFeather','s6BellChain'],s6_storm:['s6Vortex','s6EyeBeam','s6LightningGrid','s6DebrisStorm'],s6_spire:['s6FirstSong','s6BellRings','s6EchoOfAll','s6Resonance']};
+ window.S6DECK=DK;
+ for(const b of L6){const d=DK[b.art];C3BOSS[b.art].deck=[[d[0],4,0,'S'],[d[1],3,0],[d[2],3,1],[d[3],3,2]]}
+ /* ---------- 하늘 전장 ---------- */
+ const AC={};
+ function skyArena(k){if(AC[k])return AC[k];const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d'),t3=k>=7,t2=k>=3&&k<7,B=L6[k];
+  const sky=g.createLinearGradient(0,0,0,H);if(t3){sky.addColorStop(0,'#0a0e24');sky.addColorStop(.6,'#1c2850');sky.addColorStop(1,'#2a3460')}else if(t2){sky.addColorStop(0,'#3a8ad8');sky.addColorStop(.7,'#9ad8f8');sky.addColorStop(1,'#d8f0ff')}else{sky.addColorStop(0,'#3a3a78');sky.addColorStop(.55,'#f08a6a');sky.addColorStop(1,'#ffd8a0')}g.fillStyle=sky;g.fillRect(0,0,W,H);
+  const r=rng(hash('s6'+k));for(let i=0;i<14;i++){const x=r()*W,y=60+r()*120,s=20+r()*40;g.globalAlpha=t3?.25:.5;g.fillStyle=t3?'#3a4878':'#ffffff';for(let j=0;j<5;j++){g.beginPath();g.ellipse(x+j*s*.3-s*.6,y+Math.sin(j)*4,s*.4,s*.22,0,0,TAU);g.fill()}}g.globalAlpha=1;
+  /* 떠 있는 돌 바닥 */g.fillStyle=t3?'#2a2c40':'#7a6a5a';g.beginPath();g.ellipse(W/2,AY+AH*.62,AW*.56,AH*.42,0,0,TAU);g.fill();g.fillStyle=t3?'#3a3c58':'#b8a890';g.beginPath();g.ellipse(W/2,AY+AH*.6,AW*.54,AH*.39,0,0,TAU);g.fill();
+  g.strokeStyle=t3?'#4a4e70':'#d8c8a8';g.lineWidth=1;for(let i=0;i<9;i++){g.beginPath();g.ellipse(W/2,AY+AH*.6,AW*.54*(i/9),AH*.39*(i/9),0,0,TAU);g.globalAlpha=.25;g.stroke()}g.globalAlpha=1;
+  for(let i=0;i<16;i++){const a=i*TAU/16;g.strokeStyle=t3?'#4a4e70':'#d8c8a8';g.globalAlpha=.25;g.beginPath();g.moveTo(W/2,AY+AH*.6);g.lineTo(W/2+Math.cos(a)*AW*.54,AY+AH*.6+Math.sin(a)*AH*.39);g.stroke()}g.globalAlpha=1;
+  /* 나침반 바닥 문양 */g.strokeStyle=B.c;g.globalAlpha=.35;g.lineWidth=2;g.beginPath();g.ellipse(W/2,AY+AH*.6,60,40,0,0,TAU);g.stroke();g.globalAlpha=1;
+  AC[k]=c;return c}
+ window.s6SkyArena=skyArena;
+ {const _ac=arenaCanvas;arenaCanvas=function(bi){if(typeof G!=='undefined'&&G&&G.s6!=null)return skyArena(G.s6);return _ac.apply(this,arguments)}}
+ {const _aa=arenaAnim;arenaAnim=function(bi,now,beat){if(typeof G!=='undefined'&&G&&G.s6!=null){const t=now/1000,t3=G.s6>=7;for(let i=0;i<6;i++){const x=((i*97+t*(8+i*2))%(W+80))-40,y=40+i*30;RA(Math.round(x),y,30+i*4,4,t3?'#3a4878':'#ffffff',.18);RA(Math.round(x)+8,y-3,18,3,t3?'#3a4878':'#ffffff',.14)}return}return _aa.apply(this,arguments)}}
+ /* 바람 그리기 */{const _nd=npDrawTop;npDrawTop=function(now,beat){const r=_nd.apply(this,arguments);try{if(G&&G.s6!=null)drawWind(now,beat)}catch(e){}return r}}
+ /* ---------- 전투 시작 · 끝 ---------- */
+ window.s6Hp=k=>Math.round((10200+k*700)*({easy:.7,normal:1,hard:1.3,extreme:1.55}[diff]||1));
+ window.s6Fight=function(k,how){const B6=L6[k];if(!B6)return;const ST=window.S6STORY&&S6STORY[k];initAudio();story=false;enterGame();try{CS=null}catch(e){}
+  const b={art:B6.art,base:0,name:B6.name,en:B6.en,epi:(ST&&ST.title)||B6.epi||'',phase:(ST&&ST.phase)||[B6.name+'의 바람이 거세진다!','폭풍이 몰아친다!'],dying:(ST&&ST.dying)||'…바람이 잦아든다.'};c3SwapIn(b);startFight(b.base,false);G.s6=k;G.s6How=how||'rush';G.hp=G.maxHp=s6Hp(k);
+  $('bossName').textContent=B6.name+'  '+B6.en;$('bvTitle').textContent='BEAT BLADE · CHAPTER 6 · ZENITH '+(k+1)+'/10'};
+ function s6End(won){if(G.state==='result')return;G.state='result';G.won=won;stopMusic();const k=G.s6,how=G.s6How||'rush',B6=L6[k],t=Math.round((performance.now()-G.startReal)/1000);c3SwapOut();G.s6=null;G.s6w=null;
+  const rank=G.hits===0?'P':G.hits<=2?'S':G.hits<=4?'A':G.hits<=7?'B':'C';saveData.bestCombo=Math.max(saveData.bestCombo||0,G.maxCombo||0);
+  if(how==='demo'){showOverlay('ZENITH · 시연',B6.name,'시연 전투는 기록이 남지 않아요.',[['다시 시연',()=>{$('overlay').hidden=true;s6Fight(k,'demo')},true],['로비로',toLobby,false]]);return}
+  if(won&&how!=='demo'){saveData.s6rush=saveData.s6rush||{};const kk=k+'|'+diff,o='PSABC';if(!saveData.s6rush[kk]||o.indexOf(rank)<o.indexOf(saveData.s6rush[kk]))saveData.s6rush[kk]=rank}
+  let coins=0;try{coins=awardCoins(won,rank)}catch(e){}saveNow();const acc=G.swings?Math.round(G.onbeat/G.swings*100):0;
+  const html='<b style="color:#ffd166">🪙 +'+coins+' 코인</b> (보유 '+(saveData.coins||0)+')<br>반격 성공 '+(G.swings||0)+'회 · 박자 정확도 '+acc+'%<br>최대 콤보 '+(G.maxCombo||0)+' · 피격 '+G.hits+'회 · 시간 '+Math.floor(t/60)+':'+String(t%60).padStart(2,'0')+(won?'<br><b style="font-size:26px;color:'+(rank==='P'?'#fff6cf':'#ffd166')+'">'+(rank==='P'?'★ PERFECT ★':'RANK '+rank)+'</b>':'<br>보스 체력 '+Math.round(G.hp/G.maxHp*100)+'% 남음');
+  if(how==='story'&&typeof window.s6StoryEnd==='function'){if(window.s6StoryEnd(k,won,rank,coins,html))return}
+  const btns=[['다시 도전',()=>{$('overlay').hidden=true;s6Fight(k)},!won]];if(won&&k<9)btns.push(['다음 보스 →',()=>{$('overlay').hidden=true;s6Fight(k+1)},true]);btns.push(['로비로',toLobby,false]);
+  showOverlay('ZENITH · '+String(k+1).padStart(2,'0'),won?B6.name+' 격파!':'바람에 휩쓸렸다…',html,btns)}
+ {const _fe=fightEnd;fightEnd=function(won){if(G&&G.s6!=null){s6End(won);return}return _fe.apply(this,arguments)}}
+ {const _tl=toLobby;toLobby=function(){try{if(G&&G.s6!=null){c3SwapOut();G.s6=null}}catch(e){}return _tl.apply(this,arguments)}}
+}catch(e){console.error('v45 ch6 patterns',e)}})();
+/* ================= v45 챕터 6 ZENITH 「바람이 머무는 곳」: 이야기 장면 · 저장 · 메뉴(이야기 시계 · 보스 러시 탭) 연결 ================= */
+(function(){try{
+ const L6=window.S6ART;if(!L6||typeof window.s6Fight!=='function')return;
+ /* ---------- 보스별 이야기 ---------- */
+ const S6STORY=window.S6STORY=[
+  {place:'구름 선착장',title:'바람을 지키는 마지막 문지기',
+   intro:[['풍향계 기사','멈춰라. 바람이 어디로 불지 모르니, 아무도 지나갈 수 없다.'],['하루','우린 위로 가야 해! 비켜 줘!']],
+   outro:[['풍향계 기사','어디로 가야 할지 몰라서… 모두 막고 있었어.'],['','기사의 화살표가 처음으로 한 방향을 가리켰다. 하늘 위였다.']],
+   phase:['바람이 방향을 바꾼다!','풍향계가 미친 듯이 돈다!'],dying:'…북쪽… 아니, 위쪽이었구나.'},
+  {place:'연 날리는 언덕',title:'줄을 놓지 못한 손',
+   intro:[['','수천 개의 연줄을 움켜쥔 거인이 언덕을 가로막았다.'],['연줄의 거인','하나도… 놓치지 않을 거야. 다시는 울게 하지 않을 거야.']],
+   outro:[['','기억: 연을 놓친 아이가 울던 날, 거인은 다시는 연을 놓치지 않겠다고 약속했다.'],['연줄의 거인','놓아주는 것도… 날려 보내는 거였구나.']],
+   phase:['연줄이 팽팽해진다!','수천 개의 연이 한꺼번에 떠오른다!'],dying:'…줄이… 가벼워졌어.'},
+  {place:'폭풍 해협',title:'소리를 삼킨 먹구름',
+   intro:[['똑딱','저 구름… 메아리를 삼키고 있어!'],['번개구름 고래','(우르릉… 삼킨 소리들이 번개가 되어 울린다)']],
+   outro:[['','고래의 울음은 바다의 모래시계 고래와 같은 노래였다.'],['똑딱','바다의 동생이 하늘로 올라갔던 거야.']],
+   phase:['먹구름이 부풀어 오른다!','삼킨 메아리가 번개로 터진다!'],dying:'…우르르… 이제 비가 되어 내릴게.'},
+  {place:'녹슨 부두',title:'출항하지 못한 배',
+   intro:[['비행선 함장','탑이 허락하지 않으면 아무도 내려갈 수 없다!'],['라온','함장님은… 마지막 피난선을 지키고 있어.']],
+   outro:[['','기억: 함장은 사람들을 다 태우고도 출항 명령을 받지 못했다. 탑이 소리를 붙잡고 놓지 않았다.'],['비행선 함장','…닻을 올려라. 이번엔 내가 허락하지.']],
+   phase:['전 포문 개방!','프로펠러 최대 출력!'],dying:'…출항… 하라…'},
+  {place:'거꾸로 선 광장',title:'거꾸로 흐르는 정오',
+   intro:[['','광장 위에 거꾸로 매달린 시계탑. 바늘은 정오에 멈춰 있다.'],['똑딱','시계가… 거꾸로 가려고 해!']],
+   outro:[['','기억: 탑이 세워진 날 정오, 도시의 모든 시계가 그 시각에 맞춰졌다.'],['라온','그 뒤로 이 도시엔 오후가 오지 않았어.']],
+   phase:['바늘이 거꾸로 돈다!','정오의 종이 울린다!'],dying:'…째깍… 한 시…'},
+  {place:'바람 오르간 성당',title:'숨을 쉬지 못한 노래',
+   intro:[['','성당 가득, 떠난 사람들이 남긴 목소리가 오르간 바람에 실려 되풀이된다.'],['라온','저 노래 속에… 아는 목소리가 있어.']],
+   outro:[['','마지막 화음이 길게 이어지다가, 처음으로 숨을 쉬듯 멈췄다.'],['라온','…고마워. 이제 쉬어도 돼.']],
+   phase:['풀무가 크게 부푼다!','돌림노래가 시작된다!'],dying:'…아아… 쉼표…'},
+  {place:'일곱 빛 다리',title:'색을 잃은 약속',
+   intro:[['무지개 다리 수문장','탑으로 가는 길은 하나. 너희의 소리를 일곱 색으로 나누어 보겠다.'],['하루','나눌 필요 없어. 우린 같이 갈 거야!']],
+   outro:[['','부서진 무지개 사이로, 처음 보는 사람의 모습이 비쳤다.'],['라온','…아리아.']],
+   phase:['일곱 빛이 갈라진다!','다리가 무너진다!'],dying:'…약속의 색이… 돌아온다…'},
+  {place:'공명 나선 계단',title:'돌아오지 않는 소리를 쫓는 새',
+   intro:[['','나선 계단을 오르자, 흩어지는 소리를 하나도 놓치지 않는 매가 날아들었다.'],['하루','…!'],['똑딱','하루 목소리를 훔쳐 갔어!']],
+   outro:[['','매가 물고 있던 하루의 목소리를 조용히 내려놓았다.'],['하루','…돌아왔다. 고마워.']],
+   phase:['날개 칼깃이 곤두선다!','사슬 종이 울린다!'],dying:'…돌려줄게… 다…'},
+  {place:'탑 꼭대기 바람길',title:'고요를 연기하는 소용돌이',
+   intro:[['폭풍의 눈','가운데는 조용하지? 모아 두면 아무도 다치지 않아.'],['라온','아니야. 바깥은 다 부서지고 있잖아!']],
+   outro:[['','소용돌이가 풀리며, 탑 꼭대기로 가는 마지막 바람길이 열렸다.'],['라온','하루… 이다음엔 나도 같이 싸울게.']],
+   phase:['소용돌이가 빨라진다!','폭풍이 눈을 뜬다!'],dying:'…고요는… 바깥에도 있었구나.'},
+  {place:'제니스 정상',title:'끝나지 않는 노래',
+   intro:[['','세상의 모든 소리가 한꺼번에 울린다. 노래가 아니라, 굉음이다.'],['라온','하루! 부수지 마. 놓아줘야 해!'],['하루','알았어. 바람에 실어 보내자!']],
+   outro:[['','탑의 굉음이 하나씩 풀려, 서로 다른 음이 되었다.'],['','처음으로, 노래가 들렸다.']],
+   phase:['지나온 모든 챕터의 소리가 쏟아진다!','라온: "바람길을 열게! 지금이야, 하루!"'],dying:'…라… 라라…'}];
+ /* 하늘 곡: 보스마다 다른 곡 (없으면 1장 보스 곡이 나옴) */
+ try{const BPM=[124,132,118,136,128,112,140,146,150,138],SCL=['maj','mix','dor','mix','dor','maj','mix','dor','min','hmin'],PR=[[0,4,5,3],[0,5,3,4],[0,3,4,4],[0,5,4,3],[0,4,3,5],[0,3,5,4]],HK=['soar','sparkle','swing','drive','baroque','soar','sparkle','run','frantic','final'],DR=['dance','gallop','half','rock','waltz','half','dance','gallop','break','rock'];
+  L6.forEach((b,k)=>{if(typeof C3MUS!=='undefined'&&!C3MUS[b.art])C3MUS[b.art]={title:S6STORY[k].title,tag:'제니스의 바람',bpm:BPM[k],root:45+k%5,sc:SCL[k],pr:PR[k%PR.length],cp:{duty:k%2?.25:.5,bass:k%3?'oct':'gal',dr:DR[k],arp:k%2,hook:HK[k]}}})}catch(e){}
+ /* 러시 미리보기 배경도 하늘 전장 */
+ {const base=c3PaintArena;c3PaintArena=function(c,art){const k=L6.findIndex(b=>b.art===art);if(k<0||!window.s6SkyArena)return base.apply(this,arguments);c.drawImage(s6SkyArena(k),0,0)}}
+
+ /* ---------- 저장 ---------- */
+ const sv=window.s6Save=()=>{const s=saveData.ch6||(saveData.ch6={ci:0,best:{}});s.best=s.best||{};return s};
+ const unlocked=window.s6Unlocked=()=>{try{const s=saveData.ch5||{};return (s.ci||0)>=10||!!(s.best||{})[9]}catch(e){return false}};
+ const info=()=>{const s=sv();return {slots:L6.map((b,k)=>({k,art:b.art,name:b.name,rank:s.best[k]||null,seen:k<s.ci,cur:k===s.ci})),done:s.ci>=10,prog:Math.min(1,(s.ci||0)/10)}};
+ const rankOf=h=>h===0?'P':h<=2?'S':h<=4?'A':h<=7?'B':'C';
+
+ /* ---------- 장면 그리기 도구 (480×270) ---------- */
+ const TONE=k=>k>=7?2:k>=3?1:0;/* 0 새벽 · 1 한낮 · 2 폭풍 · 3 노을(엔딩) · 4 시계골 언덕 */
+ const SKY=[['#2e2c66','#d8786a','#ffd3a0'],['#2f7fd0','#8fd2f6','#dff3ff'],['#080c22','#1a2450','#2c3664'],['#3a2a5a','#e87a5a','#ffcf8a'],['#4a8ad8','#a8dcf8','#e8f6ff']];
+ function sky(c,tone,T){const p=SKY[tone],g=c.createLinearGradient(0,0,0,270);g.addColorStop(0,p[0]);g.addColorStop(.62,p[1]);g.addColorStop(1,p[2]);c.fillStyle=g;c.fillRect(0,0,480,270);
+  if(tone===0||tone===3){scGlow(c,380,190,120,tone===3?'#ffb070':'#ffd8a0',.35)}
+  if(tone===2){for(let i=0;i<30;i++){c.globalAlpha=.25+.25*Math.sin(T*2+i);c.fillStyle='#cfe0ff';c.fillRect((i*97)%480,(i*41)%120,1,1)}c.globalAlpha=1;if(Math.sin(T*1.7)>.97){c.globalAlpha=.25;c.fillStyle='#e8f4ff';c.fillRect(0,0,480,270);c.globalAlpha=1}}
+  /* 먼 구름층 */const cc=tone===2?'#3a4878':'#ffffff';for(let i=0;i<9;i++){const x=((i*83+T*(6+i%3*3))%600)-60,y=60+(i*37)%120,s=30+(i*13)%30;c.globalAlpha=tone===2?.3:.45;c.fillStyle=cc;for(let j=0;j<4;j++){c.beginPath();c.ellipse(x+j*s*.35,y+Math.sin(j*1.7)*3,s*.42,s*.2,0,0,TAU);c.fill()}}c.globalAlpha=1}
+ function windLines(c,T,a=.35,col='#ffffff'){for(let i=0;i<14;i++){const q=(T*.45+i*.137)%1,x=q*580-60,y=30+((i*53)%190);c.globalAlpha=Math.sin(q*Math.PI)*a;c.fillStyle=col;c.fillRect(Math.round(x),y,24+i%3*12,1);c.fillRect(Math.round(x)+10,y+3,10,1)}c.globalAlpha=1}
+ function island(c,x,y,w,col,dark){c.fillStyle=dark;c.beginPath();c.moveTo(x-w,y);c.lineTo(x+w,y);c.lineTo(x+w*.5,y+w*.35);c.lineTo(x+w*.15,y+w*.75);c.lineTo(x-w*.3,y+w*.4);c.closePath();c.fill();c.fillStyle=col;c.fillRect(x-w,y-3,w*2,4)}
+ /* 거꾸로 매달린 시계탑이 있는 하늘 도시 (up=1이면 바로 선 모습) */
+ function city(c,x,y,s,T,up){c.save();c.translate(x,y);c.scale(s,s);island(c,0,0,60,'#c8b89a','#5a4a40');for(const [bx,bh] of [[-40,18],[-24,26],[20,22],[38,14]]){c.fillStyle='#e8dcc8';c.fillRect(bx-6,-bh,12,bh);c.fillStyle='#7a5a4a';c.fillRect(bx-7,-bh-4,14,4)}
+  const dir=up?-1:1,base=up?-2:20;c.fillStyle='#d8ccb4';c.fillRect(-7,up?base-58:base,14,58);c.fillStyle='#8a6a52';c.fillRect(-9,up?base-62:base+56,18,6);
+  const cy=up?base-44:base+44;c.fillStyle='#fff8e8';c.beginPath();c.arc(0,cy,8,0,TAU);c.fill();c.strokeStyle='#3a2a20';c.lineWidth=1;c.stroke();
+  const hr=up?(-Math.PI/2+Math.min(1,T*.25)*Math.PI/6):Math.PI/2,mn=up?(-Math.PI/2+T*.6):Math.PI/2;c.beginPath();c.moveTo(0,cy);c.lineTo(Math.cos(hr)*4.5,cy+Math.sin(hr)*4.5);c.moveTo(0,cy);c.lineTo(Math.cos(mn)*7,cy+Math.sin(mn)*7);c.stroke();
+  for(let i=0;i<3;i++){const yy=up?base-62-6-i*5:base+62+i*5;c.fillStyle=i%2?'#8ad8ff':'#ffd08a';c.fillRect(-1-i,yy,2+i*2,2)}c.restore()}
+ /* 연 */function kite(c,x,y,s,col,rot,a=1){c.save();c.globalAlpha=a;c.translate(x,y);c.rotate(rot||0);c.fillStyle='#1a1420';c.beginPath();c.moveTo(0,-7*s);c.lineTo(5*s,0);c.lineTo(0,9*s);c.lineTo(-5*s,0);c.closePath();c.fill();c.fillStyle=col;c.beginPath();c.moveTo(0,-6*s);c.lineTo(4*s,0);c.lineTo(0,8*s);c.lineTo(-4*s,0);c.closePath();c.fill();c.fillStyle='#ffffff';c.globalAlpha=a*.35;c.beginPath();c.moveTo(0,-6*s);c.lineTo(4*s,0);c.lineTo(0,0);c.closePath();c.fill();c.restore();c.globalAlpha=1}
+ /* 비행선 바람개비호 */function ship(c,x,y,s,T){c.save();c.translate(x,y);c.scale(s,s);c.fillStyle='#1a1420';c.beginPath();c.ellipse(0,-14,31,13,0,0,TAU);c.fill();c.fillStyle='#e8d0a0';c.beginPath();c.ellipse(0,-14,30,12,0,0,TAU);c.fill();c.fillStyle='#c86a4a';for(const xx of [-18,-6,6,18]){c.beginPath();c.ellipse(xx,-14,3,11.5,0,0,TAU);c.fill()}
+  c.strokeStyle='#5a4030';c.lineWidth=1;c.beginPath();c.moveTo(-14,-3);c.lineTo(-10,6);c.moveTo(14,-3);c.lineTo(10,6);c.stroke();c.fillStyle='#7a4a2a';c.fillRect(-14,6,28,7);c.fillStyle='#a8703a';c.fillRect(-14,6,28,2);
+  c.save();c.translate(-34,-14);c.rotate(T*8);for(let i=0;i<4;i++){c.rotate(Math.PI/2);c.fillStyle=['#ff6a5a','#ffd08a','#5ad0b0','#8ad8ff'][i];c.beginPath();c.moveTo(0,0);c.lineTo(7,-2);c.lineTo(5,3);c.closePath();c.fill()}c.restore();c.restore()}
+ /* 라온: 연 조각 망토 · 긴 목도리 · 바람 지도. fade(0~1)면 연 조각으로 흩어짐 */
+ function raon(c,x,y,s,T,o){o=o||{};const f=o.fade||0,P=(xx,yy,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x+xx*s),Math.round(y+yy*s),Math.ceil(w*s),Math.ceil(h*s))},bob=Math.round(Math.sin(T*3)*.6);
+  c.save();c.globalAlpha=1-f*.85;
+  /* 목도리 (바람에 날림) */for(let i=0;i<7;i++){const yy=-11+bob+Math.sin(T*6-i*.8)*1.2+i*.25;P(3+i*1.6,yy,1.8,1.4,i%2?'#ff8a5a':'#ffb07a')}
+  /* 망토: 연 조각 */P(-4,-10+bob,8,8,'#1a1420');P(-3.5,-9.5+bob,3.5,3.5,'#ff6a5a');P(0,-9.5+bob,3.5,3.5,'#ffd08a');P(-3.5,-6+bob,3.5,3.5,'#5ad0b0');P(0,-6+bob,3.5,3.5,'#8ad8ff');
+  /* 다리 */P(-2,-2,1.6,2,'#3a2a3a');P(.6,-2,1.6,2,'#3a2a3a');
+  /* 머리 */P(-3,-16+bob,6,6,'#1a1420');P(-2.5,-15.5+bob,5,5,'#ffe0c8');P(-3,-17+bob,6,2.5,'#5a8ab8');P(-3.6,-16+bob,1.6,4,'#5a8ab8');P(2,-17.6+bob,1.6,1.4,'#5a8ab8');
+  if(!o.closed){P(-1.5,-13.5+bob,1,1,'#1a1420');P(1,-13.5+bob,1,1,'#1a1420')}else{P(-1.5,-13+bob,1.2,.5,'#1a1420');P(.8,-13+bob,1.2,.5,'#1a1420')}P(-.6,-11.8+bob,1.4,.5,'#d8786a');
+  /* 바람 지도 두루마리 */if(!o.noMap){P(-6.5,-7+bob,3,4,'#f4e8c8');P(-6.5,-7+bob,3,.6,'#a8703a');P(-6,-5.5+bob,2,.4,'#5ad0b0')}
+  c.restore();
+  if(f>0){const r=rng(77);for(let i=0;i<14;i++){const q=Math.min(1,Math.max(0,f*1.6-i*.05)),a=Math.sin(q*Math.PI);if(a<=0)continue;kite(c,x+(r()*10-5)*s+q*(40+r()*80)*s/2,y-(8+r()*8)*s-q*(30+r()*60)*s/2,s*.28,['#ff6a5a','#ffd08a','#5ad0b0','#8ad8ff'][i%4],q*4+i,a)}}}
+ /* 조율사 아리아 (회상): 긴 머리 · 소리굽쇠 지팡이 */
+ function aria(c,x,y,s,T,a){c.save();c.globalAlpha=a==null?1:a;const P=(xx,yy,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x+xx*s),Math.round(y+yy*s),Math.ceil(w*s),Math.ceil(h*s))};
+  P(-5,-18,10,18,'#1a1420');P(-4.5,-17.5,9,17.5,'#e8e0f8');P(-4.5,-6,9,1,'#c8a0ff');P(-4,-24,8,7,'#1a1420');P(-3.5,-23.5,7,6,'#ffe8d8');P(-4.5,-25,9,3,'#d8c8a0');P(-5,-23,2,12,'#d8c8a0');P(3,-23,2,12,'#d8c8a0');P(-1.6,-21,1,1,'#3a2a3a');P(1,-21,1,1,'#3a2a3a');
+  P(7,-26,1,26,'#a8885a');P(5.5,-30,1,5,'#ffe8a0');P(8.5,-30,1,5,'#ffe8a0');P(5.5,-26,4,1,'#ffe8a0');scGlow(c,x+7.5*s,y-29*s,10*s,'#ffe8a0',.35+.15*Math.sin(T*3));c.restore()}
+ /* 하늘에 쌓인 메아리 고리 (프롤로그·엔딩) */
+ function echoes(c,cx,cy,T,n,out){const cols=['#ffd08a','#8ad8ff','#ff8ab0','#a6f5c6','#c8a0ff'];for(let i=0;i<n;i++){const q=((T*.35+i/n)%1),r=out?10+q*260:150-q*140;c.globalAlpha=(out?1-q:q)*.5;c.strokeStyle=cols[i%5];c.lineWidth=1;c.beginPath();c.arc(cx,cy,r,0,TAU);c.stroke()}c.globalAlpha=1}
+ function notes(c,cx,cy,T,out){const cols=['#ffd08a','#8ad8ff','#ff8ab0','#a6f5c6','#c8a0ff','#ffffff'];for(let i=0;i<36;i++){const a=i*2.39996,q=out?((T*.25+i*.029)%1):1-((T*.25+i*.029)%1),d=20+q*300,x=cx+Math.cos(a)*d,y=cy+Math.sin(a)*d*.6;c.globalAlpha=Math.sin(q*Math.PI)*.9;c.fillStyle=cols[i%6];c.fillRect(Math.round(x),Math.round(y),2,2);c.fillRect(Math.round(x)+2,Math.round(y)-4,1,5)}c.globalAlpha=1}
+ function ledge(c,tone){c.fillStyle=tone===2?'#222438':'#5a4a40';c.fillRect(0,236,480,40);c.fillStyle=tone===2?'#3a3c58':'#b8a890';c.fillRect(0,232,480,6);c.globalAlpha=.25;c.fillStyle='#000';for(let x=0;x<480;x+=24)c.fillRect(x,238,1,30);c.globalAlpha=1}
+ function hills(c,T){c.fillStyle='#6ab06a';c.beginPath();c.moveTo(0,215);for(let x=0;x<=480;x+=20)c.lineTo(x,215-Math.sin(x*.012+1)*18);c.lineTo(480,270);c.lineTo(0,270);c.fill();c.fillStyle='#4a8a4a';c.beginPath();c.moveTo(0,240);for(let x=0;x<=480;x+=20)c.lineTo(x,236-Math.sin(x*.02)*10);c.lineTo(480,270);c.lineTo(0,270);c.fill();
+  /* 시계골 지붕 */for(let i=0;i<8;i++){const x=20+i*58,y=226-(i%3)*4;c.fillStyle='#e8dcc8';c.fillRect(x,y,22,14);c.fillStyle=['#c86a4a','#5a8ab8','#8a6a4a'][i%3];c.beginPath();c.moveTo(x-3,y);c.lineTo(x+11,y-9);c.lineTo(x+25,y);c.fill()}}
+ const heroes=(c,T,x,withRaon,o)=>{scHero(c,x,231,2,T);if(withRaon)raon(c,x+42,232,2,T,o)};
+ /* 보스 장면 */
+ function bossShot(k,lines,d,kind){const B=L6[k],ST=S6STORY[k],tone=TONE(k);return {d:d||4200,lines,la:500,draw(c,T){sky(c,tone,T);windLines(c,T,tone===2?.25:.35);
+  if(kind==='memory')scSepia(c,.24);const q=scE(T/1.4),y=kind==='meet'?214+(1-q)*30:214;ledge(c,tone);scGlow(c,330,y-60,75,B.c,.3*q);
+  try{c3ArtOn(c,B.art,330,y,performance.now(),4.6,{pulse:.12,open:kind==='memory'?.4:0})}catch(e){}heroes(c,T,96,k>=3&&k<=9);
+  scTxt(c,ST.place,22,32,10,'#ffffff',scCl(T*2),'left');scTxt(c,'「'+ST.title+'」',22,46,8,B.c==='#ffffff'?'#e8f0ff':B.c,scCl(T*2-.4),'left',700)}}}
+ /* 막 카드 */
+ function actCard(n,title,sub,tone){return {d:2600,draw(c,T){sky(c,tone,T);windLines(c,T,.4);c.globalAlpha=.55;c.fillStyle='#000';c.fillRect(0,100,480,70);c.globalAlpha=1;const q=scE(scCl(T/.7));c.fillStyle='#ffd08a';c.fillRect(Math.round(240-q*170),100,Math.round(q*340),1);c.fillRect(Math.round(240-q*170),169,Math.round(q*340),1);
+  scTxt(c,'CHAPTER 6 · ZENITH  ·  '+n+'막',240,120,9,'#ffd08a',q,'center',800);scTxt(c,title,240,145,18,'#ffffff',q);scTxt(c,sub,240,162,9,'#e8e0d0',scCl((T-.6)*2),'center',700)}}}
+ /* ---------- 프롤로그 ---------- */
+ function prologue(){return [
+  {d:4600,lines:[['','종소리가 돌아온 지 사흘째. 바다에서 떠오른 소리들이 흩어지지 않고 시계골 하늘에 쌓였다.'],['','웃음소리, 종소리, 파도 소리가 겹쳐 천둥처럼 울린다.']],draw(c,T){sky(c,4,T);echoes(c,240,60,T,9,false);notes(c,240,60,T,false);hills(c,T);if(Math.sin(T*2.3)>.9)SC4.shake=Math.max(SC4.shake,.3)}},
+  {d:4200,lines:[['똑딱','소리들이 내려오질 않아. 위에서 누가 끌어당기고 있어.'],['하루','저기… 구름 사이에 뭐가 있어!']],draw(c,T){sky(c,4,T);echoes(c,240,40,T,7,false);hills(c,T);scHero(c,200,236,2.4,T)}},
+  {d:4400,lines:[['','구름이 갈라지고, 거꾸로 매달린 시계탑이 보였다. 하늘 도시 제니스였다.']],draw(c,T){sky(c,0,T);const q=scE(scCl(T/2.5));city(c,240,70+(1-q)*20,1.25,T,false);for(const s of [-1,1]){c.fillStyle='#ffffff';c.globalAlpha=.8*(1-q);c.beginPath();c.ellipse(240+s*(60+q*200),90,140,40,0,0,TAU);c.fill()}c.globalAlpha=1;windLines(c,T,.4)}},
+  {d:4600,lines:[['','낡은 비행선 정류장에 종이 연 하나가 떨어졌다.'],['연에 적힌 글씨','도와줘. 탑이 멈추지 않아.']],draw(c,T){sky(c,0,T);ledge(c,0);ship(c,360,200,1.6,T*.1);scHero(c,150,231,2,T);const q=scE(scCl(T/2.2));kite(c,190+Math.sin(T*2)*12*(1-q),40+q*170,2.2,'#ff6a5a',Math.sin(T*3)*.4*(1-q));
+   if(T>2.4){c.globalAlpha=scCl((T-2.4)*2);c.fillStyle='#f4e8c8';c.fillRect(150,40,180,36);c.strokeStyle='#a8703a';c.strokeRect(150.5,40.5,179,35);c.globalAlpha=1;scTxt(c,'도와줘. 탑이 멈추지 않아.',240,62,10,'#5a3a2a',scCl((T-2.6)*2),'center',800)}}},
+  {d:4000,lines:[['하루','바람개비호, 아직 날 수 있겠지?'],['똑딱','바람만 잘 타면! 꽉 잡아!']],draw(c,T){sky(c,0,T);const q=scE(scCl((T-1)/3));city(c,400,50,.55,T,false);ship(c,200+q*60,170-q*70,2,T);windLines(c,T,.5);try{drawKnight(c,200+q*60,170-q*70+4,1.4,false,null,T*2.3)}catch(e){}}},
+  actCard(1,'바람의 항로','하늘로 올라가는 길',0)]}
+ /* 1막 끝: 제니스 도착 · 라온 */
+ function meetRaon(){return [
+  {d:3800,lines:[['','번개구름이 걷히자, 하늘 도시 제니스의 부두가 눈앞에 펼쳐졌다.']],draw(c,T){sky(c,1,T);city(c,240,120,1.6,T,false);ship(c,90+T*12,200,1.3,T);windLines(c,T,.35)}},
+  {d:5200,lines:[['???','…너희가 내 연을 받은 거야?'],['라온','나는 라온. 바람 지도를 그려. 어른들은 다 아래로 내려갔어.'],['라온','나만 탑 소리가 무서워서 숨어 있었어. 탑까지 가는 바람길은… 내가 알아.']],draw(c,T){sky(c,1,T);windLines(c,T,.3);ledge(c,1);
+   c.fillStyle='#8a6a4a';c.fillRect(300,206,40,28);c.fillStyle='#a8885a';c.fillRect(300,206,40,3);const q=scE(scCl((T-.8)/1.2));raon(c,320+q*-40,232,2.2,T);c.fillStyle='#8a6a4a';if(q<.5)c.fillRect(300,214,40,20);scHero(c,140,231,2,T)}},
+  actCard(2,'떠 있는 도시','도시는 왜 멈췄을까',1)]}
+ /* 2막 반전: 아리아의 기억 · 라온의 비밀 */
+ function twist(){const mem=(c,T)=>{sky(c,1,T);scSepia(c,.4);windLines(c,T,.2,'#ffe8c8')};return [
+  {d:5200,lines:[['','다리의 빛 속에서 오래된 기억이 흘러나왔다.'],['아리아','아래 세상은 너무 시끄러워. 아이들이 지치지 않도록… 모든 소리를 모아, 하나의 완벽한 노래를 만들 거야.']],draw(c,T){mem(c,T);city(c,330,150,1.3,T,true);aria(c,150,232,2.4,T,scCl(T));notes(c,330,90,T,false)}},
+  {d:4800,lines:[['','노래가 완성되기 직전, 조율사 아리아는 사라졌다.'],['','탑은 지금도 노래를 끝내려고, 세상의 소리를 끌어당기고 있다.']],draw(c,T){mem(c,T);city(c,330,150,1.3,T,true);aria(c,150,232,2.4,T,1-scCl(T/3));echoes(c,330,100,T,8,false)}},
+  {d:5600,lines:[['아리아','바람아, 이 아이를 지켜 줘. 이름은… 라온.'],['하루','라온… 너, 연으로 만들어진 거야?'],['라온','응. 노래가 완성되면 나는 바람에 흩어져. 알고 있었어. 그래도… 탑을 멈추고 싶어.']],draw(c,T){if(T<3){mem(c,T);aria(c,170,232,2.4,T,.8);for(let i=0;i<4;i++)kite(c,260+i*14,200-i*10+Math.sin(T*2+i)*3,1.4,['#ff6a5a','#ffd08a','#5ad0b0','#8ad8ff'][i],T+i);raon(c,300,232,2.2,T,{fade:1-scCl(T/2.6),noMap:true})}else{sky(c,1,T);ledge(c,1);scHero(c,150,231,2,T);raon(c,300,232,2.2,T)}}},
+  {d:4600,lines:[['똑딱','그럼 노래를 완성시키지 않으면 되잖아!'],['라온','아니야. 소리를 놓아주는 거야. 그게 아리아가 끝내 못 한 일이야.']],draw(c,T){sky(c,1,T);windLines(c,T,.35);ledge(c,1);heroes(c,T,150,true)}},
+  actCard(3,'폭풍의 눈','놓아주기',2)]}
+ /* 엔딩 · 에필로그 */
+ function ending(){return [
+  {d:5400,lines:[['','탑에 모여 있던 소리들이 바람을 타고 세상 곳곳으로 흩어졌다.'],['','톱니 소리, 짐승의 울음, 초침, 별빛, 파도. 저마다 돌아갈 곳으로.']],draw(c,T){sky(c,3,T);city(c,240,150,1.4,T,true);echoes(c,240,100,T,10,true);notes(c,240,100,T,true)}},
+  {d:5400,lines:[['라온','괜찮아. 바람이 부는 곳엔 내가 있을 거야.'],['하루','라온…!']],draw(c,T){sky(c,3,T);windLines(c,T,.4,'#ffe8c8');ledge(c,3);scHero(c,150,231,2,T);raon(c,300,232,2.4,T,{fade:scCl((T-1.5)/3.5),closed:T>1.2})}},
+  {d:5600,lines:[['아리아의 마지막 기록','완벽한 노래는 없었다.'],['아리아의 마지막 기록','모든 소리는 저마다 다른 곳으로 흘러갈 때, 비로소 노래가 된다.']],draw(c,T){c.fillStyle='#120e1c';c.fillRect(0,0,480,270);scGlow(c,240,135,160,'#ffe8a0',.12);aria(c,240,200,2,T,.35);
+   scTxt(c,'완벽한 노래는 없었다.',240,96,13,'#ffe8c8',scCl((T-.6)*1.5));scTxt(c,'모든 소리는 저마다 다른 곳으로 흘러갈 때,',240,226,10,'#e8e0f8',scCl((T-2.4)*1.5),'center',700);scTxt(c,'비로소 노래가 된다.',240,242,10,'#e8e0f8',scCl((T-2.9)*1.5),'center',700)}},
+  {d:4600,lines:[['똑딱','하루, 들려? 바람 소리.'],['하루','응. 라온 목소리 같아.']],draw(c,T){sky(c,3,T);windLines(c,T,.45,'#ffe8c8');ship(c,240,160+Math.sin(T)*3,2,T);try{drawKnight(c,240,164+Math.sin(T)*3,1.4,false,null,T*2.3)}catch(e){}kite(c,400-T*10,60+Math.sin(T*2)*6,1.6,'#5ad0b0',Math.sin(T)*.3)}},
+  {d:4800,lines:[['','며칠 뒤, 시계골 언덕. 아이들이 연을 날린다.'],['','연 하나가 혼자 높이 올라가 바람개비처럼 돌았다.']],draw(c,T){sky(c,4,T);hills(c,T);const cols=['#ff6a5a','#ffd08a','#8ad8ff','#c8a0ff'];for(let i=0;i<4;i++){const x=90+i*90,y=110+Math.sin(T*1.5+i)*8;c.strokeStyle='#ffffff';c.globalAlpha=.5;c.beginPath();c.moveTo(x-30,236);c.quadraticCurveTo(x-20,180,x,y+8);c.stroke();c.globalAlpha=1;kite(c,x,y,1.6,cols[i],Math.sin(T+i)*.3)}
+   const q=scE(scCl((T-1.5)/2.5));c.save();c.translate(260,90-q*50);c.rotate(T*3*q);for(let i=0;i<4;i++){c.rotate(Math.PI/2);c.fillStyle=['#ff6a5a','#ffd08a','#5ad0b0','#8ad8ff'][i];c.beginPath();c.moveTo(0,0);c.lineTo(9,-3);c.lineTo(7,4);c.closePath();c.fill()}c.restore();scGlow(c,260,90-q*50,24,'#ffffff',.3*q)}},
+  {d:4800,lines:[['','거꾸로 매달렸던 시계탑이 바로 서고, 바늘이 정오를 지나 한 시를 가리켰다.'],['','시간이 다시 흐르기 시작했다.']],draw(c,T){sky(c,4,T);city(c,240,190,1.6,T,true)}},
+  {d:4400,noFade:false,lines:[['','…그리고 어딘가에서, 바람에 실려 간 소리 하나가 거울에 부딪혀 거꾸로 돌아왔다.'],['???','…다시 들려?']],draw(c,T){c.fillStyle='#08080e';c.fillRect(0,0,480,270);const q=scCl(T/3);c.strokeStyle='#c8d8ff';c.globalAlpha=.5;c.strokeRect(200.5,60.5,80,130);c.globalAlpha=.12;c.fillStyle='#c8d8ff';c.fillRect(201,61,79,129);c.globalAlpha=1;
+   for(let i=0;i<5;i++){const x=40+q*160-i*6,y=125+Math.sin(i)*4;c.fillStyle='#ffd08a';c.globalAlpha=(1-i/5)*(q<1?1:0);c.fillRect(x,y,2,2)}c.globalAlpha=1;if(q>=1){const r=scCl(T-3);for(let i=0;i<5;i++){c.fillStyle='#ff8ab0';c.globalAlpha=1-i/5;c.fillRect(200-r*150+i*6,125-Math.sin(i)*4,2,2)}c.globalAlpha=1;scTxt(c,'REVERSE',240,220,10,'#ff8ab0',r*.7,'center',800)}}},
+  {d:3600,draw(c,T){c.fillStyle='#000';c.fillRect(0,0,480,270);const q=scE(scCl(T/1.2));scTxt(c,'CHAPTER 6 · ZENITH',240,118,9,'#ffd08a',q,'center',800);scTxt(c,'바람에 실린 노래',240,142,18,'#ffffff',q);scTxt(c,'THE END',240,166,10,'#e8e0d0',scCl((T-.8)*2),'center',800)}}]}
+
+ /* ---------- 이야기 흐름 ---------- */
+ window.s6Go=function(k,first){const s=sv();if(!unlocked()||k>(s.ci||0)||!L6[k])return;try{initAudio()}catch(e){}const seq=[];
+  if(first||(k===0&&!s.pro)){seq.push(...prologue());s.pro=1;saveNow()}
+  seq.push(bossShot(k,S6STORY[k].intro,4400,'meet'));scPlay(seq,()=>s6Fight(k,'story'))};
+ window.s6Start=function(k){if(!unlocked()){try{gmSfx('no')}catch(e){}return}const ci=sv().ci||0,kk=Math.min(9,k==null?ci:Math.min(k,ci));try{gmSfx('ok')}catch(e){}s6Go(kk,kk===0&&ci===0)};
+ window.s6StoryEnd=function(k,won,rank,coins,html){const B=L6[k];
+  if(!won){showOverlay('CHAPTER 6 · ZENITH',S6STORY[k].place+' · 바람에 휩쓸렸다…',html,[['다시 도전',()=>{$('overlay').hidden=true;s6Fight(k,'story')},true],['로비로',toLobby,false]]);return true}
+  const s=sv(),o='PSABC';if(!s.best[k]||o.indexOf(rank)<o.indexOf(s.best[k]))s.best[k]=rank;s.ci=Math.max(s.ci||0,k+1);saveNow();
+  const seq=[bossShot(k,S6STORY[k].outro,4400,'memory')];if(k===2)seq.push(...meetRaon());if(k===6)seq.push(...twist());if(k===9)seq.push(...ending());
+  seq.push(cxResultCard({tag:'CHAPTER 6 · ZENITH  ·  바람길 '+(k+1)+' / 10',name:B.name,rank,coins,prog:'열린 바람길 '+Math.min(10,s.ci)+'/10',next:k<9?L6[k+1].name:null,col:B.c==='#ffffff'?'#e8f0ff':B.c,bg0:'#0c1430',bg1:B.dark}));
+  scPlay(seq,()=>{if(k<9){s6Go(k+1,false);return}showOverlay('CHAPTER 6 · CLEAR','바람에 실린 노래',html+'<br><br><b style="color:#ffd08a">챕터 6을 모두 마쳤어요!</b><br>보스 러시의 CHAPTER 6 탭에서 다시 도전할 수 있어요.',[['로비로',toLobby,true]])});return true};
+ /* 최종전 마지막 단계: 라온이 연이 되어 바람길을 열어 줌 (이야기 모드만) */
+ {const _ds=drawScene;drawScene=function(now){const r=_ds.apply(this,arguments);try{if(G&&G.s6===9&&G.s6How==='story'&&(G.phase||0)>=2&&G.state!=='result'){const t=now/1000,x=AX+44+Math.sin(t*1.3)*20,y=AY+30+Math.sin(t*2.1)*6;
+   for(let i=0;i<10;i++){const q=(t*.8+i/10)%1;RA(Math.round(x+q*AW*.8),Math.round(y+8+Math.sin(q*6+t*3)*6),10,1,'#ffe8c8',(1-q)*.45)}raon(ctx,x,y+16,1.2,t,{noMap:true});kite(ctx,x+12,y-4,1,'#ffd08a',Math.sin(t*2)*.4)}}catch(e){}return r}}
+ /* 이야기 전투 중 부활 연출 없음 */
+ try{const _tr=tryRevive;tryRevive=function(){if(G&&G.s6!=null)return false;return _tr.apply(this,arguments)}}catch(e){}
+
+ /* ---------- 메뉴 ① 이야기 시계 (6번째 칸) ---------- */
+ CS_CH.push({cv:'titleCv6',btn:'btnStory6',col:'#ffd08a',ang:150,num:'VI',tag:'CHAPTER 6 · ZENITH',title:'바람이 머무는 곳',desc:'바다에서 돌아온 소리들이 하늘에 쌓여 내려오지 않는다. 구름 위 거꾸로 매달린 시계탑, 하늘 도시 제니스로.',unit:'바람길'});
+ {const c=document.createElement('canvas');c.id='titleCv6';c.width=480;c.height=190;c.style.display='none';document.body.appendChild(c);const b=document.createElement('button');b.id='btnStory6';b.hidden=true;b.textContent='▶ 하늘 도시로';b.onclick=()=>s6Start();document.body.appendChild(b)}
+ {const base=csLocked;csLocked=function(i){return i===5?!unlocked():base.apply(this,arguments)}}
+ {const base=csInfo;csInfo=function(i){return i===5?info():base.apply(this,arguments)}}
+ {const base=s_csPage;s_csPage=function(i){const r=base.apply(this,arguments);try{if(i===5){const l=document.querySelector('#csPage .csLock');if(l)l.textContent='🔒 챕터 5의 마지막 수문을 해방하면 열려요.'}}catch(e){}return r}}
+ {const base=menuTick;menuTick=function(now){base.apply(this,arguments);try{if(GM.scr==='story'){const cv=$('titleCv6');if(cv&&cv.parentNode&&cv.parentNode.id==='csWin'){const c=cv.getContext('2d'),T=now/1000;c.imageSmoothingEnabled=false;c.save();c.scale(1,190/270);sky(c,0,T);windLines(c,T,.4);city(c,240,70,1.1,T,false);ship(c,120+Math.sin(T*.5)*20,190,1.3,T);c.restore()}}}catch(e){}}}
+
+ /* ---------- 메뉴 ② 보스 러시: CHAPTER 6 탭 (rushCh=5) ---------- */
+ const RC=5;
+ const rushLk=k=>{if(!unlocked())return true;const ci=sv().ci||0;return k==null?ci<10:k>=ci};
+ const rushBest=k=>{const o='PSABC',r=saveData.s6rush||{};let b=null;for(const d of ['easy','normal','hard','extreme']){const v=r[k+'|'+d];if(v&&(b===null||o.indexOf(v)<o.indexOf(b)))b=v}return b};
+ const bpmOf=k=>((typeof C3MUS!=='undefined'&&C3MUS[L6[k].art])||{}).bpm||120;
+ function tabPaint(){document.querySelectorAll('#gmRush .gmTabs [data-ch]').forEach(b=>{if(+b.dataset.ch===RC){b.classList.toggle('on',GM.rushCh===RC);b.style.setProperty('--pc','#ffd08a');b.textContent=unlocked()?'🪁 CHAPTER 6':'🔒 CHAPTER 6'}})}
+ {const _gb=gmBuild;gmBuild=function(){_gb.apply(this,arguments);try{const tabs=document.querySelector('#gmRush .gmTabs');if(tabs&&!tabs.querySelector('[data-ch="'+RC+'"]')){const b=document.createElement('button');b.className='gmPill';b.dataset.ch=String(RC);b.textContent='CHAPTER 6';b.onclick=()=>{GM.rushCh=RC;GM.rushSel=0;gmSfx('move');gmRushBuild()};tabs.appendChild(b)}tabPaint()}catch(e){}}}
+ {const _gs=gmShow;gmShow=function(){const r=_gs.apply(this,arguments);try{tabPaint()}catch(e){}return r}}
+ {const _rb=gmRushBuild;gmRushBuild=function(){if(GM.rushCh!==RC){const r=_rb.apply(this,arguments);tabPaint();return r}
+  /* 다른 챕터 탭의 'on' 표시를 지우고 격자를 새로 */document.querySelectorAll('#gmRush .gmTabs [data-ch]').forEach(b=>b.classList.toggle('on',+b.dataset.ch===RC));tabPaint();
+  const grid=$('gmGrid');grid.innerHTML='';for(let k=0;k<10;k++){const lk=rushLk(k),b0=L6[k],b=document.createElement('button');b.className='gmTile'+(k===GM.rushSel?' sel':'')+(lk?' lock':'');b.style.setProperty('--bc',b0.c);const cv=document.createElement('canvas');cv.width=96;cv.height=72;b.appendChild(cv);const rk=rushBest(k);
+   b.insertAdjacentHTML('beforeend','<span class="no">'+String(k+1).padStart(2,'0')+'</span>'+(rk?'<span class="rk" style="color:'+(rk==='P'?'#fff6cf':rk==='S'?'#ffd166':'#cfe8d0')+'">'+(rk==='P'?'★':rk)+'</span>':'')+'<span class="nm">'+(lk?'???':b0.name)+'</span>');
+   b.onmouseenter=()=>{if(GM.rushSel!==k){GM.rushSel=k;gmSfx('move');gmRushSelUpd()}};b.onclick=()=>{if(GM.rushSel===k)gmFight();else{GM.rushSel=k;gmSfx('move');gmRushSelUpd()}};grid.appendChild(b);
+   try{const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.drawImage(s6SkyArena(k),120,60,240,180,0,0,96,72);if(!lk)c3ArtOn(c,b0.art,48,68,0,1.3,{still:true});else{c.fillStyle='rgba(5,8,10,.75)';c.fillRect(0,0,96,72)}}catch(e){}}
+  gmRushInfo();try{if(typeof rfLabels==='function')rfLabels()}catch(e){}}}
+ {const _ri=gmRushInfo;gmRushInfo=function(){if(GM.rushCh!==RC)return _ri.apply(this,arguments);const k=GM.rushSel,b=L6[k],lk=rushLk(k);
+  $('gmPrevName').textContent=lk?'???':b.name;$('gmPrevName').style.color=b.c;$('gmPrevEpi').textContent=lk?(unlocked()?'스토리 챕터 6에서 이 바람길의 보스를 쓰러뜨리면 열려요':'챕터 5의 마지막 수문을 해방하면 열리는 하늘이에요'):'"'+S6STORY[k].title+'"  ·  '+b.en;
+  $('gmPrevStat').innerHTML='<span>ZENITH '+String(k+1).padStart(2,'0')+' / 10</span><span>♩ '+bpmOf(k)+' BPM</span><span>HP '+(lk?'???':s6Hp(k).toLocaleString())+'</span><span>CHAPTER 6 · ZENITH</span>';
+  const r=saveData.s6rush||{};$('gmPrevRanks').innerHTML=GM_DIFF.map(([kk,n,c])=>{const v=r[k+'|'+kk];return '<div style="'+(kk===diff?'box-shadow:0 0 0 2px '+c:'')+'">'+n+'<b style="color:'+(v?(v==='P'?'#fff6cf':c):'#3a4a50')+'">'+(v?(v==='P'?'★':v):'—')+'</b></div>'}).join('');
+  $('gmFight').disabled=lk;try{rpDetail()}catch(e){}}}
+ {const _gf=gmFight;gmFight=function(){if(GM.rushCh!==RC)return _gf.apply(this,arguments);const k=GM.rushSel;if(rushLk(k)){gmSfx('no');return}gmSfx('ok');s6Fight(k,'rush');$('bvTitle').textContent='BEAT BLADE · ZENITH 러시 '+(k+1)+'/10'}}
+ {const f=rpKey;rpKey=function(){return GM.rushCh===RC?'z'+GM.rushSel:f.apply(this,arguments)}}
+ {const f=rpDeck;rpDeck=function(){if(GM.rushCh!==RC)return f.apply(this,arguments);return (C3BOSS[L6[GM.rushSel].art]||{}).deck||[]}}
+ {const f=rpMusId;rpMusId=function(){return GM.rushCh===RC?L6[GM.rushSel].art:f.apply(this,arguments)}}
+ {const f=rpBpm;rpBpm=function(){return GM.rushCh===RC?bpmOf(GM.rushSel):f.apply(this,arguments)}}
+ {const f=rpRunLk;rpRunLk=function(){return GM.rushCh===RC?rushLk(null):f.apply(this,arguments)}}
+ {const f=rpLocked;rpLocked=function(){return GM.rushCh===RC?rushLk(GM.rushSel):f.apply(this,arguments)}}
+ {const f=rqLk;rqLk=function(k){return GM.rushCh===RC?rushLk(k):f.apply(this,arguments)}}
+ {const f=rfLocked;rfLocked=function(k){return GM.rushCh===RC?rushLk(k):f.apply(this,arguments)}}
+ {const f=rqBoss;rqBoss=function(k){if(GM.rushCh!==RC)return f.apply(this,arguments);const b=L6[k];return {art:b.art,base:0,c:b.c,name:b.name,en:b.en,bpm:bpmOf(k)}}}
+ {const f=rpDetail;rpDetail=function(){const r=f.apply(this,arguments);try{if(GM.rushCh===RC&&rpLocked()){const n=document.querySelector('#gmRushDet .rpNote');if(n)n.textContent='🔒 '+(unlocked()?'스토리 챕터 6에서 쓰러뜨린 보스만 공격 정보와 기록이 열려요.':'챕터 5의 마지막 수문을 해방하면 열리는 하늘이에요.')}}catch(e){}return r}}
+ /* 10연전 */
+ {const f=rpRunList;rpRunList=function(ch){return ch===RC?[...Array(10)].map((_,i)=>({s6:i})):f.apply(this,arguments)}}
+ {const f=rpRunFight;rpRunFight=function(){const it=RUSH&&RUSH.list[RUSH.i];if(!it||it.s6==null)return f.apply(this,arguments);$('overlay').hidden=true;s6Fight(it.s6,'rush');if(RUSH.carry!=null)P.hp=Math.min(P.maxhp,Math.round(RUSH.carry+P.maxhp*.35));RUSH.fightT0=performance.now()}}
+ function runEnd(won,k){const t=Math.round((performance.now()-(G.startReal||RUSH.fightT0))/1000),rank=won?rankOf(G.hits):'✕';
+  RUSH.splits.push({name:L6[k].name,t,rank,score:G.score||0,hits:G.hits||0});RUSH.total+=t;RUSH.score+=G.score||0;RUSH.carry=P.hp;
+  setTimeout(()=>{if(!RUSH)return;if(won&&RUSH.i<9){RUSH.i++;const nx=RUSH.list[RUSH.i];showOverlay('BOSS RUSH · '+RUSH.i+' / 10','다음 상대: '+L6[nx.s6].name,rpRunTable()+'<div style="margin-top:8px;color:#a6f5c6">체력 '+P.hp+' → 다음 판 시작 시 35% 회복</div>',[['계속 ▶',()=>rpRunFight(),true],['그만두기',()=>rpRunSummary(false),false]])}else rpRunSummary(won)},200)}
+ /* 러시 전투 끝: 기록 + 10연전 이어가기 (가장 바깥에서 가로챔) */
+ {const _fe=fightEnd;fightEnd=function(won){try{if(G&&G.s6!=null&&G.s6How==='rush'&&G.state!=='result'){const k=G.s6;try{if(typeof rpSaveRec==='function')rpSaveRec('z'+k,won)}catch(e){}
+   if(typeof RUSH!=='undefined'&&RUSH&&RUSH.ch===RC){G.state='result';G.won=won;stopMusic();try{c3SwapOut()}catch(e){}G.s6=null;G.s6w=null;
+    if(won){saveData.s6rush=saveData.s6rush||{};const rank=rankOf(G.hits),kk=k+'|'+diff,o='PSABC';if(!saveData.s6rush[kk]||o.indexOf(rank)<o.indexOf(saveData.s6rush[kk]))saveData.s6rush[kk]=rank}saveNow();runEnd(won,k);return}}}catch(e){console.error('v45 ch6 rush',e)}return _fe.apply(this,arguments)}}
+ /* 러시 결과 창의 '다음 보스'는 잠긴 보스로 넘어가지 않게 */
+ {const _so=showOverlay;showOverlay=function(tag,title,text,btns){try{if(typeof tag==='string'&&tag.indexOf('ZENITH · ')===0&&Array.isArray(btns)){const m=/(\d\d)$/.exec(tag),k=m?+m[1]-1:-1;if(k>=0&&rushLk(k+1))btns=btns.filter(x=>x[0]!=='다음 보스 →')}}catch(e){}return _so.call(this,tag,title,text,btns)}}
+}catch(e){console.error('v45 ch6 story',e)}})();
 </script></body></html>

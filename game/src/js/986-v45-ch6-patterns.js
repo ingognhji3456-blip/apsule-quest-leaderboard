@@ -174,19 +174,22 @@
   for(let i=0;i<16;i++){const a=i*TAU/16;g.strokeStyle=t3?'#4a4e70':'#d8c8a8';g.globalAlpha=.25;g.beginPath();g.moveTo(W/2,AY+AH*.6);g.lineTo(W/2+Math.cos(a)*AW*.54,AY+AH*.6+Math.sin(a)*AH*.39);g.stroke()}g.globalAlpha=1;
   /* 나침반 바닥 문양 */g.strokeStyle=B.c;g.globalAlpha=.35;g.lineWidth=2;g.beginPath();g.ellipse(W/2,AY+AH*.6,60,40,0,0,TAU);g.stroke();g.globalAlpha=1;
   AC[k]=c;return c}
+ window.s6SkyArena=skyArena;
  {const _ac=arenaCanvas;arenaCanvas=function(bi){if(typeof G!=='undefined'&&G&&G.s6!=null)return skyArena(G.s6);return _ac.apply(this,arguments)}}
  {const _aa=arenaAnim;arenaAnim=function(bi,now,beat){if(typeof G!=='undefined'&&G&&G.s6!=null){const t=now/1000,t3=G.s6>=7;for(let i=0;i<6;i++){const x=((i*97+t*(8+i*2))%(W+80))-40,y=40+i*30;RA(Math.round(x),y,30+i*4,4,t3?'#3a4878':'#ffffff',.18);RA(Math.round(x)+8,y-3,18,3,t3?'#3a4878':'#ffffff',.14)}return}return _aa.apply(this,arguments)}}
  /* 바람 그리기 */{const _nd=npDrawTop;npDrawTop=function(now,beat){const r=_nd.apply(this,arguments);try{if(G&&G.s6!=null)drawWind(now,beat)}catch(e){}return r}}
  /* ---------- 전투 시작 · 끝 ---------- */
  window.s6Hp=k=>Math.round((10200+k*700)*({easy:.7,normal:1,hard:1.3,extreme:1.55}[diff]||1));
- window.s6Fight=function(k){const B6=L6[k];if(!B6)return;initAudio();story=false;enterGame();try{CS=null}catch(e){}
-  const b={art:B6.art,base:0,name:B6.name,en:B6.en,epi:B6.epi||'',phase:[B6.name+'의 바람이 거세진다!','폭풍이 몰아친다!'],dying:'…바람이 잦아든다.'};c3SwapIn(b);startFight(b.base,false);G.s6=k;G.hp=G.maxHp=s6Hp(k);
+ window.s6Fight=function(k,how){const B6=L6[k];if(!B6)return;const ST=window.S6STORY&&S6STORY[k];initAudio();story=false;enterGame();try{CS=null}catch(e){}
+  const b={art:B6.art,base:0,name:B6.name,en:B6.en,epi:(ST&&ST.title)||B6.epi||'',phase:(ST&&ST.phase)||[B6.name+'의 바람이 거세진다!','폭풍이 몰아친다!'],dying:(ST&&ST.dying)||'…바람이 잦아든다.'};c3SwapIn(b);startFight(b.base,false);G.s6=k;G.s6How=how||'rush';G.hp=G.maxHp=s6Hp(k);
   $('bossName').textContent=B6.name+'  '+B6.en;$('bvTitle').textContent='BEAT BLADE · CHAPTER 6 · ZENITH '+(k+1)+'/10'};
- function s6End(won){if(G.state==='result')return;G.state='result';G.won=won;stopMusic();const k=G.s6,B6=L6[k],t=Math.round((performance.now()-G.startReal)/1000);c3SwapOut();G.s6=null;G.s6w=null;
+ function s6End(won){if(G.state==='result')return;G.state='result';G.won=won;stopMusic();const k=G.s6,how=G.s6How||'rush',B6=L6[k],t=Math.round((performance.now()-G.startReal)/1000);c3SwapOut();G.s6=null;G.s6w=null;
   const rank=G.hits===0?'P':G.hits<=2?'S':G.hits<=4?'A':G.hits<=7?'B':'C';saveData.bestCombo=Math.max(saveData.bestCombo||0,G.maxCombo||0);
-  if(won){saveData.s6rush=saveData.s6rush||{};const kk=k+'|'+diff,o='PSABC';if(!saveData.s6rush[kk]||o.indexOf(rank)<o.indexOf(saveData.s6rush[kk]))saveData.s6rush[kk]=rank}
+  if(how==='demo'){showOverlay('ZENITH · 시연',B6.name,'시연 전투는 기록이 남지 않아요.',[['다시 시연',()=>{$('overlay').hidden=true;s6Fight(k,'demo')},true],['로비로',toLobby,false]]);return}
+  if(won&&how!=='demo'){saveData.s6rush=saveData.s6rush||{};const kk=k+'|'+diff,o='PSABC';if(!saveData.s6rush[kk]||o.indexOf(rank)<o.indexOf(saveData.s6rush[kk]))saveData.s6rush[kk]=rank}
   let coins=0;try{coins=awardCoins(won,rank)}catch(e){}saveNow();const acc=G.swings?Math.round(G.onbeat/G.swings*100):0;
   const html='<b style="color:#ffd166">🪙 +'+coins+' 코인</b> (보유 '+(saveData.coins||0)+')<br>반격 성공 '+(G.swings||0)+'회 · 박자 정확도 '+acc+'%<br>최대 콤보 '+(G.maxCombo||0)+' · 피격 '+G.hits+'회 · 시간 '+Math.floor(t/60)+':'+String(t%60).padStart(2,'0')+(won?'<br><b style="font-size:26px;color:'+(rank==='P'?'#fff6cf':'#ffd166')+'">'+(rank==='P'?'★ PERFECT ★':'RANK '+rank)+'</b>':'<br>보스 체력 '+Math.round(G.hp/G.maxHp*100)+'% 남음');
+  if(how==='story'&&typeof window.s6StoryEnd==='function'){if(window.s6StoryEnd(k,won,rank,coins,html))return}
   const btns=[['다시 도전',()=>{$('overlay').hidden=true;s6Fight(k)},!won]];if(won&&k<9)btns.push(['다음 보스 →',()=>{$('overlay').hidden=true;s6Fight(k+1)},true]);btns.push(['로비로',toLobby,false]);
   showOverlay('ZENITH · '+String(k+1).padStart(2,'0'),won?B6.name+' 격파!':'바람에 휩쓸렸다…',html,btns)}
  {const _fe=fightEnd;fightEnd=function(won){if(G&&G.s6!=null){s6End(won);return}return _fe.apply(this,arguments)}}
