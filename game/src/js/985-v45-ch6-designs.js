@@ -104,32 +104,41 @@
   /* 가운데 지휘 가면 */{const y=-30+b;A.E(0,y,4,4.6,K);A.E(0,y,3.5,4.1,'#fff6ee');A.P([[-3.5,y-1],[3.5,y-1],[0,y-5]],C.lv);for(const s of [-1,1]){A.P([[s*.8,y-.6],[s*2.8,y-1.4],[s*2.4,y+.2]],K);if(!A.blink&&!A.dm)A.R(s*1.8-.3+A.look[0]*.3,y-.8,.6,.5,C.lv2)}A.E(0,y+2,1.2,.5+A.open*1.2,K);A.glow(0,y,8,C.lv2,.4+A.pul*.4)}
   A.rise(6,-16,16,-20,24,.4,C.lv2,.7,.5);A.bbox=[-28,-52,28,2]};
 
- /* 7. 무지개 다리 수문장 — 유리 갑옷 · 프리즘 등불 · 등 뒤 무지개 아치 · 다리 조각 위에 섬 */
- R.c_s6_prism=A=>{const t=A.t,b=A.bob*.3,C={g1:'#d8f0ff',g2:'#9ac8e8',g3:'#5a88b8',g4:'#2a4a78'},RB=['#ff5a5a','#ffa04a','#ffe25a','#5ad08a','#4aa8ff','#7a6aff','#c86aff'];
-  /* 무지개 아치 */for(let i=0;i<7;i++){const r=20-i*1.3;for(let a=0;a<=90;a++){const q=Math.PI+a*Math.PI/90;A.R(Math.cos(q)*r-.7,-22+Math.sin(q)*r*1.05-.7,1.4,1.4,RB[i],.6)}}
-  /* 다리 조각 */A.P([[-18,0],[18,0],[15,-3.4],[-15,-3.4]],'#8a8a9a');for(let i=-4;i<=4;i++)A.R(i*3.6-.3,-3.4,.6,3.4,'#5a5a6a');A.R(-18,-4,36,.8,'#c8c8d8');
-  for(const s of [-1,1]){lim(A,s*3,-14+b,s*4,-3.6,2.2,C.g3,C.g1);A.P([[s*4-2.2,-4],[s*4+2.2,-4],[s*4+1.4,-6],[s*4-1.4,-6]],C.g4)}
-  /* 유리 몸 (면 나눔) */{const y=-14+b;A.P([[-7,y],[7,y],[8,y-12],[0,y-16],[-8,y-12]],K);A.P([[-6.4,y-.4],[6.4,y-.4],[7.4,y-12],[0,y-15.4],[-7.4,y-12]],C.g2);A.P([[0,y-15.4],[7.4,y-12],[6.4,y-.4],[0,y-6]],C.g3,.8);A.P([[0,y-15.4],[-7.4,y-12],[-2,y-10]],C.g1,.9);
-   A.P([[-1.6,y-9],[1.6,y-9],[0,y-5]],'#ffffff');const ch=Math.floor(t*3)%7;A.glow(0,y-7,6,RB[ch],.6)}
-  /* 머리: 결정 투구 */{const y=-34+b;A.P([[-4,y+4],[4,y+4],[4.6,y-1],[0,y-6],[-4.6,y-1]],K);A.P([[-3.6,y+3.6],[3.6,y+3.6],[4,y-1],[0,y-5.4],[-4,y-1]],C.g1);A.P([[0,y-5.4],[4,y-1],[3.6,y+3.6],[0,y]],C.g2,.8);A.R(-3,y,6,1,C.g4);if(!A.dm&&!A.blink){A.R(-2.6+A.look[0],y+.2,5.2,.6,'#ffffff');A.glow(0,y+.5,4,'#ffffff',.8)}
-   for(const s of [-1,0,1])A.P([[s*2.4-.8,y-3-(s?0:1.4)],[s*2.4+.8,y-3-(s?0:1.4)],[s*2.6,y-8-(s?0:2)]],C.g1)}
-  /* 프리즘 등불 (오른손) · 방패 (왼손) */lim(A,7,-26+b,12,-19+b,1.4,C.g3,C.g1);{const x=13.4,y=-18+b,rot=t*1.2;A.L(x,y-5,x,y-2.6,BR3,.4);A.P([[x+Math.cos(rot)*3,y+Math.sin(rot)*1],[x+Math.cos(rot+2.1)*3,y+Math.sin(rot+2.1)*1],[x,y-3]],'#ffffff');A.P([[x+Math.cos(rot)*3,y+Math.sin(rot)*1],[x+Math.cos(rot+2.1)*3,y+Math.sin(rot+2.1)*1],[x+Math.cos(rot+4.2)*3,y+Math.sin(rot+4.2)*1]],C.g2,.8);
-   for(let i=0;i<7;i++){const a=.25+i*.07;A.L(x+1,y,x+Math.cos(a)*8,y+Math.sin(a)*8,RB[i],.35,.7)}A.glow(x,y,5,'#ffffff',.6+A.pul*.4)}
-  lim(A,-7,-26+b,-11,-19+b,1.4,C.g3,C.g1);A.P([[-15,-24+b],[-9,-24+b],[-9,-15+b],[-12,-12+b],[-15,-15+b]],K);A.P([[-14.4,-23.4+b],[-9.6,-23.4+b],[-9.6,-15.4+b],[-12,-13+b],[-14.4,-15.4+b]],C.g2);for(let i=0;i<7;i++)A.R(-14.2+i*.65,-22+b,.6,6,RB[i],.7);
-  A.bbox=[-21,-46,21,2]};
+ /* 7. 무지개 다리 수문장 — 깨진 무지개 다리를 등에 진 거대 결정 거인 · 외눈 프리즘 · 빛의 대검 · 아치 방패 */
+ R.c_s6_prism=A=>{const t=A.t,b=A.bob*.25,C={g0:'#0e1428',g1:'#1c2848',g2:'#2e4878',g3:'#5a88c8',g4:'#a8d8ff'},RB=['#ff4a5a','#ff9a3a','#ffe04a','#4ae08a','#3aa8ff','#6a5aff','#c85aff'],cs=Math.floor(t*4)%7,BL=A.win('beam')||0;
+  /* 깨진 무지개 아치 (조각이 떠 있음) */for(let i=0;i<7;i++){const r=24.5-i*1.2;for(let a=0;a<=80;a++){const q=Math.PI+a*Math.PI/80,gap=(a>30&&a<38)||(a>58&&a<63);if(gap)continue;const fl=(a>38&&a<58)?Math.sin(t*1.5+a*.1)*1.2-1.6:0;A.R(Math.cos(q)*r-.7,-28+Math.sin(q)*r*1.05-.7+fl,1.4,1.4,RB[i],.85)}}
+  /* 다리 받침 */A.P([[-22,0],[22,0],[18,-4.4],[-18,-4.4]],'#3a3a4e');for(let i=-5;i<=5;i++)A.R(i*3.4-.3,-4.4,.6,4.4,'#24243a');A.R(-22,-5,44,1,'#8a8aa8');for(const s of [-1,1])A.P([[s*18,-5],[s*21,-5],[s*20,-10],[s*18.4,-10]],'#5a5a78');
+  /* 다리 (기둥 같은 결정) */for(const s of [-1,1]){A.P([[s*3,-18+b],[s*9,-18+b],[s*8,-5],[s*3.4,-5]],K);A.P([[s*3.6,-17.4+b],[s*8.4,-17.4+b],[s*7.4,-5.6],[s*4,-5.6]],C.g2);A.P([[s*6,-17.4+b],[s*8.4,-17.4+b],[s*7.4,-5.6],[s*5.6,-5.6]],C.g1,.8);A.L(s*4,-16+b,s*4.6,-7,C.g4,.3,.7);A.spike(s*8.6,-12+b,s>0?-.2:Math.PI+.2,3,1.8,C.g3)}
+  /* 몸통: 넓은 역삼각 결정 흉갑 + 속 빛 */{const y=-18+b;A.P([[-14,y-22],[14,y-22],[9,y-2],[0,y+2],[-9,y-2]],K);A.P([[-13,y-21.4],[13,y-21.4],[8.4,y-2.4],[0,y+1.2],[-8.4,y-2.4]],C.g1);A.P([[0,y-21.4],[13,y-21.4],[8.4,y-2.4],[0,y+1.2]],C.g0,.7);
+   for(const [x0,y0,x1,y1] of [[-13,y-21.4,0,y-10],[13,y-21.4,0,y-10],[0,y-10,0,y+1.2],[-8.4,y-2.4,0,y-10],[8.4,y-2.4,0,y-10]])A.L(x0,y0,x1,y1,C.g3,.35,.8);
+   for(let i=0;i<5;i++){const cx=(i-2)*4.2,cy2=y-14+Math.abs(i-2)*1.6;A.L(cx,cy2,cx+((i*7)%3-1)*2,cy2+5,RB[(i+cs)%7],.4,.9)}
+   A.P([[0,y-15],[3.4,y-10],[0,y-5],[-3.4,y-10]],'#ffffff');A.P([[0,y-14],[2.6,y-10],[0,y-6],[-2.6,y-10]],RB[cs]);A.glow(0,y-10,10+A.pul*6,RB[cs],.8)}
+  /* 어깨: 거대한 결정 견갑 */for(const s of [-1,1]){const x=s*14,y=-38+b;A.P([[x-s*3,y+5],[x+s*5,y+3],[x+s*8,y-6],[x+s*2,y-9],[x-s*2,y-4]],K);A.P([[x-s*2.4,y+4.4],[x+s*4.4,y+2.6],[x+s*7.2,y-5.6],[x+s*2,y-8.2],[x-s*1.6,y-3.6]],C.g2);A.P([[x+s*2,y-8.2],[x+s*7.2,y-5.6],[x+s*3,y-2]],C.g4,.7);
+   A.spike(x+s*4,y-7,-Math.PI/2+s*.5,7,2.4,C.g3,'#ffffff');A.spike(x+s*7,y-4,-Math.PI/2+s*1,5,1.8,C.g2,C.g4)}
+  /* 머리: 외눈 프리즘 왕관 */{const y=-44+b;A.P([[-5,y+5],[5,y+5],[6,y-1],[0,y-5],[-6,y-1]],K);A.P([[-4.4,y+4.4],[4.4,y+4.4],[5.4,y-1],[0,y-4.4],[-5.4,y-1]],C.g1);A.R(-4,y-.4,8,2.4,K);
+   if(!A.dm&&!A.blink){const lx=A.look[0]*1.2;A.P([[lx-2.6,y+.8],[lx,y-.6],[lx+2.6,y+.8],[lx,y+2]],'#ffffff');A.C(lx,y+.7,.8,RB[cs]);A.glow(lx,y+.8,7,RB[cs],.9);A.L(-4,y+.8,4,y+.8,RB[cs],.2,.6)}
+   for(let i=-2;i<=2;i++)A.spike(i*2.2,y-3.4+Math.abs(i)*.8,-Math.PI/2+i*.22,i?4.4:7,1.4,i%2?C.g3:C.g4,'#ffffff');A.brow(0,y-.6,9,.6,K)}
+  /* 오른팔: 빛의 대검 (위로 치켜듦) */{lim(A,14,-36+b,20,-26+b,2.6,C.g2,C.g4);lim(A,20,-26+b,22,-34+b,2.2,C.g2,C.g4);A.C(22,-34+b,2.2,C.g3);const a=-1.75+BL*.6,L=30,hx=22,hy=-35+b,ex=hx+Math.cos(a)*L,ey=hy+Math.sin(a)*L*.6;
+   A.L(hx-Math.cos(a)*3,hy-Math.sin(a)*3,ex,ey,K,3.6);for(let i=0;i<7;i++){const k=i/7,k2=(i+1)/7;A.L(hx+(ex-hx)*k,hy+(ey-hy)*k,hx+(ex-hx)*k2,hy+(ey-hy)*k2,RB[(i+cs)%7],2.4)}A.L(hx,hy,ex,ey,'#ffffff',.6,.9);A.R(hx-3,hy-.6,6,1.2,'#d8d8f0');A.glow(ex,ey,6,'#ffffff',.5)}
+  /* 왼팔: 다리 아치 모양 탑 방패 */{lim(A,-14,-36+b,-19,-26+b,2.6,C.g2,C.g4);const x=-21,y=-22+b;A.P([[x-6,y-10],[x+5,y-10],[x+5,y+8],[x-.5,y+11],[x-6,y+8]],K);A.P([[x-5.4,y-9.4],[x+4.4,y-9.4],[x+4.4,y+7.6],[x-.5,y+10.2],[x-5.4,y+7.6]],C.g1);
+   for(let i=0;i<7;i++){for(let a=0;a<=14;a++){const q=Math.PI+a*Math.PI/14,r=4-i*.45;A.R(x-.5+Math.cos(q)*r-.3,y+2+Math.sin(q)*r-.3,.6,.6,RB[i],.9)}}A.R(x-5,y+2.6,9,.6,C.g3);A.spike(x-.5,y-9.4,-Math.PI/2,3,1.6,C.g3,'#ffffff')}
+  A.rise(8,-24,24,-6,40,.35,'#ffffff',.6,.3);A.bbox=[-30,-56,30,2]};
 
- /* 8. 메아리 사냥매 — 황동·청회색 기계 매 · 펼친 날개 · 소리 고리 눈 · 발톱에 쥔 메아리 종 */
- R.c_s6_falcon=A=>{const t=A.t,y=-26+A.bob*.9,C={s1:'#3a4250',s2:'#5a6678',s3:'#8a98ac',b1:'#8a5a28',b2:'#c8903a',b3:'#ffd080'},fl=Math.sin(t*3.4)*.18;
-  /* 날개 */for(const s of [-1,1]){for(let i=0;i<8;i++){const a=-Math.PI/2+s*(.65+i*.17)-s*fl,L=19-i*1.2,x0=s*4,y0=y-2+i*.5,x1=x0+Math.cos(a)*L,y1=y0+Math.sin(a)*L*.7+i*.4;
-    lim(A,x0,y0,x1,y1,1.4,i<3?C.b2:i<6?C.s2:C.s1);A.R(x1-.4,y1-.4,.8,.8,i<3?C.b3:C.s3)}
-   A.P([[s*3,y-4],[s*12,y-10-fl*6],[s*16,y-6],[s*6,y+1]],C.s1,.9);for(let i=0;i<4;i++)A.C(s*(6+i*2.4),y-5-i*.6,.35,C.b3)}
-  /* 꼬리 */for(let i=-2;i<=2;i++)lim(A,0,y+6,i*1.6,y+14,1,i%2?C.s2:C.b2);
-  /* 몸 */A.E(0,y+1,5,7.4,K);A.E(0,y+1,4.4,6.8,C.s2);A.E(0,y+3,3,4.6,'#e8e0d0');for(let i=0;i<4;i++)A.L(-2,y+1+i*1.6,2,y+1.6+i*1.6,C.s3,.3,.8);A.R(-4.4,y-2,8.8,.6,C.b2);
-  /* 머리 · 부리 · 소리 고리 눈 */{const hy=y-8;A.E(0,hy,4,3.6,K);A.E(0,hy,3.5,3.1,C.s2);A.P([[-3.4,hy-1],[3.4,hy-1],[0,hy-3.6]],C.b2);A.P([[-1.2,hy+1],[1.2,hy+1],[0,hy+3.6]],'#ffd04a');A.P([[0,hy+1],[1.2,hy+1],[0,hy+3.6]],C.b1);
-   for(const s of [-1,1]){const ex=s*1.8,ey=hy-.4;A.C(ex,ey,1.1,'#1a1410');if(!A.dm&&!A.blink){A.C(ex+A.look[0]*.3,ey,.6,'#ffb84a');for(let k=1;k<=2;k++){const q=((t*1.4)+k/2)%1;A.ring(ex,ey,1.2+q*2.4,.2,'#ffb84a',.6*(1-q))}}}}
-  /* 발톱에 쥔 메아리 종 */{const fy=y+9;for(const s of [-1,1])lim(A,s*1.6,fy-2,s*2.4,fy+1.4,.7,C.b1,C.b3);const sw=Math.sin(t*2)*.2;A.push(1,0,fy+1.4);A.P([[-2.4,fy+5],[2.4,fy+5],[1.6,fy+1.6],[-1.6,fy+1.6]],K);A.P([[-2,fy+4.7],[2,fy+4.7],[1.3,fy+1.9],[-1.3,fy+1.9]],C.b2);A.R(-2,fy+4.2,4,.5,C.b3);A.C(sw*2,fy+5.4,.5,C.b3);A.pop();
-   A.glow(0,fy+3.4,4,'#ffd080',.4+A.pul*.4)}
-  A.bbox=[-24,-50,24,2]};
+ /* 8. 메아리 사냥매 — 칼날 깃털의 거대한 전투 맹금 · 날개를 활짝 편 위협 자세 · 세 개의 눈 투구 · 비명 지르는 부리 · 쇠사슬 종을 움켜쥔 발톱 */
+ R.c_s6_falcon=A=>{const t=A.t,y=-28+A.bob*1.1,C={s0:'#141820',s1:'#262e3c',s2:'#3e4a5e',s3:'#6a7a92',b1:'#6a4018',b2:'#b8782a',b3:'#ffc860',ey:'#ff7a2a'},fl=Math.sin(t*3)*.12,SC=A.win('screech')||0;
+  /* 날개: 칼날 깃털 3단 (펼친 위협 자세) */for(const s of [-1,1]){for(let row=0;row<3;row++)for(let i=0;i<9;i++){const a=-Math.PI/2+s*(.35+i*.15+row*.05)-s*fl*(1+row*.3),L=(31-i*1.8)*(1-row*.22),x0=s*(5+row*1.4),y0=y-3+i*.6+row*1.6,x1=x0+Math.cos(a)*L,y1=y0+Math.sin(a)*L*.62+i*.6;
+     const col=row===0?(i<4?C.b2:C.s2):row===1?C.s1:C.s0;A.P([[x0,y0-.8],[x1+s*.6,y1-.6],[x1+s*2.4,y1+1.4],[x0,y0+1]],K);A.P([[x0,y0-.4],[x1,y1-.2],[x1+s*1.8,y1+1],[x0,y0+.6]],col);if(row===0){A.L(x0,y0-.2,x1,y1,C.s3,.25,.8);A.R(x1-.4+s*1,y1,.8,.8,i<4?C.b3:'#c8d4e8')}}
+   /* 날개 뼈대 (황동 팔) */lim(A,s*4,y-4,s*13,y-12-fl*8,1.3,C.b1,C.b2);lim(A,s*13,y-12-fl*8,s*22,y-12-fl*10,.9,C.b1,C.b2);A.C(s*13,y-12-fl*8,1.3,C.b2);A.C(s*13,y-12-fl*8,.6,C.ey)}
+  /* 꼬리 칼깃 */for(let i=-3;i<=3;i++){const a=Math.PI/2+i*.16;A.P([[i*1.2,y+8],[i*1.2+Math.cos(a)*14+1,y+8+Math.sin(a)*14],[i*1.2+Math.cos(a)*14-1,y+8+Math.sin(a)*14]],i%2?C.s1:C.s2)}
+  /* 몸통: 장갑 가슴 */A.E(0,y+2,7.4,10,K);A.E(0,y+2,6.8,9.4,C.s1);A.P([[-5,y-4],[5,y-4],[3.6,y+9],[-3.6,y+9]],C.s2);for(let i=0;i<5;i++){A.P([[-4+i*.3,y-2+i*2.4],[4-i*.3,y-2+i*2.4],[0,y+i*2.4]],i%2?C.s3:C.s2);}A.R(-5.4,y-5,10.8,1,C.b2);A.C(0,y+1,1.6,C.ey);A.glow(0,y+1,5,C.ey,.5+A.pul*.5);
+  /* 다리 + 발톱이 움켜쥔 쇠사슬 종 */for(const s of [-1,1]){lim(A,s*3,y+9,s*4,y+15,1.6,C.b1,C.b2);for(let k=-1;k<=1;k++)A.spike(s*4+k*1.1,y+15,Math.PI/2+k*.4,2.6,.9,'#e8e0d0')}
+  {const by=y+19,sw=Math.sin(t*2)*.4;for(let i=0;i<3;i++)A.E(sw*i*.4,y+15.6+i*1.2,.7,.5,'#8a8a94');A.P([[-3.6+sw,by+5],[3.6+sw,by+5],[2.4+sw,by+.6],[-2.4+sw,by+.6]],K);A.P([[-3.1+sw,by+4.6],[3.1+sw,by+4.6],[2+sw,by+1],[-2+sw,by+1]],C.b2);A.R(-3.1+sw,by+4,6.2,.6,C.b3);A.C(sw,by+5.6,.7,C.b3);A.glow(sw,by+3,5,C.b3,.3+A.pul*.4)}
+  /* 머리: 세 눈 투구 · 볏 칼날 · 갈고리 부리 */{const hy=y-12;for(let i=-2;i<=2;i++)A.spike(i*1.4,hy-3+Math.abs(i)*.6,-Math.PI/2-i*.32,i?4:6,1.2,i%2?C.b2:C.b3,'#ffffff');
+   A.E(0,hy,5,4.2,K);A.E(0,hy,4.4,3.7,C.s2);A.P([[-4.4,hy-1.6],[4.4,hy-1.6],[3,hy+1.4],[-3,hy+1.4]],C.s0);
+   const op=.6+SC*2+A.open*1.6;A.P([[-1.8,hy+1.6],[1.8,hy+1.6],[0,hy+5.6]],K);A.P([[-1.4,hy+1.8],[1.4,hy+1.8],[.4,hy+5.2],[0,hy+5.6]],C.b3);A.P([[-1.2,hy+2.6+op*.3],[1.2,hy+2.6+op*.3],[0,hy+4+op]],'#1a0a0a');
+   if(!A.dm&&!A.blink){for(const [ex,ey,r] of [[-2.2,hy-.2,.8],[2.2,hy-.2,.8],[0,hy-1.6,.6]]){A.C(ex+A.look[0]*.3,ey,r,C.ey);A.R(ex+A.look[0]*.3-.15,ey-.4,.3,.3,'#ffffff');A.glow(ex,ey,3,C.ey,.8)}}A.brow(-2.2,hy-1.4,2.6,.5,K);A.brow(2.2,hy-1.4,2.6,-.5,K)}
+  /* 비명 음파 */for(let k=1;k<=3;k++){const q=((t*1.2)+k/3)%1;A.ring(0,y-8,3+q*(10+SC*14),.3,C.ey,(.35+SC*.4)*(1-q))}
+  A.bbox=[-24,-52,24,2]};
 
  /* 9. 폭풍의 눈 — 나선 구름띠 · 가운데 고요한 거대 눈 · 소용돌이에 휩쓸린 기왓장·연·톱니 · 번개 */
  R.c_s6_storm=A=>{const t=A.t,y=-26+A.bob*.5,C={s1:'#141c38',s2:'#24305a',s3:'#3a4c80',s4:'#6a80b8',s5:'#a8bce0'},sp=t*.9;
@@ -159,8 +168,33 @@
    if(i===0)A.gear(x,yy,1.4,6,t*2,c,'#3a5a44');else if(i===1)A.P([[x-1,yy-1.2],[x+1,yy-1.2],[x,yy+1.6]],c);else if(i===2){A.ring(x,yy,1.3,.35,c);A.L(x,yy,x+1,yy-.6,c,.3)}else if(i===3)A.P([[x,yy-1.8],[x+.6,yy-.4],[x+1.8,yy],[x+.6,yy+.4],[x,yy+1.8],[x-.6,yy+.4],[x-1.8,yy],[x-.6,yy-.4]],c);else A.P([[x,yy-1.8],[x+1.1,yy+.4],[x,yy+1.4],[x-1.1,yy+.4]],c);A.glow(x,yy,2.6,c,.5)}
   A.bbox=[-23,-58,23,2]};
 
+
+ /* ---------- 난이도 단계: 보통 = post(몸 위 장식) · 어려움 = pre(몸 뒤 큰 부위)+post · 익스트림 = 전부 + 각성 리마스터 ---------- */
+ const U6={
+  c_s6_vane:{pre(A){const t=A.t,b=A.bob*.4;for(let k=0;k<2;k++)for(let i=0;i<24;i++){const a=t*(k?-1.2:1.6)+i*TAU/24,r=20+k*4;if(i%3===2)continue;A.R(Math.cos(a)*r-.5,-22+b+Math.sin(a)*r*.4-.5,1,1,k?'#bfeaff':'#5ad0b0',.6)}for(let i=0;i<4;i++){const w=Math.sin(t*4+i)*1.4;A.P([[6+i*1.4,-30+b],[8+i*1.4,-30+b],[16+i*2+w,-14+b+i],[14+i*2+w,-15+b+i]],i%2?'#ffffff':'#5ad0b0',.9)}},
+   post(A){const b=A.bob*.4;for(const [x,y] of [[-5,-28],[5,-28],[-5,-16],[5,-16]])A.C(x,y+b,.45,'#f0c878');for(let i=0;i<4;i++)A.L(-4+i*2.6,-14+b,-4.2+i*2.6,-11+b+(i%2),'#5ad0b0',.3,.8);A.R(-7,-30.6+b,14,.6,'#f0c878')}},
+  c_s6_kite:{pre(A){const t=A.t;for(let i=0;i<8;i++){const a=t*.5+i*TAU/8,x=Math.cos(a)*30,y=-30+Math.sin(a)*12,c=['#ff5a4a','#ffd04a','#4a8aff','#5ad08a'][i%4];A.P([[x,y-2],[x+1.4,y],[x,y+2],[x-1.4,y]],c,.85)}for(let i=0;i<5;i++){const q=((t*.8)+i/5)%1;A.L(-30+q*60,-48+i*6,-24+q*60,-48+i*6,'#ffffff',.2,.5*(1-q))}},
+   post(A){const b=A.bob*.3,y=-26+b;A.C(0,y+6,2.2,'#ffd04a');for(let i=0;i<8;i++){const a=i*Math.PI/4;A.L(Math.cos(a)*2.4,y+6+Math.sin(a)*2.4,Math.cos(a)*3.6,y+6+Math.sin(a)*3.6,'#ff8a3a',.35)}for(const s of [-1,1])for(let i=0;i<3;i++)A.R(s*14-1+i*.6,-23+b+i*1.4,.6,1,['#ff5a4a','#ffd04a','#4a8aff'][i])}},
+  c_s6_cloudwhale:{pre(A){const t=A.t,y=-24+A.bob*.8;cloud(A,-4,y-2,20,t,9,'#1a2234','#283450','#3a4a6a');for(let i=0;i<3;i++)if(Math.floor(t*6+i)%5===0)bolt(A,-24+i*20,y-14,-28+i*20,y+12,Math.floor(t*6)+i,'#ffe25a',.8)},
+   post(A){const t=A.t,y=-24+A.bob*.8;for(const [x,yy,r] of [[-8,-10,2.6],[6,-11,2.2],[-16,-8,1.8]])A.C(x,y+yy,r,'#e8f0fa',.8);for(let i=0;i<3;i++){const a=-Math.PI/2+(i-1)*.5;bolt(A,-19,y-9,-19+Math.cos(a)*6,y-9+Math.sin(a)*6,i+Math.floor(t*4),'#ffe25a',.8)}}},
+  c_s6_captain:{pre(A){const t=A.t,b=A.bob*.9;for(const s of [-1,1]){const x=s*20,y=-36+b;A.E(x,y,5,3,'#1a2440');A.E(x,y,4.4,2.4,s>0?'#d8384a':'#f4f7fb');A.L(x,y+3,s*12,-26+b,'#3a2a1a',.2)}for(let i=0;i<6;i++){const q=((t*.6)+i/6)%1;A.C(-8+Math.sin(i)*3,-6-q*-14,1+q*2,'#c8c8d0',.5*(1-q))}},
+   post(A){const b=A.bob*.9;for(let i=0;i<3;i++)A.C(-3.4+i*1.6,-27+b,.6,['#ffd04a','#ff5a6a','#7ad0f0'][i]);A.R(-14,-45.3+b,28,.5,'#f0c878');A.L(0,-52+b,0,-55+b,'#7a5428',.3);A.P([[0,-55+b],[2.6,-54.2+b],[0,-53.4+b]],'#ff5a6a')}},
+  c_s6_clock:{pre(A){const t=A.t,y=-24+A.bob*.7;A.gear(0,y-8,15,18,t*.3,'#c8964a','#7a5428',false);A.ring(0,y-8,12,.8,'#f0c878',.8)},
+   post(A){const y=-24+A.bob*.7;for(let i=0;i<12;i++){const a=i*Math.PI/6;A.R(Math.cos(a)*7.4-.3,y-8+Math.sin(a)*7.4-.3,.6,.6,'#f0c878')}A.P([[0,y+11],[1,y+12.4],[0,y+13.8],[-1,y+12.4]],'#8ad8ff');A.R(-8,y-3,16,.4,'#f0c878',.8)}},
+  c_s6_organ:{pre(A){const t=A.t,b=A.bob*.3;for(let i=0;i<11;i++){const k=i-5,h=26+(5-Math.abs(k))*3,x=k*3.4;A.R(x-1,-11+b-h,2,h,'#4a3478',.9);A.R(x-1,-11+b-h,2,.8,'#c8a0ff')}for(let i=0;i<5;i++){const q=((t*.5)+i/5)%1,x=-18+i*9;A.P([[x,-40-q*10],[x+1.4,-40-q*10],[x+1.4,-36-q*10]],'#c8a0ff',1-q)}},
+   post(A){const b=A.bob*.3;for(let i=0;i<9;i++){const k=i-4,x=k*2.8;A.R(x-1,-12+b-3,2,.5,'#f0c878')}A.P([[0,-35.4+b],[.8,-34.4+b],[0,-33.4+b],[-.8,-34.4+b]],'#ff6aa8')}},
+  c_s6_prism:{pre(A){const t=A.t;for(let i=0;i<8;i++){const a=t*.7+i*TAU/8,x=Math.cos(a)*29,y=-26+Math.sin(a)*9,h=3+(i%3);A.P([[x,y-h],[x+1.4,y],[x,y+h*.6],[x-1.4,y]],['#a8d8ff','#ffffff','#c85aff'][i%3],.85);A.glow(x,y,3,'#a8d8ff',.4)}},
+   post(A){const t=A.t,b=A.bob*.25,RB=['#ff4a5a','#ff9a3a','#ffe04a','#4ae08a','#3aa8ff','#6a5aff','#c85aff'];for(let i=0;i<7;i++){const x=-10+i*3.3,y=-36+b+Math.abs(i-3)*1.2;A.R(x-.4,y,.8,.8,RB[(i+Math.floor(t*4))%7])}for(const s of [-1,1])A.L(s*6,-26+b,s*3,-20+b,'#a8d8ff',.3,.8)}},
+  c_s6_falcon:{pre(A){const t=A.t,y=-28+A.bob*1.1,o=Math.sin(t*2)*2;for(const s of [-1,1])for(let i=0;i<7;i++){const a=-Math.PI/2+s*(.3+i*.17),L=36-i*2,x0=s*6,y0=y-2+i;A.L(x0,y0,x0+Math.cos(a)*L+s*o,y0+Math.sin(a)*L*.62,'#ff7a2a',.6,.3)}},
+   post(A){const y=-28+A.bob*1.1;for(const s of [-1,1]){for(let i=0;i<4;i++)A.C(s*(8+i*4.4),y-6-i*1.4,.4,'#ffc860')}A.R(-5.4,y-5.6,10.8,.4,'#ffe8a0');A.P([[-1,y+5],[1,y+5],[0,y+7]],'#ff7a2a')}},
+  c_s6_storm:{pre(A){const t=A.t,y=-26+A.bob*.5;for(let i=0;i<48;i++){const a=t*.5+i*TAU/48,r=29+Math.sin(i*2.3+t)*1.6;A.C(Math.cos(a)*r,y+Math.sin(a)*r*.55,2,'#0c1228',.9)}for(let i=0;i<16;i++){const q=((t*1.4)+i*.13)%1,x=-26+i*3.4;A.L(x,y+14+q*12,x-.6,y+16+q*12,'#7af0ff',.2,.5*(1-q))}},
+   post(A){const y=-26+A.bob*.5;for(let i=-3;i<=3;i++)A.L(i*1.8,y-4.6,i*2.4,y-7-Math.abs(i)*.2,'#ffe25a',.3);for(let i=-3;i<=3;i++)A.L(i*1.8,y+4.6,i*2.2,y+6.4,'#ffe25a',.25,.7)}},
+  c_s6_spire:{pre(A){const t=A.t;for(let k=0;k<3;k++){let px=-30,py=-36+k*5;for(let i=1;i<=20;i++){const x=-30+i*3,y=-36+k*5+Math.sin(t*1.2+i*.4+k)*3;A.L(px,py,x,y,['#7af0ff','#c8a0ff','#ffe8a0'][k],.6,.35);px=x;py=y}}},
+   post(A){const b=A.bob*.25;for(let i=0;i<5;i++)A.C(-4+i*2,-9+b,.5,'#ffe8a0');for(const s of [-1,1])A.P([[s*5,-40+b],[s*6.4,-38+b],[s*5,-36+b]],'#7af0ff')}}};
+ for(const k in U6)EXU[k]=U6[k];
+ Object.assign(EXF,{c_s6_vane:['#7af0d0',['crown']],c_s6_kite:['#ffd04a',['orbit']],c_s6_cloudwhale:['#ffe25a',['arcs']],c_s6_captain:['#ff6a74',['rays']],c_s6_clock:['#bfeaff',['halo']],c_s6_organ:['#e0c0ff',['rings']],c_s6_prism:['#ffffff',['rays','crystals']],c_s6_falcon:['#ff9a3a',['wings']],c_s6_storm:['#7af0ff',['rings']],c_s6_spire:['#ffe8a0',['halo','rays']]});
  /* 엔진 등록: 넓은 그림판 · 보스 정보(색) */
- for(const k in R)MON.reg[k]=R[k];MON.scl.c_s6_falcon=1.3;MON.scl.c_s6_clock=1.05;
+ for(const k in R)MON.reg[k]=R[k];MON.scl.c_s6_clock=1.05;
  try{if(window.__V43BIG)for(const k in R)window.__V43BIG[k]=1}catch(e){}
  for(const b of S6){if(!C3BOSS[b.art])C3BOSS[b.art]={base:0,c:b.c,pal:[b.dark,K,b.c,'#f4f7fb'],cfg:{bw:18,bh:18,base:'hover',head:'visor',arms:'piston',ex:[]},th:0,deck:[]}}
 }catch(e){console.error('v45 ch6 designs',e)}})();
