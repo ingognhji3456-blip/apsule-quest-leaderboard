@@ -4,7 +4,7 @@ const { chromium } = require('./_pw');
  const p=await (await b.newContext({viewport:{width:960,height:640}})).newPage();p.on('pageerror',e=>console.log('PAGEERR',e.message));p.on('console',m=>{if(m.type()==='error')console.log('CERR',m.text())});
  await p.goto(require('./_pw').url(file));await p.waitForTimeout(1000);
  await p.evaluate(([d,i])=>{document.getElementById('splash')?.remove();diff=d;saveData.done=true;saveData.ch4={ci:10,best:{9:'A'}};setInterval(()=>{if(dlg.active)dlgAdvance()},300);
-  i=+i;if(i<20)startRush(i);else if(i<30)c3RushFight(i-20);else if(i<40)s4RushFight(i-30);else s5Fight(i-40,true,true)},[dif,boss]);
+  i=+i;if(i<20)startRush(i);else if(i<30)c3RushFight(i-20);else if(i<40)s4RushFight(i-30);else if(i<50)s5Fight(i-40,true,true);else s6Fight(i-50)},[dif,boss]);
  const box=await p.evaluate(()=>{const r=$('arena').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}});
  const shots=[];const t0=Date.now();for(let k=0;k<16;k++){const tgt=t0+150+k*450;const w=tgt-Date.now();if(w>0)await p.waitForTimeout(w);shots.push((await p.screenshot({clip:box})).toString('base64'))}
  console.log(await p.evaluate(()=>JSON.stringify({cine:G.cine&&G.cine.type,dur:G.cine&&G.cine.dur,state:G.state})));

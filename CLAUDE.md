@@ -38,6 +38,7 @@
 | 20–29 | 3 기원(ORIGIN) | `c3RushFight(i-20)` |
 | 30–39 | 4 ECLIPSE | `s4RushFight(i-30)` |
 | 40–49 | 5 ABYSS | `s5Fight(i-40,true,true)` |
+| 50–59 | 6 ZENITH | `s6Fight(i-50)` (이야기는 `s6Go(k)`, 디자인 `985-*`, 패턴 `986-*`, 이야기·메뉴 `987-*`) |
 
 ### 주요 시스템과 진입점
 - **보스 그리기 엔진 `MON`**: `monDraw(key,...)` → 디자인 함수 `MON.reg[key](A)`가 작은 그림판(`MON.S`)에 그림 → `monFinish`가 외곽선·음영 후 화면에 붙임. 키: `b0`~`b19`, `c_<art>`(3장), `c_s4_*`, `c_s5_*`. 디자인 도구 `A.R/C/E/L/P/ring/glow/spark/rise/win(패턴명)`.
@@ -87,7 +88,7 @@
 ## 주의할 점
 
 - `game/src/foot.html`(`</script></body></html>`)과 `head.html`/`body.html`의 `<style>`·`<script>` 여닫는 태그는 빌드 틀이다. 함부로 바꾸지 않는다.
-- v40~v43에서 덧붙인 코드는 `game/src/js/970-*`~`982-*` 파일이다.
+- v40~v43에서 덧붙인 코드는 `game/src/js/970-*`~`982-*`, v44는 `983-*`·`984-*`, v45(챕터 6)는 `985-*`~`987-*` 파일이다.
 - `drawScene` 안에서 `G.boss.x/y`를 잠깐 옮기는 패치(v43 보스 몸 동작)가 있다. 판정 계산에는 영향을 주지 않는다.
 - 이야기 흐름 함수(`showOverlay`, `enterCave`, `fightEnd`)는 여러 버전이 감싸고 있다. 결과창 문구(`'BOSS DOWN'`, `'계속 →'`)를 조건으로 쓰는 패치가 있으니 문구를 바꿀 때 함께 확인한다.
 - 남은 확인 거리는 `game/BeatBlade_작업요약.md` 맨 아래에 있다.

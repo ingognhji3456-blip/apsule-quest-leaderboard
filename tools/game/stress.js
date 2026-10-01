@@ -25,7 +25,7 @@ const { chromium } = require('./_pw');
  const res=[];
  for(let i=from;i<=to;i++){
   errs=[];
-  await p.evaluate(i=>{try{$('overlay').hidden=true;if(i<20)startRush(i);else if(i<30)c3RushFight(i-20);else if(i<40)s4RushFight(i-30);else s5Fight(i-40,true,true)}catch(e){console.error('START '+e.message)}
+  await p.evaluate(i=>{try{$('overlay').hidden=true;if(i<20)startRush(i);else if(i<30)c3RushFight(i-20);else if(i<40)s4RushFight(i-30);else if(i<50)s5Fight(i-40,true,true);else s6Fight(i-50)}catch(e){console.error('START '+e.message)}
    window.__ft=[];let last=performance.now();const f=()=>{const n=performance.now();window.__ft.push(n-last);last=n;window.__raf=requestAnimationFrame(f)};cancelAnimationFrame(window.__raf);f()},i);
   await p.waitForTimeout(secs*1000);
   const st=await p.evaluate(()=>{const ft=window.__ft.slice(10).sort((a,b)=>a-b);return {state:G&&G.state,phase:G&&G.phase,hp:G&&Math.round(G.hp/G.maxHp*100),p50:ft[ft.length>>1]|0,p95:ft[Math.floor(ft.length*.95)]|0,max:ft[ft.length-1]|0,shots:(G&&G.shots||[]).length,boss:$('bossName').textContent,botErr:window.__botErr||0,lastBotErr:window.__lastBotErr||''}});
