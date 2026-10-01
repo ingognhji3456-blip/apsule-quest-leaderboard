@@ -1,0 +1,58 @@
+</style></head><body>
+<div id="splash" onclick="if(!this.classList.contains('live'))this.remove()"><div class="spLogo">BEAT BLADE</div><canvas width="480" height="200"></canvas><div class="tap">TAP / PRESS ANY KEY</div></div>
+<header><div class="logo">BEAT <b>BLADE</b> <small>/ MACHINA</small></div><button id="sound" aria-label="소리 켜고 끄기">소리 ON</button></header>
+<main>
+<div class="pagerNav">
+<button class="navArrow" id="chPrev" aria-label="이전 챕터">‹</button>
+<div class="pagerLabel" id="pagerLabel">CHAPTER <b>1</b> / 2</div>
+<div class="pagerDots"><button class="dot active" id="dot0" aria-label="챕터 1"></button><button class="dot" id="dot1" aria-label="챕터 2"></button></div>
+<button class="navArrow" id="chNext" aria-label="다음 챕터">›</button>
+</div>
+<div class="pagerViewport" id="pagerViewport"><div class="pagerTrack" id="pagerTrack">
+<div class="pagerPage">
+<section class="hero"><canvas id="titleCv" width="480" height="190"></canvas>
+<div class="heroText"><div class="eyebrow">PART 1 · PIXEL RHYTHM ADVENTURE</div><h1>BEAT<br><span>MACHINA</span></h1>
+<p>멈춰버린 마을의 시계. 박동이 울리는 동굴 깊은 곳으로 내려가<br>기계 수호자들과 싸우세요.</p>
+<div class="row"><button class="primary" id="btnStory">▶ 이야기 시작</button><button id="btnNew" hidden>처음부터</button>
+<label class="small">난이도&nbsp;<select id="diffSel"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option><option value="extreme">익스트림</option></select></label></div>
+<p class="small" id="diffInfo"></p><p class="doneTag" id="ch1Done" hidden>✓ 챕터 1 클리어! 보스 도전에서 다시 즐길 수 있어요.</p></div></section>
+<section class="panel"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">CHAPTER 1 · BOSS RUSH</h3><button id="openRush1">🥊 보스전 연습 열기</button></div></section>
+</div>
+<div class="pagerPage">
+<section class="hero ch2Hero"><canvas id="titleCv2" width="480" height="190" style="display:block;width:100%;height:auto;image-rendering:pixelated"></canvas><div class="heroText"><div class="eyebrow">PART 2 · 정적이 남긴 것들</div>
+<h1>THE<br><span>HUNGER</span></h1>
+<p>종소리가 다시 울린 지 한 달. 시계탑 아래 깊은 곳에서 오래도록 잠들어 있던 것들이 서서히 깨어난다.</p>
+<div class="row"><button class="primary" id="btnStory2">▶ 챕터 2 시작</button></div>
+<p class="doneTag" id="ch2Done" hidden>✓ 챕터 2 클리어! 보스 도전에서 다시 즐길 수 있어요.</p>
+</div><div class="lockOverlay" id="ch2LockOverlay" hidden><div><b>🔒 LOCKED</b>챕터 1을 클리어해야<br>도전할 수 있어요.</div></div>
+</section>
+<section class="panel"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">CHAPTER 2 · BOSS RUSH</h3><button id="openRush2">🥊 보스전 연습 열기</button></div></section>
+</div>
+</div></div>
+<div id="rushModal" class="rushModal" hidden>
+ <div class="rushBar"><span id="rushTitle">BOSS RUSH</span><button id="rushClose">✕ 닫기</button></div>
+ <div class="rushBody">
+  <div id="rushSec1"><div id="bossGrid1"></div></div>
+  <div id="rushSec2"><div id="bossGrid2"></div><div class="gridLock" id="bossGrid2Lock" hidden>🔒 챕터 1을 클리어하면 열려요.</div></div>
+ </div>
+</div>
+<div class="two">
+<section class="panel"><h3>HOW TO PLAY</h3>
+<p><b>이동</b> WASD / 방향키 · 모바일: 왼쪽 스틱<br><b>반격</b> 원에 표시된 <b>Q · W · E · R</b> 키를 정확히 · 모바일: 원 터치<br><b>동굴 공격</b> 스페이스 / J<br><b>패링</b> 맞기 직전 <b>F / L</b> · 모바일: 🛡 버튼 · 박자에 맞추면 PERFECT<br><b>대시</b> SHIFT / K · 한 번에 20% 소모, 0%가 되면 천천히 가득 충전<br><b>그로기</b> 반격은 그로기 게이지가 차야 열려요 — 금빛 조각을 박자에 맞춰 되받아치기(SPACE) · 불안정 코어를 차서 보스의 공격 속에 넣기 · 공격 직전 대시(저스트 회피)<br><b>궁극기</b> 공격(반격·되받아치기·코어 폭발)으로 게이지를 채우고 <b>C</b> 키 · 모바일: 궁 버튼 — 무기마다 다른 필살기<br>ESC: 일시정지</p><p><b>회피 시간</b>: 보스의 몸짓과 바닥 예고를 보고 직접 이동·대시로 피하세요.<br><b>반격 시간</b>: 보스가 멈추고 약점이 열립니다. 보스 주변에 뜨는 원을 클릭하세요. 화면 하단 <b>박자 바</b>의 가운데 막대가 <span style="color:#ffe79a">노란색</span>으로 빛날 때 클릭하면 <b>PERFECT</b> 판정으로 피해가 크게 늘어요 (초록이면 GOOD, 그 외엔 그냥 HIT).<br>보스 공격은 음악의 프레이즈에 맞춰 전개되며, 반격 중에는 위험 요소가 사라집니다.<br>보스마다 <b>고유 시그니처 패턴</b>이 있고, 체력 66% · 33%에서 <b>각성</b>해 더 격렬해져요. 반격 끝에 나오는 큰 <b>FINISH 원</b>을 맞히면 큰 피해!</p></section>
+<section class="panel"><h3>SYNC · 소리 싱크 조절</h3>
+<p class="small">소리가 화면 박자보다 늦게 들리면 +, 빠르면 − 로 맞춰 주세요. 블루투스 이어폰은 보통 +가 필요해요.</p>
+<div class="row"><button id="syncMinus">−10ms</button><strong id="syncVal">0ms</strong><button id="syncPlus">+10ms</button><button id="syncTest">▶ 박자 테스트</button></div>
+<div id="syncLight" style="height:24px;margin:12px 0;width:120px;background:#2c3c3a;border-radius:4px"></div></section>
+</div></main>
+
+<section id="battleView" hidden>
+<div class="bar"><span id="bvTitle">BEAT MACHINA</span><div><button id="fsBtn">⛶ 전체화면</button><button id="pauseBtn">Ⅱ 일시정지</button></div></div>
+<div id="arena"><canvas style="touch-action:none" id="game" width="480" height="300"></canvas>
+<div class="hud" id="bossName"></div><div class="hud" id="songInfo"></div><div class="hud" id="banner"></div>
+<div id="dlg" hidden><canvas id="dlgPortrait" width="56" height="56"></canvas><div id="dlgName"></div><div id="dlgText"></div><div id="dlgHint">▼</div></div>
+<div id="overlay" hidden><div class="modal"><div class="eyebrow" id="mTag"></div><h2 id="mTitle"></h2><p id="mText"></p><div class="actions" id="mBtns"></div></div></div></div>
+<div id="touch"><div id="stickZone"></div><div id="stickBase" hidden><div id="stickKnob"></div></div><button class="tbtn" id="btnD">DASH</button><button class="tbtn" id="btnA">ATTACK</button></div>
+</section>
+
+
+<script>

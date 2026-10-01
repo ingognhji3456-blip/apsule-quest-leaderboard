@@ -5,8 +5,8 @@
 | 경로 | 내용 |
 |---|---|
 | `app.py`, `render.yaml`, `Procfile`, `requirements.txt` | Capsule Quest 리더보드 서버 (Flask + SQLite, Render 배포) |
-| `game/BeatBlade-XX.html` | 리듬 액션 게임 **BEAT BLADE · MACHINA**. 파일 하나로 실행됨. **숫자가 가장 큰 파일이 최신** |
-| `game/patches/vXX.js` | 각 버전에서 덧붙인 패치 원본 (v40~) |
+| `game/src/` | 게임 **원본 코드** (CSS 1개 + HTML 틀 + js 110개 조각). 수정은 여기서 한다. 파일 목록과 역할은 `game/src/README.md` |
+| `game/BeatBlade-XX.html` | 빌드 결과물: 리듬 액션 게임 **BEAT BLADE · MACHINA**를 파일 하나로 합친 것. 사용자는 이 파일로 플레이·배포한다. **숫자가 가장 큰 파일이 최신**이다(지난 버전은 git 기록에 있다) |
 | `game/BeatBlade_작업요약.md` | 사용자에게 보여 주는 버전별 작업 요약 (한국어). 새 버전을 낼 때마다 갱신 |
 | `tools/game/` | 헤드리스 테스트·스크린샷 도구 |
 
@@ -16,12 +16,17 @@
 
 ## 게임 구조 (BeatBlade HTML)
 
-- 약 2.5MB, `<script>` 하나에 1.6만 줄. 버전이 올라갈 때마다 **기존 전역 함수를 감싸서 다시 대입**하는 방식으로 기능이 쌓였다.
+- 결과물은 약 2.5MB, `<script>` 하나에 1.6만 줄이다. 원본은 `game/src/js/`에 기능별 110개 파일로 나뉘어 있고, `tools/game/bundle.py`가 **번호 순서대로 이어 붙여 한 스크립트로** 만든다. 따로따로 `<script src>`로 불러오면 안 된다(함수 끌어올림이 깨진다).
+- 버전이 올라갈 때마다 **기존 전역 함수를 감싸서 다시 대입**하는 방식으로 기능이 쌓였다.
   ```js
   {const _old=drawScene;drawScene=function(now){/*앞*/const r=_old.apply(this,arguments);/*뒤*/return r}}
   ```
   같은 함수가 여러 겹으로 감싸여 있으니, 원래 정의만 보지 말고 **마지막으로 감싼 곳까지** 확인한다(`grep -n "함수명=function"`).
-- **수정 원칙: 기존 줄을 직접 고치지 말고, 패치 파일을 마지막 `</script>` 앞에 덧붙인다.** 되돌리기와 추적이 쉽다.
+- 함수가 어느 파일에 있는지 찾기: `grep -ln "함수명" game/src/js/*.js` (정의는 `function 함수명(`, 감싸기는 `함수명=function`)
+- **수정 원칙**
+  - 기존 기능의 버그·조정: 그 기능이 있는 파일을 직접 고친다.
+  - 새 기능: 끝 번호 다음에 새 파일을 만든다 (예: `983-v44-새기능.js`). IIFE로 감싸고 `try{}catch`로 실패해도 게임이 죽지 않게 한다.
+  - 파일 번호(실행 순서)는 바꾸지 않는다. 모든 js 파일은 줄바꿈으로 끝나야 한다(빌드가 검사한다).
 - 좌표계: 게임 화면 480×300(`W`,`H`), 경기장 `AX=16,AY=34,AW=448,AH=250`. `ctx`는 고해상도 배율(`SS`)이 적용된 상태라 게임 좌표 그대로 그리면 된다.
 - 그리기 도우미: `RA(x,y,w,h,색,알파)`는 **globalAlpha를 직접 덮어쓴다**(곱하지 않음). `pcirc`, `cRing`, `cStar`, `cPx`, `line(x0,y0,x1,y1,간격,fn)`, `fxRing`, `e2Glow`, `e2Bolt`. 효과음은 `sfx(주파수,길이,파형,볼륨,끝주파수)`.
 
@@ -50,12 +55,13 @@
 
 ## 작업 순서
 
-1. 최신 `game/BeatBlade-XX.html`을 기준으로 삼는다.
-2. 패치를 `game/patches/v(XX+1).js`로 쓴다. IIFE로 감싸고, 실패해도 게임이 죽지 않게 `try{}catch` 처리한다.
-3. 빌드: `bash tools/game/build.sh game/BeatBlade-XX.html game/patches/vYY.js game/BeatBlade-YY.html` (문법 검사 포함)
-4. 확인한다. 아래 도구에서 **필요한 것만** 골라 쓴다.
+1. `game/src/`에서 수정한다(위 수정 원칙). 새 파일을 만들었다면 `game/src/README.md` 표에 한 줄 추가한다.
+2. 빌드: `python3 tools/game/bundle.py game/BeatBlade-YY.html` (YY = 최신 번호 + 1, 문법 검사 포함). 확인 중에는 스크래치패드 같은 임시 경로로 빌드해도 된다.
+3. 확인한다. 아래 도구에서 **필요한 것만** 골라 쓴다.
+4. 이전 버전 HTML(`git rm game/BeatBlade-XX.html`)은 지우고 최신 하나만 남긴다. 지난 버전은 git 기록에 있다.
 5. `game/BeatBlade_작업요약.md`에 새 버전 항목과 버전 기록을 추가한다.
 6. 커밋하고 푸시한다. 커밋 메시지는 영어로, 변경 요약을 쓴다.
+- 원본과 결과물이 어긋나지 않았는지 보려면: `python3 tools/game/bundle.py /tmp/x.html --same game/BeatBlade-XX.html` (동일하면 성공)
 
 ## 테스트 도구 (`tools/game/`, 저장소 루트에서 실행)
 
@@ -80,7 +86,8 @@
 
 ## 주의할 점
 
-- 문서 끝의 `</script></body></html>`이 빌드 기준점이다. 이 끝부분을 바꾸지 않는다.
+- `game/src/foot.html`(`</script></body></html>`)과 `head.html`/`body.html`의 `<style>`·`<script>` 여닫는 태그는 빌드 틀이다. 함부로 바꾸지 않는다.
+- v40~v43에서 덧붙인 코드는 `game/src/js/970-*`~`982-*` 파일이다.
 - `drawScene` 안에서 `G.boss.x/y`를 잠깐 옮기는 패치(v43 보스 몸 동작)가 있다. 판정 계산에는 영향을 주지 않는다.
 - 이야기 흐름 함수(`showOverlay`, `enterCave`, `fightEnd`)는 여러 버전이 감싸고 있다. 결과창 문구(`'BOSS DOWN'`, `'계속 →'`)를 조건으로 쓰는 패치가 있으니 문구를 바꿀 때 함께 확인한다.
 - 남은 확인 거리는 `game/BeatBlade_작업요약.md` 맨 아래에 있다.
