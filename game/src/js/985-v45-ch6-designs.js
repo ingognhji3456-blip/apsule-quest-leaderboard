@@ -194,7 +194,8 @@
  for(const k in U6)EXU[k]=U6[k];
  Object.assign(EXF,{c_s6_vane:['#7af0d0',['crown']],c_s6_kite:['#ffd04a',['orbit']],c_s6_cloudwhale:['#ffe25a',['arcs']],c_s6_captain:['#ff6a74',['rays']],c_s6_clock:['#bfeaff',['halo']],c_s6_organ:['#e0c0ff',['rings']],c_s6_prism:['#ffffff',['rays','crystals']],c_s6_falcon:['#ff9a3a',['wings']],c_s6_storm:['#7af0ff',['rings']],c_s6_spire:['#ffe8a0',['halo','rays']]});
  /* 엔진 등록: 넓은 그림판 · 보스 정보(색) */
- for(const k in R)MON.reg[k]=R[k];MON.scl.c_s6_clock=1.05;
+ for(const k in R){MON.reg[k]=R[k];MON.hand[k]=()=>{};MON.noArm[k]=1}
+ /* 전투 크기 (5장과 같은 기준): 그림판 단위 × 0.5 */Object.assign(MON.scl,{c_s6_vane:.52,c_s6_kite:.5,c_s6_cloudwhale:.52,c_s6_captain:.5,c_s6_clock:.52,c_s6_organ:.5,c_s6_prism:.5,c_s6_falcon:.5,c_s6_storm:.52,c_s6_spire:.48});
  try{if(window.__V43BIG)for(const k in R)window.__V43BIG[k]=1}catch(e){}
  for(const b of S6){if(!C3BOSS[b.art])C3BOSS[b.art]={base:0,c:b.c,pal:[b.dark,K,b.c,'#f4f7fb'],cfg:{bw:18,bh:18,base:'hover',head:'visor',arms:'piston',ex:[]},th:0,deck:[]}}
 }catch(e){console.error('v45 ch6 designs',e)}})();

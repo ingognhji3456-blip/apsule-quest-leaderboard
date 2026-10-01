@@ -38,6 +38,7 @@
 | 20–29 | 3 기원(ORIGIN) | `c3RushFight(i-20)` |
 | 30–39 | 4 ECLIPSE | `s4RushFight(i-30)` |
 | 40–49 | 5 ABYSS | `s5Fight(i-40,true,true)` |
+| 50–59 | 6 ZENITH (제작 중) | `s6Fight(i-50)` — 메뉴·스토리 미연결, 디자인 `985-*`, 패턴 `986-*` |
 
 ### 주요 시스템과 진입점
 - **보스 그리기 엔진 `MON`**: `monDraw(key,...)` → 디자인 함수 `MON.reg[key](A)`가 작은 그림판(`MON.S`)에 그림 → `monFinish`가 외곽선·음영 후 화면에 붙임. 키: `b0`~`b19`, `c_<art>`(3장), `c_s4_*`, `c_s5_*`. 디자인 도구 `A.R/C/E/L/P/ring/glow/spark/rise/win(패턴명)`.
