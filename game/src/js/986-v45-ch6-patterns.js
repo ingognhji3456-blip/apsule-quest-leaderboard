@@ -19,6 +19,8 @@
    ctx.font='bold 9px '+FONT_STACK;ctx.textAlign='center';ctx.fillStyle='#ffffff';ctx.globalAlpha=.6+.4*p;ctx.fillText('바람 '+(Math.abs(w.dx)>Math.abs(w.dy)?(w.dx>0?'→':'←'):(w.dy>0?'↓':'↑')),AX+AW/2,AY+22);ctx.globalAlpha=1;ctx.textAlign='left';return}
   /* 실제 바람: 흐르는 바람 줄기 */const fade=beat>w.t2?1-(beat-w.t2)/.2:1;for(let i=0;i<26;i++){const q=((t*1.4)+i*.137)%1,len=18+(i%3)*10,x=w.dx?(w.dx>0?AX+q*AW:AX+AW-q*AW):AX+((i*53)%AW),y=w.dy?(w.dy>0?AY+q*AH:AY+AH-q*AH):AY+((i*37)%AH);
    line(x,y,x-w.dx*len,y-w.dy*len,3,(px,py)=>cPx(px,py,1,'#ffffff',.35*fade*Math.sin(q*Math.PI)))}}
+ /* v46 어려움·익스트림 전용 공격(988)에서 같은 도구를 씀 */
+ window.S6H={tel,spd,ph,P6,toP,shot,circ,snd,shake,wind};
  /* ---------- 패턴 ---------- */
  const D=(n,kr,ch,est,tip,fn)=>defPat(n,kr,ch,est,tip,fn);
  /* 1 풍향계 기사 */
