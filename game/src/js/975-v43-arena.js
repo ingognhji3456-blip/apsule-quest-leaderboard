@@ -1,7 +1,7 @@
 /* ================= v43 전투 맵 퀄리티: 깊이감 있는 대기층 (빛줄기 · 보스 발밑 광원 · 챕터별 떠다니는 입자 · 박자 바닥 파동 · 바닥 안개 · 비네트) ================= */
 (function(){
- const chOf=()=>{try{if(G.s6!=null)return 6;if(G.s5!=null||G._s5hold!=null)return 5;if(G.s4!=null||G.s4Rush!=null)return 4;if(typeof _c3Swap!=='undefined'&&_c3Swap&&_c3Swap.art)return 3;return G.bi<10?1:2}catch(e){return 1}};
- const TH={1:{ray:'#ffe2b0',mote:['#ffb050','#ffe79a','#ffffff'],fog:'#0b1418',kind:'spark'},2:{ray:'#ffb0c8',mote:['#ff5d8f','#ffb070','#caff6b'],fog:'#14060c',kind:'ember'},3:{ray:'#ffe8c0',mote:['#e8d8b0','#c8b088','#ffffff'],fog:'#140f08',kind:'dust'},4:{ray:'#d8d0ff',mote:['#ffffff','#c8b8ff','#9af0ff'],fog:'#05040e',kind:'star'},6:{ray:'#fff0d8',mote:['#ffffff','#ffd8b0','#bfeaff'],fog:'#3a2a40',kind:'dust'},5:{ray:'#bff4ff',mote:['#bff4ff','#8ae8ff','#ffffff'],fog:'#021018',kind:'bubble'}};
+ const chOf=()=>{try{if(G.s7!=null)return 7;if(G.s6!=null)return 6;if(G.s5!=null||G._s5hold!=null)return 5;if(G.s4!=null||G.s4Rush!=null)return 4;if(typeof _c3Swap!=='undefined'&&_c3Swap&&_c3Swap.art)return 3;return G.bi<10?1:2}catch(e){return 1}};
+ const TH={1:{ray:'#ffe2b0',mote:['#ffb050','#ffe79a','#ffffff'],fog:'#0b1418',kind:'spark'},2:{ray:'#ffb0c8',mote:['#ff5d8f','#ffb070','#caff6b'],fog:'#14060c',kind:'ember'},3:{ray:'#ffe8c0',mote:['#e8d8b0','#c8b088','#ffffff'],fog:'#140f08',kind:'dust'},4:{ray:'#d8d0ff',mote:['#ffffff','#c8b8ff','#9af0ff'],fog:'#05040e',kind:'star'},7:{ray:'#e0ccff',mote:['#ffffff','#c89aff','#b8fff6'],fog:'#140e24',kind:'star'},6:{ray:'#fff0d8',mote:['#ffffff','#ffd8b0','#bfeaff'],fog:'#3a2a40',kind:'dust'},5:{ray:'#bff4ff',mote:['#bff4ff','#8ae8ff','#ffffff'],fog:'#021018',kind:'bubble'}};
  const AR={vg:null,vgKey:''};
  function layers(now,beat){if(!G||!G.B)return;const ch=chOf(),T=TH[ch],t=now/1000,g=bgeo(),col=G.B.c||'#ffffff';
   ctx.save();
