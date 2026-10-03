@@ -20,6 +20,8 @@
  const echo=(T0,col,f,delay)=>{const d=delay==null?1:delay;sch(T0,()=>f(T0,mxN,maN,col,false));sch(T0+d,()=>{f(T0+d,mxM,maM,EV,true);try{G.s7echo={t:T0+d}}catch(e){}});snd(T0+d+tel(),660,.18,'triangle',.04,330)};
  const RB=['#ff4a5a','#ff9a3a','#ffe04a','#4ae08a','#3aa8ff','#6a5aff','#c85aff'];
  const D=(n,kr,ch,est,tip,fn)=>defPat(n,kr,ch,est,tip,fn);
+ /* 어려움·익스트림 전용 공격(996)과 캐릭터 연출(997)에서 같은 도구를 씀 */
+ window.S7H={tel,spd,ph,P7,toP,shot,circ,seg,rect,snd,shake,gapRing,echo,CX,CY,EV,POS};
 
  /* 1 거울문 수문장 */
  D('s7GateKey','열쇠 찌르기','hands',11,'열쇠 창이 나를 찌르고 한 박자 뒤 반대편에서 메아리가 찌름 → 두 선이 겹치지 않는 곳으로',t=>{const n=2+ph();
