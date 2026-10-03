@@ -39,13 +39,14 @@
 | 30–39 | 4 ECLIPSE | `s4RushFight(i-30)` |
 | 40–49 | 5 ABYSS | `s5Fight(i-40,true,true)` |
 | 50–59 | 6 ZENITH | `s6Fight(i-50)` (이야기는 `s6Go(k)`, 디자인 `985-*`, 패턴 `986-*`, 이야기·메뉴 `987-*`) |
+| 60–69 | 7 REVERSE | `s7Fight(i-60)` (이야기는 `s7Go(k)`, 디자인 `991-*`(난이도별로 몸이 바뀜), 패턴 `992-*`, 이야기·메뉴 `993-*`, 로비·전당·이미지 `994-*`) |
 
 ### 주요 시스템과 진입점
 - **보스 그리기 엔진 `MON`**: `monDraw(key,...)` → 디자인 함수 `MON.reg[key](A)`가 작은 그림판(`MON.S`)에 그림 → `monFinish`가 외곽선·음영 후 화면에 붙임. 키: `b0`~`b19`, `c_<art>`(3장), `c_s4_*`, `c_s5_*`. 디자인 도구 `A.R/C/E/L/P/ring/glow/spark/rise/win(패턴명)`.
   - 그림판 크기는 기본 60×52칸이다. 이보다 큰 보스는 v43의 `__V43BIG` 목록에서 80×70칸 그림판을 쓴다. **새 보스나 큰 장식을 추가하면 `tools/game/clip.js`로 잘림을 검사한다.**
   - 익스트림: `EXU[key]`(보스별 디테일 pre/post)와 `monFinish` 리마스터 패스. v43부터 난이도별 단계: 쉬움=기본, 보통=EXU.post, 어려움=EXU.pre+post+빛, 익스트림=전부.
 - **공격 엔진 `NP`**: `NP({k:'orb'|'seg'|'rect'|'circ', t0,t1,t2,...})`, 예고(t0~t1) → 판정(t1~t2), 시간 단위는 박자. 그리기는 `NPK[k].tel/draw`. 구형 장판은 `G.zones` 등.
-  - 패턴 목록은 `DECK[bi]`(1·2장), `C3BOSS[art].deck`(3장), `s4Deck(S4[k])`(4장), `S5[k].sig`(5장), `S6DECK[art]`(6장).
+  - 패턴 목록은 `DECK[bi]`(1·2장), `C3BOSS[art].deck`(3장), `s4Deck(S4[k])`(4장), `S5[k].sig`(5장), `S6DECK[art]`(6장), `S7DECK[art]`(7장).
   - 난이도별 추가 공격은 `T5_SET[key]=[[보통],[어려움],[익스트림]]`(840)이 `buildPhrase` 때 덱에 섞는다. 6장은 `S6EXTRA`(988).
 - **등장씬**: `entStart`/`entTick`(보스별 움직임 `ENT2[key]`), 연출층은 `drawCineOverlay`(v43에서 새로 만듦). 길이는 `G.cine.dur`.
 - **이야기 흐름(1·2장)**: `startStory` → `enterCave` → 여정 카드(v43) → `playScene` → 동굴 → `startFight` → `fightEnd` → 결과 카드(`scPlay`+`cxResultCard`) → `enterVillage`. 4·5장은 `s4Go`/`s5Go`와 `scPlay` 장면.
@@ -89,7 +90,7 @@
 ## 주의할 점
 
 - `game/src/foot.html`(`</script></body></html>`)과 `head.html`/`body.html`의 `<style>`·`<script>` 여닫는 태그는 빌드 틀이다. 함부로 바꾸지 않는다.
-- v40~v43에서 덧붙인 코드는 `game/src/js/970-*`~`982-*`, v44는 `983-*`·`984-*`, v45(챕터 6)는 `985-*`~`987-*`, v46(챕터 6 난이도 전용 공격)은 `988-*`, v47(챕터 6 음악 · 로비 · 명예의 전당 · 이미지)은 `989-*`·`990-*` 파일이다.
+- v40~v43에서 덧붙인 코드는 `game/src/js/970-*`~`982-*`, v44는 `983-*`·`984-*`, v45(챕터 6)는 `985-*`~`987-*`, v46(챕터 6 난이도 전용 공격)은 `988-*`, v47(챕터 6 음악 · 로비 · 명예의 전당 · 이미지)은 `989-*`·`990-*`, v48(챕터 7)은 `991-*`~`994-*` 파일이다.
 - 음악: `playSlot(n,delay,S)`가 반 박자마다 불린다(16분음표 2칸). 챕터 5는 `S.s5Mix27`, 챕터 6은 `S.s6Mix`로 자기 곡을 연주한다. 곡을 소리 파일로 뽑아 들어 보려면 `OfflineAudioContext`를 `audio`에 넣고 `playSlot`을 차례로 부른 뒤 렌더링한다.
 - `drawScene` 안에서 `G.boss.x/y`를 잠깐 옮기는 패치(v43 보스 몸 동작)가 있다. 판정 계산에는 영향을 주지 않는다.
 - 이야기 흐름 함수(`showOverlay`, `enterCave`, `fightEnd`)는 여러 버전이 감싸고 있다. 결과창 문구(`'BOSS DOWN'`, `'계속 →'`)를 조건으로 쓰는 패치가 있으니 문구를 바꿀 때 함께 확인한다.
