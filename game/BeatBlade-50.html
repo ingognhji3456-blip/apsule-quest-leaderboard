@@ -17756,6 +17756,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const echo=(T0,col,f,delay)=>{const d=delay==null?1:delay;sch(T0,()=>f(T0,mxN,maN,col,false));sch(T0+d,()=>{f(T0+d,mxM,maM,EV,true);try{G.s7echo={t:T0+d}}catch(e){}});snd(T0+d+tel(),660,.18,'triangle',.04,330)};
  const RB=['#ff4a5a','#ff9a3a','#ffe04a','#4ae08a','#3aa8ff','#6a5aff','#c85aff'];
  const D=(n,kr,ch,est,tip,fn)=>defPat(n,kr,ch,est,tip,fn);
+ /* 어려움·익스트림 전용 공격(996)과 캐릭터 연출(997)에서 같은 도구를 씀 */
+ window.S7H={tel,spd,ph,P7,toP,shot,circ,seg,rect,snd,shake,gapRing,echo,CX,CY,EV,POS};
 
  /* 1 거울문 수문장 */
  D('s7GateKey','열쇠 찌르기','hands',11,'열쇠 창이 나를 찌르고 한 박자 뒤 반대편에서 메아리가 찌름 → 두 선이 겹치지 않는 곳으로',t=>{const n=2+ph();
@@ -18290,4 +18292,350 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  try{L7.forEach((b,k)=>{const C=C3MUS[b.art];if(C){C.title=M7[k].title;C.tag='거울 세계의 노래 · 3분'}})}catch(e){}
  window.S7MUS=M7;
 }catch(e){console.error('v51 ch7 music',e)}})();
+/* ================= v52 챕터 7 어려움·익스트림 전용 공격 20종 (보스마다 2개) =================
+   - 어려움부터: 보스마다 1개 (익스트림에도 나옴)
+   - 익스트림만: 보스마다 1개
+   쉬움·보통에는 나오지 않는다. 난이도별 추가 공격 장치(840의 T5_SET)에 등록해서 덱에 섞인다.
+   모두 그 보스가 "할 법한" 행동에서 나온다(열쇠·눈·물·체스 말·촛대·춤·목마·실·비늘·대검).
+   모든 공격은 예고가 먼저 나오고, 반드시 빠져나갈 틈이 있다. 메아리(1박자 뒤 좌우 반전)도 섞인다. */
+(function(){try{
+ const L7=window.S7ART,H=window.S7H;if(!L7||!H)return;
+ const {tel,spd,ph,P7,toP,shot,circ,seg,rect,snd,shake,gapRing,echo,CX,CY}=H;
+ const D=(n,kr,ch,est,tip,fn)=>defPat(n,kr,ch,est,tip,fn);
+ const live=(T0,x,y,a0,rot,len,col,w,dur,dmg)=>NP({k:'seg',sty:'laser',col,w,live:true,t0:T0,t1:T0+tel(),t2:T0+tel()+dur,a:()=>[x,y],b:b=>{const a=a0+Math.max(0,b-T0-tel())*rot*spd();return [x+Math.cos(a)*len,y+Math.sin(a)*len]},dmg:dmg||12});
+
+ /* 1 거울문 수문장 */
+ D('s7hGateLock','자물쇠 감옥','field',13,'[어려움] 내 둘레에 문짝 네 개가 닫혀 오고 한쪽만 열쇠 구멍처럼 열림, 곧바로 새 자리에서 또 잠김 → 열린 쪽으로 빠져나가',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.5;sch(T0,()=>{const cx=clamp(P.x,AX+50,AX+AW-50),cy=clamp(P.y,AY+50,AY+AH-50),g=34,op=Math.floor(RND()*4),col=k%2?'#c89aff':'#ffd27a';
+    if(op!==0)rect(T0,AX,AY,cx-g-AX,AH,col,'light',.35,13);if(op!==1)rect(T0,cx+g,AY,AX+AW-cx-g,AH,col,'light',.35,13);
+    if(op!==2)rect(T0,cx-g,AY,g*2,cy-g-AY,col,'light',.35,13);if(op!==3)rect(T0,cx-g,cy+g,g*2,AY+AH-cy-g,col,'light',.35,13);
+    rect(T0,cx-g+6,cy-g+6,g*2-12,g*2-12,col,'light',.3,13,{t0:T0+tel()*.35})});shake(T0+tel(),.3);snd(T0+tel(),220,.3,'square',.05,110)}
+  return n*1.5+tel()+.6});
+ D('s7xGateThirteen','열세 번째 문','all',13,'[익스트림] 문들이 줄지어 화면을 가로지르며 하나씩 열림, 머리의 시계 바늘도 거꾸로 돎 → 열린 문짝 칸을 따라 걸어',t=>{const n=4+ph(),rows=6,rh=AH/rows,dur=n*1.3+tel()+1.8;
+  for(let k=0;k<n;k++){const T0=t+k*1.3,gap=Math.floor(RND()*rows),dir=k%2?-1:1;sch(T0,()=>{for(let r=0;r<rows;r++){if(r===gap)continue;const y=AY+r*rh+2,x0=dir>0?AX-30:AX+AW;NP({k:'rect',x:x0,y,w:30,h:rh-4,sty:'light',col:'#ffd27a',t0:T0,t1:T0+tel(),t2:T0+tel()+3.4,rf:b=>{const q=Math.max(0,b-T0-tel());return [x0+dir*q*(AW+30)/3.2*spd(),y,30,rh-4]},dmg:12})}})}
+  sch(t,()=>{const [x,y]=P7(0,-51);for(let i=0;i<2;i++)live(t,x,y,i*Math.PI,-.45,420,'#ff7ad0',4,dur,11)});
+  return dur+.4});
+ /* 2 유리 공작 */
+ const fanEye=(i,n)=>{const a=Math.PI+(.12+i*(.76/(n-1)))*Math.PI,L=29;return P7(Math.cos(a)*L,-14+Math.sin(a)*L*.95)};
+ D('s7hPeaHundred','백 개의 눈 일제히','head',12,'[어려움] 꼬리 깃털 눈이 모두 나를 보고 한꺼번에 쏘고, 반 박자 뒤 메아리 눈이 반대쪽에서 → 쏘는 순간 옆으로 크게',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.8;echo(T0,'#7af0d0',(T,mx,ma,col)=>{for(let i=0;i<13;i+=2){const [x,y]=fanEye(i,13),sx=mx(x);shot(T,sx,y,toP(sx,y),88,{sty:'light',col,r:4,rayL:22,noTel:i>1})}},.5);snd(T0+tel(),880,.12,'triangle',.05,1200)}
+  return n*1.8+.5+tel()+1.2});
+ D('s7xPeaPrismTail','프리즘 꼬리','all',12,'[익스트림] 꼬리가 일곱 빛 레이저 부채로 펼쳐져 돌고, 유리 깃털이 비처럼 쏟아짐 → 레이저 틈을 따라 돌며 깃털을 피해',t=>{const dur=4+ph()*.6,RB=['#ff4a5a','#ff9a3a','#ffe04a','#4ae08a','#3aa8ff','#6a5aff','#c85aff'];
+  sch(t,()=>{const [x,y]=P7(0,-14);for(let i=0;i<7;i++)live(t,x,y,Math.PI+i*Math.PI/6,.38*(ph()%2?-1:1),420,RB[i],4,dur,11)});
+  for(let i=0;i<Math.round(dur*4);i++){const T0=t+tel()*.6+i*.25;sch(T0,()=>shot(T0,AX+10+RND()*(AW-20),AY+2,Math.PI/2+(RND()-.5)*.6,70,{sty:'light',col:'#b8fff6',r:3,rayL:20}))}
+  return tel()+dur+.4});
+ /* 3 역류의 분수 */
+ D('s7hFountGeyser','간헐천 추격','field',12,'[어려움] 내 발밑부터 물기둥이 차례로 솟아 따라옴, 메아리는 반대쪽에서 → 솟기 전에 방향을 바꿔',t=>{const n=6+ph()*2,cw=36;
+  for(let i=0;i<n;i++){const T0=t+i*.5;sch(T0,()=>{const x=clamp(P.x-cw/2,AX,AX+AW-cw);echo(T0,'#7ad8ff',(T,mx,ma,col,m)=>{rect(T,m?2*CX-x-cw:x,AY,cw,AH,col,'ice',.3,12)},.75)})}
+  return n*.5+.75+tel()+.5});
+ D('s7xFountFlood','역류 홍수','all',13,'[익스트림] 물이 아래에서 위로 차오르며 지나가고(빈 칸 하나), 빗방울도 거꾸로 솟음 → 빈 칸으로 옮겨 기다려',t=>{const n=2+ph(),cols=6,cw=AW/cols;
+  for(let k=0;k<n;k++){const T0=t+k*2.4,gap=Math.floor(RND()*cols);sch(T0,()=>{for(let c=0;c<cols;c++){if(c===gap)continue;NP({k:'rect',x:AX+c*cw+1,y:AY+AH-16,w:cw-2,h:16,sty:'ice',col:'#5ac8f0',t0:T0,t1:T0+tel(),t2:T0+tel()+2.4,live:true,step:(o,b)=>{if(b>=o.t1)o.y=AY+AH-16-(b-o.t1)*110*spd()},dmg:12})}
+    for(let i=0;i<5;i++){const x=AX+gap*cw+cw/2+(i%2?1:-1)*(cw*.8+i*20);if(x>AX+6&&x<AX+AW-6)shot(T0+i*.3,x,AY+AH-2,-Math.PI/2,80,{sty:'bubble',col:'#8ae0ff',r:4,rayL:24})}})}
+  return n*2.4+tel()+2.6});
+ /* 4 흑백 체스 왕 */
+ D('s7hChessQueen','퀸의 행진','all',13,'[어려움] 퀸이 내 자리에서 가로·세로·대각 여덟 방향을 한꺼번에 찍음 → 여덟 줄 사이 빈 틈으로',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.6,px=P.x,py=P.y,rot=k%2?Math.PI/8:0;echo(T0,'#f2f6ff',(T,mx,ma,col)=>{const x=mx(px);for(let i=0;i<4;i++){const a=rot+i*Math.PI/4;seg(T,x-Math.cos(a)*520,py-Math.sin(a)*520,x+Math.cos(a)*520,py+Math.sin(a)*520,col,6,.3,13)}},.9);shake(T0+tel(),.25)}
+  return n*1.6+.9+tel()+.5});
+ D('s7xChessPromotion','폰의 승격','field',13,'[익스트림] 폰들이 위에서 한 칸씩 내려오다 바닥에 닿으면 퀸이 되어 가로줄을 쏨 → 폰 사이로, 바닥 줄은 피해',t=>{const cols=8,cw=AW/cols,n=4+ph(),Tg=t+tel(),drop=3;
+  const used=new Set();for(let i=0;i<n;i++){let c=Math.floor(RND()*cols);while(used.has(c))c=(c+1)%cols;used.add(c);const x=AX+cw*(c+.5),T0=t+i*.35;
+   NP({k:'orb',sty:'bob',col:'#e8ecf4',r:8,t0:T0,t1:T0+tel(),t2:T0+tel()+drop,pos:b=>{const q=Math.max(0,b-T0-tel())/drop;return [x,AY+12+Math.floor(q*5)/5*(AH-30)]},dmg:12});
+   const Tq=T0+tel()+drop;sch(Tq,()=>{seg(Tq,AX,AY+AH-14,AX+AW,AY+AH-14,'#f2f6ff',10,.3,13);seg(Tq,x,AY,x,AY+AH,'#16161e',6,.3,12)})}
+  return tel()+n*.35+drop+tel()+.6});
+ /* 5 거꾸로 타는 초 */
+ D('s7hCandleCandelabra','촛대의 일곱 불','hands',12,'[어려움] 촛대 팔의 불꽃들이 하나씩 나를 겨눠 불줄기를 뿜고, 메아리는 반대편 팔에서 → 한 줄씩 비켜',t=>{const n=5+ph();
+  for(let i=0;i<n;i++){const T0=t+i*.55,s=i%2?1:-1,ax=s*(10+(i%3)*6),ay=-24-(i%3)*4;echo(T0,'#5af0e0',(T,mx,ma,col)=>{const [x,y]=P7(ax,ay),sx=mx(x),a=toP(sx,y);seg(T,sx,y,sx+Math.cos(a)*560,y+Math.sin(a)*560,col,8,.3,12)},.8)}
+  return n*.55+.8+tel()+.5});
+ D('s7xCandleMelt','녹아내리는 시간','all',13,'[익스트림] 위에서 촛농이, 아래에서 거꾸로 촛농이 동시에 흐르고, 불꽃 고리가 좁혀 옴 → 고리 틈으로 빠져나가며 촛농 줄을 피해',t=>{const n=10+ph()*3;
+  for(let i=0;i<n;i++){const T0=t+i*.28,x=AX+14+((i*71)%(AW-28));echo(T0,'#5af0e0',(T,mx,ma,col,m)=>{shot(T,mx(x),m?AY+AH-2:AY+2,m?-Math.PI/2:Math.PI/2,70,{sty:'fire',col,r:4,rayL:26})},.6)}
+  sch(t+1,()=>{const cx=P.x,cy=P.y,Tg=t+1+tel(),gap=RND()*TAU,m=24;for(let i=0;i<m;i++){const a0=i*TAU/m;if(Math.abs(((a0-gap+Math.PI*3)%TAU)-Math.PI)<.45)continue;NP({k:'orb',sty:'fire',col:'#a8fff0',r:5,t0:t+1,t1:Tg,t2:Tg+2.2,noTel:i>2,pos:b=>{const q=Math.max(0,b-Tg),r=Math.max(10,110-q*50*spd());return [cx+Math.cos(a0+q*.3)*r,cy+Math.sin(a0+q*.3)*r*.85]},dmg:11})}});
+  return Math.max(n*.28+.6,1+2.2)+tel()+1.4});
+ /* 6 오르골 발레리나 */
+ D('s7hBalletDuet','거울 2인무','all',12,'[어려움] 발레리나와 거울 속 발레리나가 마주 보며 돌고 칼날 치마를 나선으로 뿌림 → 두 나선이 엇갈리는 빈 곳으로',t=>{const dur=3+ph()*.5;
+  for(let i=0;i<Math.round(dur*6);i++){const T0=t+i/6;sch(T0,()=>{const [x,y]=P7(0,-30);for(let j=0;j<2;j++){shot(T0,x,y,T0*2.2+j*Math.PI,64,{sty:'crystal',col:'#ffb0d8',r:4,rayL:14,noTel:i>0});shot(T0,2*CX-x,y+30,Math.PI-(T0*2.2+j*Math.PI),64,{sty:'crystal',col:'#c89aff',r:4,rayL:14,noTel:i>0})}})}
+  return dur+tel()+1.8});
+ D('s7xBalletFinale','커튼콜','field',13,'[익스트림] 오선 줄을 따라 양쪽에서 음표가 흐르고, 무대 조명이 나를 따라와 터짐 → 빈 줄에 서서 조명이 오면 옆 칸으로',t=>{const n=2+ph(),rows=6,rh=AH/(rows+1);
+  for(let k=0;k<n;k++){const T0=t+k*2.2,g1=Math.floor(RND()*rows),g2=(g1+2+Math.floor(RND()*3))%rows;sch(T0,()=>{for(let r=0;r<rows;r++){if(r===g1||r===g2)continue;const y=AY+rh*(r+1),L=r%2===0;for(let j=0;j<3;j++)shot(T0+j*.3,L?AX+2:AX+AW-2,y,L?0:Math.PI,96,{sty:'note',col:L?'#e0ccff':'#ffb0d8',r:4,rayL:18,noTel:j>0})}})}
+  for(let i=0;i<3+ph();i++){const T0=t+.8+i*1.1;sch(T0,()=>circ(T0,P.x,P.y,22,'#fff0c0',{label:'✦'}))}
+  return n*2.2+tel()+2.6});
+ /* 7 뒤집힌 회전목마 */
+ D('s7hCarGallop','목마 질주','field',12,'[어려움] 목마들이 줄지어 가로로 내달리고, 메아리 목마는 반대 방향으로 → 빈 줄에서 기다려',t=>{const n=2+ph(),rows=5,rh=AH/rows;
+  for(let k=0;k<n;k++){const T0=t+k*2,gap=Math.floor(RND()*rows);echo(T0,'#ffd27a',(T,mx,ma,col,m)=>{for(let r=0;r<rows;r++){if(r===gap)continue;const y=AY+rh*(r+.5),L=(r+k)%2===0!==m;for(let j=0;j<2;j++)shot(T+j*.35,L?AX+4:AX+AW-4,y,L?0:Math.PI,104,{sty:'bob',col,r:7,rayL:20,noTel:j>0})}},1)}
+  return n*2+1+tel()+2.4});
+ D('s7xCarDerail','탈선','all',13,'[익스트림] 회전목마가 돌다 축이 빠져, 목마와 전구가 소용돌이처럼 바깥으로 튕겨 나감 → 소용돌이 팔 사이를 따라 돌아',t=>{const dur=3.2+ph()*.5;
+  for(let i=0;i<Math.round(dur*5);i++){const T0=t+i/5;sch(T0,()=>{const [x,y]=P7(0,-26);for(let j=0;j<4;j++){const a=-T0*1.8+j*TAU/4;shot(T0,x,y,a,58+(i%3)*8,{sty:j%2?'bob':'light',col:j%2?'#f2e8ff':'#ffd27a',r:j%2?6:4,rayL:14,noTel:i>0})}})}
+  shake(t+tel(),.35);return dur+tel()+2});
+ /* 8 그림자 인형사 */
+ D('s7hPupMarionette','마리오네트 춤','all',12,'[어려움] 내 그림자 인형이 거울처럼 반대로 따라 하고, 지나간 자리에 실이 내려꽂힘 → 인형과 마주치지 않게 가운데를 피하고, 한 자리에 머물지 마',t=>{const dur=4+ph()*.6;
+  sch(t,()=>NP({k:'orb',sty:'bob',col:'#3e3058',r:8,t0:t,t1:t+tel(),t2:t+tel()+dur,prev:.6,pos:()=>[2*CX-P.x,2*CY-P.y],dmg:12}));
+  for(let i=0;i<Math.round(dur/.7);i++){const T0=t+tel()*.5+i*.7;sch(T0,()=>{const x=P.x;seg(T0,x,AY,x,AY+AH,'#c4d0e4',4,.3,11)})}
+  return tel()+dur+.5});
+ D('s7xPupCurtain','막이 내린다','field',13,'[익스트림] 무대 막이 위에서 칸칸이 내려오고(빈 칸 하나), 터지는 꼭두각시가 섞임 → 빈 칸 아래로 들어가',t=>{const n=2+ph(),cols=7,cw=AW/cols;
+  for(let k=0;k<n;k++){const T0=t+k*2.6,gap=Math.floor(RND()*cols);sch(T0,()=>{for(let c=0;c<cols;c++){if(c===gap)continue;NP({k:'rect',x:AX+c*cw+1,y:AY,w:cw-2,h:14,sty:'light',col:'#6a3a8a',t0:T0,t1:T0+tel(),t2:T0+tel()+2.2,live:true,step:(o,b)=>{if(b>=o.t1)o.h=Math.min(AH,14+(b-o.t1)*120*spd())},dmg:12})}
+    const dx=AX+cw*(gap+.5),T1=T0+tel()+1.4;sch(T1,()=>gapRing(T1,(dx+CX)/2,AY+40,10,Math.PI/2,.6,62,{sty:'light',col:'#b48aff',r:4,noTel:true}))})}
+  return n*2.6+tel()+2.4});
+ /* 9 반사룡 */
+ D('s7hDragonTwin','쌍둥이 숨결','head',13,'[어려움] 용의 숨결과 거울 숨결이 양쪽에서 동시에 쓸어오며 가운데서 엇갈림 → 엇갈리는 순간 가운데 틈으로',t=>{const n=1+Math.min(1,ph());
+  for(let k=0;k<n;k++){const T0=t+k*2.6;sch(T0,()=>{const [x,y]=P7(-19,-40);for(const m of [0,1]){const sx=m?2*CX-x:x;NP({k:'seg',sty:'laser',col:m?'#c89aff':'#8af0ff',w:10,live:true,t0:T0,t1:T0+tel(),t2:T0+tel()+1.4,a:()=>[sx,y],b:b=>{const q=clamp((b-T0-tel())/1.4,0,1),a0=Math.PI*(.9-q*.4),a=m?Math.PI-a0:a0;return [sx+Math.cos(a)*520,y+Math.sin(a)*520]},dmg:13})}});shake(T0+tel(),.3)}
+  return n*2.6+tel()+1.6});
+ D('s7xDragonKaleido','만화경','all',12,'[익스트림] 비늘 결정이 양쪽 날개에서 쏟아져 벽에 튕기고, 거울판이 세로로 꽂힘 → 튕기는 각을 읽으며 판 사이로',t=>{const n=5+ph();
+  sch(t,()=>{for(const s of [-1,1]){const [x0,y]=P7(s*24,-30),Tg=t+tel();for(let i=0;i<n;i++){const a=toP(x0,y)+(i-(n-1)/2)*.32;NP({k:'orb',sty:'crystal',col:s<0?'#8af0ff':'#c89aff',r:5,t0:t,t1:Tg,t2:Tg+4,ray:a,rayL:24,noTel:i>0,pos:npBounce(x0,y,a,78*spd(),Tg)})}}});
+  for(let i=0;i<4+ph();i++){const T0=t+1.2+i*.6,x=AX+30+((i*97)%(AW-60));sch(T0,()=>rect(T0,x-10,AY,20,AH,'#c8dcf0','ice',.3,12))}
+  return tel()+4.2});
+ /* 10 거울 하루 */
+ D('s7hHaruCounter','거울 반격','hands',13,'[어려움] 대검이 X자로 두 번 베고, 메아리가 반대 X자로 → 칼이 지나간 쪽으로 바로 들어가',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.8;echo(T0,'#e0ccff',(T,mx,ma,col)=>{const [x,y]=P7(-11,-22),sx=mx(x);for(const d of [-1,1])NP({k:'seg',sty:'laser',col,w:12,live:true,t0:T,t1:T+tel(),t2:T+tel()+.45,a:()=>[sx,y],b:b=>{const q=clamp((b-T-tel())/.45,0,1),a=ma(Math.PI/2+d*(1.2-q*2.4)*.5+d*.3);return [sx+Math.cos(a)*440,y+Math.sin(a)*440]},dmg:14})},.9);shake(T0+tel()+.2,.35)}
+  return n*1.8+.9+tel()+.6});
+ D('s7xHaruZero','0시의 거울','all',14,'[익스트림] 머리 뒤 시계가 0시를 치며 바늘 두 겹이 서로 반대로 돌고, 날개 조각이 쏟아짐 → 두 바늘이 엇갈리는 틈을 따라',t=>{const dur=4+ph()*.5;
+  sch(t,()=>{const [x,y]=P7(0,-43);for(let i=0;i<3;i++){live(t,x,y,i*TAU/3,.5,460,'#b48aff',5,dur,12);live(t,x,y,i*TAU/3+Math.PI/3,-.5,460,'#e0ccff',3,dur,11)}});
+  for(let i=0;i<8+ph()*2;i++){const T0=t+tel()+.4+i*.4;sch(T0,()=>{const s=i%2?1:-1,[x,y]=P7(s*18,-36);shot(T0,x,y,toP(x,y),84,{sty:'crystal',col:'#e8f4ff',r:4,rayL:20})})}
+  snd(t+tel(),196,1,'triangle',.06,98);return tel()+dur+.4});
+
+ /* ---------- 난이도별 추가 공격 장치에 등록: [보통, 어려움, 익스트림] ---------- */
+ const EXTRA=window.S7EXTRA={s7_gate:['s7hGateLock','s7xGateThirteen'],s7_peacock:['s7hPeaHundred','s7xPeaPrismTail'],s7_fountain:['s7hFountGeyser','s7xFountFlood'],s7_chess:['s7hChessQueen','s7xChessPromotion'],s7_candle:['s7hCandleCandelabra','s7xCandleMelt'],
+  s7_ballet:['s7hBalletDuet','s7xBalletFinale'],s7_carousel:['s7hCarGallop','s7xCarDerail'],s7_puppet:['s7hPupMarionette','s7xPupCurtain'],s7_dragon:['s7hDragonTwin','s7xDragonKaleido'],s7_mharu:['s7hHaruCounter','s7xHaruZero']};
+ try{for(const k in EXTRA)T5_SET[k]=[[],[EXTRA[k][0]],[EXTRA[k][1]]]}catch(e){console.error('v52 t5',e)}
+
+ /* 보스 러시 상세: 챕터 7 탭에서 난이도 전용 공격도 보여 줌 */
+ {const f=rpDetail;rpDetail=function(){const r=f.apply(this,arguments);try{if(GM.rushCh===6&&!rpLocked()){const art=L7[GM.rushSel].art,ex=EXTRA[art],box=document.querySelector('#gmRushDet .rpChips');if(ex&&box&&!box.querySelector('.s7ex')){
+   const lv={easy:0,normal:1,hard:2,extreme:3}[diff]||0,mk=(n,tag,need)=>'<span class="rpChip s7ex" title="'+((ATK_TIP[n]||'').replace(/"/g,''))+'" style="'+(lv>=need?'':'opacity:.45')+'">'+(ATK_NAME[n]||n)+'<i>'+tag+'</i></span>';
+   box.insertAdjacentHTML('beforeend',mk(ex[0],'어려움+',2)+mk(ex[1],'익스트림',3))}}}catch(e){}return r}}
+}catch(e){console.error('v52 ch7 hard',e)}})();
+/* ================= v52 챕터 7 공격에 "그 보스다움" 입히기 =================
+   1) 외침: 공격을 시작할 때 보스가 그 공격에 맞는 한마디를 말풍선으로 외친다 (체스 왕 "룩, 전진!" 등)
+   2) 시전 부위: 공격이 나오는 몸의 부위(열쇠 창·깃털 눈·물의 손·홀·불꽃·조종 막대·입·대검)가 빛나고,
+      예고 동안 그 부위에서 공격 자리까지 보스다운 줄(실·물줄기·빛 점선)이 이어진다
+   3) 공격 모양: 같은 판정이라도 보스마다 모양을 바꾼다
+      열쇠 · 유리 깃털 · 물방울 · 체스 말 · 거꾸로 불꽃 · 음표와 칼날 별 · 목마와 전구 · 꼭두각시 · 비늘 결정 · 거울 조각
+   판정(맞는 범위)은 바꾸지 않는다. 그림만 바뀐다. */
+(function(){try{
+ const L7=window.S7ART,H=window.S7H;if(!L7||!H)return;
+ const on=()=>typeof G!=='undefined'&&G&&G.s7!=null;
+ /* ---------- 1) 공격별 외침 + 시전 부위 [대사, x, y] (보스 그림 좌표) ---------- */
+ const CAST={
+  s7GateKey:['열쇠로 잠근다!',20,-49],s7GateMirror:['비춰라, 거울 면!',0,-26],s7GateClose:['문을 닫아라!',0,-26],s7GateClock:['열세 시를 쳐라!',0,-51],s7hGateLock:['갇혀라, 영원히!',0,-26],s7xGateThirteen:['열세 번째 문이 열린다…',0,-51],
+  s7PeaFan:['내 깃털을 봐!',0,-14],s7PeaGaze:['어디로 숨든 보인다!',0,-14],s7PeaFeather:['유리 깃털, 쏟아져라!',0,-14],s7PeaSpin:['날개를 펼친다!',0,-14],s7hPeaHundred:['백 개의 눈이 너를 본다!',0,-14],s7xPeaPrismTail:['일곱 빛으로 부서져라!',0,-14],
+  s7FountUp:['물아, 거꾸로 솟아라!',0,-30],s7FountArc:['받아라, 물덩이!',19,-30],s7FountRain:['하늘로 떨어지는 비!',0,-30],s7FountWave:['수면이 차오른다!',0,-30],s7hFountGeyser:['발밑을 조심해!',0,-30],s7xFountFlood:['모두 거꾸로 잠겨라!',0,-30],
+  s7ChessRook:['룩, 전진!',0,-34],s7ChessBishop:['비숍, 대각선으로!',0,-34],s7ChessKnight:['나이트, 뛰어라!',0,-34],s7ChessCheck:['체크!',0,-34],s7hChessQueen:['퀸, 출격!',0,-34],s7xChessPromotion:['폰을 퀸으로!',0,-34],
+  s7CandleDrip:['녹아내려라…',0,-44],s7CandleFlame:['거꾸로 타올라라!',0,-44],s7CandleWick:['심지에 불을!',11,-24],s7CandleOut:['불꽃 고리로 가둬!',0,-44],s7hCandleCandelabra:['일곱 촛불이 너를 향한다!',0,-30],s7xCandleMelt:['시간이 녹아내린다…',0,-44],
+  s7BalletSpin:['피루엣!',0,-30],s7BalletLeap:['그랑 주테!',0,-30],s7BalletNotes:['오르골, 처음부터!',0,-30],s7BalletMirror:['거울 무대로!',0,-28],s7hBalletDuet:['거울 속 나와 함께!',0,-30],s7xBalletFinale:['커튼콜이에요!',0,-30],
+  s7CarHorse:['목마들아, 달려라!',0,-26],s7CarRing:['한 바퀴만 더!',0,-26],s7CarLights:['불을 켜라!',0,-26],s7CarFlag:['깃발을 꽂아라!',0,-40],s7hCarGallop:['질주다!',0,-26],s7xCarDerail:['축이… 빠진다!',0,-26],
+  s7PupString:['실을 당겨라.',0,-50],s7PupDoll:['꼭두각시들아, 가라.',0,-18],s7PupMask:['웃어라, 가면아!',0,-39],s7PupWeb:['그물을 쳐라.',0,-50],s7hPupMarionette:['네 그림자는 내 것이다.',0,-50],s7xPupCurtain:['막을 내려라.',0,-50],
+  s7DragonBreath:['되돌려 주마!',-19,-40],s7DragonWing:['비늘이 떨어진다!',0,-30],s7DragonDive:['내려간다!',-19,-40],s7DragonPrism:['빛을 튕겨라!',-19,-40],s7hDragonTwin:['두 숨결을 받아라!',-19,-40],s7xDragonKaleido:['만화경 속에 갇혀라!',0,-30],
+  s7HaruSlash:['거울처럼 벤다!',-11,-22],s7HaruShards:['조각들아!',0,-36],s7HaruHalo:['바늘을 되감아!',0,-43],s7HaruMirror:['나는 너야.',0,-30],s7hHaruCounter:['반격이다!',-11,-22],s7xHaruZero:['0시야. 다 되감겨.',0,-43]};
+ for(const n in CAST){const f=MV[n];if(!f)continue;MV[n]=function(t){try{const c=CAST[n];sch(t,()=>{if(on())G.s7cast={n,t,line:c[0],ax:c[1],ay:c[2],real:performance.now()}})}catch(e){}return f.apply(this,arguments)}}
+ window.S7CAST=CAST;
+ const castPt=()=>{const c=G.s7cast;return c?H.P7(c.ax,c.ay):H.P7(0,-30)};
+ /* 말풍선 + 시전 부위 빛 */
+ function drawCast(now){const c=G.s7cast;if(!c)return;const age=(now-c.real)/1000;if(age>2.2)return;const B=L7[G.s7],col=B.c,[sx,sy]=castPt(),k=G.s7;
+  /* 부위 빛: 커졌다가 사라지는 고리 + 빛살 */const p=Math.min(1,age/.6),a=age<1.4?1:Math.max(0,1-(age-1.4)/.8);
+  pcirc(sx,sy,3+p*4,col,.35*a);pcirc(sx,sy,2,'#ffffff',.9*a);cRing(sx,sy,4+p*14,col,(1-p)*.8*a,1);
+  for(let i=0;i<6;i++){const ang=i*TAU/6+now/700,L=6+p*8;for(let s=4;s<L;s+=2)cPx(sx+Math.cos(ang)*s,sy+Math.sin(ang)*s,1,i%2?'#ffffff':col,.6*a*(1-s/L))}
+  /* 말풍선 */const ctx2=ctx;ctx2.save();ctx2.font='bold 8px '+(typeof FONT_STACK!=='undefined'?FONT_STACK:'sans-serif');const tw=Math.ceil(ctx2.measureText(c.line).width),bw=tw+10,bh=13;
+  const pos=H.POS['c_'+B.art],hx=pos?pos.x:sx,hy=pos?pos.y-44*pos.u:sy-20,side=pos?26*pos.u:18;let bx=Math.round(hx+side),by=Math.round(hy-6);if(bx+bw>AX+AW-4)bx=Math.round(hx-side-bw);bx=clamp(bx,AX+4,AX+AW-bw-4);by=clamp(by,AY+54,AY+AH-30);
+  const pop=age<.15?age/.15:1,ba=Math.min(1,(2.2-age)/.4);ctx2.globalAlpha=ba;RA(bx+1,by+2,bw,bh,'#000000',.4*ba);RA(bx,by,bw,bh,'#0a0c18',.92*ba);RA(bx,by,bw,1,col,ba);RA(bx,by+bh-1,bw,1,col,.6*ba);RA(bx,by,1,bh,col,.6*ba);RA(bx+bw-1,by,1,bh,col,.6*ba);
+  const tx=bx<hx?bx+bw-6:bx+6;for(let i=0;i<3;i++)RA(bx<hx?tx-i+2:tx+i-2,by+bh+i,3-i,1,col,.8*ba);
+  ctx2.globalAlpha=ba*pop;ctx2.fillStyle='#000';ctx2.textAlign='left';ctx2.fillText(c.line,bx+5+1,by+10);ctx2.fillStyle=k===3?'#ffffff':mixc(col,'#ffffff',.55);ctx2.fillText(c.line,bx+5,by+9);ctx2.restore();ctx.globalAlpha=1}
+ {const _ds=drawScene;drawScene=function(now){const r=_ds.apply(this,arguments);try{if(on()&&G.state==='play')drawCast(now)}catch(e){}return r}}
+
+ /* ---------- 2·3) 공격 모양 입히기 ---------- */
+ {const base=NP;NP=function(o){try{if(on()&&o&&['seg','orb','circ','rect'].includes(o.k)&&o.harm!==false){o.s7k=G.s7;const c=G.s7cast;if(c&&G.beat-c.t<8)o.s7src=castPt()}}catch(e){}return base.apply(this,arguments)}}
+ const dirOf=(o,b)=>{if(o.ray!=null&&b<o.t1+.05)return o.ray;try{const [x0,y0]=o.pos(b-.04),[x1,y1]=o.pos(b);if(Math.hypot(x1-x0,y1-y0)>.05)return Math.atan2(y1-y0,x1-x0)}catch(e){}return o.ray!=null?o.ray:Math.PI/2};
+ const LN=(ax,ay,bx,by,st,fn)=>{const L=Math.hypot(bx-ax,by-ay),n=Math.max(1,Math.floor(L/st));for(let i=0;i<=n;i++){const q=i/n;fn(ax+(bx-ax)*q,ay+(by-ay)*q,i,q)}};
+ const along=(x,y,a,d,s)=>[x+Math.cos(a)*d-Math.sin(a)*s,y+Math.sin(a)*d+Math.cos(a)*s];
+ /* 구슬 → 보스다운 물체 */
+ const ORB=[
+  /* 0 열쇠 */(o,x,y,a,t,col)=>{for(let d=-6;d<=5;d++){const [px,py]=along(x,y,a,d,0);cPx(px,py,2,'#3a2a10',1);cPx(px,py,1,'#ffd27a',1)}const [hx,hy]=along(x,y,a,-8,0);cRing(hx,hy,3,'#ffd27a',1,2);pcirc(hx,hy,1,'#5af0e0',1);for(const d of [3,5]){const [px,py]=along(x,y,a,d,2.5);cPx(px,py,2,'#ffd27a',1)}const [gx,gy]=along(x,y,a,5,0);cPx(gx,gy,1,'#ffffff',1)},
+  /* 1 유리 깃털 */(o,x,y,a,t,col)=>{for(let d=-9;d<=6;d++){const w=Math.max(0,Math.round(2.6*(1-Math.abs(d+1)/9)));for(let s=-w;s<=w;s++){const [px,py]=along(x,y,a,d,s);cPx(px,py,1,Math.abs(s)===w?'#0e3a3a':s===0?'#ffffff':col,.95)}}const [ex,ey]=along(x,y,a,-4,0);pcirc(ex,ey,2,'#1a3a8a',1);pcirc(ex,ey,1,'#ffd27a',1)},
+  /* 2 물방울 */(o,x,y,a,t,col)=>{for(let d=1;d<=5;d++){const [px,py]=along(x,y,a,-d*1.6-2,0);cPx(px,py,Math.max(1,4-d),'#bff4ff',.7-d*.1)}pcirc(x,y,o.r,'#0a3a5a',1);pcirc(x,y,o.r-1,col,1);cPx(x-1.5,y-1.5,1.5,'#ffffff',1)},
+  /* 3 체스 폰 */(o,x,y,a,t,col)=>{const dk=(o.col==='#16161e')||hash((o.t0*97|0)+'p')%2===0,f=dk?'#16161e':'#f2f6ff',e=dk?'#8492b0':'#0a0c18',s=o.r>=7?1.4:1;const P2=(dx,dy,w,h,c)=>RA(Math.round(x+dx*s),Math.round(y+dy*s),Math.max(1,Math.round(w*s)),Math.max(1,Math.round(h*s)),c,1);
+   P2(-4,3,8,3,e);P2(-3.5,3.5,7,2,f);P2(-2.5,-1,5,5,e);P2(-2,-.5,4,4.5,f);pcirc(x,y-3*s,2.6*s,e,1);pcirc(x,y-3*s,2*s,f,1);cPx(x-.8*s,y-3.8*s,1,dk?'#c4d0e4':'#ffffff',1)},
+  /* 4 거꾸로 불꽃 (끝이 날아온 쪽을 향함) */(o,x,y,a,t,col)=>{const fl=Math.sin(t*30+(o.t0||0))*.8;for(let d=0;d<=7;d++){const w=Math.max(0,3.6*(1-d/7.5));const [px,py]=along(x,y,a,-d,fl*d*.15);pcirc(px,py,w,d<2?'#ffffff':d<4?'#b8fff6':col,.9)}pcirc(x,y,1.4,'#ffffff',1)},
+  /* 5 음표 · 칼날 별 */(o,x,y,a,t,col)=>{if(o.sty==='note'){pcirc(x,y+1,2.4,'#0a0c18',1);pcirc(x,y+1,1.8,col,1);RA(Math.round(x+1),Math.round(y-6),1,7,col,1);RA(Math.round(x+1),Math.round(y-6),3,1,col,1);RA(Math.round(x+3),Math.round(y-5),1,2,col,1);return}
+   const r=t*9;for(let i=0;i<4;i++){const q=r+i*Math.PI/2;for(let d=0;d<=5;d++)cPx(x+Math.cos(q)*d,y+Math.sin(q)*d,d<3?2:1,d<2?'#ffffff':col,1)}pcirc(x,y,1.5,'#fff0f8',1)},
+  /* 6 목마 · 전구 */(o,x,y,a,t,col)=>{if(o.sty==='bob'){const fx=Math.cos(a)>=0?1:-1,bob=Math.round(Math.sin(t*12+(o.t0||0))*1);const P2=(dx,dy,w,h,c)=>RA(Math.round(x+(fx>0?dx:-dx-w)),Math.round(y+dy+bob),w,h,c,1);
+    P2(-6,-2,10,5,'#0a0c18');P2(-5,-1,8,3,'#f2e8ff');P2(2,-6,4,5,'#0a0c18');P2(3,-5,2,4,'#f2e8ff');P2(4,-4,1,1,'#0a0c18');P2(-5,3,1,3,'#f2e8ff');P2(1,3,1,3,'#f2e8ff');P2(-6,-1,1,1,col);P2(-1,-9,1,16,'#ffd27a');P2(-3,-2,4,1,'#ff7ad0');return}
+   pcirc(x,y,o.r+2,col,.25);pcirc(x,y,o.r,'#3a2a10',1);pcirc(x,y,o.r-1,col,1);pcirc(x,y,Math.max(1,o.r-2.5),'#fff8e0',1)},
+  /* 7 꼭두각시 (머리 위로 실) */(o,x,y,a,t,col)=>{const sw=Math.sin(t*10+(o.t0||0))*1.5;LN(x,y-6,x+sw*3,AY,6,(px,py)=>cPx(px,py,1,'#c4d0e4',.35));
+   RA(Math.round(x-3),Math.round(y-2),6,6,'#0a0814',1);RA(Math.round(x-2),Math.round(y-1),4,4,o.col||'#3e3058',1);pcirc(x,y-4.5,2.6,'#0a0814',1);pcirc(x,y-4.5,2,'#e8e0f0',1);cPx(x-.8,y-4.8,1,'#0a0814',1);cPx(x+.8,y-4.8,1,'#0a0814',1);
+   RA(Math.round(x-5),Math.round(y-1+sw*.5),2,1,'#e8e0f0',1);RA(Math.round(x+3),Math.round(y-1-sw*.5),2,1,'#e8e0f0',1);RA(Math.round(x-2),Math.round(y+4),1,2,'#e8e0f0',1);RA(Math.round(x+1),Math.round(y+4),1,2,'#e8e0f0',1)},
+  /* 8 비늘 결정 */(o,x,y,a,t,col)=>{const r=o.r+1;for(let d=-r;d<=r;d++){const w=Math.round((r-Math.abs(d))*.6);for(let s=-w;s<=w;s++){const [px,py]=along(x,y,a,d,s);cPx(px,py,1,Math.abs(s)===w||Math.abs(d)===r?'#0a1828':s<0?'#ffffff':col,1)}}const [gx,gy]=along(x,y,a,-1,-1);cPx(gx,gy,1,'#ffffff',1)},
+  /* 9 거울 조각 */(o,x,y,a,t,col)=>{if(o.sty==='bob'){pcirc(x,y,o.r+3,col,.25);pcirc(x,y,o.r,'#141228',1);pcirc(x,y,o.r-1,col,1);cPx(x-2,y-2,2,'#ffffff',1);return}const sp=t*6+(o.t0||0);const pts=[[0,-5],[4,3],[-3,4]].map(([px,py])=>[x+px*Math.cos(sp)-py*Math.sin(sp),y+px*Math.sin(sp)+py*Math.cos(sp)]);
+   ctx.save();ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);ctx.lineTo(pts[1][0],pts[1][1]);ctx.lineTo(pts[2][0],pts[2][1]);ctx.closePath();ctx.fillStyle='#0a0c18';ctx.globalAlpha=1;ctx.lineWidth=2;ctx.strokeStyle='#0a0c18';ctx.stroke();ctx.fillStyle=col;ctx.fill();ctx.restore();cPx((pts[0][0]+pts[1][0])/2,(pts[0][1]+pts[1][1])/2,1,'#ffffff',1)}];
+ {const base=NPK.orb.draw;NPK.orb.draw=function(o,b,now){if(o.s7k==null||!ORB[o.s7k])return base.apply(this,arguments);try{const [x,y]=o.pos(b);ORB[o.s7k](o,x,y,dirOf(o,b),now/1000,o.col||L7[o.s7k].c);ctx.globalAlpha=1}catch(e){return base.apply(this,arguments)}}}
+ /* 선 공격 → 보스다운 장식 */
+ const SEG=[
+  /* 0 열쇠 창: 열쇠 이빨 */(ax,ay,bx,by,w,col,t)=>{const a=Math.atan2(by-ay,bx-ax);LN(ax,ay,bx,by,14,(x,y,i)=>{if(i%2)return;const [px,py]=along(x,y,a,0,w/2+1);cPx(px,py,2,'#ffd27a',.9);const [qx,qy]=along(x,y,a,3,w/2+1);cPx(qx,qy,1,'#ffd27a',.9)})},
+  /* 1 깃털 가지 */(ax,ay,bx,by,w,col,t)=>{const a=Math.atan2(by-ay,bx-ax);LN(ax,ay,bx,by,7,(x,y,i)=>{for(const s of [-1,1]){const [px,py]=along(x,y,a,-3,s*(w/2+3));LN(x,y,px,py,1,(qx,qy)=>cPx(qx,qy,1,col,.55))}if(i%6===3){pcirc(x,y,2.5,'#1a3a8a',.9);pcirc(x,y,1.2,'#ffd27a',1)}})},
+  /* 2 물줄기: 물방울이 흐름 */(ax,ay,bx,by,w,col,t)=>{const a=Math.atan2(by-ay,bx-ax);LN(ax,ay,bx,by,5,(x,y,i)=>{const s=Math.sin(i*.9-t*14)*(w/2+1);const [px,py]=along(x,y,a,0,s);cPx(px,py,2,'#e8fbff',.7)})},
+  /* 3 체스판 칸 */(ax,ay,bx,by,w,col,t)=>{LN(ax,ay,bx,by,6,(x,y,i)=>cPx(x,y,Math.max(2,w-2),i%2?'#16161e':'#f2f6ff',.85))},
+  /* 4 불꽃 혀 */(ax,ay,bx,by,w,col,t)=>{const a=Math.atan2(by-ay,bx-ax),sd=Math.floor(t*20);LN(ax,ay,bx,by,4,(x,y,i)=>{const h=hash(sd+'f'+i)%5;for(const s of [-1,1]){const [px,py]=along(x,y,a,0,s*(w/2+1+h));cPx(px,py,1,h>2?'#ffffff':'#b8fff6',.8)}})},
+  /* 5 리본 */(ax,ay,bx,by,w,col,t)=>{const a=Math.atan2(by-ay,bx-ax);LN(ax,ay,bx,by,2,(x,y,i)=>{const s=Math.sin(i*.35+t*8)*(w/2+3);const [px,py]=along(x,y,a,0,s);cPx(px,py,1,'#ffe0f0',.85)})},
+  /* 6 놋쇠 기둥 줄무늬 */(ax,ay,bx,by,w,col,t)=>{LN(ax,ay,bx,by,4,(x,y,i)=>{if((i+Math.floor(t*6))%3===0)cPx(x,y,Math.max(2,w-1),'#ff7ad0',.8)})},
+  /* 7 실 매듭 */(ax,ay,bx,by,w,col,t)=>{LN(ax,ay,bx,by,16,(x,y,i)=>{pcirc(x,y,1.5,'#e8e0f0',.9)})},
+  /* 8 무지개 테 */(ax,ay,bx,by,w,col,t)=>{const a=Math.atan2(by-ay,bx-ax);LN(ax,ay,bx,by,3,(x,y)=>{const [p1x,p1y]=along(x,y,a,0,-(w/2+1)),[p2x,p2y]=along(x,y,a,0,w/2+1);cPx(p1x,p1y,1,'#ff7a9a',.75);cPx(p2x,p2y,1,'#7ab8ff',.75)})},
+  /* 9 대검: 칼날 빛이 흐름 + 날밑 */(ax,ay,bx,by,w,col,t)=>{const a=Math.atan2(by-ay,bx-ax),L=Math.hypot(bx-ax,by-ay),q=(t*2)%1,[gx,gy]=along(ax,ay,a,L*q,0);pcirc(gx,gy,w*.5,'#ffffff',.7);for(let s=-7;s<=7;s++){const [px,py]=along(ax,ay,a,10,s);cPx(px,py,2,'#ffd27a',1)}}];
+ {const base=NPK.seg.draw;NPK.seg.draw=function(o,b,now){const r=base.apply(this,arguments);if(o.s7k==null||!SEG[o.s7k])return r;try{const [ax,ay]=o.a(b),[bx,by]=o.b(b);SEG[o.s7k](ax,ay,bx,by,Math.max(2,o.w),o.col||L7[o.s7k].c,now/1000);ctx.globalAlpha=1}catch(e){}return r}}
+ /* 장판(사각) → 보스다운 무늬 */
+ const RECT=[
+  /* 0 문짝: 세로 널판 + 열쇠 구멍 */(x,y,w,h,col,t)=>{for(let i=6;i<w;i+=8)RA(x+i,y+2,1,h-4,'#3a2a10',.45);if(w>14&&h>20){const cx=Math.round(x+w/2),cy=Math.round(y+h/2);pcirc(cx,cy-2,2.5,'#0a0c18',.9);RA(cx-1,cy,2,5,'#0a0c18',.9)}RA(x,y+Math.round(h*.3),w,1,'#ffd27a',.5);RA(x,y+Math.round(h*.7),w,1,'#ffd27a',.5)},
+  /* 1 유리판 격자 */(x,y,w,h,col,t)=>{for(let i=10;i<w;i+=12)RA(x+i,y,1,h,'#ffffff',.3);for(let j=10;j<h;j+=12)RA(x,y+j,w,1,'#ffffff',.3);RA(x+2,y+2,Math.min(w-4,6),1,'#ffffff',.8)},
+  /* 2 물기둥: 위로 오르는 거품 */(x,y,w,h,col,t)=>{for(let i=0;i<Math.max(2,w/6);i++){const q=(t*.9+i*.37)%1,bx=x+3+((i*13)%Math.max(1,w-6)),by=y+h-q*h;cRing(bx,by,1.5,'#e8fbff',.7*(1-q),1)}},
+  /* 3 체스판 */(x,y,w,h,col,t)=>{const s=10;for(let i=0;i<w;i+=s)for(let j=0;j<h;j+=s)if(((i+j)/s)%2===0)RA(x+i,y+j,Math.min(s,w-i),Math.min(s,h-j),col==='#16161e'?'#3a3a4a':'#16161e',.35)},
+  /* 4 촛농 흘러내림 */(x,y,w,h,col,t)=>{for(let i=2;i<w-2;i+=5){const L=4+(hash(i+'w')%Math.max(2,Math.min(18,h/3)));RA(x+i,y,3,L,'#e8fff8',.55);pcirc(x+i+1.5,y+L,1.5,'#e8fff8',.55)}},
+  /* 5 리본 사선 */(x,y,w,h,col,t)=>{ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();for(let i=-h;i<w;i+=12)LN(x+i+(t*20%12),y,x+i+h+(t*20%12),y+h,2,(px,py)=>cPx(px,py,2,'#ffe0f0',.35));ctx.restore()},
+  /* 6 천막 줄무늬 */(x,y,w,h,col,t)=>{for(let i=0;i<w;i+=8)RA(x+i,y,4,h,'#ff7ad0',.25);for(let i=4;i<w;i+=10)pcirc(x+i,y+3,1.5,'#fff0c0',.8)},
+  /* 7 무대 막: 주름 + 금색 술 */(x,y,w,h,col,t)=>{for(let i=3;i<w;i+=6)RA(x+i,y,2,h,'#0a0814',.35);RA(x,y+h-3,w,2,'#ffd27a',.8);for(let i=1;i<w;i+=4)RA(x+i,y+h-1,1,2,'#ffd27a',.8)},
+  /* 8 거울판 빛 */(x,y,w,h,col,t)=>{const q=(t*.6)%1;ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();LN(x+(q*2-.5)*w,y,x+(q*2-.5)*w-h*.5,y+h,2,(px,py)=>cPx(px,py,4,'#ffffff',.35));ctx.restore()},
+  /* 9 금 간 거울 */(x,y,w,h,col,t)=>{const cx=x+w/2,cy=y+h/2;for(let i=0;i<5;i++){const a=i*1.3+.4,L=Math.min(w,h)*.45;LN(cx,cy,cx+Math.cos(a)*L,cy+Math.sin(a)*L,2,(px,py)=>cPx(px,py,1,'#ffffff',.55))}}];
+ {const base=NPK.rect.draw;NPK.rect.draw=function(o,b,now){const r=base.apply(this,arguments);if(o.s7k==null||!RECT[o.s7k])return r;try{const [x,y,w,h]=o.rf?o.rf(b):[o.x,o.y,o.w,o.h];if(w>2&&h>2)RECT[o.s7k](Math.round(x),Math.round(y),Math.round(w),Math.round(h),o.col||L7[o.s7k].c,now/1000);ctx.globalAlpha=1}catch(e){}return r}}
+ /* 원 → 보스다운 그림 */
+ const CIRC=[
+  /* 0 열쇠 구멍 */(x,y,r,col,t)=>{pcirc(x,y-r*.2,r*.28,'#0a0c18',.8);RA(Math.round(x-r*.12),Math.round(y-r*.1),Math.max(2,Math.round(r*.24)),Math.round(r*.5),'#0a0c18',.8);cRing(x,y,r,'#ffd27a',.8,1)},
+  /* 1 거울 눈 */(x,y,r,col,t)=>{pcirc(x,y,r*.5,'#1a3a8a',.85);pcirc(x,y,r*.28,'#ffd27a',.9);pcirc(x,y,r*.12,'#0a0c18',1);cRing(x,y,r*.75,'#ffffff',.5,1)},
+  /* 2 물결 */(x,y,r,col,t)=>{for(let i=0;i<3;i++){const q=(t*1.2+i/3)%1;cRing(x,y,r*q,'#e8fbff',(1-q)*.8,1)}},
+  /* 3 나이트 말 머리 */(x,y,r,col,t)=>{const s=r/9,P2=(dx,dy,w,h,c)=>RA(Math.round(x+dx*s),Math.round(y+dy*s),Math.max(1,Math.round(w*s)),Math.max(1,Math.round(h*s)),c,.9);P2(-3,-6,6,12,'#0a0c18');P2(-6,-4,4,4,'#0a0c18');P2(-5,4,10,3,'#0a0c18');P2(-2,-5,4,10,col==='#16161e'?'#8492b0':'#f2f6ff');P2(-5,-3,3,2,col==='#16161e'?'#8492b0':'#f2f6ff')},
+  /* 4 둘레 촛불 */(x,y,r,col,t)=>{for(let i=0;i<8;i++){const a=i*TAU/8,px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;RA(Math.round(px-1),Math.round(py-1),2,4,'#e8fff8',.9);pcirc(px,py-2+Math.sin(t*20+i)*.5,1.5,'#5af0e0',1)}},
+  /* 5 무대 조명 별 */(x,y,r,col,t)=>{for(let i=0;i<4;i++){const a=i*Math.PI/2+t;LN(x,y,x+Math.cos(a)*r*.7,y+Math.sin(a)*r*.7,2,(px,py)=>cPx(px,py,1,'#fff0f8',.8))}pcirc(x,y,2,'#ffffff',1)},
+  /* 6 둘레 전구 */(x,y,r,col,t)=>{for(let i=0;i<10;i++){const a=i*TAU/10+t*.6,on2=(i+Math.floor(t*8))%2;pcirc(x+Math.cos(a)*r,y+Math.sin(a)*r,1.8,on2?'#fff0c0':col,1)}},
+  /* 7 그림자 손 */(x,y,r,col,t)=>{const s=r/10;for(let i=-2;i<=2;i++)RA(Math.round(x+i*2.4*s-s),Math.round(y-6*s+Math.abs(i)*s),Math.max(1,Math.round(1.6*s)),Math.round(6*s),'#0a0814',.8);pcirc(x,y+2*s,4.5*s,'#0a0814',.8)},
+  /* 8 육각 비늘 */(x,y,r,col,t)=>{for(let i=0;i<6;i++){const a=i*TAU/6,b2=(i+1)*TAU/6;LN(x+Math.cos(a)*r*.8,y+Math.sin(a)*r*.8,x+Math.cos(b2)*r*.8,y+Math.sin(b2)*r*.8,1,(px,py)=>cPx(px,py,1,'#ffffff',.6))}},
+  /* 9 시계 바늘 */(x,y,r,col,t)=>{for(let i=0;i<12;i++){const a=i*TAU/12;cPx(x+Math.cos(a)*r*.85,y+Math.sin(a)*r*.85,1,'#ffffff',.8)}const h1=-t*2,h2=-t*.3;LN(x,y,x+Math.cos(h1)*r*.7,y+Math.sin(h1)*r*.7,1,(px,py)=>cPx(px,py,1,'#ffffff',.9));LN(x,y,x+Math.cos(h2)*r*.45,y+Math.sin(h2)*r*.45,1,(px,py)=>cPx(px,py,2,'#e0ccff',.9))}];
+ {const base=NPK.circ.draw;NPK.circ.draw=function(o,b,now){const r=base.apply(this,arguments);if(o.s7k==null||!CIRC[o.s7k])return r;try{const [x,y,rr]=o.cf?o.cf(b):[o.x,o.y,o.r];CIRC[o.s7k](x,y,rr,o.col||L7[o.s7k].c,now/1000);ctx.globalAlpha=1}catch(e){}return r}}
+ /* 예고 동안: 시전 부위 → 공격 자리로 이어지는 줄 (한 화면에 너무 많지 않게) */
+ let lkF=0,lkN=0;const target=(o)=>{if(o.k==='orb')return o.pos(o.t1);if(o.k==='circ'){const c=o.cf?o.cf(o.t1):[o.x,o.y];return [c[0],c[1]]}if(o.k==='rect'){const r=o.rf?o.rf(o.t1):[o.x,o.y,o.w,o.h];return [r[0]+r[2]/2,r[1]+r[3]/2]}return o.b(o.t1)};
+ function link(o,b,now){if(o.s7k==null||!o.s7src||o.noTel)return;if(now!==lkF){lkF=now;lkN=0}if(++lkN>9)return;const p=clamp((b-o.t0)/Math.max(.01,o.t1-o.t0),0,1);if(p>=1)return;const [sx,sy]=o.s7src,[tx,ty]=target(o),k=o.s7k,col=L7[k].c,a=.45*(1-p*.6),t=now/1000;
+  if(k===7){LN(sx,sy,tx,ty,3,(x,y)=>cPx(x,y,1,'#c4d0e4',a));return}/* 인형사: 실 */
+  if(k===2){LN(sx,sy,tx,ty,6,(x,y,i,q)=>cPx(x,y-Math.sin(q*Math.PI)*30,2,'#bff4ff',a*(Math.sin(q*Math.PI)*.5+.5)));return}/* 분수: 물줄기 포물선 */
+  const L=Math.hypot(tx-sx,ty-sy),n=Math.max(2,Math.floor(L/9));for(let i=0;i<n;i++){const q=((i/n)+t*.9)%1;if(q>p+.15)continue;cPx(sx+(tx-sx)*q,sy+(ty-sy)*q,k===3?2:1,k===3?(i%2?'#16161e':'#f2f6ff'):i%3?col:'#ffffff',a)}}
+ for(const k of ['orb','seg','rect','circ']){const base=NPK[k].tel;NPK[k].tel=function(o,b,now){const r=base.apply(this,arguments);try{if(o.s7k!=null)link(o,b,now);ctx.globalAlpha=1}catch(e){}return r}}
+}catch(e){console.error('v52 ch7 character attacks',e)}})();
+/* ================= v52 챕터 6 · 7 보스 체력바: 보스 20명 각자 디자인이 다른 체력바 =================
+   전에는 챕터 6·7 보스가 모두 1번(톱니) 체력바를 같이 썼다. 이제 보스마다 그 캐릭터의 모양·재질로 바꾼다.
+   구조는 350의 체력바 틀(BB_TH)을 그대로 따른다: back(뒤 장식) · shape(몸통 모양) · tex(채운 부분 무늬) · front(앞 장식)
+   S: x,y,w,h(바 위치) · fw(채운 길이) · fx(채움 끝) · t(초) · r(남은 비율) · main(주색) · c(빈/잔상/채움 색 묶음) */
+(function(){try{
+ const L6=window.S6ART,L7=window.S7ART;if(typeof BB_TH==='undefined'||typeof C3BOSS==='undefined')return;
+ const frame=(S,a,b,c)=>{const {x,y,w,h}=S;R(x-3,y-3,w+6,h+6,a);R(x-2,y-2,w+4,h+4,b);R(x-1,y-1,w+2,h+2,c||'#06080c')};
+ const tri=(x0,y0,x1,y1,x2,y2,col,al)=>{const c=BXC();c.save();c.globalAlpha=al==null?1:al;c.fillStyle=col;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.lineTo(x2,y2);c.closePath();c.fill();c.restore()};
+ const kite=(x,y,s,col,rot)=>{const c=BXC();c.save();c.translate(x,y);c.rotate(rot||0);c.fillStyle='#1a1420';c.beginPath();c.moveTo(0,-5*s);c.lineTo(3.6*s,0);c.lineTo(0,6*s);c.lineTo(-3.6*s,0);c.closePath();c.fill();c.fillStyle=col;c.beginPath();c.moveTo(0,-4*s);c.lineTo(2.8*s,0);c.lineTo(0,5*s);c.lineTo(-2.8*s,0);c.closePath();c.fill();c.restore()};
+ const th={};
+
+ /* ================= 챕터 6 ZENITH ================= */
+ /* 0 풍향계 기사: 화살 모양 바 (뒤 깃 · 앞 화살촉) + 바람 줄기 */
+ th.s6_vane={main:'#5ad0b0',frame:'#1e3a3a',
+  back(S){frame(S,'#0a1414','#8a6a3a');const {x,y,w,h}=S;for(let i=0;i<3;i++){R(x-9+i*2,y-3-i,2,3,'#c89a5a');R(x-9+i*2,y+h+i,2,3,'#c89a5a')}},
+  tex(S){const {x,y,h,fw,t}=S;for(let i=0;i<fw;i+=14){const q=(i+t*60)%fw;RA(x+q,y+3+(i%3)*2,8,1,'#ffffff',.35)}},
+  front(S){const {x,y,w,h,t}=S;bbTriH(x+w+3,y-4,9,h+8,'#0a1414',1);bbTriH(x+w+3,y-2,7,h+4,'#c89a5a',1);const a=Math.sin(t*1.3)*.5;pcirc(x+w+16,y+h/2,4,'#0a1414');RA(x+w+16+Math.cos(a)*-5,y+h/2+Math.sin(a)*-5-1,2,2,'#ffe8a0',1);bbLine(x+w+16,y+h/2,x+w+16+Math.cos(a)*6,y+h/2+Math.sin(a)*6,'#ff6a5a')}};
+ /* 1 연줄의 거인: 꼰 연줄 테 + 줄에 매달린 연들 */
+ th.s6_kite={main:'#ff6a5a',frame:'#3a2418',
+  back(S){frame(S,'#140c08','#d8c8a0');const {x,y,w,h}=S;for(let i=0;i<w+4;i+=4){RA(x-2+i,y-2,2,1,'#8a6a40',.8);RA(x-1+i,y+h+1,2,1,'#8a6a40',.8)}},
+  tex(S){const {x,y,h,fw}=S;for(let i=0;i<fw;i+=6)RA(x+i,y+2,3,h-4,'#ffffff',.1)},
+  front(S){const {x,y,w,h,t}=S,cols=['#ff6a5a','#ffd08a','#5ad0b0','#8ad8ff'];for(let i=0;i<5;i++){const kx=x+30+i*55,ky=y-7+Math.sin(t*2+i)*2;bbLine(kx,ky+5,kx,y,'#d8c8a0',.7);kite(kx,ky,1,cols[i%4],Math.sin(t*1.5+i)*.25)}kite(x+w+10,y+h/2-2+Math.sin(t*2)*2,1.6,'#ff6a5a',Math.sin(t)*.2)}};
+ /* 2 번개구름 고래: 뭉게구름 테 + 안쪽 번개 + 끝에 고래 꼬리 */
+ th.s6_cloudwhale={main:'#ffe25a',frame:'#2a3448',
+  back(S){const {x,y,w,h,t}=S;for(let i=-4;i<w+8;i+=9){const b=Math.sin(t+i*.1)*.6;pcirc(x+i,y-1+b,5,'#3a4868');pcirc(x+i+4,y+h+1-b,5,'#2a3448')}frame(S,'#141a28','#5a6888')},
+  tex(S){const {x,y,h,fw,now}=S;if(Math.floor(now/90)%5===0){const rr=rng(Math.floor(now/90));let px=x+rr()*fw,py=y+1;for(let k=0;k<4;k++){const nx=px+(rr()-.5)*6,ny=py+3;bbLine(px,py,nx,ny,'#ffffff');px=nx;py=ny}}},
+  front(S){const {x,y,w,h,t}=S,wx=x+w+6,wy=y+h/2+Math.sin(t*1.6)*1.5;R(wx-1,wy-2,8,5,'#0a0e18');R(wx,wy-1,7,3,'#8a9ac0');tri(wx+5,wy,wx+15,wy-8,wx+12,wy+1,'#0a0e18');tri(wx+6,wy,wx+14,wy-6,wx+11,wy,'#b8c8e8');tri(wx+5,wy,wx+15,wy+8,wx+12,wy-1,'#0a0e18');tri(wx+6,wy,wx+14,wy+6,wx+11,wy,'#8a9ac0');RA(wx+1,wy,5,1,'#ffe25a',.9)}};
+ /* 3 비행선 함장: 리벳 박힌 선체 + 대포 구멍 + 프로펠러 */
+ th.s6_captain={main:'#ff5a6a',frame:'#1a2440',
+  back(S){frame(S,'#0a0c14','#a8703a','#1a1008');const {x,y,w,h}=S;for(let i=6;i<w;i+=18){RA(x+i,y-2,1,1,'#ffe0a0',1);RA(x+i,y+h+1,1,1,'#ffe0a0',1)}for(let i=20;i<w-10;i+=45){pcirc(x+i,y+h+3,2,'#0a0c14');pcirc(x+i,y+h+3,1.2,'#3a2a20')}},
+  tex(S){const {x,y,h,fw}=S;for(let i=0;i<fw;i+=12)RA(x+i,y,1,h,'#3a0a10',.35);RA(x,y+h-3,fw,1,'#ffffff',.2)},
+  front(S){const {x,y,w,h,t}=S,cx=x+w+9,cy=y+h/2;pcirc(cx,cy,3,'#a8703a');for(let i=0;i<3;i++){const a=t*14+i*TAU/3;bbLine(cx,cy,cx+Math.cos(a)*8,cy+Math.sin(a)*8,['#ff6a5a','#ffd08a','#5ad0b0'][i])}pcirc(cx,cy,1.5,'#ffe0a0')}};
+ /* 4 깃털 시계탑: 위쪽 시계 눈금 + 초침처럼 도는 빛 + 끝에 시계 얼굴과 깃털 */
+ th.s6_clock={main:'#8ad8ff',frame:'#2a3a52',
+  back(S){frame(S,'#0a1020','#d8ccb4');const {x,y,w}=S;for(let i=0;i<=60;i++){const px=Math.round(x+w*i/60);R(px,y-5,1,i%5===0?3:1,'#d8ccb4')}},
+  tex(S){const {x,y,h,fw,t}=S,q=(t*.5)%1;RA(x+fw*q,y,2,h,'#ffffff',.5)},
+  front(S){const {x,y,w,h,t}=S,cx=x+w+11,cy=y+h/2;for(let i=0;i<3;i++){const a=-.6+i*.6;tri(cx,cy,cx+Math.cos(a-1.6)*12-2,cy+Math.sin(a-1.6)*12,cx+Math.cos(a-1.6)*12+2,cy+Math.sin(a-1.6)*12,'#f4f8ff',.9)}pcirc(cx,cy,7,'#0a1020');pcirc(cx,cy,6,'#fff8e8');const a1=-t*.4,a2=-t*3;bbLine(cx,cy,cx+Math.cos(a1)*3.5,cy+Math.sin(a1)*3.5,'#1a1420');bbLine(cx,cy,cx+Math.cos(a2)*5,cy+Math.sin(a2)*5,'#ff5a6a')}};
+ /* 5 풍금 합창단: 바가 오르간 파이프 줄 + 위로 떠오르는 음표 */
+ th.s6_organ={main:'#c8a0ff',frame:'#2a2040',
+  shape(S,c){const {x,y,w,h}=S,n=27,cw=w/n;for(let i=0;i<n;i++){const hh=h-((i*5)%4),px=x+i*cw;R(px,y+(h-hh),cw-1,hh,c.l);R(px,y+(h-hh),cw-1,hh-2,c.b);R(px,y+(h-hh),1,hh,c.h);R(px,y+h-4,cw-1,1,'#0a0814')}},
+  back(S){const {x,y,w,h}=S;R(x-3,y-4,w+6,h+8,'#0a0814');R(x-2,y+h+1,w+4,2,'#c8a070');R(x-2,y-3,w+4,1,'#8a6a4a')},
+  front(S){const {x,y,w,t,fw}=S;for(let i=0;i<5;i++){const q=(t*.4+i*.21)%1,nx=x+((i*61)%Math.max(1,fw)),ny=y-2-q*8;RA(nx,ny,2,2,'#e0ccff',1-q);RA(nx+2,ny-4,1,5,'#e0ccff',1-q)}}};
+ /* 6 무지개 다리 수문장: 일곱 빛 줄 + 아래 돌다리 아치 */
+ th.s6_prism={main:'#ffffff',frame:'#24304a',
+  back(S){const {x,y,w,h}=S;frame(S,'#0a0e18','#8a96b0');for(let i=0;i<w;i+=30){for(let a=0;a<=10;a++){const px=x+i+a*3,py=y+h+2+Math.round(Math.sin(a/10*Math.PI)*-2);R(px,py,2,2,'#5a6680')}}},
+  tex(S){const {x,y,h,fw,t}=S,RB=['#ff4a5a','#ff9a3a','#ffe04a','#4ae08a','#3aa8ff','#6a5aff','#c85aff'],bh=h/7;for(let i=0;i<7;i++)RA(x,y+i*bh,fw,Math.ceil(bh),RB[(i+Math.floor(t*3))%7],.55)},
+  front(S){const {x,y,w,h,t}=S;tri(x+w+3,y+h,x+w+11,y-3,x+w+15,y+h,'#e8f0ff',.9);RA(x+w+9,y+1,2,6,'#ffffff',.6+.3*Math.sin(t*4))}};
+ /* 7 메아리 사냥매: 뒤로 젖힌 날개깃 테 + 속도선 + 끝에 매의 눈 */
+ th.s6_falcon={main:'#ffb84a',frame:'#2a2420',
+  back(S){frame(S,'#100c08','#6a4a2a');const {x,y,w,h}=S;for(let i=0;i<w;i+=10){tri(x+i,y-2,x+i+9,y-2,x+i-2,y-6,'#8a6a40');tri(x+i,y+h+2,x+i+9,y+h+2,x+i-2,y+h+5,'#5a4028')}},
+  tex(S){const {x,y,h,fw,t}=S;for(let i=0;i<6;i++){const q=(t*1.6+i*.17)%1;RA(x+fw*(1-q),y+2+i*1.5,10,1,'#ffffff',.3)}},
+  front(S){const {x,y,w,h,t}=S,cx=x+w+9,cy=y+h/2;tri(cx-6,cy-5,cx+8,cy,cx-6,cy+5,'#3a2818');pcirc(cx,cy,3,'#ffb84a');pcirc(cx+.5,cy,1.4,'#0a0806');tri(cx+6,cy-1,cx+11,cy+1,cx+6,cy+2,'#ffe08a')}};
+ /* 8 폭풍의 눈: 먹구름 테 + 소용돌이 무늬 + 가운데 눈 */
+ th.s6_storm={main:'#7af0ff',frame:'#141c38',
+  back(S){const {x,y,w,h,t}=S;for(let i=-4;i<w+8;i+=8)pcirc(x+i,y-1+Math.sin(t*2+i)*.8,4,'#1c2448');frame(S,'#05070e','#3a4878')},
+  tex(S){const {x,y,h,fw,t}=S;for(let i=0;i<fw;i+=3){const vy=y+h/2+Math.sin(i*.18-t*6)*(h/2-2);RA(x+i,vy,2,1,'#ffffff',.45)}},
+  front(S){const {x,y,w,h,t}=S,cx=x+w+11,cy=y+h/2;for(let i=0;i<3;i++){const a=t*3+i*TAU/3;for(let d=2;d<9;d++)RA(cx+Math.cos(a+d*.3)*d,cy+Math.sin(a+d*.3)*d*.7,1,1,'#7af0ff',.7)}pcirc(cx,cy,2.5,'#ffffff');pcirc(cx,cy,1.2,'#141c38')}};
+ /* 9 공명탑: 탑 성가퀴 테 + 소리 물결 + 흔들리는 종 */
+ th.s6_spire={main:'#ffe8a0',frame:'#1c2238',
+  back(S){frame(S,'#0a0c18','#c8b890');const {x,y,w}=S;for(let i=0;i<w;i+=10)R(x+i,y-6,6,3,'#c8b890')},
+  tex(S){const {x,y,h,fw,t}=S;for(let i=0;i<fw;i+=2){RA(x+i,y+h/2+Math.sin(i*.3-t*8)*3,1,1,'#ffffff',.6)}},
+  front(S){const {x,y,w,h,t}=S,sw=Math.sin(t*3)*.3,cx=x+w+10,cy=y-2,c=BXC();c.save();c.translate(cx,cy);c.rotate(sw);c.fillStyle='#0a0c18';c.beginPath();c.moveTo(-6,13);c.lineTo(6,13);c.lineTo(4,2);c.lineTo(-4,2);c.closePath();c.fill();c.fillStyle='#ffe8a0';c.beginPath();c.moveTo(-5,12);c.lineTo(5,12);c.lineTo(3.5,3);c.lineTo(-3.5,3);c.closePath();c.fill();c.restore();
+   const q=(t*.8)%1;cRing(cx,cy+8,3+q*9,'#ffe8a0',(1-q)*.6,1)}};
+
+ /* ================= 챕터 7 REVERSE ================= */
+ /* 0 거울문 수문장: 문틀 + 금 테 + 끝에 열쇠 구멍과 열쇠 */
+ th.s7_gate={main:'#5af0e0',frame:'#1c2a38',
+  back(S){frame(S,'#0a0c18','#8492b0');const {x,y,w,h}=S;R(x-4,y-5,w+8,2,'#ffd27a');R(x-4,y+h+3,w+8,1,'#c8a050');for(const px of [x-5,x+w+2])R(px,y-5,3,h+9,'#46526e')},
+  tex(S){const {x,y,h,fw,t}=S,q=((t*.35)%1.4)-.2;if(q>0&&q<1)for(let j=0;j<h;j++)RA(x+fw*q-j,y+j,3,1,'#ffffff',.35)},
+  front(S){const {x,y,w,h,t}=S,cx=x+w+11,cy=y+h/2;R(cx-6,cy-8,12,16,'#0a0c18');R(cx-5,cy-7,10,14,'#ffd27a');pcirc(cx,cy-2,2.2,'#0a0c18');R(cx-1,cy,2,4,'#0a0c18');
+   const kx=cx+9+Math.sin(t*2)*1;R(kx,cy-1,7,2,'#ffd27a');cRing(kx+9,cy,2.5,'#ffd27a',1,1);R(kx+1,cy+1,1,2,'#ffd27a');R(kx+3,cy+1,1,2,'#ffd27a')}};
+ /* 1 유리 공작: 유리 테에 박힌 깃털 눈 + 끝에서 부채처럼 펼친 꼬리 */
+ th.s7_peacock={main:'#7af0d0',frame:'#14283a',
+  back(S){frame(S,'#06121a','#3a8a8a');const {x,y,w,h}=S;for(let i=16;i<w;i+=34){pcirc(x+i,y-3,2.6,'#1a3a8a');pcirc(x+i,y-3,1.3,'#ffd27a')}},
+  tex(S){const {x,y,h,fw,t}=S;for(let i=0;i<fw;i+=9){const g=(Math.sin(t*3+i*.4)+1)/2;RA(x+i,y+2,1,h-4,'#ffffff',.15+.3*g)}},
+  front(S){const {x,y,w,h,t}=S,cx=x+w+4,cy=y+h/2;for(let i=0;i<5;i++){const a=-1.1+i*.55+Math.sin(t*2)*.05,L=12;bbLine(cx,cy,cx+Math.cos(a)*L,cy+Math.sin(a)*L,'#3a8a8a');pcirc(cx+Math.cos(a)*L,cy+Math.sin(a)*L,2.4,'#7af0d0');pcirc(cx+Math.cos(a)*L,cy+Math.sin(a)*L,1.2,'#1a3a8a')}pcirc(cx,cy,2.5,'#14283a')}};
+ /* 2 역류의 분수: 물이 오른쪽에서 차오르는 거꾸로 바 + 위로 오르는 거품 + 돌 수반 */
+ th.s7_fountain={main:'#7ad8ff',frame:'#142a3a',rev:true,
+  back(S){frame(S,'#08121a','#8492b0');const {x,y,w,h}=S;R(x-4,y+h+2,w+8,2,'#c4d0e4');R(x-4,y-4,w+8,1,'#46526e')},
+  tex(S){const {x,y,h,fw,t}=S;for(let i=0;i<fw;i+=2){const wy=Math.round(Math.sin(i*.25-t*4)*1.2+1);RA(x+i,y+wy,2,1,'#ffffff',.55)}for(let i=0;i<Math.floor(fw/16);i++){const q=(t*.9+i*.41)%1;RA(x+((i*29)%Math.max(1,fw)),y+h-1-q*(h-2),1,1,'#ffffff',.8*(1-q))}},
+  front(S){const {x,y,w,h,t}=S,cx=x-8,cy=y+h/2;for(let i=0;i<6;i++){const q=(t*1.2+i/6)%1;RA(cx+Math.sin(i*2)*2,cy+6-q*14,1,2,'#bff4ff',1-q)}pcirc(cx,cy+4,3,'#46526e')}};
+ /* 3 흑백 체스 왕: 흑백 칸으로 된 바 + 위에 말들 + 끝에 왕관 */
+ th.s7_chess={main:'#f2f6ff',frame:'#16161e',
+  shape(S,c){const {x,y,w,h}=S,n=18,cw=w/n;for(let i=0;i<n;i++){const px=Math.round(x+i*cw),dk=i%2===1;R(px,y,Math.ceil(cw),h,c.l);if(S.mode==='f'){R(px,y,Math.ceil(cw),h-2,dk?'#2a2a36':c.b);R(px,y,Math.ceil(cw),1,dk?'#4a4a5a':c.h)}else{R(px,y,Math.ceil(cw),h-2,dk?mixc(c.b,'#000000',.35):c.b);R(px,y,Math.ceil(cw),1,c.h)}}},
+  back(S){frame(S,'#000000','#8492b0','#16161e')},
+  front(S){const {x,y,w,h,t}=S;for(let i=0;i<6;i++){const px=x+20+i*44,dk=i%2;R(px-2,y-4,5,2,dk?'#16161e':'#f2f6ff');R(px-1,y-6,3,2,dk?'#16161e':'#f2f6ff');pcirc(px+.5,y-7,1.5,dk?'#16161e':'#f2f6ff')}
+   const cx=x+w+10,cy=y+h/2+1;R(cx-6,cy,12,4,'#0a0c18');R(cx-5,cy,10,3,'#ffd27a');for(const dx of [-5,-1,3])tri(cx+dx,cy,cx+dx+1,cy-6,cx+dx+2,cy,'#ffd27a');RA(cx-1,cy-8,2,2,'#ff4a5a',.8+.2*Math.sin(t*4))}};
+ /* 4 거꾸로 타는 초: 촛농 몸통 + 흘러내린 촛농 + 채움 끝에 거꾸로 선 청록 불꽃 */
+ th.s7_candle={main:'#a8fff0',frame:'#2a2234',
+  back(S){const {x,y,w,h}=S;R(x-4,y+h+1,w+8,3,'#c8a050');R(x-4,y+h+1,w+8,1,'#ffe0a0');R(x-3,y-3,w+6,h+4,'#0a0814')},
+  tex(S){const {x,y,h,fw}=S;for(let i=3;i<fw;i+=11){const L=3+(hash(i+'d')%Math.max(2,h-4));RA(x+i,y,2,L,'#ffffff',.35);RA(x+i,y+L,2,1,'#ffffff',.5)}},
+  front(S){const {x,y,w,h,t,fx,r}=S;if(r<=0)return;const fl=Math.sin(t*14)*.8;for(let d=0;d<8;d++){const ww=Math.max(.5,3.6*(1-d/8));pcirc(fx+1,y+h/2+d+fl*d*.12,ww,d<2?'#ffffff':d<4?'#b8fff6':'#5af0e0',.9)}pcirc(fx+1,y+h/2-1,2,'#ffffff');R(fx,y-3,1,3,'#3a2a20')}};
+ /* 5 오르골 발레리나: 나무 오르골 상자 + 금속 빗살 + 채움 끝에서 도는 무희 + 태엽 */
+ th.s7_ballet={main:'#ffb0d8',frame:'#2a1a2a',
+  back(S){frame(S,'#140a10','#8a5a3a','#2a1408');const {x,y,w,h}=S;R(x-3,y-3,w+6,1,'#ffd27a');R(x-3,y+h+2,w+6,1,'#ffd27a')},
+  tex(S){const {x,y,h,fw,t}=S;for(let i=0;i<fw;i+=4){const on2=((i/4)+Math.floor(t*8))%7===0;RA(x+i,y+2,1,h-4,on2?'#ffffff':'#ffd27a',on2?.8:.25)}},
+  front(S){const {x,y,w,h,t,fx,r}=S;if(r>0){const sp=Math.cos(t*5),bx=Math.round(fx),by=y-2;R(bx-1,by-8,2,5,'#ffe0d0');pcirc(bx,by-9,1.5,'#ffe0d0');R(bx-Math.round(4*Math.abs(sp)),by-4,Math.max(1,Math.round(8*Math.abs(sp))),2,'#ffb0d8');R(bx,by-3,1,3,'#ffe0d0')}
+   const kx=x+w+8,ky=y+h/2,a=t*2;R(kx-2,ky-1,4,2,'#c8a050');for(const s of [-1,1])pcirc(kx+2+Math.cos(a)*0+3,ky+s*Math.abs(Math.sin(a))*3,2,'#ffd27a')}};
+ /* 6 뒤집힌 회전목마: 천막 장식(위) + 깜빡이는 전구(아래) + 채움 끝에서 오르내리는 목마 */
+ th.s7_carousel={main:'#ffd27a',frame:'#261a30',
+  back(S){frame(S,'#0a0610','#c86a8a');const {x,y,w,h,t}=S;for(let i=0;i<w;i+=10){R(x+i,y-5,10,2,(i/10)%2?'#ff7ad0':'#fff0f0');pcirc(x+i+5,y-3,2.5,(i/10)%2?'#ff7ad0':'#fff0f0')}for(let i=4;i<w;i+=9){const on2=((i/9|0)+Math.floor(t*6))%2;RA(x+i,y+h+2,2,2,on2?'#fff0c0':'#6a4a3a',1)}},
+  tex(S){const {x,y,h,fw}=S;for(let i=0;i<fw;i+=8)RA(x+i,y,4,h,'#ffffff',.12)},
+  front(S){const {x,y,h,t,fx,r}=S;if(r<=0)return;const bob=Math.round(Math.sin(t*5)*2),hx=Math.round(fx)-4,hy=y+h/2-3+bob;R(hx+3,y-6,1,h+10,'#ffd27a');R(hx,hy,8,4,'#0a0c18');R(hx+1,hy+1,6,2,'#f2e8ff');R(hx+6,hy-3,3,4,'#0a0c18');R(hx+6,hy-2,2,3,'#f2e8ff');R(hx+1,hy+4,1,2,'#f2e8ff');R(hx+5,hy+4,1,2,'#f2e8ff')}};
+ /* 7 그림자 인형사: 위 조종 막대에서 실이 바로 내려와 바를 붙듦 + 그림자 */
+ th.s7_puppet={main:'#b48aff',frame:'#120e1e',
+  back(S){const {x,y,w,h,t}=S;R(x-3,y-3,w+6,h+6,'#05030a');R(x-2,y-2,w+4,h+4,'#3a2a5a');R(x-1,y-1,w+2,h+2,'#08060e');
+   const sw=Math.sin(t*1.4)*3;R(x+w/2-61+sw,y-10,122,3,'#05030a');R(x+w/2-60+sw,y-9,120,2,'#c8a070');for(let i=0;i<5;i++){const ax=x+w/2-56+i*28+sw,bx2=x+20+i*(w-40)/4;bbLine(ax,y-8,bx2,y-2,'#e0e8f4',.9)}},
+  tex(S){const {x,y,h,fw,t}=S;RA(x+2,y+h-4,fw,3,'#000000',.35);for(let i=0;i<fw;i+=12)RA(x+i+Math.sin(t*2+i)*2,y+2,1,h-6,'#e0ccff',.2)},
+  front(S){const {x,y,w,h,t}=S,cx=x+w+10,cy=y+h/2;pcirc(cx,cy,5,'#0a0814');pcirc(cx,cy,4,'#f2eef8');RA(cx-2,cy-1,1,1,'#0a0814',1);RA(cx+1,cy-1,1,1,'#0a0814',1);for(let i=-2;i<=2;i++)RA(cx+i,cy+2-Math.abs(i)*.4,1,1,'#ff7ad0',1)}};
+ /* 8 반사룡: 겹친 비늘 마디 + 끝에 용 머리 */
+ th.s7_dragon={main:'#8af0ff',frame:'#101c2c',
+  shape(S,c){const {x,y,w,h}=S,n=22,cw=w/n;R(x,y,w,h,c.l);for(let i=0;i<n;i++){const px=Math.round(x+i*cw);R(px,y,Math.ceil(cw)-1,h-2,c.b);R(px,y,2,h-2,c.h);R(px+Math.ceil(cw)-2,y+1,1,h-3,c.m)}},
+  back(S){frame(S,'#04080e','#46607e');const {x,y,w}=S;for(let i=0;i<w;i+=12)tri(x+i,y-2,x+i+6,y-7,x+i+10,y-2,'#46607e')},
+  tex(S){const {x,y,h,fw,t}=S,q=(t*.7)%1;RA(x+fw*q-6,y,12,h,'#ffffff',.25);RA(x,y+1,fw,1,'#ffffff',.3)},
+  front(S){const {x,y,w,h,t}=S,cx=x+w+3,cy=y+h/2;tri(cx,cy-6,cx+16,cy-1,cx,cy+6,'#0a1828');tri(cx+1,cy-5,cx+14,cy-1,cx+1,cy+4,'#8af0ff');tri(cx+2,cy-6,cx+5,cy-11,cx+7,cy-5,'#c8dcf0');pcirc(cx+7,cy-2,1.2,'#ff7ad0');if(Math.sin(t*2)>.6)RA(cx+15,cy-1,6,2,'#ffffff',.7)}};
+ /* 9 거울 하루: 오른쪽에서 줄어드는 거꾸로 바 + 은빛 거울 테 + 아래 거울 잔상 + 거꾸로 도는 시계 */
+ th.s7_mharu={main:'#b48aff',frame:'#141228',rev:true,
+  back(S){frame(S,'#05040c','#c4d0e4','#0a0816');const {x,y,w,h,fw,r}=S;RA(x+w-fw,y+h+3,fw,2,'#b48aff',.35);RA(x+w-fw,y+h+5,fw,1,'#b48aff',.15)},
+  tex(S){const {x,y,h,fw,t}=S;for(let i=0;i<fw;i+=16){const q=(i/16+t*1.2)%3;if(q<1)RA(x+i,y+2,3,h-4,'#e0ccff',.5*(1-q))}},
+  front(S){const {x,y,w,h,t}=S,cx=x+w+11,cy=y+h/2;pcirc(cx,cy,7,'#0a0816');pcirc(cx,cy,6,'#e0e8f4');for(let i=0;i<12;i+=3)RA(cx+Math.cos(i*TAU/12)*4.5,cy+Math.sin(i*TAU/12)*4.5,1,1,'#141228',1);const a1=-Math.PI/2-t*.6,a2=-Math.PI/2-t*4;bbLine(cx,cy,cx+Math.cos(a1)*3,cy+Math.sin(a1)*3,'#141228');bbLine(cx,cy,cx+Math.cos(a2)*5,cy+Math.sin(a2)*5,'#b48aff');
+   const sh=(t*.5)%1;RA(x+w-1,y-1,2,h+2,'#e0ccff',.4+.4*Math.sin(t*3));RA(cx-1+Math.cos(sh*TAU)*9,cy+Math.sin(sh*TAU)*9,2,2,'#e0ccff',.8)}};
+
+ /* 등록: 보스 열쇠 → 체력바 */
+ const reg=(L,pre)=>{if(!L)return;L.forEach(b=>{const T=th[b.art];if(!T)return;const key=pre+b.art;BB_TH[key]=T;if(C3BOSS[b.art])C3BOSS[b.art].th=key})};
+ reg(L6,'bar_');reg(L7,'bar_');
+ window.BB67=th;
+ /* 왼쪽 보스 모양 게이지: 바뀐 보스마다 크기 맞춤을 다시 계산 (같은 자리를 여러 보스가 나눠 써서) */
+ try{const base=c3SwapIn;c3SwapIn=function(b){const r=base.apply(this,arguments);try{if(typeof _bbFit!=='undefined'&&b&&b.base!=null)delete _bbFit[b.base];if(G)G._barLast=undefined}catch(e){}return r}}catch(e){}
+}catch(e){console.error('v52 ch67 bars',e)}})();
 </script></body></html>
