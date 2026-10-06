@@ -55,8 +55,8 @@
   const boomT=IN.boom&&IN.boom>=c.t0?now-IN.boom:-1,landed=boomT>=0||T>2600;
   /* 1) 전조 단계: 화면을 덮는 어둠(보스 자리만 열린 비네트) + 챕터 전조 */
   const pre=landed?Math.max(0,1-(boomT>=0?boomT:T-2600)/500):1;
-  if(pre>0){const gr=ctx.createRadialGradient(g.x,g.coreY,20,g.x,g.coreY,330);gr.addColorStop(0,'rgba(0,0,0,'+(.25*pre)+')');gr.addColorStop(1,'rgba(0,0,0,'+(.9*pre)+')');ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
-   omen(ch,T,g,B,pre*Math.min(1,T/400),ex);
+  if(pre>0){const gr=ctx.createRadialGradient(g.x,g.coreY,20,g.x,g.coreY,330);gr.addColorStop(0,'rgba(0,0,0,'+(.12*pre)+')');gr.addColorStop(1,'rgba(0,0,0,'+(.62*pre)+')');ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+   /* v54: 보스마다 다른 등장 움직임이 잘 보이도록 어둠·전조를 옅게 */omen(ch,T,g,B,pre*Math.min(1,T/400)*.6,ex);
    if(ex&&T>200&&T<1700)warning(T-200,B,Math.min(1,(T-200)/200)*Math.min(1,(1700-T)/250)*pre)}
   /* 2) 눈빛: 착지 직전 어둠 속에서 두 눈이 번쩍 */
   const eyeT=landed?-1:T-(ex?1650:1250);if(eyeT>0&&eyeT<900){const k=eyeT<120?eyeT/120:Math.max(0,1-(eyeT-500)/400),ey=g.headY+(g.coreY-g.headY)*.55,dx=Math.max(6,g.hf*U*.28);
