@@ -40,7 +40,9 @@
   needle:A.pix(["KKKKKKKKKKKKK..","KWWWWWWWWWWWWKK","KKKKKKKKKKKKK.."],{K:'#2a2440',W:'#e8e0ff'}),
   lens:A.pix(["..KKKKK..",".KSCCCSK.","KSCWCCCSK","KSCCCCCSK","KSCCCWCSK",".KSCCCSK.","..KKKKK.."],{K:K,S:'#c8b890',C:'#a8e8ff',W:'#ffffff'}),
   icemirror:A.pix([".KKKKK.","KWCCCWK","KCWCCCK","KCCWCCK","KCCCWCK","KCCCCWK",".KKKKK."],{K:'#2a4a6a',C:'#a8f0ff',W:'#ffffff'})};
- const SPR=(name,r,col)=>PX[name]||A.spr(name,r||5,col);
+ const SPR=(name,r,col)=>PX[name]||A.spr(name,r||5,col);window.PX53=PX;
+ /* 톱니·고철처럼 갈아 버리는 물체: 구르며 땅에 불똥을 튀김 */
+ const GRIND=(Q,b,now,x,y)=>{const t=now/1000;for(let j=0;j<5;j++){const aa=Math.PI+(hash(Math.floor(t*30)+'g'+j)%100-50)/60,d=3+hash(Math.floor(t*30)+'d'+j)%12;cPx(x+Math.cos(aa)*d*(Q.fwd||1),y+8+Math.sin(aa)*d*.5-2,2,j%2?'#ffffff':'#ffd166',.95)}RA(Math.round(x-6),Math.round(y+9),12,2,'#1a1410',.5)};
 
  /* ================= 공격 틀 11가지: (t, c, L) → 걸리는 박자 =================
     c = {spr, s(크기), col, sty(탄 모양), r(탄 크기), noun(이름말)} · L = 난이도 세기(1~3) */
@@ -54,7 +56,7 @@
  TM.charge={chan:'field',tip:n=>'줄마다 '+n+' 하나씩 서서 끝까지 돌진 → 비어 있는 줄로',fn:(t,c,L)=>{const waves=1+(L>=2)+(L>=3);
   for(let w=0;w<waves;w++){const T0=t+w*1.8;sch(T0,()=>{const hor=w%2===0,N=hor?5:7,sz=hor?AH/N:AW/N,gap=C(Math.floor(((hor?P.y-AY:P.x-AX)/sz))+(RND()<.5?-1:1),0,N-1),gap2=L<2?(gap+2)%N:-1,T1=T0+tl(),go=1,fwd=(w%4)<2;
     for(let i=0;i<N;i++){if(i===gap||i===gap2)continue;const m=(hor?AY:AX)+sz*(i+.5),s0=fwd?(hor?AX+10:AY+10):(hor?AX+AW-10:AY+AH-10),s1=fwd?(hor?AX+AW+30:AY+AH+30):(hor?AX-30:AY-30);
-     const pos=b=>{const v=b<T1?s0:s0+(s1-s0)*C((b-T1)/go,0,1);return hor?[v,m]:[m,v]};A.put({spr:c.spr,s:c.s||1.8,t0:T0,t2:T1+go,pos,ground:hor,face:()=>fwd?1:-1,rot:hor?null:()=>fwd?Math.PI/2:-Math.PI/2});
+     const pos=b=>{const v=b<T1?s0:s0+(s1-s0)*C((b-T1)/go,0,1);return hor?[v,m]:[m,v]};A.put({spr:c.spr,s:c.s||1.8,t0:T0,t2:T1+go,pos,ground:hor,fwd:fwd?-1:1,face:()=>fwd?1:-1,rot:c.grind?(b=>(fwd?1:-1)*Math.max(0,b-T1)*16):(hor?null:()=>fwd?Math.PI/2:-Math.PI/2),deco:c.grind?((Q,b,now,x,y)=>{if(b>=T1)GRIND(Q,b,now,x,y)}):null});
      if(hor)lane(T0,T1,AX,m-sz/2+3,AW,sz-6);else lane(T0,T1,m-sz/2+3,AY,sz-6,AH);A.hit({pos,r:10,t0:T0,t1:T1,t2:T1+go,dmg:11})}
     snd(T1,160,80)})}
   return waves*1.8+tl()+1}};
@@ -86,7 +88,7 @@
  /* 벽: 한 줄로 늘어선 물체 벽이 밀려옴 (빈틈 두 칸) */
  TM.wall={chan:'field',tip:n=>'한 줄로 늘어선 '+n+' 벽이 밀려옴 → 초록 화살표 빈틈으로',fn:(t,c,L)=>{const waves=1+(L>=2)+(L>=3),N=10,sw=AW/N,go=2.4;
   for(let w=0;w<waves;w++){const T0=t+w*1.6;sch(T0,()=>{const down=w%2===0,gap=C(Math.floor((P.x-AX)/sw)+(RND()<.5?-2:1),0,N-2),T1=T0+tl(),y0=down?AY+8:AY+AH-8,y1=down?AY+AH+16:AY-16;
-    for(let i=0;i<N;i++){if(i===gap||i===gap+1)continue;const x=AX+sw*(i+.5),pos=b=>[x,b<T1?y0:y0+(y1-y0)*C((b-T1)/go,0,1)];A.put({spr:c.spr,s:c.s||1.6,t0:T0,t2:T1+go,pos,ground:true});A.hit({pos,r:9,t0:T0,t1:T1,t2:T1+go,dmg:11})}
+    for(let i=0;i<N;i++){if(i===gap||i===gap+1)continue;const x=AX+sw*(i+.5),pos=b=>[x,b<T1?y0:y0+(y1-y0)*C((b-T1)/go,0,1)];A.put({spr:c.spr,s:c.s||1.6,t0:T0,t2:T1+go,pos,ground:true,rot:c.grind?(b=>(down?1:-1)*Math.max(0,b-T1)*10):null,deco:c.grind?((Q,b,now,x,y)=>{if(b>=T1)GRIND(Q,b,now,x,y)}):null});A.hit({pos,r:9,t0:T0,t1:T1,t2:T1+go,dmg:11})}
     arrow(T0,T1,AX+sw*(gap+1),down?AY+30:AY+AH-30,down?Math.PI/2:-Math.PI/2)});snd(T0+tl(),300,500)}
   return (waves-1)*1.6+tl()+go+.3}};
  /* 행렬: 물체들이 줄지어 물결치며 가로지름 */
@@ -167,7 +169,7 @@
  /* ---------- 등록: T5_SET[보스] = [[보통], [어려움], [익스트림 2개]] ---------- */
  const tierOf=[0,1,2,2];
  for(const key in B){try{const [sprN,sz,sty,r,col,noun,list]=B[key],sets=[[],[],[]];
-  list.forEach(([tm,kr,ov],i)=>{const T=TM[tm];if(!T)return;const spN=(ov&&ov.spr)||sprN,c={spr:SPR(spN,6,col),s:((ov&&ov.s)||sz)*1.35,sty,r,col,noun};
+  list.forEach(([tm,kr,ov],i)=>{const T=TM[tm];if(!T)return;const spN=(ov&&ov.spr)||sprN,c={spr:SPR(spN,6,col),s:((ov&&ov.s)||sz)*1.35,sty,r,col,noun,grind:spN==='gear'||spN==='scrap'};
    const nm='t6_'+key+'_'+i;defPat(nm,kr,T.chan,8,(['','[어려움] ','[익스트림] ','[익스트림] '][i])+T.tip(noun),tt=>T.fn(tt,c,Math.max(tierOf[i]+1,t5L())));sets[tierOf[i]].push(nm)});
   T5_SET[key]=sets}catch(e){console.error('v53 t6 '+key,e)}}
  window.B53=B;
