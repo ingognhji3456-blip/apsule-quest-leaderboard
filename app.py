@@ -62,7 +62,8 @@ class DB:
 
     def __init__(self):
         if USE_PG:
-            self.conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+            # Neon 같은 연결 공유(pooling) 주소에서도 문제없게 미리 준비된 쿼리는 쓰지 않음
+            self.conn = psycopg.connect(DATABASE_URL, row_factory=dict_row, prepare_threshold=None)
         else:
             self.conn = sqlite3.connect(DB_PATH)
             self.conn.row_factory = sqlite3.Row
