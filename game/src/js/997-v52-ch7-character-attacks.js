@@ -36,7 +36,7 @@
  {const _ds=drawScene;drawScene=function(now){const r=_ds.apply(this,arguments);try{if(on()&&G.state==='play')drawCast(now)}catch(e){}return r}}
 
  /* ---------- 2·3) 공격 모양 입히기 ---------- */
- {const base=NP;NP=function(o){try{if(on()&&o&&['seg','orb','circ','rect'].includes(o.k)&&o.harm!==false){o.s7k=G.s7;const c=G.s7cast;if(c&&G.beat-c.t<8)o.s7src=castPt()}}catch(e){}return base.apply(this,arguments)}}
+ {const base=NP;NP=function(o){try{if(on()&&o&&!o.noSkin&&['seg','orb','circ','rect'].includes(o.k)&&o.harm!==false){o.s7k=G.s7;const c=G.s7cast;if(c&&G.beat-c.t<8)o.s7src=castPt()}}catch(e){}return base.apply(this,arguments)}}
  const dirOf=(o,b)=>{if(o.ray!=null&&b<o.t1+.05)return o.ray;try{const [x0,y0]=o.pos(b-.04),[x1,y1]=o.pos(b);if(Math.hypot(x1-x0,y1-y0)>.05)return Math.atan2(y1-y0,x1-x0)}catch(e){}return o.ray!=null?o.ray:Math.PI/2};
  const LN=(ax,ay,bx,by,st,fn)=>{const L=Math.hypot(bx-ax,by-ay),n=Math.max(1,Math.floor(L/st));for(let i=0;i<=n;i++){const q=i/n;fn(ax+(bx-ax)*q,ay+(by-ay)*q,i,q)}};
  const along=(x,y,a,d,s)=>[x+Math.cos(a)*d-Math.sin(a)*s,y+Math.sin(a)*d+Math.cos(a)*s];
