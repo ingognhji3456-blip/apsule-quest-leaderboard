@@ -8,3 +8,7 @@ services:
     envVars:
       - key: LEADERBOARD_SECRET
         generateValue: true
+      # (선택) 계정이 서버 재시작 때 지워지지 않게 하려면 무료 Postgres 주소를 넣으세요.
+      # 비워 두면 SQLite 파일에 저장합니다. 자세한 건 game/서버_로그인_안내.md
+      - key: DATABASE_URL
+        sync: false

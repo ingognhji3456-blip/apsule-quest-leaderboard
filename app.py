@@ -15,13 +15,25 @@ Render.com 배포:
     이 폴더를 GitHub 저장소에 올린 뒤 Render의 "New +" -> "Web Service"에서
     그 저장소를 선택하면 render.yaml 을 자동으로 읽어서 배포합니다.
     (같이 들어있는 README_서버배포.md 참고)
+
+BEAT BLADE · MACHINA 계정 기능 (/api/...):
+    가입·로그인하면 게임 진행 기록을 서버에 보관해서 다른 기기에서도 이어 할 수
+    있습니다. 배포 방법은 game/서버_로그인_안내.md 를 보세요.
 """
+import hashlib
+import json
 import os
+import re
+import secrets
 import sqlite3
+import threading
 import time
 from flask import Flask, request, jsonify, g
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+# 저장 기록 하나가 아주 커도 요청 전체는 2MB를 넘지 못하게 막음
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 
 # 게임 클라이언트와 공유하는 비밀 키. 반드시 아무 문자열로나 바꾸고,
 # capsule_quest.py 안의 LEADERBOARD_SECRET 값도 똑같이 맞춰주세요.
@@ -32,14 +44,47 @@ API_SECRET = os.environ.get('LEADERBOARD_SECRET', 'change-me-please')
 # 연결했다면 그 경로를(DB_PATH 환경변수로) 지정해주세요. 기본은 앱 폴더.
 DB_PATH = os.environ.get('DB_PATH', os.path.join(os.path.dirname(__file__), 'leaderboard.db'))
 
+# DATABASE_URL(Postgres 주소)을 넣으면 SQLite 파일 대신 Postgres에 저장합니다.
+# Render 무료 서버는 다시 켜질 때 파일이 지워지므로, 계정을 오래 보관하려면
+# 무료 Postgres(Neon 등) 주소를 넣거나 유료 영구 디스크를 쓰세요.
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
+USE_PG = DATABASE_URL.startswith(('postgres://', 'postgresql://'))
+if USE_PG:
+    import psycopg
+    from psycopg.rows import dict_row
+
 MAX_NAME_LEN = 12
 MAX_TEXT_LEN = 40
 
 
+class DB:
+    """SQLite와 Postgres를 같은 방식으로 쓰기 위한 얇은 포장. SQL에는 ? 자리표시를 쓴다."""
+
+    def __init__(self):
+        if USE_PG:
+            self.conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+        else:
+            self.conn = sqlite3.connect(DB_PATH)
+            self.conn.row_factory = sqlite3.Row
+
+    def execute(self, sql, params=()):
+        if USE_PG:
+            sql = sql.replace('?', '%s')
+        return self.conn.execute(sql, params)
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
+
+    def close(self):
+        self.conn.close()
+
+
 def get_db():
     if 'db' not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
+        g.db = DB()
     return g.db
 
 
@@ -51,7 +96,7 @@ def close_db(exception=None):
 
 
 def init_db():
-    db = sqlite3.connect(DB_PATH)
+    db = DB()
     db.execute('''
         CREATE TABLE IF NOT EXISTS players (
             player_id   TEXT PRIMARY KEY,
@@ -60,13 +105,39 @@ def init_db():
             level       INTEGER NOT NULL DEFAULT 1,
             wave        INTEGER NOT NULL DEFAULT 1,
             rebirths    INTEGER NOT NULL DEFAULT 0,
-            coins       INTEGER NOT NULL DEFAULT 0,
+            coins       BIGINT NOT NULL DEFAULT 0,
             pet_name    TEXT,
             pet_tier    INTEGER,
             weapon_name TEXT,
             weapon_tier INTEGER,
-            score       INTEGER NOT NULL DEFAULT 0,
-            updated_at  REAL NOT NULL
+            score       BIGINT NOT NULL DEFAULT 0,
+            updated_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    # ---- BEAT BLADE 계정 · 저장 기록 ----
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id     TEXT PRIMARY KEY,
+            username    TEXT NOT NULL,
+            name_key    TEXT NOT NULL UNIQUE,
+            pw_hash     TEXT NOT NULL,
+            created_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS sessions (
+            token_hash  TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            created_at  DOUBLE PRECISION NOT NULL,
+            last_used   DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS saves (
+            user_id     TEXT PRIMARY KEY,
+            rev         INTEGER NOT NULL,
+            data        TEXT NOT NULL,
+            updated_at  DOUBLE PRECISION NOT NULL
         )
     ''')
     db.commit()
@@ -155,6 +226,221 @@ def leaderboard():
         entry['rank'] = i + 1
         result.append(entry)
     return jsonify(ok=True, players=result, count=len(result))
+
+
+# =====================================================================
+# BEAT BLADE · MACHINA 계정 (가입 · 로그인 · 진행 기록 저장)
+# =====================================================================
+# 게임 HTML은 파일로 열거나 다른 주소에서 열리므로, /api/ 아래는 어느 주소에서든
+# 부를 수 있게 열어 둔다(CORS). 쿠키 대신 "Authorization: Bearer 토큰"을 쓴다.
+USERNAME_RE = re.compile(r'^[0-9A-Za-z가-힣_]{2,16}$')
+PW_MIN, PW_MAX = 6, 64
+SESSION_DAYS = 180
+MAX_SAVE_BYTES = 1024 * 1024
+
+_fail_lock = threading.Lock()
+_fails = {}
+
+
+def _too_many(key, limit, window):
+    """window초 안에 key로 이미 limit번 시도했는지 (로그인 실패·가입 횟수 제한)"""
+    now = time.time()
+    with _fail_lock:
+        hits = [t for t in _fails.get(key, []) if now - t < window]
+        if hits:
+            _fails[key] = hits
+        else:
+            _fails.pop(key, None)
+        return len(hits) >= limit
+
+
+def _note(key):
+    now = time.time()
+    with _fail_lock:
+        if len(_fails) > 20000:
+            # 오래된 기록은 정리 (1시간 넘은 것)
+            for k in [k for k, v in _fails.items() if not v or now - v[-1] > 3600]:
+                del _fails[k]
+        _fails.setdefault(key, []).append(now)
+
+
+def _client_ip():
+    fwd = request.headers.get('X-Forwarded-For', '')
+    return (fwd.split(',')[0].strip() if fwd else request.remote_addr) or '?'
+
+
+def _hash_token(token):
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _new_session(db, user_id):
+    token = secrets.token_urlsafe(32)
+    now = time.time()
+    db.execute('INSERT INTO sessions (token_hash, user_id, created_at, last_used) VALUES (?, ?, ?, ?)',
+               (_hash_token(token), user_id, now, now))
+    return token
+
+
+def _current_user():
+    """Authorization 헤더의 토큰으로 사용자 찾기. 없거나 만료되면 None"""
+    auth = request.headers.get('Authorization', '')
+    if not auth.startswith('Bearer '):
+        return None
+    th = _hash_token(auth[7:].strip())
+    db = get_db()
+    row = db.execute('SELECT s.user_id, s.last_used, u.username FROM sessions s '
+                     'JOIN users u ON u.user_id = s.user_id WHERE s.token_hash = ?', (th,)).fetchone()
+    if not row:
+        return None
+    now = time.time()
+    if now - row['last_used'] > SESSION_DAYS * 86400:
+        db.execute('DELETE FROM sessions WHERE token_hash = ?', (th,))
+        db.commit()
+        return None
+    if now - row['last_used'] > 86400:
+        db.execute('UPDATE sessions SET last_used = ? WHERE token_hash = ?', (now, th))
+        db.commit()
+    return {'user_id': row['user_id'], 'username': row['username'], 'token_hash': th}
+
+
+def _bad(msg, code=400):
+    return jsonify(ok=False, error=msg), code
+
+
+def _read_credentials():
+    data = request.get_json(silent=True) or {}
+    username = data.get('username') if isinstance(data.get('username'), str) else ''
+    password = data.get('password') if isinstance(data.get('password'), str) else ''
+    return username.strip(), password
+
+
+@app.after_request
+def _cors(resp):
+    if request.path.startswith('/api/'):
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS'
+        resp.headers['Access-Control-Max-Age'] = '86400'
+    return resp
+
+
+@app.errorhandler(413)
+def _too_large(e):
+    return jsonify(ok=False, error='기록이 너무 커요'), 413
+
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    ip = _client_ip()
+    if _too_many('reg:' + ip, 10, 3600):
+        return _bad('가입 시도가 너무 많아요. 잠시 뒤에 다시 해 주세요', 429)
+    username, password = _read_credentials()
+    if not USERNAME_RE.match(username):
+        return _bad('아이디는 2~16자의 한글·영문·숫자·_ 만 쓸 수 있어요')
+    if not (PW_MIN <= len(password) <= PW_MAX):
+        return _bad(f'비밀번호는 {PW_MIN}~{PW_MAX}자로 해 주세요')
+    db = get_db()
+    name_key = username.lower()
+    if db.execute('SELECT 1 FROM users WHERE name_key = ?', (name_key,)).fetchone():
+        return _bad('이미 있는 아이디예요', 409)
+    user_id = secrets.token_hex(12)
+    try:
+        db.execute('INSERT INTO users (user_id, username, name_key, pw_hash, created_at) VALUES (?, ?, ?, ?, ?)',
+                   (user_id, username, name_key, generate_password_hash(password), time.time()))
+        token = _new_session(db, user_id)
+        db.commit()
+    except Exception:
+        # 같은 아이디가 거의 동시에 가입된 경우 (UNIQUE 위반)
+        db.rollback()
+        return _bad('이미 있는 아이디예요', 409)
+    _note('reg:' + ip)
+    return jsonify(ok=True, token=token, username=username)
+
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    ip = _client_ip()
+    username, password = _read_credentials()
+    key = 'login:' + ip + ':' + username.lower()
+    # 주소(IP)별 + 아이디별로 따로 센다 (IP를 바꿔 가며 한 아이디를 노리는 경우도 막음)
+    if _too_many(key, 8, 600) or _too_many('login:' + ip, 40, 600) or _too_many('user:' + username.lower(), 20, 600):
+        return _bad('로그인 실패가 너무 많아요. 10분 뒤에 다시 해 주세요', 429)
+    db = get_db()
+    row = db.execute('SELECT user_id, username, pw_hash FROM users WHERE name_key = ?',
+                     (username.lower(),)).fetchone()
+    if not row or not check_password_hash(row['pw_hash'], password):
+        _note(key)
+        _note('login:' + ip)
+        _note('user:' + username.lower())
+        return _bad('아이디나 비밀번호가 맞지 않아요', 401)
+    token = _new_session(db, row['user_id'])
+    db.commit()
+    return jsonify(ok=True, token=token, username=row['username'])
+
+
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    user = _current_user()
+    if user:
+        db = get_db()
+        db.execute('DELETE FROM sessions WHERE token_hash = ?', (user['token_hash'],))
+        db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/me')
+def api_me():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    return jsonify(ok=True, username=user['username'])
+
+
+@app.route('/api/save', methods=['GET'])
+def api_save_get():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    row = get_db().execute('SELECT rev, data, updated_at FROM saves WHERE user_id = ?',
+                           (user['user_id'],)).fetchone()
+    if not row:
+        return jsonify(ok=True, rev=0, data=None, updated_at=None)
+    return jsonify(ok=True, rev=row['rev'], data=json.loads(row['data']), updated_at=row['updated_at'])
+
+
+@app.route('/api/save', methods=['PUT'])
+def api_save_put():
+    """기록 올리기. base_rev가 서버의 지금 번호와 같을 때만 덮어쓴다. 다른 기기에서 먼저
+    저장했으면 409로 알려서 게임이 어느 쪽을 쓸지 묻게 한다. force=true면 그냥 덮어쓴다."""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    data = body.get('data')
+    if not isinstance(data, dict):
+        return _bad('기록 형식이 잘못됐어요')
+    text = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
+    if len(text.encode()) > MAX_SAVE_BYTES:
+        return _bad('기록이 너무 커요', 413)
+    base_rev = clamp_int(body.get('base_rev'), 0, 2**31 - 1, 0)
+    force = body.get('force') is True
+    db = get_db()
+    now = time.time()
+    row = db.execute('SELECT rev FROM saves WHERE user_id = ?', (user['user_id'],)).fetchone()
+    cur = row['rev'] if row else 0
+    if not force and base_rev != cur:
+        return jsonify(ok=False, error='conflict', rev=cur), 409
+    if row:
+        # 그 사이 다른 요청이 먼저 바꿨으면 아무 줄도 바뀌지 않는다
+        res = db.execute('UPDATE saves SET rev = ?, data = ?, updated_at = ? WHERE user_id = ? AND rev = ?',
+                         (cur + 1, text, now, user['user_id'], cur))
+    else:
+        res = db.execute('INSERT INTO saves (user_id, rev, data, updated_at) VALUES (?, ?, ?, ?) '
+                         'ON CONFLICT(user_id) DO NOTHING', (user['user_id'], 1, text, now))
+    db.commit()
+    if res.rowcount != 1:
+        return jsonify(ok=False, error='conflict', rev=cur + 1), 409
+    return jsonify(ok=True, rev=cur + 1, updated_at=now)
 
 
 init_db()
