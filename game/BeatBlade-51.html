@@ -18438,7 +18438,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  {const _ds=drawScene;drawScene=function(now){const r=_ds.apply(this,arguments);try{if(on()&&G.state==='play')drawCast(now)}catch(e){}return r}}
 
  /* ---------- 2·3) 공격 모양 입히기 ---------- */
- {const base=NP;NP=function(o){try{if(on()&&o&&['seg','orb','circ','rect'].includes(o.k)&&o.harm!==false){o.s7k=G.s7;const c=G.s7cast;if(c&&G.beat-c.t<8)o.s7src=castPt()}}catch(e){}return base.apply(this,arguments)}}
+ {const base=NP;NP=function(o){try{if(on()&&o&&!o.noSkin&&['seg','orb','circ','rect'].includes(o.k)&&o.harm!==false){o.s7k=G.s7;const c=G.s7cast;if(c&&G.beat-c.t<8)o.s7src=castPt()}}catch(e){}return base.apply(this,arguments)}}
  const dirOf=(o,b)=>{if(o.ray!=null&&b<o.t1+.05)return o.ray;try{const [x0,y0]=o.pos(b-.04),[x1,y1]=o.pos(b);if(Math.hypot(x1-x0,y1-y0)>.05)return Math.atan2(y1-y0,x1-x0)}catch(e){}return o.ray!=null?o.ray:Math.PI/2};
  const LN=(ax,ay,bx,by,st,fn)=>{const L=Math.hypot(bx-ax,by-ay),n=Math.max(1,Math.floor(L/st));for(let i=0;i<=n;i++){const q=i/n;fn(ax+(bx-ax)*q,ay+(by-ay)*q,i,q)}};
  const along=(x,y,a,d,s)=>[x+Math.cos(a)*d-Math.sin(a)*s,y+Math.sin(a)*d+Math.cos(a)*s];
@@ -18638,4 +18638,595 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* 왼쪽 보스 모양 게이지: 바뀐 보스마다 크기 맞춤을 다시 계산 (같은 자리를 여러 보스가 나눠 써서) */
  try{const base=c3SwapIn;c3SwapIn=function(b){const r=base.apply(this,arguments);try{if(typeof _bbFit!=='undefined'&&b&&b.base!=null)delete _bbFit[b.base];if(G)G._barLast=undefined}catch(e){}return r}}catch(e){}
 }catch(e){console.error('v52 ch67 bars',e)}})();
+/* ================= v53 공통 장치: 보스가 "소환한 물체" + 묵직한 레이저 =================
+   1) 소환 물체(ACT): 보스가 공격할 때 실제 물건(거울·체스 말·촛불·목마·드론…)을 경기장에 꺼내 놓고,
+      그 물건이 움직이거나 쏘면서 공격한다. 물건은 펑 하고 나타났다가 사라진다(빛 고리·그림자).
+      - ACT.put({spr, pos(b), t0, t2, s, ground, face(b), rot(b), glow}) : 보이기만 하는 물체(맞지 않음)
+      - ACT.hit({pos(b), r, t0, t1, t2, dmg}) : 물체 몸에 붙는 판정(그림은 물체가 대신 그림)
+      - ACT.pix(줄글, 색표) : 글자로 적은 도트 그림 → 그리기 함수 (한 번 그려 두고 크게 붙임)
+      - ACT.spr(탄모양, 크기) : 기존 탄 그림(npSpr: 톱니·드론·벌…)을 크게 키운 물체
+   2) 레이저(모든 챕터 공통, 'laser' 모양): 순간 "띡" 나타나지 않고
+      발사구가 번쩍 → 빛줄기가 쭉 뻗어 나감 → 두꺼운 빛무리 + 흰 심지 + 흐르는 빛 → 끝에 불똥 → 가늘어지며 사라짐
+      예고 때는 발사구에 빛이 모여드는 모습이 보인다. 판정 두께는 그대로다. */
+(function(){try{
+ const ACT=window.ACT={};
+ const E=q=>1-Math.pow(1-q,3),C=(v,a,b)=>v<a?a:v>b?b:v;
+ /* 판정만 있고 그림은 숨기는 위험물 (물체가 대신 그림) */
+ for(const k of ['orb','seg','rect','circ']){const d=NPK[k].draw;NPK[k].draw=function(o){if(o&&o.hide)return;return d.apply(this,arguments)}}
+
+ /* ---------- 도트 그림: 한 번 그려 둔 그림판을 크게 붙인다 ---------- */
+ const CACHE=new Map();
+ ACT.pix=(rows,pal)=>{const h=rows.length,w=Math.max(...rows.map(r=>r.length));const make=(tint)=>{const cv=document.createElement('canvas');cv.width=w;cv.height=h;const c=cv.getContext('2d');
+   for(let j=0;j<h;j++)for(let i=0;i<w;i++){const ch=rows[j][i];if(!ch||ch==='.'||!pal[ch])continue;c.fillStyle=tint&&ch!=='K'?mixc(pal[ch],tint,.45):pal[ch];c.fillRect(i,j,1,1)}return cv};
+  const f=(x,y,s,o)=>{o=o||{};const key=f.id+'|'+(o.tint||'');let cv=CACHE.get(key);if(!cv){cv=make(o.tint);CACHE.set(key,cv)}const c=ctx;c.save();c.imageSmoothingEnabled=false;c.translate(x,y);if(o.rot)c.rotate(o.rot);if(o.flip)c.scale(-1,1);if(o.a!=null)c.globalAlpha=o.a;
+   c.drawImage(cv,-w*s/2,-h*s/2,w*s,h*s);c.restore();c.globalAlpha=1};f.id='p'+(ACT._n=(ACT._n||0)+1);f.w=w;f.h=h;return f};
+ /* 기존 탄 그림을 키워서 물체로 */
+ const SPC=document.createElement('canvas');SPC.width=SPC.height=40;
+ ACT.spr=(sty,r,col)=>{const f=(x,y,s,o)=>{o=o||{};const g=SPC.getContext('2d');g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,40,40);g.imageSmoothingEnabled=false;const sv=_cx;_cx=g;try{npSpr(sty,20,20,r||5,performance.now(),{col:o.col||col,t0:0,t2:9e9,spin:1},0)}catch(e){}_cx=sv;
+   const c=ctx;c.save();c.imageSmoothingEnabled=false;c.translate(x,y);if(o.rot)c.rotate(o.rot);if(o.flip)c.scale(-1,1);if(o.a!=null)c.globalAlpha=o.a;c.drawImage(SPC,-20*s,-20*s,40*s,40*s);c.restore();c.globalAlpha=1};f.w=(r||5)*2+4;f.h=(r||5)*2+4;return f};
+
+ /* ---------- 물체 놓기 ---------- */
+ function drawActor(o,b,now){const A=o.A;if(!A)return;const [x,y]=A.pos(b),ain=C((b-A.t0)/(A.inT||.22),0,1),aout=C((A.t2-b)/(A.outT||.2),0,1),k=E(ain)*aout,s=(A.s||1.5)*(.35+.65*k)*(A.pulse?1+Math.sin(now/90)*.04:1);
+  if(k<=0.01)return;const sp=typeof A.spr==='function'?A.spr:null;if(!sp)return;const hh=(sp.h||12)*s;
+  if(A.ground){RA(Math.round(x-hh*.45),Math.round(y+hh*.5-1),Math.round(hh*.9),2,'#000000',.3*k)}
+  if(A.glow)pcirc(x,y,hh*.55,A.glow,.18*k);
+  const face=A.face?A.face(b):0,rot=A.rot?A.rot(b):0;sp(x,y,s,{flip:face<0,rot,a:aout<1?aout:1,tint:A.tint,col:A.col});
+  if(ain<1){cRing(x,y,hh*.35+ain*hh*.5,'#ffffff',(1-ain)*.9,1);if(ain<.5)pcirc(x,y,hh*.3*(1-ain*2),'#ffffff',.6)}
+  if(A.deco)try{A.deco(A,b,now,x,y,k)}catch(e){}}
+ ACT.put=A=>{A.t2=A.t2==null?A.t0+4:A.t2;const o=NP({k:'orb',harm:false,noTel:true,hide:true,r:1,t0:A.t0,t1:A.t0,t2:A.t2,pos:A.pos,A,deco:drawActor,act:1});A.o=o;return A};
+ ACT.hit=h=>NP(Object.assign({k:'orb',hide:true,noTel:true},h,{pos:h.pos,r:h.r||6,dmg:h.dmg||11}));
+ /* 자주 쓰는 움직임 */
+ ACT.at=(x,y)=>()=>[x,y];
+ ACT.lin=(x0,y0,x1,y1,b0,b1,ease)=>b=>{const q=C((b-b0)/Math.max(.001,b1-b0),0,1),e=ease?E(q):q;return [x0+(x1-x0)*e,y0+(y1-y0)*e]};
+ ACT.hop=(x0,y0,x1,y1,b0,b1,hgt)=>b=>{const q=C((b-b0)/Math.max(.001,b1-b0),0,1);return [x0+(x1-x0)*q,y0+(y1-y0)*q-Math.sin(q*Math.PI)*(hgt||40)]};
+ ACT.path=(pts,b0,dur)=>b=>{const n=pts.length-1,q=C((b-b0)/dur,0,1)*n,i=Math.min(n-1,Math.floor(q)),f=q-i;return [pts[i][0]+(pts[i+1][0]-pts[i][0])*f,pts[i][1]+(pts[i+1][1]-pts[i][1])*f]};
+ /* 소환 연출 효과음 */
+ ACT.snd=(t,f,l,w,v,f2)=>sch(t,()=>{try{sfx(f,l||.12,w||'triangle',v||.04,f2||f*1.5)}catch(e){}});
+
+ /* ---------- 묵직한 레이저 ---------- */
+ const _sd=npSegDraw;
+ npSegDraw=function(o,ax,ay,bx,by,now,b){const sty=o.sty||'laser';if(sty!=='laser'||o.thin)return _sd.apply(this,arguments);
+  const c=o.col||npCol(),w=Math.max(2,o.w),age=b-o.t1,rem=o.t2-b,g=ctx,t=now/1000;
+  const ext=E(C(age/.14,0,1)),fade=C(rem/.18,0,1),flash=C(1-age/.1,0,1),ww=w*(.45+.55*fade)*(1+flash*.5);
+  const ex=ax+(bx-ax)*ext,ey=ay+(by-ay)*ext,L=Math.hypot(ex-ax,ey-ay)||1,ux=(ex-ax)/L,uy=(ey-ay)/L;
+  g.save();g.lineCap='round';
+  g.globalAlpha=.22*fade+.2*flash;g.strokeStyle=c;g.lineWidth=ww*2.4+4;g.beginPath();g.moveTo(ax,ay);g.lineTo(ex,ey);g.stroke();
+  g.globalAlpha=.95;g.strokeStyle=c;g.lineWidth=ww;g.beginPath();g.moveTo(ax,ay);g.lineTo(ex,ey);g.stroke();
+  g.globalAlpha=.95;g.strokeStyle='#ffffff';g.lineWidth=Math.max(1,ww*.38*(.85+.3*Math.sin(t*50+ax)));g.beginPath();g.moveTo(ax,ay);g.lineTo(ex,ey);g.stroke();
+  /* 흐르는 빛 */g.globalAlpha=.8*fade;g.fillStyle='#ffffff';for(let d=((t*260)%22);d<L;d+=22){const px=ax+ux*d,py=ay+uy*d;g.fillRect(px-1,py-1,2+ww*.2,2)}
+  g.restore();g.globalAlpha=1;
+  /* 발사구 */pcirc(ax,ay,ww*.75+flash*4,c,.7);pcirc(ax,ay,Math.max(1,ww*.4),'#ffffff',.95);
+  /* 끝 불똥 */if(ext>=1&&ex>AX&&ex<AX+AW&&ey>AY&&ey<AY+AH){const sd=Math.floor(t*30);for(let i=0;i<5;i++){const a=hash(sd+'i'+i)%628/100,d=2+hash(sd+'d'+i)%Math.max(3,Math.round(ww));cPx(ex+Math.cos(a)*d,ey+Math.sin(a)*d,1,i%2?'#ffffff':c,.9)}pcirc(ex,ey,ww*.5,'#ffffff',.6)}};
+ /* 레이저 예고: 발사구에 빛이 모여듦 */
+ {const T=NPK.seg.tel;NPK.seg.tel=function(o,b,now){const r=T.apply(this,arguments);try{if((o.sty||'laser')==='laser'&&!o.noCharge){const p=C((b-o.t0)/Math.max(.01,o.t1-o.t0),0,1),[ax,ay]=o.a(o.live?b:o.t1),c=o.col||npCol(),w=Math.max(2,o.w);
+   pcirc(ax,ay,1+p*w*.7,c,.35+.45*p);pcirc(ax,ay,Math.max(1,p*w*.3),'#ffffff',.8*p);for(let i=0;i<6;i++){const a=i*TAU/6+now/300,d=(1-((now/400+i/6)%1))*(10+w*1.5);cPx(ax+Math.cos(a)*d,ay+Math.sin(a)*d,1,i%2?'#ffffff':c,.4+.5*p)}}}catch(e){}return r}}
+}catch(e){console.error('v53 actors beams',e)}})();
+/* ================= v53 챕터 7 공격 다시 만들기: 보스가 "자기 물건"을 꺼내서 공격 =================
+   (파일 번호 9991: 999 다음에 실행되도록 네 자리 번호를 씀)
+   - 거울문 수문장: 거울을 꺼내 세우고, 광선이 거울에 맞아 꺾여서 나를 노림 · 열쇠가 날아와 찌름 · 문짝이 양옆에서 닫힘 · 시계판의 바늘
+   - 흑백 체스 왕: 체스 말을 꺼냄 — 룩은 줄을 따라 돌진, 비숍은 대각선으로 미끄러짐, 나이트는 L자로 뛰어 찍음,
+     퀸은 사방팔방(8방향)으로 구슬을 쏘며 칸을 옮김, 폰은 한 칸씩 내려오다 바닥에서 퀸이 됨
+   - 유리 공작: 꼬리 깃털 눈이 하나씩 떠서 쏨 · 바닥에 눈이 떠서 터짐
+   - 역류의 분수: 물기둥이 바닥에서 솟아오름(물 그림)
+   - 거꾸로 타는 초: 양옆에 초를 세우고 그 불꽃이 쓸어 감 · 초들이 둥글게 둘러싸고 좁혀 옴
+   - 오르골 발레리나: 작은 무희 인형이 날아와 착지 · 무대 거울에 빛이 반사 · 거울 속 무희와 2인무
+   - 뒤집힌 회전목마: 거꾸로 된 깃발이 위에서 내리꽂힘
+   - 그림자 인형사: 조종 막대가 위에 나타나 실을 내림 · 가면이 날아가 웃으며 쏨 · 내 그림자 인형
+   - 반사룡: 거울 비늘판이 떨어져 꽂힘 · 용이 화면을 가로질러 급강하
+   - 거울 하루: 거울 속 내가 실제로 나타나 반대로 따라옴
+   이름·덱은 그대로 두고 같은 이름으로 다시 정의한다. 외침(997)도 다시 붙인다. 판정은 늘 예고가 먼저. */
+(function(){try{
+ const L7=window.S7ART,H=window.S7H,A=window.ACT;if(!L7||!H||!A)return;
+ const {tel,spd,ph,P7,toP,shot,circ,seg,rect,snd,shake,gapRing,echo,CX,CY}=H;
+ const D=(n,kr,ch,est,tip,fn)=>defPat(n,kr,ch,est,tip,fn);
+ const C=(v,a,b)=>v<a?a:v>b?b:v;
+ /* 예고 전용 선 (맞지 않음): 지나갈 길을 미리 보여 줌 */
+ const path=(T0,T1,ax,ay,bx,by,col)=>NP({k:'seg',sty:'laser',harm:false,noCharge:true,col:col||'#ff4d6d',w:3,t0:T0,t1:T1,t2:T1+.01,a:()=>[ax,ay],b:()=>[bx,by],dmg:0});
+ const lane=(T0,T1,x,y,w,h)=>NP({k:'rect',harm:false,x,y,w,h,t0:T0,t1:T1,t2:T1+.01,dmg:0});
+
+ /* ---------- 도트 그림 ---------- */
+ const KK='#0a0c18';
+ const MIRROR=A.pix(["..KKKKK..",".KSSSSSK.","KSCCWCCSK","KSCWCCCSK","KSCCCCCSK","KSCCCCCSK","KSCCCCWSK","KSCCCWCSK","KSCCCCCSK",".KSSSSSK.","..KKKKK..","...KSK...","..KSSSK..",".KKKKKKK."],{K:KK,S:'#c4d0e4',C:'#5af0e0',W:'#ffffff'});
+ const MIRRORV=A.pix(["..KKKKK..",".KSSSSSK.","KSCCWCCSK","KSCWCCCSK","KSCCCCCSK","KSCCCCCSK","KSCCCCWSK","KSCCCWCSK","KSCCCCCSK",".KSSSSSK.","..KKKKK.."],{K:KK,S:'#e0ccff',C:'#b48aff',W:'#ffffff'});
+ const KEY=A.pix([".KKK..........","KGGGK.........","KG.GKKKKKKKKKK","KG.GGGGGGGGGGK","KGGGKKKKKGKGKK",".KKK.....GKGK.",".........KK.K."],{K:KK,G:'#ffd27a'});
+ const LOCK=A.pix(["..KKKKK..",".KSKKKSK.",".KS...SK.","KKKKKKKKK","KGGGGGGGK","KGGGKGGGK","KGGKKKGGK","KGGGKGGGK","KGGGGGGGK","KKKKKKKKK"],{K:KK,S:'#c4d0e4',G:'#ffd27a'});
+ const PW={K:KK,W:'#f2f6ff',D:'#8492b0'},PB={K:'#c4d0e4',W:'#1a1a24',D:'#5a5a72'};
+ const RAW={pawn:["...KKK...","..KWWWK..","..KWWWK..","...KKK...","..KWWWK..","...KWK...","...KWK...","..KWWWK..",".KWWWWWK.",".KKKKKKK.","KWWWWWWWK","KKKKKKKKK"],
+  rook:["KK.KKK.KK","KWKWWWKWK","KWWWWWWWK",".KWWWWWK.","..KWWWK..","..KWDWK..","..KWWWK..","..KWDWK..","..KWWWK..",".KWWWWWK.",".KKKKKKK.","KWWWWWWWK","KKKKKKKKK"],
+  knight:["...KK.....","..KWWKK...",".KWWWWWK..","KWDWWWWWK.","KWWWWWWWWK",".KKKWWWWWK","...KWWWWK.","..KWWWWK..","..KWWWWK..",".KWWWWWWK.",".KKKKKKKK.","KWWWWWWWWK","KKKKKKKKKK"],
+  bishop:["....K....","...KWK...","..KWWDK..","..KWDWK..","..KWWWK..","...KWK...","..KKKKK..","...KWK...","...KWK...","..KWWWK..",".KWWWWWK.",".KKKKKKK.","KWWWWWWWK","KKKKKKKKK"],
+  queen:[".K..K.K..K.","KWK.KWK.KWK","KWWKWWWKWWK",".KWWWWWWWK.","..KWWWWWK..","..KKKKKKK..","...KWWWK...","...KWWWK...","...KWWWK...","..KWWWWWK..",".KWWWWWWWK.",".KKKKKKKKK.","KWWWWWWWWWK","KKKKKKKKKKK"]};
+ const PIECE={};for(const k in RAW){PIECE[k]=A.pix(RAW[k],PW);PIECE[k+'B']=A.pix(RAW[k],PB)}
+ const CANDLE=A.pix(["..KKK..",".KWWWK.",".KWEWK.",".KWWWK.",".KWWEK.",".KWWWK.",".KWWWK.","..KKK..","...K...","..KFK..",".KFFFK.",".KFYFK.","..KFK..","...K..."],{K:KK,W:'#e8fff8',E:'#b8d8d0',F:'#5af0e0',Y:'#ffffff'});
+ const DANCER=A.pix(["....K....","...KHK...","...KHK...","....K....","..KKPKK..",".KHKPKHK.","...KPK...",".KKPPPKK.","KPPWPWPPK",".KKKPKKK.","...KHK...","...KHK...","...KHK...","....K...."],{K:KK,H:'#ffe0d0',P:'#ffb0d8',W:'#ffffff'});
+ const DANCERV=A.pix(["....K....","...KHK...","...KHK...","....K....","..KKPKK..",".KHKPKHK.","...KPK...",".KKPPPKK.","KPPWPWPPK",".KKKPKKK.","...KHK...","...KHK...","...KHK...","....K...."],{K:KK,H:'#e0d0ff',P:'#b48aff',W:'#ffffff'});
+ const FLAG=A.pix(["...KGK...","...KGK...","...KGK...","...KGK...","...KGK...","KKKKGK...","KRRRGK...","KRWRGK...",".KRRGK...","..KRGK...","...KGK...","...KGK...","...KGK...","....K....","....K...."],{K:KK,G:'#ffd27a',R:'#ff7ad0',W:'#ffffff'});
+ const BAR=A.pix(["......KK......","......KWK.....","KKKKKKKWKKKKKK","KWWWWWWWWWWWWK","KKKKKKKWKKKKKK","......KWK.....","......KK......"],{K:KK,W:'#8a6a4a'});
+ const MASK=A.pix(["..KKKKK..",".KWWWWWK.","KWKWWWKWK","KWWWWWWWK","KWRWWWRWK",".KWRRRWK.","..KKKKK.."],{K:KK,W:'#f2eef8',R:'#ff7ad0'});
+ const DOLL=A.pix(["...KKK...","..KWWWK..","..KWKWK..","...KKK...",".KKPPPKK.","KWKPPPKWK","...KPK...","..KP.PK..","..KW.WK.."],{K:KK,W:'#e8e0f0',P:'#3e3058'});
+ const DRAGON=A.pix(["K..................K","KK................KK",".KCK....KKKK....KCK.","..KCCK.KCCCCK.KCCK..","...KCCKCCWCCCKCCK...","....KCCCCCCCCCCK....",".....KKKCCCCKKK.....","........KCCK........","........KWWK........",".........KK........."],{K:KK,C:'#8af0ff',W:'#ffffff'});
+ const PLATE=A.pix(["KKKKKKKKKKKK","KSWCCCCCCCSK","KSCWCCCCCCSK","KSCCCCCCCWSK","KKKKKKKKKKKK"],{K:KK,S:'#c4d0e4',C:'#8af0ff',W:'#ffffff'});
+ /* 거울 하루: 하루를 좌우로 뒤집고 보라로 물들인 모습 */
+ const HC=document.createElement('canvas');HC.width=28;HC.height=28;
+ const MHARU=(x,y,s,o)=>{const g=HC.getContext('2d');g.setTransform(1,0,0,1,0,0);g.globalCompositeOperation='source-over';g.globalAlpha=1;g.clearRect(0,0,28,28);g.imageSmoothingEnabled=false;try{drawKnight(g,8,6,1,true,null,performance.now()/430)}catch(e){}
+  g.globalCompositeOperation='source-atop';g.globalAlpha=.55;g.fillStyle='#b48aff';g.fillRect(0,0,28,28);g.globalCompositeOperation='source-over';g.globalAlpha=1;
+  ctx.save();ctx.imageSmoothingEnabled=false;if(o&&o.a!=null)ctx.globalAlpha=o.a;ctx.drawImage(HC,x-14*s,y-16*s,28*s,28*s);ctx.restore();ctx.globalAlpha=1};MHARU.h=24;
+ window.S7PIX={MIRROR,KEY,LOCK,PIECE,CANDLE,DANCER,FLAG,BAR,MASK,DOLL,DRAGON,PLATE,MHARU};
+
+ /* ---------- 공용: 거울에 반사되는 광선 ---------- */
+ /* 보스 (gx,gy) → 거울 (mx,my) → 반사 방향 a2. 거울은 두 길의 가운데를 향해 기울어 선다 */
+ function mirrorShot(T,gx,gy,mx,my,a2,col,spr,dmg){const a1=Math.atan2(my-gy,mx-gx),nx=Math.cos(a2)-Math.cos(a1),ny=Math.sin(a2)-Math.sin(a1),rot=Math.atan2(ny,nx),hitT=T+tel();
+  A.put({spr:spr||MIRROR,s:2.2,t0:T,t2:hitT+.9,pos:A.at(mx,my),rot:()=>rot,glow:col,deco:(Q,b,now,x,y)=>{if(b>=hitT&&b<hitT+.35){const q=(b-hitT)/.35;pcirc(x,y,10+q*8,'#ffffff',.5*(1-q));cRing(x,y,8+q*16,col,(1-q),1)}}});
+  NP({k:'seg',sty:'laser',col,w:7,t0:T,t1:hitT,t2:hitT+.45,a:()=>[gx,gy],b:()=>[mx,my],dmg:dmg||12});
+  NP({k:'seg',sty:'laser',col:'#ffffff',w:8,t0:T,t1:hitT+.12,t2:hitT+.6,a:()=>[mx,my],b:()=>[mx+Math.cos(a2)*560,my+Math.sin(a2)*560],dmg:dmg||12,noCharge:true});
+  snd(hitT,880,.2,'triangle',.05,1320);snd(hitT+.12,1320,.25,'triangle',.05,1760)}
+ const spotAway=(far)=>{for(let i=0;i<12;i++){const x=AX+30+RND()*(AW-60),y=AY+40+RND()*(AH-70);if(Math.hypot(x-P.x,y-P.y)>(far||80))return [x,y]}return [AX+40,AY+60]};
+
+ /* ================= 1 거울문 수문장 ================= */
+ D('s7GateKey','열쇠 찌르기','hands',11,'지팡이의 열쇠가 떠올라 나를 겨누고 날아와 찌름, 한 박자 뒤 반대편에서 메아리 열쇠 → 열쇠가 겨눈 줄에서 비켜',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.8;echo(T0,'#ffd27a',(T,mx,ma,col,m)=>{const [x0,y0]=P7(20,-49),sx=mx(x0),a=toP(sx,y0),T1=T+tel(),L=600,v=L/.45;
+    const pos=b=>{if(b<T1){const q=C((b-T)/.3,0,1);return [sx+Math.cos(a)*-6*q,y0-10*q+Math.sin(b*8)*1]}const d=(b-T1)*v;return [sx+Math.cos(a)*d,y0-10+Math.sin(a)*d]};
+    A.put({spr:KEY,s:1.5,t0:T,t2:T1+.5,pos,rot:()=>a,tint:m?'#c89aff':null,deco:(Q,b,now,x,y)=>{if(b>=T1)for(let i=1;i<6;i++)cPx(x-Math.cos(a)*i*5,y-Math.sin(a)*i*5,3-i*.4,col,.6-i*.1)}});
+    path(T,T1,sx,y0-10,sx+Math.cos(a)*L,y0-10+Math.sin(a)*L,col);A.hit({pos,r:7,t0:T,t1:T1,t2:T1+.45,dmg:13});snd(T1,520,.2,'square',.05,260)});shake(T0+tel(),.2)}
+  return n*1.8+1+tel()+.6});
+ D('s7GateMirror','거울 면 반사','head',12,'수문장이 거울을 꺼내 세우고 거울 면 광선을 쏨 → 광선이 거울에 맞아 꺾여 나를 노림. 꺾인 선(흰 선)을 피해',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.7;echo(T0,'#5af0e0',(T,mx,ma,col,m)=>{const [gx,gy]=P7(0,-26),[px,py]=spotAway(90),sx=mx(px),a2=Math.atan2(P.y-py,P.x-sx);mirrorShot(T,mx(gx),gy,sx,py,a2,col,m?MIRRORV:MIRROR,12)},1.1)}
+  return n*1.7+1.1+tel()+.8});
+ D('s7GateClose','닫히는 문','field',12,'양옆에서 커다란 문짝이 쾅 닫혀 오며 가운데만 열림 → 열린 틈으로, 메아리 문은 틈 위치가 바뀜',t=>{const n=1+ph();
+  for(let k=0;k<n;k++){const T0=t+k*2.6,gx=AX+70+RND()*(AW-140);echo(T0,'#8492b0',(T,mx,ma,col)=>{const g=mx(gx),T1=T+tel(),cl=.4,E=b=>{const q=C((b-T1)/cl,0,1);return 1-Math.pow(1-q,3)};
+    const door=(side)=>NP({k:'rect',sty:'light',col,t0:T,t1:T1,t2:T1+cl+.35,dmg:13,rf:b=>{const e=b<T1?1:E(b);if(side<0){const w=(g-26-AX)*e;return [AX,AY,Math.max(1,w),AH]}const w=(AX+AW-g-26)*e;return [AX+AW-w,AY,Math.max(1,w),AH]},
+     deco:(o,b)=>{if(b<T1)return;const [x,y,w,h]=o.rf(b),ex=side<0?x+w:x;RA(ex-(side<0?6:0),y,6,h,'#ffd27a',.9);RA(ex-(side<0?3:3),y,1,h,'#ffffff',.9);pcirc(ex-side*12,y+h/2,3,'#0a0c18',.9)}});
+    door(-1);door(1);sch(T1+cl,()=>{G.shake=Math.max(G.shake||0,.35)});snd(T1+cl,110,.3,'square',.07,60)},1.2)}
+  return n*2.6+1.2+tel()+.8});
+ D('s7GateClock','13시의 종','head',12,'수문장 머리 위에 13시 시계판이 나타나 열세 바늘이 거꾸로 돎, 끝에 종이 울려 퍼짐 → 바늘 사이를 따라 반대로 돌아',t=>{const dur=3+ph()*.6,T1=t+tel();
+  sch(t,()=>{const [x,y]=P7(0,-51);A.put({spr:(xx,yy,s)=>{pcirc(xx,yy,11*s/1.5,'#0a0c18');pcirc(xx,yy,10*s/1.5,'#f2f6ff');for(let i=0;i<13;i++){const a=i*TAU/13;cPx(xx+Math.cos(a)*8*s/1.5,yy+Math.sin(a)*8*s/1.5,i===12?2:1,i===12?'#ff7ad0':'#46526e',1)}pcirc(xx,yy,2,'#ffd27a')},s:1.5,t0:t,t2:T1+dur+.6,pos:A.at(x,y),glow:'#ffd27a'});
+   for(let i=0;i<13;i++){const a0=i*TAU/13;NP({k:'seg',sty:'laser',col:i===12?'#ff7ad0':'#c4d0e4',w:4,live:true,t0:t,t1:T1,t2:T1+dur,a:()=>[x,y],b:b=>{const a=a0-Math.max(0,b-T1)*.55*spd();return [x+Math.cos(a)*420,y+Math.sin(a)*420]},dmg:11})}
+   sch(T1+dur,()=>{gapRing(T1+dur,x,y,13,RND()*TAU,.4,60,{sty:'light',col:'#ffd27a',r:4,noTel:true});G.shake=Math.max(G.shake||0,.3)})});snd(T1,392,.8,'triangle',.05,392);snd(T1+dur,196,1,'triangle',.07,98);
+  return tel()+dur+2});
+ D('s7hGateLock','자물쇠 감옥','field',13,'[어려움] 내 둘레에 문짝 네 개가 닫혀 오고 자물쇠가 철컥 잠김, 한쪽만 열림 → 열린 쪽으로 빠져나가',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.5;sch(T0,()=>{const cx=C(P.x,AX+50,AX+AW-50),cy=C(P.y,AY+50,AY+AH-50),g=34,op=Math.floor(RND()*4),col=k%2?'#c89aff':'#ffd27a',T1=T0+tel();
+    if(op!==0)rect(T0,AX,AY,cx-g-AX,AH,col,'light',.35,13);if(op!==1)rect(T0,cx+g,AY,AX+AW-cx-g,AH,col,'light',.35,13);
+    if(op!==2)rect(T0,cx-g,AY,g*2,cy-g-AY,col,'light',.35,13);if(op!==3)rect(T0,cx-g,cy+g,g*2,AY+AH-cy-g,col,'light',.35,13);
+    rect(T0,cx-g+6,cy-g+6,g*2-12,g*2-12,col,'light',.3,13,{t0:T0+tel()*.35});
+    A.put({spr:LOCK,s:1.6,t0:T0,t2:T1+.5,pos:b=>[cx,cy-(b<T1?Math.max(0,(T1-b))*6:0)],deco:(Q,b,now,x,y)=>{if(b>=T1&&b<T1+.2)cStar(x,y,8,'#ffffff',.9)}});
+    const ar=[[-1,0],[1,0],[0,-1],[0,1]][op];for(let i=0;i<3;i++)cChevronLater(T0,T1,cx+ar[0]*(g-8+i*6),cy+ar[1]*(g-8+i*6),Math.atan2(ar[1],ar[0]))});
+   shake(T0+tel(),.3);snd(T0+tel(),220,.3,'square',.05,110)}
+  return n*1.5+tel()+.6});
+ /* 초록 화살표(나갈 쪽 안내): 예고 동안만 */
+ function cChevronLater(T0,T1,x,y,a){NP({k:'orb',harm:false,noTel:true,hide:true,r:1,t0:T0,t1:T0,t2:T1,pos:()=>[x,y],deco:()=>cChevron(x,y,a,'#a6f5c6',1,4)})}
+
+ /* ================= 2 유리 공작 ================= */
+ const fanEye=(i,n)=>{const a=Math.PI+(.12+i*(.76/(n-1)))*Math.PI,L=29;return P7(Math.cos(a)*L,-14+Math.sin(a)*L*.95)};
+ const EYE=(x,y,s,o)=>{const op=o&&o.open!=null?o.open:1;pcirc(x,y,5*s/1.5,'#0a0c18');pcirc(x,y,4.2*s/1.5,'#7af0d0');RA(Math.round(x-4*s/1.5),Math.round(y-(1-op)*4),Math.round(8*s/1.5),Math.round((1-op)*4)+1,'#14283a',1);if(op>.4){pcirc(x,y,2.2*s/1.5,'#1a3a8a');pcirc(x,y,1.1,'#ffd27a')}};EYE.h=10;
+ D('s7PeaFan','부채 눈빛','head',11,'꼬리 깃털의 눈이 하나씩 번쩍 떠서 나를 향해 유리 깃털을 쏨, 메아리는 반대쪽 눈부터 → 계속 옆으로 움직여',t=>{const n=7+ph()*2;
+  for(let i=0;i<n;i++){const T0=t+i*.32;echo(T0,'#7af0d0',(T,mx,ma,col)=>{const [x,y]=fanEye(i%13,13),sx=mx(x),T1=T+tel();A.put({spr:EYE,s:1.5,t0:T-.3,t2:T1+.4,pos:A.at(sx,y),glow:col,pulse:true});shot(T,sx,y,toP(sx,y),82,{sty:'light',col,r:4})})}
+  return n*.32+1+tel()+1.2});
+ D('s7PeaGaze','백 개의 눈','field',11,'바닥에 거울 눈이 천천히 뜨고, 다 뜨면 빛이 터짐 → 눈이 다 뜨기 전에 벗어나, 메아리는 반대편에',t=>{const n=4+ph();
+  for(let k=0;k<n;k++){const T0=t+k*.9,px=P.x,py=P.y;echo(T0,'#7af0d0',(T,mx,ma,col)=>{const x=mx(px),T1=T+tel();A.put({spr:(xx,yy,s)=>EYE(xx,yy,s*1.6),s:1.5,t0:T,t2:T1+.4,pos:A.at(x,py),deco:(Q,b,now,xx,yy)=>{const op=C((b-T)/(T1-T),0,1);RA(xx-12,yy-1,24,2,'#14283a',1-op)}});circ(T,x,py,18,col)},.6)}
+  return n*.9+.6+tel()+.6});
+
+ /* ================= 3 역류의 분수: 물기둥 ================= */
+ function geyser(T,x,w,col,hold){const T1=T+tel();NP({k:'rect',sty:'ice',col,hide:true,x,y:AY,w,h:AH,t0:T,t1:T1,t2:T1+(hold||.3),dmg:11,
+   deco:(o,b,now)=>{const t=now/1000;if(b<T1){for(let i=0;i<3;i++){const q=((b-T)*1.6+i/3)%1;cRing(x+w/2,AY+AH-4,4+q*w*.5,'#e8fbff',(1-q)*.7,1)}return}
+    const q=C((b-T1)/.12,0,1),hh=AH*q,y0=AY+AH-hh;RA(x,y0,w,hh,col,.55);RA(x+2,y0,Math.max(1,w*.25),hh,'#ffffff',.35);for(let j=0;j<hh;j+=8)RA(x+((j*7+Math.floor(t*30))%Math.max(1,w-2)),y0+j,2,4,'#ffffff',.5);
+    for(let i=0;i<5;i++)pcirc(x+w*(i/4),y0+Math.sin(t*20+i)*2,4,'#e8fbff',.9);pcirc(x+w/2,AY+AH-2,w*.6,'#e8fbff',.3)}});snd(T1,240,.3,'sawtooth',.04,520)}
+ D('s7FountUp','역류 기둥','field',11,'바닥에서 물이 거꾸로 솟아 기둥이 됨 → 거품이 안 이는 빈 칸으로, 메아리 기둥은 좌우가 뒤집힘',t=>{const n=3+ph(),cols=8,cw=AW/cols;
+  for(let k=0;k<n;k++){const T0=t+k*1.5,gap=Math.floor(RND()*cols),gap2=(gap+3+Math.floor(RND()*3))%cols;echo(T0,'#7ad8ff',(T,mx,ma,col,m)=>{for(let c=0;c<cols;c++){if(c===gap||c===gap2)continue;if((c+k)%2)continue;const x=AX+c*cw+3;geyser(T,m?2*CX-x-(cw-6):x,cw-6,col)}},.75)}
+  return n*1.5+.75+tel()+.5});
+ D('s7hFountGeyser','간헐천 추격','field',12,'[어려움] 내 발밑부터 간헐천이 차례로 솟아 따라옴, 메아리는 반대쪽에서 → 솟기 전에 방향을 바꿔',t=>{const n=6+ph()*2,cw=36;
+  for(let i=0;i<n;i++){const T0=t+i*.5;sch(T0,()=>{const x=C(P.x-cw/2,AX,AX+AW-cw);echo(T0,'#7ad8ff',(T,mx,ma,col,m)=>geyser(T,m?2*CX-x-cw:x,cw,col),.75)})}
+  return n*.5+.75+tel()+.5});
+
+ /* ================= 4 흑백 체스 왕: 체스 말 ================= */
+ const pc=(k,dark)=>PIECE[k+(dark?'B':'')];
+ D('s7ChessRook','룩 돌진','field',11,'왕이 룩들을 판 끝에 세우고, 룩이 제 줄을 따라 끝까지 돌진 → 룩이 없는 줄로, 메아리 룩은 반대편에서',t=>{const n=2+ph(),rows=5,rh=AH/rows;
+  for(let k=0;k<n;k++){const T0=t+k*1.9,free=Math.floor(RND()*rows),free2=(free+2+Math.floor(RND()*2))%rows;echo(T0,'#f2f6ff',(T,mx,ma,col,m)=>{const T1=T+tel(),go=.7,fromL=(k%2===0)!==m;
+    for(let r=0;r<rows;r++){if(r===free||(k%2&&r===free2))continue;const y=AY+rh*(r+.5),x0=fromL?AX+10:AX+AW-10,x1=fromL?AX+AW+20:AX-20,dark=(r+k)%2===1;
+     const pos=b=>b<T1?[x0,y]:[x0+(x1-x0)*C((b-T1)/go,0,1),y];A.put({spr:pc('rook',dark),s:2,t0:T,t2:T1+go,pos,ground:true,deco:(Q,b,now,x,yy)=>{if(b>=T1)for(let i=1;i<5;i++)RA(x-(fromL?i*7:-i*7)-2,yy-6,4,12,dark?'#5a5a72':'#f2f6ff',.35-i*.07)}});
+     lane(T,T1,AX,y-rh/2+3,AW,rh-6);A.hit({pos,r:11,t0:T,t1:T1,t2:T1+go,dmg:12})}
+    snd(T1,160,.3,'square',.06,80)},.9);shake(t+k*1.9+tel(),.25)}
+  return n*1.9+.9+tel()+.8});
+ D('s7ChessBishop','비숍 대각선','field',11,'비숍 둘이 판 가장자리에 나타나 나를 지나는 대각선을 따라 미끄러짐 → 대각선 밖으로, 메아리는 반대로 기운 대각선',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.4,px=P.x,py=P.y;echo(T0,'#e8ecf4',(T,mx,ma,col,m)=>{const T1=T+tel(),go=.8,x=mx(px);for(const s of [-1,1]){const dx=s,dy=m?-1:1,
+     /* 대각선이 경기장 가장자리에 닿는 두 점 */k1=Math.min((dx>0?x-AX:AX+AW-x),(dy>0?py-AY:AY+AH-py)),k2=Math.min((dx>0?AX+AW-x:x-AX),(dy>0?AY+AH-py:py-AY)),sx=x-dx*k1,sy=py-dy*k1,ex=x+dx*k2,ey=py+dy*k2;
+     const pos=A.lin(sx,sy,ex,ey,T1,T1+go);A.put({spr:pc('bishop',s>0),s:2,t0:T,t2:T1+go+.1,pos,ground:true,deco:(Q,b,now,xx,yy)=>{if(b>=T1)for(let i=1;i<6;i++)cPx(xx-dx*i*6,yy-dy*i*6,3,s>0?'#5a5a72':'#f2f6ff',.5-i*.08)}});
+     path(T,T1,sx,sy,ex,ey,col);A.hit({pos,r:10,t0:T,t1:T1,t2:T1+go,dmg:12})}},.7)}
+  return n*1.4+.7+tel()+1});
+ D('s7ChessKnight','나이트 점프','all',11,'나이트가 L자로 껑충 뛰어 내 자리를 찍음 → 다음 L자 칸을 예상해 피해',t=>{const n=4+ph(),L=[[2,1],[1,2],[-1,2],[-2,1],[-2,-1],[-1,-2],[1,-2],[2,-1]],u=24,hop=.7;
+  sch(t,()=>{let [x,y]=P7(-24,-6);const pts=[[x,y]],times=[t];for(let k=0;k<n;k++){const [dx,dy]=L[Math.floor(RND()*8)];const tx=C(k?x+dx*u:P.x,AX+20,AX+AW-20),ty=C(k?y+dy*u:P.y,AY+20,AY+AH-20);x=tx;y=ty;pts.push([x,y]);times.push(t+tel()+k*hop)}
+   const pos=b=>{let i=0;while(i<times.length-1&&b>times[i+1])i++;if(i>=times.length-1)return pts[pts.length-1];const b0=i===0?t+tel()*.3:times[i],b1=times[i+1],q=C((b-b0)/Math.max(.01,b1-b0),0,1);return [pts[i][0]+(pts[i+1][0]-pts[i][0])*q,pts[i][1]+(pts[i+1][1]-pts[i][1])*q-Math.sin(q*Math.PI)*34]};
+   A.put({spr:pc('knight',false),s:2.2,t0:t,t2:times[times.length-1]+.5,pos,ground:true,face:b=>{const [a]=pos(b),[c]=pos(b+.05);return c<a?-1:1}});
+   for(let k=1;k<pts.length;k++){const T1=times[k];circ(T1-tel(),pts[k][0],pts[k][1],18,k%2?'#16161e':'#e8ecf4',{label:'♞',t2:T1+.25});sch(T1,()=>{G.shake=Math.max(G.shake||0,.18)});snd(T1,140,.15,'square',.05,70)}});
+  return n*hop+tel()+.8});
+ D('s7hChessQueen','퀸의 행진','all',13,'[어려움] 퀸이 판 위에 나타나 사방팔방(8방향)으로 구슬을 쏘고, 퀸답게 곧게 다음 칸으로 옮겨 또 쏨 → 구슬 사이 틈으로, 퀸과 같은 줄에 서지 마',t=>{const waves=3+ph(),gap=1.1;
+  sch(t,()=>{let [qx,qy]=spotAway(100);const pts=[[qx,qy]];for(let i=1;i<waves;i++){const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]],d=dirs[Math.floor(RND()*8)],st=40+RND()*50;qx=C(qx+d[0]*st,AX+30,AX+AW-30);qy=C(qy+d[1]*st,AY+30,AY+AH-30);pts.push([qx,qy])}
+   const T1=t+tel(),pos=b=>{const i=C(Math.floor((b-T1)/gap),0,waves-1),f=C(((b-T1)-i*gap-.6)/.4,0,1),j=Math.min(waves-1,i+1);if(b<T1+.6)return pts[0];return i>=waves-1?pts[waves-1]:[pts[i][0]+(pts[j][0]-pts[i][0])*f,pts[i][1]+(pts[j][1]-pts[i][1])*f]};
+   A.put({spr:pc('queen',false),s:2.2,t0:t,t2:T1+waves*gap+.4,pos,ground:true,glow:'#ffd27a',pulse:true});A.hit({pos,r:9,t0:t,t1:T1,t2:T1+waves*gap,dmg:12});
+   for(let i=0;i<waves;i++){const Tw=T1+i*gap,off=i%2?Math.PI/8:0,[x,y]=pts[i];for(let j=0;j<8;j++){const a=off+j*Math.PI/4;for(const v of [60,84])npShot(Tw-.5,Tw,x,y,a,v*spd(),{sty:j%2?'void':'light',col:j%2?'#8492b0':'#f2f6ff',r:5,rayL:20,noTel:j>0||v>60,noSkin:true,dmg:11})}snd(Tw,660,.15,'triangle',.05,990)}});
+  return tel()+waves*gap+3});
+ D('s7xChessPromotion','폰의 승격','field',13,'[익스트림] 폰들이 위에서 한 칸씩 내려오다 바닥에 닿으면 퀸이 되어 사방으로 쏨 → 폰 사이로, 퀸이 되기 전에 떨어져',t=>{const cols=8,cw=AW/cols,n=4+ph(),drop=3;
+  const used=new Set();for(let i=0;i<n;i++){let c=Math.floor(RND()*cols);while(used.has(c))c=(c+1)%cols;used.add(c);const x=AX+cw*(c+.5),T0=t+i*.35,T1=T0+tel(),Tq=T1+drop,dark=i%2===1;
+   const pos=b=>[x,AY+14+Math.floor(C((b-T1)/drop,0,1)*5)/5*(AH-34)];A.put({spr:pc('pawn',dark),s:2,t0:T0,t2:Tq,pos,ground:true});A.hit({pos,r:9,t0:T0,t1:T1,t2:Tq,dmg:12});
+   lane(T0,T1,x-cw/2+3,AY,cw-6,AH);A.put({spr:pc('queen',dark),s:1.7,t0:Tq,t2:Tq+1,pos:A.at(x,AY+AH-20),glow:'#ffd27a'});
+   sch(Tq-.6,()=>{for(let j=0;j<8;j++)npShot(Tq-.6,Tq,x,AY+AH-20,j*Math.PI/4+Math.PI/8,70*spd(),{sty:dark?'void':'light',col:dark?'#8492b0':'#f2f6ff',r:5,rayL:18,noTel:j>0,noSkin:true})});snd(Tq,880,.2,'triangle',.05,1320)}
+  return tel()+n*.35+drop+3});
+
+ /* ================= 5 거꾸로 타는 초 ================= */
+ D('s7CandleWick','심지 줄','hands',11,'양옆에 초가 하나씩 세워지고, 그 불꽃이 가로로 쓸고 지나감 → 불꽃 줄이 지나간 뒤 그 자리로',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.8,s=k%2?1:-1;sch(T0,()=>{const x=s<0?AX+12:AX+AW-12,y=AY+30+RND()*(AH-60),T1=T0+tel();A.put({spr:CANDLE,s:1.7,t0:T0,t2:T1+1.4,pos:A.at(x,y),ground:true,glow:'#5af0e0'});
+    NP({k:'seg',sty:'laser',col:'#5af0e0',w:7,live:true,t0:T0,t1:T1,t2:T1+1.2,a:()=>[x,y+8],b:b=>{const q=C((b-T1)/1.2,0,1),a=(s<0?-Math.PI*.42:Math.PI*1.42)+(s<0?1:-1)*q*Math.PI*.84;return [x+Math.cos(a)*520,y+8+Math.sin(a)*520]},dmg:12})})}
+  return n*1.8+tel()+1.4});
+ D('s7CandleOut','불꽃 고리','all',12,'내 둘레에 초들이 둥글게 세워지고 서서히 좁혀 옴, 한 곳은 꺼져 있음 → 꺼진 틈으로 빠져나가',t=>{const n=2;
+  for(let k=0;k<n;k++){const T0=t+k*2.4;sch(T0,()=>{const cx=P.x,cy=P.y,Tg=T0+tel(),gap=RND()*TAU,m=16;for(let i=0;i<m;i++){const a0=i*TAU/m;if(Math.abs(((a0-gap+Math.PI*3)%TAU)-Math.PI)<.5)continue;
+    const pos=b=>{const q=Math.max(0,b-Tg),r=Math.max(12,100-q*50*spd());return [cx+Math.cos(a0)*r,cy+Math.sin(a0)*r*.85]};A.put({spr:CANDLE,s:1.2,t0:T0,t2:Tg+2,pos,ground:true});A.hit({pos,r:5,t0:T0,t1:Tg,t2:Tg+2,dmg:11})}})}
+  return n*2.4+tel()+.4});
+
+ /* ================= 6 오르골 발레리나 ================= */
+ D('s7BalletLeap','그랑 주테','all',11,'작은 무희 인형이 높이 뛰어올라 내 자리에 착지, 칼날 고리가 퍼짐 → 착지 원 밖으로, 고리 틈으로',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.6;sch(T0,()=>{const [sx,sy]=P7(0,-30),c=circ(T0,P.x,P.y,18,'#ffb0d8',{label:'✦'}),T1=T0+tel(),pos=A.hop(sx,sy,c.x,c.y,T0,T1,70);
+    A.put({spr:DANCER,s:1.7,t0:T0,t2:T1+.6,pos,rot:b=>b<T1?(b-T0)*9:0});sch(T1,()=>gapRing(T1,c.x,c.y,14,RND()*TAU,.5,64,{sty:'crystal',col:'#ff7ab8',r:4,noTel:true}))});shake(T0+tel(),.25)}
+  return n*1.6+tel()+1.4});
+ D('s7BalletMirror','거울 무대','head',12,'무대 벽에 거울이 내려오고, 무희의 빛이 거울에 반사되어 나를 노림 → 꺾인 흰 선을 봐',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.6;sch(T0,()=>{const [gx,gy]=P7(0,-28),side=k%2?1:-1,mx=side<0?AX+16:AX+AW-16,my=AY+40+RND()*(AH-80),a2=Math.atan2(P.y-my,P.x-mx);mirrorShot(T0,gx,gy,mx,my,a2,'#ffb0d8',MIRROR,12)})}
+  return n*1.6+tel()+1});
+ D('s7hBalletDuet','거울 2인무','all',12,'[어려움] 무희와 거울 속 무희가 마주 보고 돌며 칼날 치마 조각을 나선으로 뿌림 → 두 나선이 엇갈리는 빈 곳으로',t=>{const dur=3+ph()*.5;
+  sch(t,()=>{const [x,y]=P7(0,-30),x2=2*CX-x,y2=y+30;A.put({spr:DANCER,s:1.7,t0:t,t2:t+dur+.6,pos:A.at(x+30,y+10),rot:b=>Math.sin(b*6)*.3});A.put({spr:DANCERV,s:1.7,t0:t,t2:t+dur+.6,pos:A.at(x2-30,y2),rot:b=>-Math.sin(b*6)*.3})});
+  for(let i=0;i<Math.round(dur*6);i++){const T0=t+i/6;sch(T0,()=>{const [x,y]=P7(0,-30);for(let j=0;j<2;j++){shot(T0,x+30,y+10,T0*2.2+j*Math.PI,64,{sty:'crystal',col:'#ffb0d8',r:4,rayL:14,noTel:i>0});shot(T0,2*CX-x-30,y+30,Math.PI-(T0*2.2+j*Math.PI),64,{sty:'crystal',col:'#c89aff',r:4,rayL:14,noTel:i>0})}})}
+  return dur+tel()+1.8});
+
+ /* ================= 7 뒤집힌 회전목마: 거꾸로 깃발 ================= */
+ D('s7CarFlag','거꾸로 깃발','head',11,'지붕에서 아래를 향한 깃발이 세로로 내리꽂혀 박힘 → 꽂히는 줄을 피하고, 메아리는 반대편',t=>{const n=5+ph()*2;
+  for(let i=0;i<n;i++){const T0=t+i*.45,x=i%3===2?P.x:AX+20+RND()*(AW-40);echo(T0,'#ff7ad0',(T,mx,ma,col)=>{const X=mx(x),T1=T+tel(),pos=b=>[X,b<T1?AY+10:AY+10+C((b-T1)/.2,0,1)*(AH-30)];
+    A.put({spr:FLAG,s:1.6,t0:T,t2:T1+.9,pos});rect(T,X-9,AY,18,AH,col,'light',.25,12,{hide:true});sch(T1+.2,()=>{G.shake=Math.max(G.shake||0,.12)})},.9)}
+  return n*.45+.9+tel()+.9});
+
+ /* ================= 8 그림자 인형사 ================= */
+ D('s7PupString','끊어지는 실','hands',11,'내 위쪽에 조종 막대가 나타나 실 두 가닥을 내리꽂음 → 실과 실 사이로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.2;echo(T0,'#c4d0e4',(T,mx,ma,col)=>{const [bx]=P7(0,-50),cx=mx(bx)+(P.x-mx(bx))*.5,T1=T+tel();A.put({spr:BAR,s:1.6,t0:T,t2:T1+.5,pos:A.at(cx,AY+8),rot:b=>Math.sin(b*5)*.15});
+    for(const s of [-1,1]){const sx=cx+s*16;seg(T,sx,AY+8,sx,AY+AH,col,4,.3,11)}},.7)}
+  return n*1.2+.7+tel()+.5});
+ D('s7PupMask','가면 웃음','head',11,'가면이 날아 나와 웃으며 부채꼴로 탄을 뿜고, 메아리 가면은 반대로 기운 부채 → 두 부채 사이로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.1,off=(RND()-.5)*.4;echo(T0,'#f2eef8',(T,mx,ma,col)=>{const [x,y]=P7(0,-39),sx=mx(x)+(mx(x)<CX?-30:30),sy=y+20,T1=T+tel();A.put({spr:MASK,s:1.8,t0:T,t2:T1+.6,pos:A.lin(mx(x),y,sx,sy,T,T+.4,true),rot:b=>Math.sin(b*7)*.2});
+    const a0=ma(toP(sx,sy)+off);for(let i=-3;i<=3;i++)shot(T,sx,sy,a0+i*.17,70,{sty:'light',col,r:4})},.8)}
+  return n*1.1+.8+tel()+1.6});
+ D('s7hPupMarionette','마리오네트 춤','all',12,'[어려움] 내 그림자 인형이 실에 매달려 거울처럼 반대로 따라 하고, 지나간 자리에 실이 내려꽂힘 → 인형과 마주치지 않게 가운데를 피하고, 한 자리에 머물지 마',t=>{const dur=4+ph()*.6;
+  sch(t,()=>{const pos=()=>[2*CX-P.x,2*CY-P.y];A.put({spr:DOLL,s:2,t0:t,t2:t+tel()+dur,pos,deco:(Q,b,now,x,y)=>{for(const s of [-1,1])line(x+s*5,y-8,x+s*5,AY,4,(px,py)=>cPx(px,py,1,'#c4d0e4',.5))}});A.hit({pos,r:8,t0:t,t1:t+tel(),t2:t+tel()+dur,dmg:12})});
+  for(let i=0;i<Math.round(dur/.7);i++){const T0=t+tel()*.5+i*.7;sch(T0,()=>{const x=P.x;seg(T0,x,AY,x,AY+AH,'#c4d0e4',4,.3,11)})}
+  return tel()+dur+.5});
+
+ /* ================= 9 반사룡 ================= */
+ D('s7DragonWing','날개 거울판','field',11,'날개에서 거울 비늘판이 떨어져 바닥까지 꽂힘 → 판 사이로, 메아리는 반대편',t=>{const n=6+ph()*2;
+  for(let i=0;i<n;i++){const T0=t+i*.4,x=AX+20+((i*71)%(AW-40));echo(T0,'#c8dcf0',(T,mx,ma,col)=>{const X=mx(x),T1=T+tel(),pos=b=>[X,b<T1?AY+8+Math.sin(b*6)*2:AY+8+C((b-T1)/.25,0,1)*(AH-20)];
+    A.put({spr:PLATE,s:1.6,t0:T,t2:T1+.8,pos,rot:b=>b<T1?Math.sin(b*4)*.3:Math.PI/2});rect(T,X-12,AY,24,AH,col,'ice',.3,12,{hide:true})},1)}
+  return n*.4+1+tel()+.8});
+ D('s7DragonDive','급강하','all',12,'반사룡이 화면 밖에서 나를 향해 비스듬히 급강하해 가로지름 → 굵은 길 밖으로',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.6;sch(T0,()=>{const s=RND()<.5?-1:1,y0=AY+20+RND()*40,x0=s<0?AX-10:AX+AW+10,a=Math.atan2(P.y-y0,P.x-x0),T1=T0+tel(),L=640,go=.55,ex=x0+Math.cos(a)*L,ey=y0+Math.sin(a)*L,pos=b=>b<T1?[x0,y0]:A.lin(x0,y0,ex,ey,T1,T1+go)(b);
+    path(T0,T1,x0,y0,ex,ey,'#8af0ff');NP({k:'rect',harm:false,noTel:true,hide:true,x:0,y:0,w:1,h:1,t0:T0,t1:T0,t2:T1,deco:(o,b)=>{const q=C((b-T0)/(T1-T0),0,1);for(let i=0;i<20;i++){const u=i/20;cPx(x0+(ex-x0)*u,y0+(ey-y0)*u,6*q,'#ff4d6d',.12)}}});
+    A.put({spr:DRAGON,s:2.2,t0:T1-.05,t2:T1+go,pos,rot:()=>a-Math.PI/2,inT:.05,deco:(Q,b,now,x,y)=>{for(let i=1;i<6;i++)pcirc(x-Math.cos(a)*i*10,y-Math.sin(a)*i*10,6-i,'#8af0ff',.25)}});A.hit({pos,r:15,t0:T1,t1:T1,t2:T1+go,dmg:15})});shake(T0+tel(),.4);snd(T0+tel(),120,.4,'sawtooth',.06,60)}
+  return n*1.6+tel()+.7});
+
+ /* ================= 10 거울 하루 ================= */
+ D('s7HaruMirror','반대편의 나','all',13,'경기장 반대편에 거울 속 내가 실제로 나타나 내 움직임을 거꾸로 따라 하며 보라 불꽃을 쏨 → 거울 하루와 마주 보지 않게 움직여',t=>{const dur=4+ph()*.6;
+  sch(t,()=>{const pos=()=>[2*CX-P.x,P.y];A.put({spr:MHARU,s:1.6,t0:t,t2:t+tel()+dur,pos,glow:'#b48aff'});A.hit({pos,r:8,t0:t,t1:t+tel(),t2:t+tel()+dur,dmg:13})});
+  for(let i=0;i<Math.round(dur/.6);i++){const T0=t+tel()*.5+i*.6;sch(T0,()=>{const x=2*CX-P.x,y=P.y;shot(T0,x,y,toP(x,y),78,{sty:'fire',col:'#ff7ad0',r:4})})}
+  return tel()+dur+.6});
+
+ /* ---------- 외침 다시 붙이기 (997의 외침 표를 그대로 씀) ---------- */
+ try{const CAST=window.S7CAST||{};const RE=['s7GateKey','s7GateMirror','s7GateClose','s7GateClock','s7hGateLock','s7PeaFan','s7PeaGaze','s7FountUp','s7hFountGeyser','s7ChessRook','s7ChessBishop','s7ChessKnight','s7hChessQueen','s7xChessPromotion','s7CandleWick','s7CandleOut','s7BalletLeap','s7BalletMirror','s7hBalletDuet','s7CarFlag','s7PupString','s7PupMask','s7hPupMarionette','s7DragonWing','s7DragonDive','s7HaruMirror'];
+  for(const n of RE){const f=MV[n],c=CAST[n];if(!f||!c)continue;MV[n]=function(t){try{sch(t,()=>{if(G&&G.s7!=null)G.s7cast={n,t,line:c[0],ax:c[1],ay:c[2],real:performance.now()}})}catch(e){}return f.apply(this,arguments)}}}catch(e){}
+}catch(e){console.error('v53 ch7 actors',e)}})();
+/* ================= v53 챕터 6 공격 다시 만들기: 보스가 "자기 물건"을 꺼내서 공격 =================
+   - 풍향계 기사: 방패의 나침반이 떠올라 돌며 쏨 · 투구의 수탉이 울면 깃털 고리 · 탄이 화살 모양
+   - 연줄의 거인: 진짜 연이 날아와 내리꽂힘 · 탄이 작은 연 모양
+   - 번개구름 고래: 먹구름이 줄 위에 몰려와 번개를 떨굼 · 고래가 몸으로 줄을 들이받음
+   - 비행선 함장: 대포가 나와 포탄을 쏨 · 닻이 사슬에 매달려 떨어짐 · 망원경 조준경이 나를 따라옴 · 폭탄이 떨어짐
+   - 깃털 시계탑: 커다란 시계추가 줄에 매달려 흔들림 · 탄이 깃털 모양
+   - 풍금 합창단: 탄이 음표 모양
+   - 무지개 다리 수문장: 무지개 대검이 실제로 휘둘러짐
+   - 메아리 사냥매: 매가 직접 급강하(잔상 매가 뒤따름) · 탄이 칼날 깃털
+   - 공명탑: 종이 사슬에 매달려 휘둘러짐
+   이름·덱은 그대로, 같은 이름으로 다시 정의한다. 판정은 늘 예고가 먼저. */
+(function(){try{
+ const L6=window.S6ART,H=window.S6H,A=window.ACT;if(!L6||!H||!A)return;
+ const {tel,spd,ph,P6,toP,shot,circ,snd,shake,wind}=H;
+ const D=(n,kr,ch,est,tip,fn)=>defPat(n,kr,ch,est,tip,fn);
+ const C=(v,a,b)=>v<a?a:v>b?b:v,KK='#1a1420';
+ const seg=(T0,ax,ay,bx,by,col,w,hold,dmg,o)=>NP(Object.assign({k:'seg',sty:'laser',col,w,t0:T0,t1:T0+tel(),t2:T0+tel()+hold,a:()=>[ax,ay],b:()=>[bx,by],dmg:dmg||12},o||{}));
+ const rect=(T0,x,y,w,h,col,sty,hold,dmg,o)=>NP(Object.assign({k:'rect',x,y,w,h,sty:sty||'light',col,t0:T0,t1:T0+tel(),t2:T0+tel()+(hold||.3),dmg:dmg||11},o||{}));
+ const path=(T0,T1,ax,ay,bx,by,col)=>NP({k:'seg',sty:'laser',harm:false,noCharge:true,col:col||'#ff4d6d',w:3,t0:T0,t1:T1,t2:T1+.01,a:()=>[ax,ay],b:()=>[bx,by],dmg:0});
+ const lane=(T0,T1,x,y,w,h)=>NP({k:'rect',harm:false,x,y,w,h,t0:T0,t1:T1,t2:T1+.01,dmg:0});
+
+ /* ---------- 도트 그림 ---------- */
+ const ARROW=A.pix(["K.........K..","KK.......KYK.","KFKKKKKKKYYYK","KFFYYYYYYYYYY","KFKKKKKKKYYYK","KK.......KYK.","K.........K.."],{K:KK,F:'#c89a5a',Y:'#ffe8a0'});
+ const KITEP=["....K....","...KCK...","..KCCCK..",".KCCWCCK.","KCCCWCCCK",".KCCWCCK.","..KCCCK..","...KCK...","....K....","....T....","...T.....","....T....",".....T..."];
+ const KITE=['#ff6a5a','#ffd08a','#5ad0b0','#8ad8ff'].map(c=>A.pix(KITEP,{K:KK,C:c,W:'#ffffff',T:'#f0e8d8'}));
+ const ROOSTER=A.pix(["...RR.....","..RRRK....","..KWWWK...",".KWWKWWYY.",".KWWWWWYK.","..KWWWWK..","KKWWWWWWK.","KCKWWWWWK.","KCCKWWWK..",".KCCKKK...","..K.Y.Y...","....Y.Y..."],{K:KK,R:'#ff4a4a',W:'#ffe8c8',Y:'#ffb84a',C:'#5ad0b0'});
+ const CLOUD=A.pix(["....KKKK.......","..KKGGGGKK.....",".KGGWWGGGGKKK..","KGGWWGGGGGGGGK.","KGGGGGGGGGGGGGK","KDGGGGGGGGGGGDK",".KDDDDDDDDDDDK.","..KKKKKKKKKKK.."],{K:'#141a28',G:'#5a6888',W:'#8a9ac0',D:'#3a4868'});
+ const CANNON=A.pix(["...KKKK...","..KMMMMK..",".KMMWMMMK.",".KMMMMMMK.","KMMMMMMMMK","KBBBBBBBBK","KMKKKKKKMK","KK......KK"],{K:'#0a0c14',M:'#5a5a6a',W:'#c8c8d8',B:'#a8703a'});
+ const ANCHOR=A.pix(["....KKK....","....KSK....","....KKK....","..KKKSKKK..","..KSSSSSK..","....KSK....","....KSK....","....KSK....","K...KSK...K","KSK.KSK.KSK",".KSKKSKKSK.","..KSSSSSK..","...KKKKK..."],{K:'#0a0c14',S:'#8a9aac'});
+ const BOMB=A.pix(["......YF.",".....K...","...KKKK..","..KDDDDK.",".KDWDDDDK",".KDDDDDDK",".KDDDDDDK","..KDDDDK.","...KKKK.."],{K:'#0a0c14',D:'#2a2a36',W:'#8a8aa0',Y:'#ffd04a',F:'#ff6a20'});
+ const SCOPE=A.pix(["KKKK..........","KGGKKKKKKK....","KGWGGGGGGKKKK.","KGGGGGGGGGGGGK","KGWGGGGGGKKKK.","KGGKKKKKKK....","KKKK.........."],{K:'#0a0c14',G:'#c8a050',W:'#fff0c0'});
+ const FALCON=A.pix(["K.................K","KK...............KK",".KBK.....K.....KBK.","..KBBK..KOK..KBBK..","...KBBKKOOOKKBBK...","....KBBOOOOOBBK....",".....KKKOWOKKK.....","........KYK........",".........K........."],{K:'#1a1008',B:'#8a6a40',O:'#ffb84a',W:'#ffffff',Y:'#ffe08a'});
+ const BELL=A.pix(["....KK....","...KYYK...","..KYYYYK..","..KYWYYK..",".KYWYYYYK.",".KYYYYYYK.","KYYYYYYYYK","KKKKKKKKKK","....KK...."],{K:'#1c2238',Y:'#ffe8a0',W:'#ffffff'});
+ const WHALE=A.pix(["........KKKKKKK.........","......KKGGGGGGGKK.......","....KKGGGGGGGGGGGKK...KK","...KGGGWGGGGGGGGGGGK.KGK","..KGGGKGGGGGGGGGGGGGKGGK",".KGGGGGGGGGGGGGGGGGGGGK.","KYYYYYYGGGGGGGGGGGGGGK..",".KYYYYYYYYGGGGGGGGGKK...","..KKKKYYYYYYYYYYKKK.....","......KKKKKKKKKK........"],{K:'#141a28',G:'#5a6888',W:'#ffffff',Y:'#c8d4e8'});
+ const SWORD=A.pix(["..K..","KKYKK",".KRK.",".KOK.",".KYK.",".KGK.",".KBK.",".KVK.",".KWK.",".KWK.",".KWK.","..K.."],{K:'#1a1420',Y:'#ffd08a',R:'#ff4a5a',O:'#ff9a3a',G:'#4ae08a',B:'#3aa8ff',V:'#c85aff',W:'#ffffff'});
+ const FEATHER=A.pix(["....W","...WC","..WCC",".WCCK","WCCK.","CCK..","CK...","K...."],{K:'#2a3a52',W:'#ffffff',C:'#8ad8ff'});
+ const NOTE=A.pix(["...KK","...KC","...K.","...K.",".KKK.","KCCK.",".KK.."],{K:'#2a2040',C:'#c8a0ff'});
+ const SHARD=A.pix(["..K..",".KWK.","KWCRK",".KBK.","..K.."],{K:'#24304a',W:'#ffffff',C:'#8ad8ff',R:'#ff8ab0',B:'#c8a0ff'});
+ const BLADE=A.pix(["......KW","....KKWC","..KKWCCK",".KWCCKK.","KWCKK...","KKK....."],{K:'#2a2420',W:'#ffffff',C:'#c8d4e8'});
+ const DROP=A.pix(["..K..",".KCK.","KCWCK","KCCCK",".KKK."],{K:'#141a28',C:'#8ac8ff',W:'#ffffff'});
+ const BALL=A.pix([".KKK.","KDWDK","KDDDK","KDDDK",".KKK."],{K:'#0a0c14',D:'#3a3a48',W:'#8a8aa0'});
+ window.S6PIX={ARROW,KITE,ROOSTER,CLOUD,CANNON,ANCHOR,BOMB,SCOPE,FALCON,BELL,WHALE,SWORD};
+
+ /* ---------- 탄 모양 입히기: 보스마다 자기 물건 모양 ---------- */
+ const OSK=[ARROW,KITE[0],DROP,BALL,FEATHER,NOTE,SHARD,BLADE,null,NOTE];
+ const SKIP={bob:1,crate:1,scrap:1,coal:1,steam:1,crystal:1};
+ const dirOf=(o,b)=>{if(o.ray!=null&&b<o.t1+.05)return o.ray;try{const [x0,y0]=o.pos(b-.04),[x1,y1]=o.pos(b);if(Math.hypot(x1-x0,y1-y0)>.05)return Math.atan2(y1-y0,x1-x0)}catch(e){}return o.ray!=null?o.ray:Math.PI/2};
+ {const base=NPK.orb.draw;NPK.orb.draw=function(o,b,now){try{if(G&&G.s6!=null&&!o.noSkin&&!o.hide&&!SKIP[o.sty]&&o.harm!==false){const k=G.s6,sp=k===1?KITE[(o.t0*7|0)%4]:OSK[k];if(sp){const [x,y]=o.pos(b),a=dirOf(o,b);if(k===5||k===9){sp(x,y,1.6,{})}else sp(x,y,1.5,{rot:a});return}}}catch(e){}return base.apply(this,arguments)}}
+
+ /* ================= 1 풍향계 기사 ================= */
+ const COMPASS=(x,y,s,o)=>{const r=8*s/1.5,a=o&&o.rot||0;pcirc(x,y,r+1,KK);pcirc(x,y,r,'#e8d8b0');cRing(x,y,r-1,'#c89a5a',1,1);const c=Math.cos(a),sn=Math.sin(a);for(let i=-r+2;i<r-1;i++){cPx(x+c*i,y+sn*i,i>0?2:1,i>0?'#ff5a4a':'#3a4a5a',1)}pcirc(x,y,1.5,'#ffd08a')};COMPASS.h=16;
+ D('s6CompassSpin','나침반 회전','hands',10,'방패의 나침반이 떠올라 바늘을 돌리며 8방향으로 쏨 → 바늘 사이 빈 방향으로',t=>{const n=3+ph();
+  sch(t,()=>{const [x,y]=P6(-11,-19),T1=t+tel();A.put({spr:COMPASS,s:2,t0:t,t2:T1+(n-1)*1.1+.6,pos:A.at(x-14,y+6),rot:b=>b*2.2,glow:'#e0965a'})});
+  for(let k=0;k<n;k++){const T0=t+k*1.1;sch(T0,()=>{const [x,y]=P6(-11,-19),off=k*.2;for(let i=0;i<8;i++)shot(T0,x-14,y+6,off+i*TAU/8,70,{sty:'spark',col:'#e0965a',rayL:30})});snd(T0+tel(),660,.08,'square',.04,990)}
+  return n*1.1+tel()+1});
+ D('s6Rooster','수탉의 외침','head',10,'투구 위 수탉이 날개를 펴고 울면 깃털 고리가 퍼짐 → 고리의 틈으로',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.3;sch(T0,()=>{const [x,y]=P6(0,-48),T1=T0+tel(),gap=toP(x,y)+(k%2?Math.PI:0);A.put({spr:ROOSTER,s:1.8,t0:T0,t2:T1+.5,pos:b=>[x,y-6-(b>T1-.2&&b<T1+.2?3:0)],deco:(Q,b,now,xx,yy)=>{if(b>T1-.15&&b<T1+.4){for(let i=0;i<3;i++)cRing(xx,yy,8+i*6+(b-T1)*30,'#ffffff',.6-i*.15,1)}}});
+   for(let i=0;i<24;i++){const a=i*TAU/24;if(Math.abs(((a-gap+Math.PI*3)%TAU)-Math.PI)<.45)continue;shot(T0,x,y,a,64,{sty:'light',col:'#ff9a4a',r:4,rayL:20})}});snd(T0+tel(),880,.3,'sawtooth',.04,1320)}
+  return n*1.3+tel()+1});
+
+ /* ================= 2 연줄의 거인 ================= */
+ D('s6KiteDive','연 급강하','all',11,'거인의 손에서 연이 줄을 끌고 날아올라 내 자리로 내리꽂힘 → 원이 차오르면 벗어나',t=>{const n=6+ph()*2;
+  for(let i=0;i<n;i++){const T0=t+i*.45;sch(T0,()=>{const [hx,hy]=P6(i%2?14:-14,-26),x=P.x+(RND()-.5)*30,y=P.y+(RND()-.5)*20,col=['#ff5a4a','#ffd04a','#4a8aff','#5ad08a'][i%4];const c=circ(T0,x,y,15,col,{label:'◆'}),T1=T0+tel();
+   const pos=b=>{if(b<T1-.5){const q=C((b-T0)/Math.max(.1,tel()-.5),0,1);return [hx+(c.x-hx)*.3*q,hy-50*q+Math.sin(b*6+i)*4]}const q=C((b-(T1-.5))/.5,0,1),sx=hx+(c.x-hx)*.3,sy=hy-50;return [sx+(c.x-sx)*q*q,sy+(c.y-sy)*q*q]};
+   A.put({spr:KITE[i%4],s:2.6,t0:T0,t2:T1+.15,pos,rot:b=>b<T1-.5?Math.sin(b*5)*.3:Math.atan2(c.y-hy,c.x-hx)-Math.PI/2,deco:(Q,b,now,xx,yy)=>{line(hx,hy,xx,yy,5,(px,py)=>cPx(px,py,1,'#f0e8d8',.6))}})});shake(T0+tel(),.18)}
+  return n*.45+tel()+1});
+ D('s6xThousandKites','천 개의 연','all',12,'[익스트림] 수십 개의 연이 하늘에서 내 자리로 연달아 꽂히고, 네 번째마다 파편이 튐 → 멈추지 말고 원을 그리며 움직여',t=>{const n=14+ph()*3;
+  for(let i=0;i<n;i++){const T0=t+i*.3;sch(T0,()=>{const c=circ(T0,P.x+(RND()-.5)*24,P.y+(RND()-.5)*20,14,'#ff6a5a',{label:'◆'}),T1=T0+tel(),sx=c.x+(RND()-.5)*120,sy=AY-10;
+   A.put({spr:KITE[i%4],s:2.3,t0:T0,t2:T1+.1,pos:A.lin(sx,sy,c.x,c.y,T0,T1),rot:()=>Math.atan2(c.y-sy,c.x-sx)-Math.PI/2});
+   if(i%4===3)sch(T1,()=>{for(let j=0;j<6;j++)npShot(T1,T1,c.x,c.y,j*TAU/6+i,60*spd(),{sty:'light',col:'#ffd04a',r:3,noTel:true,dmg:9})})})}
+  return n*.3+tel()+1.4});
+
+ /* ================= 3 번개구름 고래 ================= */
+ D('s6ThunderRain','번개 비','field',11,'먹구름이 내 머리 위 줄로 몰려와 번개를 세로로 떨굼 → 구름 아래 줄을 피해',t=>{const n=5+ph()*2;
+  for(let i=0;i<n;i++){const T0=t+i*.5;sch(T0,()=>{const x=i%3===2?P.x-12:AX+20+RND()*(AW-40),T1=T0+tel(),sx=x+(RND()<.5?-60:60);
+   A.put({spr:CLOUD,s:1.8,t0:T0,t2:T1+.5,pos:A.lin(sx,AY+10,x,AY+10,T0,T0+tel()*.6,true),deco:(Q,b,now,xx,yy)=>{if(b>T1-.3&&b<T1&&Math.floor(now/60)%2)pcirc(xx,yy+6,6,'#ffe25a',.6)}});
+   NP({k:'rect',x:x-12,y:AY,w:24,h:AH,sty:'elec',t0:T0,t1:T1,t2:T1+.25,col:'#ffe25a',dmg:13,deco:(o,b,now)=>{if(b<o.t1)return;let px=x,py=AY+16;const sd=Math.floor(now/50);for(let j=0;j<10;j++){const nx=x+((hash(sd+'b'+j)%13)-6),ny=py+AH/10;line(px,py,nx,ny,2,(qx,qy)=>{cPx(qx,qy,3,'#ffe25a',.8);cPx(qx,qy,1,'#ffffff',1)});px=nx;py=ny}}})});
+   sch(T0+tel(),()=>{G.flash=Math.max(G.flash||0,.12);sfx(70,.3,'sawtooth',.06,40)})}
+  return n*.5+tel()+.5});
+ D('s6hThunderBreach','번개 돌파','all',12,'[어려움] 고래가 내 줄을 가로로 통째로 들이받고, 지나간 자리에 번개 기둥 → 위아래로 비켰다가 기둥 사이로',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.9;sch(T0,()=>{const y=C(P.y,AY+24,AY+AH-24),T1=T0+tel(),fromL=k%2===0,x0=fromL?AX-60:AX+AW+60,x1=fromL?AX+AW+60:AX-60,go=.5,pos=b=>b<T1?[x0,y]:[x0+(x1-x0)*C((b-T1)/go,0,1),y];
+   lane(T0,T1,AX,y-24,AW,48);A.put({spr:WHALE,s:2.4,t0:T1-.08,t2:T1+go,inT:.05,pos,face:()=>fromL?-1:1,deco:(Q,b,now,xx,yy)=>{for(let i=1;i<6;i++)RA(xx-(fromL?1:-1)*i*14,yy-10,10,20,'#c8d4e8',.3-i*.05)}});
+   NP({k:'rect',hide:true,noTel:true,t0:T0,t1:T1,t2:T1+go,dmg:14,rf:b=>{const [xx]=pos(b);return [xx-30,y-22,60,44]}});
+   for(let j=0;j<3;j++){const T2=T0+.8+j*.2,x=AX+30+RND()*(AW-60);rect(T2,x-11,AY,22,AH,'#ffe25a','elec',.25,12)}});shake(T0+tel(),.35);snd(T0+tel(),60,.5,'sawtooth',.06,30)}
+  return n*1.9+tel()+1.4});
+
+ /* ================= 4 비행선 함장 ================= */
+ D('s6Broadside','일제 포격','hands',11,'곤돌라 아래로 대포 다섯 문이 나와 세 번 일제 사격 → 포탄 사이 틈으로',t=>{const n=3+ph();
+  sch(t,()=>{for(let i=-2;i<=2;i++){const [x,y]=P6(i*3,-14);A.put({spr:CANNON,s:1.5,t0:t,t2:t+n+tel()+.4,pos:A.at(x+i*8,y+8),rot:()=>i*.22,deco:(Q,b,now,xx,yy)=>{for(let k=0;k<n;k++){const Tk=t+k+tel();if(b>Tk&&b<Tk+.2){pcirc(xx+Math.cos(Math.PI/2+i*.22)*8,yy+Math.sin(Math.PI/2+i*.22)*8,5*(1-(b-Tk)/.2),'#ffd08a',.9)}}}})}});
+  for(let k=0;k<n;k++){const T0=t+k*1;sch(T0,()=>{for(let i=-2;i<=2;i++){const [x,y]=P6(i*3,-14);shot(T0,x+i*8,y+12,Math.PI/2+i*.22+(k%2?.11:0),80,{sty:'coal',col:'#3a2a1a',r:5})}});snd(T0+tel(),90,.25,'square',.06,40);shake(T0+tel(),.2)}
+  return n+tel()+1});
+ D('s6AnchorDrop','닻 투하','all',11,'비행선에서 닻이 사슬에 매달려 내 자리로 떨어지고 충격파 → 원 밖으로, 충격파는 대시로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.1;sch(T0,()=>{const c=circ(T0,P.x,P.y,18,'#8a9aac',{label:'⚓'}),T1=T0+tel(),[sx,sy]=P6(0,-10);
+   A.put({spr:ANCHOR,s:1.8,t0:T0,t2:T1+.6,pos:b=>{const q=C((b-T0)/tel(),0,1);return [c.x,AY-10+(c.y-12-(AY-10))*q*q]},deco:(Q,b,now,xx,yy)=>{line(xx,AY,xx,yy-10,3,(px,py)=>{cPx(px,py,2,'#5a6a7a',.9);cPx(px,py,1,'#c8d4e8',.9)})}});
+   sch(T1,()=>{for(let i=0;i<14;i++)npShot(T1,T1,c.x,c.y,i*TAU/14,70*spd(),{sty:'default',col:'#8a9aac',r:4,noTel:true,dmg:9})})});shake(T0+tel(),.3)}
+  return n*1.1+tel()+1.2});
+ D('s6ScopeSnipe','망원경 저격','hands',10,'함장이 망원경을 들어 조준경이 나를 따라오다 굳으면 저격 → 조준경이 멈추면 옆으로',t=>{const n=3+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.2;sch(T0,()=>{const [x,y]=P6(18,-26),a=toP(x,y),T1=T0+tel()+.2;A.put({spr:SCOPE,s:1.6,t0:T0,t2:T1+.4,pos:A.at(x+10,y-4),rot:()=>a});
+   let lx=P.x,ly=P.y;A.put({spr:(xx,yy,s)=>{cRing(xx,yy,9,'#ff5a6a',1,1);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])RA(Math.round(xx+dx*6-(dy?0:dx>0?0:4)),Math.round(yy+dy*6-(dx?0:dy>0?0:4)),dx?4:1,dy?4:1,'#ff5a6a',1)},s:1,t0:T0,t2:T1+.2,pos:b=>{if(b<T1-.35){lx+=(P.x-lx)*.15;ly+=(P.y-ly)*.15}return [lx,ly]}});
+   NP({k:'seg',sty:'laser',col:'#ff5a6a',w:6,t0:T0,t1:T1,t2:T1+.3,a:()=>[x,y],b:()=>[x+Math.cos(a)*600,y+Math.sin(a)*600],dmg:13})});snd(T0+tel()+.2,1400,.1,'square',.05,200)}
+  return n*1.2+tel()+.8});
+ D('s6hCarpetBomb','융단 폭격','field',12,'[어려움] 비행선이 지나가며 폭탄을 왼쪽부터 줄지어 떨어뜨림 → 줄마다 비어 있는 칸을 따라 걸어',t=>{const rows=5,cols=9,cw=AW/cols,rh=AH/rows,n=1+Math.min(2,ph());
+  for(let k=0;k<n;k++){const T0=t+k*3.2,dir=k%2?-1:1;let gap=Math.floor(RND()*rows);for(let c=0;c<cols;c++){const cc=dir>0?c:cols-1-c,Tc=T0+c*.28,g=gap;sch(Tc,()=>{for(let r=0;r<rows;r++){if(r===g)continue;const x=AX+cw*(cc+.5),y=AY+rh*(r+.5),T1=Tc+tel();circ(Tc,x,y,Math.min(cw,rh)*.52,'#8a9aac',{label:'●',t2:T1+.2});
+     A.put({spr:BOMB,s:1.4,t0:T1-.45,t2:T1+.05,inT:.05,outT:.05,pos:A.lin(x,AY-6,x,y,T1-.45,T1)})}});gap=C(gap+(RND()<.5?-1:1),0,rows-1)}shake(T0+tel()+1,.25)}
+  return n*3.2+tel()+.6});
+
+ /* ================= 5 깃털 시계탑 ================= */
+ D('s6Pendulum','시계추','all',11,'시계탑 아래 커다란 추가 줄에 매달려 좌우로 흔들림 → 추가 지나간 뒤 그 자리로',t=>{const dur=4+ph();
+  sch(t,()=>{const [px,py]=P6(0,-10),pos=b=>{const q=Math.max(0,b-t-tel())*1.8*spd(),a=Math.PI/2+Math.sin(q)*1.1;return [px+Math.cos(a)*170,py+Math.sin(a)*150]};
+   A.put({spr:(x,y,s)=>{pcirc(x,y,16,'#3a2410');pcirc(x,y,14,'#c8964a');pcirc(x,y,9,'#e8b86a');pcirc(x-4,y-5,3,'#fff0c8');cRing(x,y,11,'#8a5a2a',1,1)},s:1,t0:t,t2:t+tel()+dur,pos,deco:(Q,b,now,x,y)=>{line(px,py,x,y,3,(qx,qy)=>{cPx(qx,qy,2,'#8a5a2a',1);cPx(qx,qy,1,'#e8b86a',1)})}});
+   NP({k:'orb',sty:'bob',col:'#c8964a',r:16,hide:true,t0:t,t1:t+tel(),t2:t+tel()+dur,prev:.8,pos,dmg:14})});
+  return tel()+dur+.3});
+
+ /* ================= 7 무지개 다리 수문장 ================= */
+ D('s6LightSword','빛의 대검','hands',11,'치켜든 무지개 대검이 실제로 크게 휘둘러 내려침 → 칼이 지나는 반대편으로',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.6,dir=k%2?-1:1;sch(T0,()=>{const [x,y]=P6(22,-35),T1=T0+tel(),ang=b=>-Math.PI/2+dir*(.2+C((b-T1)/.6,0,1)*2.6);
+   A.put({spr:SWORD,s:5,t0:T0,t2:T1+.7,pos:b=>{const a=ang(b);return [x+Math.cos(a)*30,y+Math.sin(a)*30]},rot:b=>ang(b)+Math.PI/2,deco:(Q,b,now)=>{if(b>T1&&b<T1+.6){const a=ang(b);for(let i=1;i<6;i++){const aa=a-dir*i*.12;line(x+Math.cos(aa)*20,y+Math.sin(aa)*20,x+Math.cos(aa)*80,y+Math.sin(aa)*80,6,(px,py)=>cPx(px,py,2,['#ff4a5a','#ffe04a','#4ae08a','#3aa8ff','#c85aff'][i-1],.5-i*.07))}}}});
+   NP({k:'seg',sty:'laser',col:'#ffffff',w:14,live:true,t0:T0,t1:T1,t2:T1+.6,a:()=>[x,y],b:b=>{const a=ang(b);return [x+Math.cos(a)*420,y+Math.sin(a)*420]},dmg:15})});shake(T0+tel()+.3,.4)}
+  return n*1.6+tel()+.8});
+
+ /* ================= 8 메아리 사냥매 ================= */
+ function dive(T0,sx,sy,a,col,w,dmg,ghost){const T1=T0+tel(),L=600,go=.3,ex=sx+Math.cos(a)*L,ey=sy+Math.sin(a)*L,pos=b=>b<T1?[sx,sy]:A.lin(sx,sy,ex,ey,T1,T1+go)(b);
+  path(T0,T1,sx,sy,ex,ey,col);A.put({spr:FALCON,s:ghost?1.6:2,t0:T1-.1,t2:T1+go,inT:.06,pos,rot:()=>a-Math.PI/2,tint:ghost?'#ffc860':null,deco:(Q,b,now,x,y)=>{for(let i=1;i<6;i++)pcirc(x-Math.cos(a)*i*9,y-Math.sin(a)*i*9,5-i*.7,col,.3)}});
+  NP({k:'seg',hide:true,noTel:true,col,w,live:true,t0:T0,t1:T1,t2:T1+go,a:b=>{const [x,y]=pos(b);return [x-Math.cos(a)*30,y-Math.sin(a)*30]},b:b=>pos(b),dmg})}
+ D('s6EchoDive','메아리 급강하','all',12,'사냥매가 조준선을 긋고 직접 급강하, 메아리 잔상 매가 조금씩 다른 각도로 뒤따름 → 선 밖으로, 잔상까지 피해',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.8;sch(T0,()=>{const [x,y]=P6(0,-28),a=toP(x,y);dive(T0,x,y,a,'#ff9a3a',16,14,false);for(let e=1;e<=2;e++){const o=e*.18*(k%2?1:-1);sch(T0+e*.35,()=>dive(T0+e*.35,x,y,a+o,'#ffc860',10,11,true))}});shake(T0+tel(),.35);snd(T0+tel(),1600,.3,'sawtooth',.05,200)}
+  return n*1.8+tel()+1.4});
+ D('s6hTwinDive','쌍 급강하','all',12,'[어려움] 양 날개에서 매 두 마리가 X자로 엇갈려 급강하하며 나를 지남 → 두 길이 만나는 곳을 벗어나',t=>{const n=2+ph();
+  for(let k=0;k<n;k++){const T0=t+k*1.6;sch(T0,()=>{for(const s of [-1,1]){const [x,y]=P6(s*24,-38),a=toP(x,y);dive(T0,x,y,a,s<0?'#ff9a3a':'#ffc860',14,14,s>0)}});shake(T0+tel(),.3);snd(T0+tel(),1600,.25,'sawtooth',.05,200)}
+  return n*1.6+tel()+.6});
+ D('s6xHuntingStorm','사냥 폭풍','all',12,'[익스트림] 사냥매가 화면 가장자리 아무 데서나 나를 향해 연달아 급강하 → 선이 보이면 직각으로 비켜',t=>{const n=6+ph();
+  for(let k=0;k<n;k++){const T0=t+k*.75;sch(T0,()=>{const e=Math.floor(RND()*4),q=RND(),sx=e===0?AX:e===1?AX+AW:AX+q*AW,sy=e===2?AY:e===3?AY+AH:AY+q*AH,a=toP(sx,sy);dive(T0,sx,sy,a,'#ff9a3a',13,13,k%2===1)});snd(T0+tel(),1800,.2,'sawtooth',.04,300)}
+  return n*.75+tel()+.6});
+ D('s6BellChain','사슬 종','all',11,'발톱에 사슬로 매단 종이 크게 휘둘러지고 울림 고리가 퍼짐 → 종이 지나간 뒤 고리 틈으로',t=>{const dur=3+ph();
+  sch(t,()=>{const [px,py]=P6(0,-8),pos=b=>{const q=Math.max(0,b-t-tel())*2*spd(),a=Math.PI/2+Math.sin(q)*1.2;return [px+Math.cos(a)*140,py+Math.sin(a)*120]};
+   A.put({spr:BELL,s:2.6,t0:t,t2:t+tel()+dur,pos,rot:b=>{const q=Math.max(0,b-t-tel())*2*spd();return -Math.sin(q)*1.2},deco:(Q,b,now,x,y)=>{line(px,py,x,y-10,4,(qx,qy)=>{cPx(qx,qy,2,'#5a4a3a',1);cPx(qx,qy,1,'#c8a870',1)})}});
+   NP({k:'orb',sty:'bob',col:'#ffc860',r:12,hide:true,t0:t,t1:t+tel(),t2:t+tel()+dur,prev:.6,pos,dmg:13})});
+  for(let k=0;k<3;k++){const T0=t+tel()+k*1.1;sch(T0,()=>{const [x,y]=P6(0,-8);for(let i=0;i<16;i++)npShot(T0,T0+.01,x,y,i*TAU/16+k*.2,60*spd(),{sty:'echo',col:'#ffc860',r:4,noTel:true,dmg:9})})}
+  return tel()+dur+.4});
+}catch(e){console.error('v53 ch6 actors',e)}})();
+/* ================= v53 챕터 1~5 난이도별 추가 공격 다시 만들기 (보스 50명) =================
+   전에는 50명이 모두 같은 16가지 틀(소나기·나선·탄막 벽·십자 광선…)을 이름 앞말만 바꿔 썼다(840·870).
+   이제 보스마다 "자기 물건"이 나와서 그 물건다운 방식으로 공격한다.
+     예) 철갑 열차 → 화물칸이 줄마다 돌진 · 열차 칸 행렬 / 스톰 하이브 → 드론 편대가 둘러싸고 사격 · 자폭 드론 떼
+         실크 여제 → 거미가 줄을 타고 내려옴 · 알이 부화하며 터짐 / 광학 요새 → 세워 둔 렌즈에 빛이 꺾임
+   보스마다 4개: 보통 +1 · 어려움 +2 · 익스트림 +4 (난이도가 오를수록 같은 공격도 더 세짐)
+   공격 틀(물체가 하는 행동) 11가지 — 편대·돌진·낙하·궤도·포대·떼·폭산·벽·행렬·반사·궤적
+   모든 공격은 예고가 먼저, 빠져나갈 틈이 있다. */
+(function(){try{
+ const A=window.ACT;if(!A||typeof T5_SET==='undefined')return;
+ const C=(v,a,b)=>v<a?a:v>b?b:v,tl=()=>t5T(),sp=()=>t5S(),core=()=>t5Core(),K='#0a0c14';
+ const snd=(t,f,f2)=>t5Snd(t,f,f2);
+ const shot=(T0,T1,x,y,a,v,c,o)=>npShot(T0,T1,x,y,a,v*sp(),Object.assign({sty:c.sty||'default',col:c.col,r:c.r||5,rayL:22,dmg:10},o||{}));
+ const lane=(T0,T1,x,y,w,h)=>NP({k:'rect',harm:false,x,y,w,h,t0:T0,t1:T1,t2:T1+.01,dmg:0});
+ const path=(T0,T1,ax,ay,bx,by)=>NP({k:'seg',sty:'laser',harm:false,noCharge:true,col:'#ff4d6d',w:3,t0:T0,t1:T1,t2:T1+.01,a:()=>[ax,ay],b:()=>[bx,by],dmg:0});
+ const arrow=(T0,T1,x,y,a)=>NP({k:'orb',harm:false,noTel:true,hide:true,r:1,t0:T0,t1:T0,t2:T1,pos:()=>[x,y],deco:()=>cChevron(x,y,a,'#a6f5c6',1,4)});
+ const away=(far)=>{for(let i=0;i<14;i++){const x=AX+30+RND()*(AW-60),y=AY+30+RND()*(AH-60);if(Math.hypot(x-P.x,y-P.y)>(far||90))return [x,y]}return [AX+40,AY+40]};
+
+ /* ---------- 물체 그림 (새로 그린 것) ---------- */
+ const PX={
+  train:A.pix(["..KKKKKKKKKKKK..",".KRRRRRRRRRRRRK.","KRWWKWWKWWKWWRRK","KRWWKWWKWWKWWRRK","KRRRRRRRRRRRRRRK","KDDDDDDDDDDDDDDK",".KK.KK....KK.KK.","KGGKGGK..KGGKGGK",".KK.KK....KK.KK."],{K:K,R:'#c84a3a',W:'#ffe8a0',D:'#3a3a48',G:'#8a8a9a'}),
+  seed:A.pix(["...KK...","..KGGK..",".KGGLGK.","KGGGGGLK","KGLGGGGK",".KGGGGK.","..KKKK..","...KK..."],{K:K,G:'#6a8a3a',L:'#c8e070'}),
+  thorn:A.pix(["...K...","..KGK..","..KGK..",".KGGGK.",".KGLGK.","KGGGGGK","KGGLGGK","KKKKKKK"],{K:K,G:'#4a6a2a',L:'#a8c860'}),
+  mush:A.pix(["..KKKKK..",".KRRWRRK.","KRWRRRWRK","KRRRRRRRK","KKKKKKKKK","...KWK...","...KWK...","..KKKKK.."],{K:K,R:'#c98fe6',W:'#f0d8ff'}),
+  frog:A.pix([".KK...KK.","KWKK.KKWK","KGGGGGGGK","KGGGGGGGK","KGRRRRRGK",".KGGGGGK.","KGK...KGK","KK.....KK"],{K:K,G:'#5aa860',W:'#ffffff',R:'#ff8a8a'}),
+  skull:A.pix(["..KKKKK..",".KWWWWWK.","KWWWWWWWK","KWKKWKKWK","KWKKWKKWK","KWWWKWWWK",".KWWWWWK.","..KWKWK..","..KKKKK.."],{K:K,W:'#efe4cd'}),
+  spider:A.pix(["K.K...K.K",".K.K.K.K.","..KKKKK..","KKKRRRKKK","..KRRRK..","KKKRRRKKK",".K.KKK.K.","K.K...K.K"],{K:'#1a1020',R:'#a03a6a'}),
+  hive:A.pix(["...KKK...","..KYYYK..",".KYKYKYK.","KYYYYYYYK","KYKYKYKYK","KYYYYYYYK",".KYKYKYK.","..KYYYK..","...KKK..."],{K:K,Y:'#ffd23a'}),
+  fish:A.pix(["......L.....","......K.....",".KKKKKKK..KK","KDDDDWDDKKDK","KDDDDKDDDDDK","KYYDDDDDKKDK",".KKKKKKK..KK"],{K:K,D:'#2a4a6a',W:'#ffffff',Y:'#8ac8ff',L:'#ffe08a'}),
+  wisp:A.pix(["...K...","..KYK..",".KYWYK.","KYWWWYK","KYWWWYK",".KYYYK.","..KKK.."],{K:'#2a1a3a',Y:'#ffb84a',W:'#fff0c0'}),
+  tooth:A.pix(["KKKKKKK","KWWWWWK","KWWWWWK",".KWWWK.",".KWWWK.","..KWK..","...K..."],{K:'#2a0a14',W:'#f4f0e0'}),
+  anvil:A.pix(["KKKKKKKKKKK","KMMMMMMMMMK",".KMMMMMMMK.","..KKMMMKK..","...KMMMK...","..KMMMMMK..",".KKKKKKKKK."],{K:K,M:'#6a6a7a'}),
+  broom:A.pix(["....KK....","....KW....","....KW....","....KW....","...KKKK...","..KYYYYK..",".KYKYKYYK.","KYYKYYKYYK","KYKYYKYKYK"],{K:K,W:'#a8703a',Y:'#d8c070'}),
+  crab:A.pix(["KK.......KK","KRK.....KRK",".KRKKKKKRK.","..KRRWRRK..",".KRRRRRRRK.","KKRRRRRRRKK","K.KKKKKKK.K"],{K:K,R:'#ff8a5a',W:'#ffd58a'}),
+  manta:A.pix(["K.........K","KK.......KK",".KPK.K.KPK.","..KPPKPPK..","...KPPPK...","....KPK....",".....K.....",".....K....."],{K:K,P:'#f4e8c8'}),
+  jelly:A.pix(["..KKKKK..",".KPPWPPK.","KPPPPPPPK","KPPPPPPPK","KKKKKKKKK",".K.K.K.K.","K.K.K.K.K",".K...K..."],{K:'#4b3265',P:'#eab7ff',W:'#ffffff'}),
+  torpedo:A.pix(["..KKKKKKKKK..",".KGGGGGGGGGK.","KWGGGGGGGGGKK",".KGGGGGGGGGK.","..KKKKKKKKK.."],{K:K,G:'#88a8c8',W:'#ffffff'}),
+  hourglass:A.pix(["KKKKKKK","KWWWWWK",".KYYYK.","..KYK..","..KYK..",".KWYWK.","KYYYYYK","KKKKKKK"],{K:'#304968',W:'#e8f0ff',Y:'#f7d8a3'}),
+  meteor:A.pix(["......KK","....KKRK","..KKROOK",".KROOYOK","KROOYYOK","KROOOOK.",".KRROK..","..KKK..."],{K:'#2a1410',R:'#a02a10',O:'#ff7a2a',Y:'#ffe8b0'}),
+  needle:A.pix(["KKKKKKKKKKKKK..","KWWWWWWWWWWWWKK","KKKKKKKKKKKKK.."],{K:'#2a2440',W:'#e8e0ff'}),
+  lens:A.pix(["..KKKKK..",".KSCCCSK.","KSCWCCCSK","KSCCCCCSK","KSCCCWCSK",".KSCCCSK.","..KKKKK.."],{K:K,S:'#c8b890',C:'#a8e8ff',W:'#ffffff'}),
+  icemirror:A.pix([".KKKKK.","KWCCCWK","KCWCCCK","KCCWCCK","KCCCWCK","KCCCCWK",".KKKKK."],{K:'#2a4a6a',C:'#a8f0ff',W:'#ffffff'})};
+ const SPR=(name,r,col)=>PX[name]||A.spr(name,r||5,col);
+
+ /* ================= 공격 틀 11가지: (t, c, L) → 걸리는 박자 =================
+    c = {spr, s(크기), col, sty(탄 모양), r(탄 크기), noun(이름말)} · L = 난이도 세기(1~3) */
+ const TM={};
+ /* 편대: 물체들이 날아와 나를 둘러싸고 차례로 부채꼴 사격 */
+ TM.squad={chan:'head',tip:n=>n+' 편대가 날아와 나를 둘러싸고 차례로 쏨 → 쏘는 순서를 보고 빈 쪽으로',fn:(t,c,L)=>{const n=3+L,T1=t+tl();
+  sch(t,()=>{const [cx,cy]=core(),px=P.x,py=P.y;for(let i=0;i<n;i++){const a=-Math.PI*.9+i*(Math.PI*.8/(n-1))+(py<AY+AH/2?Math.PI:0),[x,y]=npIn(px+Math.cos(a)*110,py+Math.sin(a)*90,16),Tf=T1+i*.45;
+    A.put({spr:c.spr,s:c.s||1.8,t0:t,t2:Tf+.5,pos:A.lin(cx,cy,x,y,t,t+.6,true),face:b=>x<cx?-1:1,deco:(Q,b,now,xx,yy)=>{if(b>Tf-.3&&b<Tf)cRing(xx,yy,9,'#ff4d6d',.8,1)}});
+    sch(Tf-.6,()=>{const a0=Math.atan2(P.y-y,P.x-x);for(let j=-1;j<=1;j++)shot(Tf-.6,Tf,x,y,a0+j*.2,82,c,{noTel:j!==0})})}});snd(T1,760);return tl()+n*.45+3}};
+ /* 돌진: 줄마다 물체가 판 끝에 서서 끝까지 돌진 (빈 줄 하나) */
+ TM.charge={chan:'field',tip:n=>'줄마다 '+n+' 하나씩 서서 끝까지 돌진 → 비어 있는 줄로',fn:(t,c,L)=>{const waves=1+(L>=2)+(L>=3);
+  for(let w=0;w<waves;w++){const T0=t+w*1.8;sch(T0,()=>{const hor=w%2===0,N=hor?5:7,sz=hor?AH/N:AW/N,gap=C(Math.floor(((hor?P.y-AY:P.x-AX)/sz))+(RND()<.5?-1:1),0,N-1),gap2=L<2?(gap+2)%N:-1,T1=T0+tl(),go=1,fwd=(w%4)<2;
+    for(let i=0;i<N;i++){if(i===gap||i===gap2)continue;const m=(hor?AY:AX)+sz*(i+.5),s0=fwd?(hor?AX+10:AY+10):(hor?AX+AW-10:AY+AH-10),s1=fwd?(hor?AX+AW+30:AY+AH+30):(hor?AX-30:AY-30);
+     const pos=b=>{const v=b<T1?s0:s0+(s1-s0)*C((b-T1)/go,0,1);return hor?[v,m]:[m,v]};A.put({spr:c.spr,s:c.s||1.8,t0:T0,t2:T1+go,pos,ground:hor,face:()=>fwd?1:-1,rot:hor?null:()=>fwd?Math.PI/2:-Math.PI/2});
+     if(hor)lane(T0,T1,AX,m-sz/2+3,AW,sz-6);else lane(T0,T1,m-sz/2+3,AY,sz-6,AH);A.hit({pos,r:10,t0:T0,t1:T1,t2:T1+go,dmg:11})}
+    snd(T1,160,80)})}
+  return waves*1.8+tl()+1}};
+ /* 낙하: 물체가 위에서 내 자리로 연달아 떨어짐, 세지면 부딪힌 자리에서 파편 */
+ TM.drop={chan:'field',tip:n=>'위에서 '+n+' 하나가 내 자리로 연달아 떨어짐 → 원이 차오르면 벗어나',fn:(t,c,L)=>{const n=4+L*2;
+  for(let i=0;i<n;i++){const T0=t+i*.35;sch(T0,()=>{const [x,y]=npIn(P.x+(RND()-.5)*40,P.y+(RND()-.5)*30,18),T1=T0+tl();NP({k:'circ',x,y,r:16,t0:T0,t1:T1,t2:T1+.3,col:c.col,dmg:11});
+    A.put({spr:c.spr,s:c.s||1.8,t0:T1-.45,t2:T1+.25,inT:.06,pos:A.lin(x,AY-8,x,y,T1-.45,T1)});if(L>=2&&i%2===0)sch(T1,()=>{for(let j=0;j<6;j++)shot(T1,T1,x,y,j*TAU/6+i,62,c,{noTel:true,r:Math.max(3,(c.r||5)-1)})});snd(T1,220,90)})}
+  return n*.35+tl()+1.5}};
+ /* 궤도: 보스 둘레를 돌던 물체가 하나씩 나를 향해 날아옴 */
+ TM.orbit={chan:'head',tip:n=>'보스 둘레를 도는 '+n+' 고리에서 하나씩 나를 향해 날아옴 → 날아오는 순서대로 비켜',fn:(t,c,L)=>{const m=6+L*2,T1=t+tl();
+  sch(t,()=>{for(let i=0;i<m;i++){const a0=i*TAU/m,Tf=T1+i*.28;let o=null;const pos=b=>{const [cx,cy]=core();if(b<Tf){const q=b-t;return [cx+Math.cos(a0+q*1.5)*56,cy+Math.sin(a0+q*1.5)*40]}if(!o){const q=Tf-t,x=cx+Math.cos(a0+q*1.5)*56,y=cy+Math.sin(a0+q*1.5)*40;o={x,y,a:Math.atan2(P.y-y,P.x-x)}}const d=(b-Tf)*118*sp();return [o.x+Math.cos(o.a)*d,o.y+Math.sin(o.a)*d]};
+    A.put({spr:c.spr,s:c.s||1.6,t0:t,t2:Tf+3,pos,deco:(Q,b,now,x,y)=>{if(b>Tf-.3&&b<Tf)cRing(x,y,8,'#ff4d6d',.9,1)}});A.hit({pos,r:6,t0:t,t1:Tf,t2:Tf+3,dmg:10})}});snd(T1,880);return tl()+m*.28+3}};
+ /* 포대: 구석에 선 물체에서 빛줄기가 천천히 휘둘러짐 */
+ TM.turret={chan:'field',tip:n=>'경기장 구석에 선 '+n+'에서 빛줄기가 천천히 휘둘러짐 → 빛줄기가 도는 쪽을 따라 돌아',fn:(t,c,L)=>{const k=2+(L>=3),dur=3,T1=t+tl();
+  sch(t,()=>{const S=[[AX+24,AY+24],[AX+AW-24,AY+24],[AX+24,AY+AH-24],[AX+AW-24,AY+AH-24]].sort((p,q)=>Math.hypot(q[0]-P.x,q[1]-P.y)-Math.hypot(p[0]-P.x,p[1]-P.y)).slice(0,k);
+   S.forEach(([x,y],i)=>{const a0=Math.atan2(P.y-y,P.x-x)+(i%2?.5:-.5),rot=(i%2?-1:1)*.35*sp();A.put({spr:c.spr,s:c.s||1.8,t0:t,t2:T1+dur+.3,pos:A.at(x,y),glow:c.col});
+    NP({k:'seg',sty:'laser',col:c.col,w:7,live:true,t0:t,t1:T1,t2:T1+dur,a:()=>[x,y],b:b=>{const a=a0+Math.max(0,b-T1)*rot;return [x+Math.cos(a)*560,y+Math.sin(a)*560]},dmg:11})})});snd(T1,300,600);return tl()+dur+.4}};
+ /* 떼: 작은 물체 떼가 나를 쫓아옴 (잠시 뒤 흩어짐) */
+ TM.swarm={chan:'all',tip:n=>n+' 떼가 나를 쫓아옴 → 크게 돌며 끌고 다니다 따돌려',fn:(t,c,L)=>{const m=5+L*2,life=3.2;
+  sch(t,()=>{const [cx,cy]=core();for(let i=0;i<m;i++){const T0=t+i*.15,T1=t+tl()+i*.15,a0=i*TAU/m,st={x:cx+Math.cos(a0)*30,y:cy+Math.sin(a0)*22,vx:Math.cos(a0),vy:Math.sin(a0)};
+    const h=A.hit({pos:()=>[st.x,st.y],r:5,t0:T0,t1:T1,t2:T1+life,dmg:10});h.step=(q,b,dt)=>{if(b<T1)return;const v=(44+L*6)*sp(),a2=Math.atan2(P.y-st.y,P.x-st.x),a1=Math.atan2(st.vy,st.vx);let d=a2-a1;while(d>Math.PI)d-=TAU;while(d<-Math.PI)d+=TAU;const na=a1+C(d,-2.2*dt,2.2*dt);st.vx=Math.cos(na);st.vy=Math.sin(na);st.x=C(st.x+st.vx*v*dt,AX+4,AX+AW-4);st.y=C(st.y+st.vy*v*dt,AY+4,AY+AH-4)};
+    A.put({spr:c.spr,s:(c.s||1.8)*.75,t0:T0,t2:T1+life,pos:()=>[st.x,st.y],face:()=>st.vx<0?-1:1,deco:(Q,b,now,x,y)=>{if(b<T1&&Math.floor(now/120)%2)cRing(x,y,7,'#ff4d6d',.6,1)}})}});snd(t+tl(),300,600);return tl()+m*.15+life+.3}};
+ /* 폭산: 내 근처에 박힌 물체가 사방으로 터짐 */
+ TM.bloom={chan:'field',tip:n=>'내 근처에 박힌 '+n+'에서 사방으로 탄이 터짐 → 멀리, 터지는 틈으로',fn:(t,c,L)=>{const n=2+L;
+  for(let k=0;k<n;k++){const T0=t+k*.9;sch(T0,()=>{const a=RND()*TAU,[x,y]=npIn(P.x+Math.cos(a)*40,P.y+Math.sin(a)*34,20),T1=T0+tl(),m=10+L*2,gap=RND()*TAU;
+    A.put({spr:c.spr,s:c.s||1.8,t0:T0,t2:T1+.1,pos:A.at(x,y),pulse:true,deco:(Q,b,now,xx,yy)=>{const p=C((b-T0)/(T1-T0),0,1);cRing(xx,yy,6+p*10,'#ff4d6d',.5+.4*p,1)}});NP({k:'circ',x,y,r:12,t0:T0,t1:T1,t2:T1+.3,col:c.col,dmg:10});
+    for(let i=0;i<m;i++){const aa=gap+i*TAU/m;if(i===0)continue;shot(T0,T1,x,y,aa,64,c,{noTel:true,rayL:14})}});snd(T0+tl(),640,200)}
+  return (n-1)*.9+tl()+4}};
+ /* 벽: 한 줄로 늘어선 물체 벽이 밀려옴 (빈틈 두 칸) */
+ TM.wall={chan:'field',tip:n=>'한 줄로 늘어선 '+n+' 벽이 밀려옴 → 초록 화살표 빈틈으로',fn:(t,c,L)=>{const waves=1+(L>=2)+(L>=3),N=10,sw=AW/N,go=2.4;
+  for(let w=0;w<waves;w++){const T0=t+w*1.6;sch(T0,()=>{const down=w%2===0,gap=C(Math.floor((P.x-AX)/sw)+(RND()<.5?-2:1),0,N-2),T1=T0+tl(),y0=down?AY+8:AY+AH-8,y1=down?AY+AH+16:AY-16;
+    for(let i=0;i<N;i++){if(i===gap||i===gap+1)continue;const x=AX+sw*(i+.5),pos=b=>[x,b<T1?y0:y0+(y1-y0)*C((b-T1)/go,0,1)];A.put({spr:c.spr,s:c.s||1.6,t0:T0,t2:T1+go,pos,ground:true});A.hit({pos,r:9,t0:T0,t1:T1,t2:T1+go,dmg:11})}
+    arrow(T0,T1,AX+sw*(gap+1),down?AY+30:AY+AH-30,down?Math.PI/2:-Math.PI/2)});snd(T0+tl(),300,500)}
+  return (waves-1)*1.6+tl()+go+.3}};
+ /* 행렬: 물체들이 줄지어 물결치며 가로지름 */
+ TM.snake={chan:'field',tip:n=>'줄지은 '+n+' 행렬이 물결치며 가로지름 → 물결이 높을 때 아래로, 낮을 때 위로',fn:(t,c,L)=>{const rows=1+(L>=3),m=9+L*2,v=(90+L*8)*sp(),T1=t+tl();
+  sch(t,()=>{for(let r=0;r<rows;r++){const dir=(r%2?-1:1)*(P.x<AX+AW/2?-1:1),yc=C(P.y+(r?-56:0),AY+30,AY+AH-30),x0=dir>0?AX-10:AX+AW+10,Tr=T1+r*.8,amp=26;
+    for(let i=0;i<=20;i++){const u=i/20*AW;}path(t,Tr,x0,yc,x0+dir*AW,yc);
+    for(let j=0;j<m;j++){const st=Tr+j*.13,pos=b=>{const u=Math.max(0,b-st)*v,x=x0+dir*u;return [x,yc+Math.sin(u/32)*amp]};A.put({spr:c.spr,s:c.s||1.6,t0:t,t2:st+(AW+20)/v,pos:b=>b<st?[x0,yc]:pos(b),face:()=>dir,inT:.1});A.hit({pos,r:6,t0:t,t1:st,t2:st+(AW+20)/v,dmg:10})}}});
+  snd(T1,540,700);return tl()+.8*(rows-1)+m*.13+(AW+20)/((90+L*8)*sp())+.3}};
+ /* 반사: 세워 둔 물체에 빛이 맞아 꺾여 나를 노림 */
+ TM.mirror={chan:'head',tip:n=>'세워 둔 '+n+'에 보스의 빛이 맞아 꺾여 나를 노림 → 꺾인 흰 선을 피해',fn:(t,c,L)=>{const n=2+L;
+  for(let k=0;k<n;k++){const T0=t+k*1.4;sch(T0,()=>{const [gx,gy]=core(),[mx,my]=away(90),a2=Math.atan2(P.y-my,P.x-mx),T1=T0+tl();
+    A.put({spr:c.spr,s:c.s||2,t0:T0,t2:T1+.8,pos:A.at(mx,my),glow:c.col,deco:(Q,b,now,x,y)=>{if(b>=T1&&b<T1+.35)cRing(x,y,8+(b-T1)*40,'#ffffff',1-(b-T1)/.35,1)}});
+    NP({k:'seg',sty:'laser',col:c.col,w:6,t0:T0,t1:T1,t2:T1+.4,a:()=>[gx,gy],b:()=>[mx,my],dmg:11});NP({k:'seg',sty:'laser',col:'#ffffff',w:7,noCharge:true,t0:T0,t1:T1+.12,t2:T1+.55,a:()=>[mx,my],b:()=>[mx+Math.cos(a2)*560,my+Math.sin(a2)*560],dmg:12});snd(T1+.12,1320,1760)})}
+  return n*1.4+tl()+.8}};
+ /* 궤적: 물체가 내 줄을 가로지르며 지나간 자리가 터짐 */
+ TM.trail={chan:'all',tip:n=>n+' 하나가 내 줄을 가로지르며 지나간 자리가 차례로 터짐 → 지나가기 전에 그 줄에서 벗어나',fn:(t,c,L)=>{const n=1+L;
+  for(let k=0;k<n;k++){const T0=t+k*1.6;sch(T0,()=>{const hor=k%2===0,m=hor?C(P.y,AY+20,AY+AH-20):C(P.x,AX+20,AX+AW-20),fwd=RND()<.5,T1=T0+tl(),go=.9,Lw=hor?AW:AH,N=Math.floor(Lw/28);
+    const at=q=>{const v=fwd?q:1-q;return hor?[AX+v*AW,m]:[m,AY+v*AH]},pos=b=>at(C((b-T1)/go,0,1));A.put({spr:c.spr,s:c.s||1.8,t0:T0,t2:T1+go,pos,face:()=>fwd?1:-1,ground:hor});
+    for(let j=0;j<=N;j++){const q=j/N,[x,y]=at(q);NP({k:'circ',x,y,r:13,t0:T0,t1:T1+q*go+.15,t2:T1+q*go+.75,col:c.col,dmg:11})}});snd(T0+tl(),200,100)}
+  return n*1.6+tl()+1.8}};
+ window.TM53=TM;
+
+ /* ================= 보스 50명: [물체 그림, 크기, 탄 모양, 탄 크기, 색, 이름말, [[틀, 공격 이름] × 4]] ================= */
+ const B={
+  b0:['gear',2,'gear',6,'#8eda9e','톱니',[['orbit','톱니 위성'],['charge','톱니바퀴 굴리기'],['wall','톱니 장벽 행진'],['drop','톱니 낙하']]],
+  b1:['spark',2.2,'spark',5,'#7fd6ff','전류 구슬',[['turret','테슬라 탑'],['bloom','축전기 폭발'],['swarm','전류 구슬 떼'],['snake','방전 행렬']]],
+  b2:['fire',2,'fire',6,'#ff8a3a','불덩이',[['drop','쇳물 국자 붓기'],['trail','용암 발자국'],['bloom','불덩이 폭발'],['orbit','불씨 고리']]],
+  b3:['train',1.6,'coal',6,'#c84a3a','화물칸',[['charge','화물칸 돌진'],['snake','열차 칸 행렬'],['drop','석탄 쏟기'],['turret','전조등 탐색']]],
+  b4:['icemirror',2,'snow',6,'#a8f0ff','얼음 거울',[['drop','고드름 낙하',{spr:'icicle'}],['mirror','얼음 거울 반사'],['bloom','서리 결정 폭발',{spr:'snow'}],['wall','빙벽 전진',{spr:'icicle'}]]],
+  b5:['drone',2.4,'drone',6,'#ff4d6d','드론',[['squad','드론 편대 사격'],['swarm','자폭 드론 떼'],['charge','드론 돌격 대열'],['turret','포탑 드론']]],
+  b6:['scrap',2,'scrap',6,'#9aa5ad','고철',[['drop','고철 떨어뜨리기'],['orbit','자력 고철 회전'],['charge','컨테이너 밀기',{spr:'crate'}],['swarm','끌려오는 고철']]],
+  b7:['bird',2.4,'gear',6,'#ffd166','뻐꾸기',[['squad','뻐꾸기 편대'],['orbit','태엽 톱니 회전',{spr:'gear'}],['drop','시계추 낙하',{spr:'bob'}],['snake','뻐꾸기 행렬']]],
+  b8:['lens',2,'light',5,'#ffe79a','렌즈',[['turret','탐조등 포대'],['mirror','렌즈 굴절'],['squad','렌즈 편대'],['bloom','프리즘 폭발',{spr:'light'}]]],
+  b9:['spark',2.2,'spark',6,'#ff5a7a','오메가 모듈',[['squad','모듈 편대'],['charge','수호자 돌진',{spr:'drone'}],['orbit','오메가 위성'],['wall','방어벽 행진',{spr:'gear'}]]],
+  b10:['seed',2,'default',5,'#8ab84a','가시씨',[['drop','가시씨 낙하'],['wall','뿌리 장벽',{spr:'thorn'}],['bloom','씨앗 개화'],['trail','뿌리 땅굴',{spr:'thorn'}]]],
+  b11:['mush',2,'spore',6,'#c98fe6','버섯',[['swarm','포자 떼',{spr:'spore'}],['bloom','버섯 포자 터뜨리기'],['orbit','포자 고리',{spr:'spore'}],['drop','버섯 낙하']]],
+  b12:['frog',2,'bubble',6,'#5aa860','개구리',[['drop','개구리 뛰어들기'],['bloom','거품 터뜨리기',{spr:'bubble'}],['charge','개구리 떼 도약'],['swarm','등불 유혹',{spr:'wisp'}]]],
+  b13:['skull',2,'bone',6,'#efe4cd','해골',[['charge','해골 굴리기'],['orbit','뼈 고리',{spr:'bone'}],['swarm','해골 사냥개 떼'],['drop','갈비뼈 낙하',{spr:'bone'}]]],
+  b14:['spider',2.2,'egg',6,'#a03a6a','거미',[['drop','거미 낙하'],['bloom','알 부화',{spr:'egg'}],['swarm','새끼 거미 떼'],['wall','거미 행렬 장막']]],
+  b15:['bee',2.4,'bee',5,'#ffd23a','말벌',[['swarm','벌떼 추격'],['squad','말벌 편대 독침'],['charge','벌떼 돌격'],['bloom','벌집 폭발',{spr:'hive'}]]],
+  b16:['crystal',2,'crystal',6,'#c8a0ff','수정',[['drop','수정 낙하'],['mirror','수정 굴절'],['orbit','수정 위성'],['wall','수정 기둥 행진']]],
+  b17:['fish',2,'bubble',6,'#8ac8ff','심해어',[['swarm','심해어 떼'],['bloom','먹물 폭탄',{spr:'void'}],['charge','아귀 새끼 돌진'],['squad','발광 미끼',{spr:'wisp'}]]],
+  b18:['ghost',2,'ghost',6,'#d8d0ff','원혼',[['swarm','원혼 떼'],['orbit','등불 원무',{spr:'wisp'}],['squad','유령 합창'],['bloom','잿불 꽃',{spr:'wisp'}]]],
+  b19:['tooth',2,'void',6,'#ff2d55','이빨',[['drop','이빨 비'],['orbit','굶주린 눈 위성',{spr:'eye'}],['charge','이빨 행렬'],['swarm','굶주림의 그림자',{spr:'void'}]]],
+  pendulum:['bob',2,'bob',7,'#e0a060','시계추',[['drop','괘종 추 낙하'],['charge','진자 행렬'],['orbit','시계추 고리'],['wall','추 장벽']]],
+  panopticon:['eye',2.2,'eye',6,'#ff4d6d','감시 눈',[['turret','감시 카메라 포대'],['squad','감시 눈 편대'],['mirror','탐조등 반사',{spr:'lens'}],['swarm','추적 눈']]],
+  moth:['moth',2.4,'moth',6,'#c8b8f0','나방',[['swarm','나방 떼'],['orbit','등불 주위 나방'],['squad','나방 편대'],['bloom','인분 폭발',{spr:'dust'}]]],
+  bellows:['steam',2,'steam',6,'#d0d0d0','증기 덩이',[['bloom','증기 폭발'],['trail','증기 궤적'],['drop','모루 낙하',{spr:'anvil'}],['charge','모루 굴리기',{spr:'anvil'}]]],
+  metronome:['note',2.6,'note',5,'#e0ccff','음표',[['squad','악단 편대'],['wall','오선지 행진'],['orbit','음표 고리'],['drop','박자 추 낙하',{spr:'weight'}]]],
+  calendar:['page',2,'page',6,'#fff6e0','달력 낱장',[['drop','달력 낙장'],['wall','페이지 장벽'],['swarm','찢긴 낱장 떼'],['bloom','압정 폭발']]],
+  dust:['dust',2.4,'dust',6,'#b8a8d8','먼지 덩이',[['swarm','먼지 덩이 떼'],['trail','먼지 회오리 궤적'],['orbit','먼지 고리'],['charge','빗자루 쓸기',{spr:'broom'}]]],
+  scales:['weight',2,'weight',6,'#b8a060','무게추',[['drop','무게추 낙하'],['charge','저울추 굴리기'],['turret','심판의 빛',{spr:'lens'}],['bloom','저울 접시 폭발']]],
+  echo:['echo',2.4,'echo',6,'#9de8dc','메아리',[['squad','메아리 편대'],['bloom','울림 폭발'],['orbit','메아리 고리'],['swarm','되돌아오는 부름']]],
+  stillness:['gear',2,'ghost',6,'#e8e0ff','멈춘 태엽',[['orbit','멈춘 태엽 고리'],['wall','정지 화면 장벽'],['squad','태엽 합주'],['drop','마지막 박동',{spr:'bob'}]]],
+  s4_meteor:['meteor',2,'ember',5,'#ff7a2a','유성',[['drop','유성 낙하'],['charge','유성 질주'],['squad','사냥꾼 표식 편대',{spr:'star4'}],['bloom','유성 폭발']]],
+  s4_eclipse:['sunspot',2,'sunspot',6,'#ffb84a','흑점',[['orbit','흑점 위성'],['turret','코로나 포대'],['bloom','플레어 폭발'],['wall','반그림자 장벽']]],
+  s4_comet:['comet',2,'comet',6,'#8ad8ff','혜성',[['snake','혜성 꼬리 행렬'],['charge','혜성 돌진'],['drop','혜성 조각 낙하'],['orbit','서리 궤도']]],
+  s4_nebula:['plank',2.4,'plank',5,'#c8a0ff','별 플랑크톤',[['swarm','별 플랑크톤 떼'],['wall','성운 해일'],['orbit','플랑크톤 고리'],['snake','고래 노래 행렬']]],
+  s4_gemini:['twin',2.2,'twin',6,'#ffe08a','쌍둥이 별',[['squad','쌍둥이 별 편대'],['mirror','거울 쌍둥이 반사'],['orbit','쌍성 공전'],['charge','두 별의 돌진']]],
+  s4_void:['darkm',2.2,'darkm',6,'#8a5aff','암흑 물질',[['swarm','암흑 물질 떼'],['bloom','특이점 폭발'],['orbit','중력 위성'],['drop','작은 블랙홀 낙하']]],
+  s4_nova:['star4',2,'star4',6,'#ffd04a','태양 별',[['charge','기사단 돌격'],['drop','태양검 비'],['bloom','초신성 폭발'],['turret','태양 포대']]],
+  s4_luna:['crescent',2.2,'crescent',6,'#e8f0ff','초승달',[['orbit','초승달 칼날 고리'],['drop','달빛 꽃비'],['charge','초승달 질주'],['bloom','보름달 폭발']]],
+  s4_weaver:['needle',1.6,'needle',5,'#e8e0ff','바늘',[['squad','바늘 편대'],['wall','베틀 장벽'],['charge','바늘 꿰매기 돌진'],['turret','별실 포대',{spr:'star4'}]]],
+  s4_last:['star4',2.2,'star4',7,'#fff6cf','별',[['squad','별들의 편대'],['orbit','별의 심장 고리'],['bloom','창세 폭발'],['drop','무너지는 하늘']]],
+  s5_beacon:['lens',2,'light',6,'#ffd58a','등대 렌즈',[['turret','등대 빛 포대'],['squad','새끼 게 편대',{spr:'crab'}],['mirror','렌즈 반사'],['charge','게 옆걸음 돌진',{spr:'crab'}]]],
+  s5_manta:['manta',2.2,'page',6,'#9fe6dd','종이 가오리',[['drop','해도 낙장',{spr:'page'}],['swarm','종이 가오리 떼'],['charge','항로 비행'],['wall','접힌 지도 장벽',{spr:'page'}]]],
+  s5_anchor:['anchor',1.8,'weight',6,'#f0ac7d','닻',[['drop','닻 낙하'],['orbit','사슬 철구 회전',{spr:'ball'}],['charge','닻 끌기 돌진'],['wall','창살 장벽',{spr:'thorn'}]]],
+  s5_organ:['jelly',2.2,'bubble',6,'#eab7ff','해파리',[['orbit','진주 고리',{spr:'bubble'}],['squad','해파리 성가대 편대'],['bloom','진주 폭발',{spr:'bubble'}],['swarm','해파리 떼']]],
+  s5_nautilus:['torpedo',1.8,'bubble',6,'#88d8ff','어뢰',[['charge','어뢰 발사'],['turret','탐조등',{spr:'lens'}],['drop','폭뢰 투하',{spr:'bomb'}],['swarm','추적 어뢰']]],
+  s5_eel:['needle',1.6,'spark',5,'#bcff9c','봉합 바늘',[['snake','장어 행렬',{spr:'spark'}],['turret','전극 포대',{spr:'spark'}],['charge','바늘 돌진'],['bloom','방전 폭발',{spr:'spark'}]]],
+  s5_octopus:['bell',2,'echo',6,'#ffb2c4','종',[['drop','종 낙하'],['orbit','여덟 종 회전'],['bloom','종소리 폭발'],['squad','촉수 종 편대']]],
+  s5_whale:['hourglass',2,'dust',6,'#f7d8a3','모래시계',[['drop','모래시계 낙하'],['wall','모래 해류 장벽',{spr:'dust'}],['charge','고래 돌진',{spr:'whale',s:1.4}],['swarm','모래 떼',{spr:'dust'}]]],
+  s5_archive:['page',2,'page',6,'#ffbd8b','문서',[['drop','문서 낙하'],['orbit','조개 문서함 회전'],['wall','책장 장벽'],['swarm','잉크 방울 떼',{spr:'void'}]]],
+  s5_heart:['bell',2,'echo',7,'#a8ffe9','귀환종',[['orbit','수문 고리',{spr:'echo'}],['bloom','귀환종 울림'],['squad','종 편대'],['wall','수문 장벽',{spr:'thorn'}]]]};
+ /* 다른 파일의 도트 그림도 씀: 닻·폭탄·종·고래(9992) · 철구 */
+ const S6P=window.S6PIX||{};PX.anchor=S6P.ANCHOR;PX.bomb=S6P.BOMB;PX.bell=S6P.BELL;PX.whale=S6P.WHALE;PX.ball=A.pix([".KKKK.","KDWDDK","KDDDDK","KDDDDK",".KKKK."],{K:K,D:'#4a4a58',W:'#9a9aaa'});
+
+ /* ---------- 등록: T5_SET[보스] = [[보통], [어려움], [익스트림 2개]] ---------- */
+ const tierOf=[0,1,2,2];
+ for(const key in B){try{const [sprN,sz,sty,r,col,noun,list]=B[key],sets=[[],[],[]];
+  list.forEach(([tm,kr,ov],i)=>{const T=TM[tm];if(!T)return;const spN=(ov&&ov.spr)||sprN,c={spr:SPR(spN,6,col),s:((ov&&ov.s)||sz)*1.35,sty,r,col,noun};
+   const nm='t6_'+key+'_'+i;defPat(nm,kr,T.chan,8,(['','[어려움] ','[익스트림] ','[익스트림] '][i])+T.tip(noun),tt=>T.fn(tt,c,Math.max(tierOf[i]+1,t5L())));sets[tierOf[i]].push(nm)});
+  T5_SET[key]=sets}catch(e){console.error('v53 t6 '+key,e)}}
+ window.B53=B;
+}catch(e){console.error('v53 ch1-5 extras',e)}})();
 </script></body></html>
