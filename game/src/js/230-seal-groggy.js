@@ -134,7 +134,7 @@ function tryReflect(){const pz=G.puz,now=performance.now();if(!pz||!pz.brain)ret
  let best=null,bd=40;for(const o of pz.shards){if(o.ref)continue;const d=Math.hypot(o.x-P.x,o.y-(P.y-10));if(d<bd){bd=d;best=o}}
  let core=null,cd=30;for(const c of pz.cores){if(c.fly)continue;const d=Math.hypot(c.x-P.x,c.y-(P.y-4));if(d<cd){cd=d;core=c}}
  const a0=best?Math.atan2(best.y-P.y,best.x-P.x):core?Math.atan2(core.y-P.y,core.x-P.x):Math.atan2(P.face.y||-1,P.face.x||0);
- P.lungeT=now;P.lungeA=a0;P.lungeDur=120;G.slashFx.push({x:P.x+Math.cos(a0)*14,y:P.y-10+Math.sin(a0)*14,a:a0+Math.PI/2,t:now});
+ P.lungeT=now;P.lungeA=a0;P.lungeDur=120;G.slashFx.push({x:P.x+Math.cos(a0)*14,y:P.y-10+Math.sin(a0)*14,a:a0+Math.PI/2,t:now,air:1,cx:P.x,cy:P.y-10,a0});
  if(best){const err=Math.abs(G.beat-Math.round(G.beat))*G.ms,on=err<=win().g*1.3,g=bgeo(),a=Math.atan2(g.coreY-best.y,g.x-best.x);best.ref=true;best.power=on?30:12;best.vx=Math.cos(a)*(on?380:260);best.vy=Math.sin(a)*(on?380:260);
   G.pops.push({x:best.x,y:best.y-12,t:now,tx:on?'PERFECT 반사!':'박자 어긋남 · 약한 반사',col:on?'#ffe79a':'#c8d8dc'});sfx(on?820:520,.12,'square',.05,on?1500:700);G.shake=Math.max(G.shake,on?.25:.1);if(on)G.hitstop=now+50;return}
  if(core){const a=Math.atan2(core.y-(P.y-4),core.x-P.x);core.vx=Math.cos(a)*250;core.vy=Math.sin(a)*250;core.armT=now+4000;sfx(260,.1,'square',.05,140);G.pops.push({x:core.x,y:core.y-14,t:now,tx:'차기!',col:core.col});G.shake=Math.max(G.shake,.12);return}

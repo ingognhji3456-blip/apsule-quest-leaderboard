@@ -79,7 +79,7 @@
   #gameMenu #gmSound.v57,#gameMenu #mbFs.v57{width:32px!important;padding:0!important}
   #gmName .v57i{width:20px;height:20px}#gmDiffChip .v57pips i{width:5px;height:11px}
  }
- /* 상점 탭 줄의 「보스팩 · 스킨」 탭 */
+ /* 상점 탭 줄의 「✦ 스킨 · 무기 · 연출」 탭 */
  html body #shopModal.wsFull .shopTabs{grid-template-columns:repeat(4,1fr)!important;flex-wrap:nowrap!important}html body #shopModal.wsFull .shopTabs .shopTab{flex:1 1 0!important;padding-left:6px!important;padding-right:6px!important;min-width:0!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  #shopModal .shopTab.bbAddonTab{background:linear-gradient(180deg,#5a3a8a,#36225a)!important;color:#f3e8ff!important;border-color:#c8a0ff!important}
  #shopModal .shopTab.bbAddonTab:hover{filter:brightness(1.15)}
