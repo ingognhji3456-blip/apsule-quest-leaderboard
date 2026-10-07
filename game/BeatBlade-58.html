@@ -19784,6 +19784,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  .ssCard em{font-style:normal;display:inline-block;font-size:10px;font-weight:900;letter-spacing:.1em;padding:2px 7px;border-radius:5px;color:#0a0f17;margin-bottom:3px}
  .ssCard .sub{color:#8ea2c0;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .ssCard .pr{font-weight:900;color:#fff0b0;font-size:14px;text-align:right}
+ .ssCard .pr.own{color:#7dffb0}.ssBtn.buy.own{background:#1d3a2c!important;color:#7dffb0!important;cursor:default}
  .ssCard .on{display:block;font-size:10px;font-weight:900;color:#5affd8;text-align:right;margin-top:2px}
  .ssPromise{padding:11px 13px;border-radius:12px;background:#ffffff08;border:1px dashed #ffffff22;color:#9fb0c8;font-size:12px;line-height:1.6}
  .ssEmpty{padding:30px;text-align:center;color:#9fb0c8;border-radius:14px;background:#ffffff06;border:1px solid #ffffff12}
@@ -19811,6 +19812,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const API0=()=>({skin:window.SKIN58,pet:window.PET59,sword:window.SWORD59,vic:window.VIC59,lob:window.LOB59});
  const isOn=it=>{const API=API0();return it.kind==='set'?it.parts.every(([c,id])=>{const k=c==='fx'?(id.startsWith('v_')?'vic':'lob'):c;return API[k]&&API[k].get()===id}):!!(API[it.kind]&&API[it.kind].get()===it.id)};
  function toggle(it){const API=API0(),on=isOn(it);if(it.kind==='set'){for(const [c,id] of it.parts){const k=c==='fx'?(id.startsWith('v_')?'vic':'lob'):c;API[k]&&API[k].equip(on?null:id)}return !on}API[it.kind].equip(on?null:it.id);return !on}
+ const PAY=()=>window.PAY58;const owns=it=>{try{return !!(PAY()&&PAY().ownsItem(it))}catch(e){return false}};
+ function toggleSave(it){const r=toggle(it);try{PAY()&&PAY().sync()}catch(e){}return r}
 
  let tab='skin',sel={},viewMode='auto',raf=0,owned=null,ownedErr='';
  const TABS=[['skin','캐릭터 스킨'],['pet','펫 스킨'],['sword','무기'],['fx','연출'],['set','세트'],['owned','내 보관함']];
@@ -19819,29 +19822,36 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   sheet.querySelector('.ssX').onclick=()=>sheet.close();
   sheet.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;try{gmSfx('move')}catch(_){}build()});
   const body=sheet.querySelector('#ssBody');if(tab==='owned')ownedTab(body);else listTab(body)}
- function card(x){return '<button class="ssCard" data-id="'+x.id+'" data-cat="'+x.cat+'" aria-pressed="'+(sel[tab]===x.id)+'" style="--tc:'+x.col+'"><canvas width="72" height="72" data-k="'+x.kind+'" data-id="'+x.id+'"></canvas><div style="min-width:0"><em style="background:'+TIER_BG[x.tier]+'">'+x.tier+'</em><b>'+safe(x.name)+'</b><div class="sub">'+safe(x.en)+'</div></div><div><div class="pr">'+won(x.price)+'</div>'+(isOn(x)?'<span class="on">입어보는 중</span>':'')+'</div></button>'}
+ function card(x){return '<button class="ssCard" data-id="'+x.id+'" data-cat="'+x.cat+'" aria-pressed="'+(sel[tab]===x.id)+'" style="--tc:'+x.col+'"><canvas width="72" height="72" data-k="'+x.kind+'" data-id="'+x.id+'"></canvas><div style="min-width:0"><em style="background:'+TIER_BG[x.tier]+'">'+x.tier+'</em><b>'+safe(x.name)+'</b><div class="sub">'+safe(x.en)+'</div></div><div>'+(owns(x)?'<div class="pr own">✓ 보유</div>':'<div class="pr">'+won(x.price)+'</div>')+(isOn(x)?'<span class="on">'+(owns(x)?'장착 중':'입어보는 중')+'</span>':'')+'</div></button>'}
  function listTab(body){const L=items().filter(x=>x.cat===tab);if(!L.length){body.innerHTML='<div class="ssEmpty">상품을 불러오지 못했어요.</div>';return}
-  if(!sel[tab]||!L.find(x=>x.id===sel[tab]))sel[tab]=L[0].id;const s=L.find(x=>x.id===sel[tab]),on=isOn(s);
+  if(!sel[tab]||!L.find(x=>x.id===sel[tab]))sel[tab]=L[0].id;const s=L.find(x=>x.id===sel[tab]),on=isOn(s),own=owns(s),P=PAY(),test=P&&P.test();
   let list='';if(tab==='skin'){const pr=L.filter(x=>!x.variant),va=L.filter(x=>x.variant);list='<div class="ssSec">프리미엄 스킨</div>'+pr.map(card).join('')+'<div class="ssSec">변이 스킨 · 원래 캐릭터의 변이종</div>'+va.map(card).join('')}
   else if(tab==='fx'){list='<div class="ssSec">승리 연출 · 보스를 쓰러뜨리는 순간</div>'+L.filter(x=>x.kind==='vic').map(card).join('')+'<div class="ssSec">로비 테마 · 메인 메뉴 무대</div>'+L.filter(x=>x.kind==='lob').map(card).join('')}
   else list=L.map(card).join('');
   const views=s.kind==='skin'?'<div class="ssViews">'+[['auto','돌려 보기'],['front','정면'],['side','옆'],['back','뒤']].map(([k,n])=>'<button data-v="'+k+'" aria-pressed="'+(viewMode===k)+'">'+n+'</button>').join('')+'</div>':'';
   const setParts=s.kind==='set'?'<div class="ssSet">'+s.parts.map(([c,id])=>{const it=items().find(x=>x.cat===c&&x.id===id);return it?'<span style="border-color:'+it.col+'66">'+safe(it.name)+' · '+won(it.price)+'</span>':''}).join('')+'</div>':'';
-  const note=s.kind==='skin'&&s.variant?'<div class="ssNote" style="color:#9fb0c8">'+safe(s.name.split(' · ')[0])+'의 변이 모습이에요. 입어보면 지금 캐릭터 위에 이 모습이 입혀져요.</div>':s.kind==='pet'?'<div class="ssNote" style="color:#9fb0c8">'+safe(s.name.split(' · ')[0])+'을(를) 데리고 다닐 때 이 모습으로 바뀌어요.</div>':s.kind==='sword'?'<div class="ssNote" style="color:#9fb0c8">입어보기 동안은 모양·궤적·이펙트만 바뀌고 공격력은 지금 검 그대로예요.</div>':'';
+  const note=s.kind==='skin'&&s.variant?'<div class="ssNote" style="color:#9fb0c8">'+safe(s.name.split(' · ')[0])+'의 변이 모습이에요. 입어보면 지금 캐릭터 위에 이 모습이 입혀져요.</div>':s.kind==='pet'?'<div class="ssNote" style="color:#9fb0c8">'+safe(s.name.split(' · ')[0])+'을(를) 데리고 다닐 때 이 모습으로 바뀌어요.</div>':s.kind==='sword'?'<div class="ssNote" style="color:#9fb0c8">'+(own?'보유 중! 장착하면 공격력도 이 검(피해 ×'+(((window.SWORD59&&SWORD59.byId(s.id))||{}).stat||{dmg:1.9}).dmg.toFixed(2)+')으로 바뀌어요.':'입어보기 동안은 모양·궤적·이펙트만 바뀌고, 사면 공격력도 이 검으로 바뀌어요.')+'</div>':'';
   body.innerHTML='<div class="ssGrid"><div class="ssStage"><span class="ssTier" style="background:'+TIER_BG[s.tier]+'">'+TIER_EN[s.tier]+' · '+s.tier+'</span>'+views+'<canvas id="ssCv" width="480" height="360"></canvas><div class="ssInfo"><h3 style="color:'+s.col+'">'+safe(s.name)+'</h3><div class="en">'+safe(s.en)+'</div><p>'+safe(s.desc)+'</p>'+setParts+
-   '<div class="ssTags">'+s.tags.filter(Boolean).map(x=>'<span>'+safe(x)+'</span>').join('')+'</div><div class="ssBuy"><div class="ssPrice">'+(s.full?'<s>'+won(s.full)+'</s>':'')+won(s.price)+'<small>부가세 포함</small></div><button class="ssBtn try" aria-pressed="'+on+'">'+(on?'✓ 입어보는 중':'입어보기')+'</button><button class="ssBtn buy">구매하기</button></div><div class="ssNote" id="ssNote"></div>'+note+'</div></div>'+
-   '<div class="ssSide"><div class="ssList">'+list+'</div><div class="ssPromise">• 모든 상품은 겉모습·연출만 바꿔요. 새 검도 공격력은 상점 최고 검(시간의 검)과 비슷해요.<br>• 한 번 사면 같은 계정으로 로그인한 모든 기기에서 쓸 수 있게 할 예정이에요.<br>• 결제는 준비 중이에요. 지금은 「입어보기」로 게임 안에서 미리 써 볼 수 있어요(게임을 다시 켜면 풀려요).</div></div></div>';
+   '<div class="ssTags">'+s.tags.filter(Boolean).map(x=>'<span>'+safe(x)+'</span>').join('')+'</div><div class="ssBuy"><div class="ssPrice">'+(s.full?'<s>'+won(s.full)+'</s>':'')+won(s.price)+'<small>부가세 포함</small></div><button class="ssBtn try" aria-pressed="'+on+'">'+(own?(on?'✓ 장착 중':'장착하기'):(on?'✓ 입어보는 중':'입어보기'))+'</button>'+(own?'<button class="ssBtn buy own" disabled>✓ 보유 중</button>':'<button class="ssBtn buy">구매하기</button>')+'</div><div class="ssNote" id="ssNote"></div>'+note+'</div></div>'+
+   '<div class="ssSide"><div class="ssList">'+list+'</div><div class="ssPromise">'+(test?'<b style="color:#ffb0c8">🧪 테스트 결제 중 — 실제로 돈이 나가지 않아요.</b><br>':'')+'• 결제는 <b>토스페이먼츠</b>로 해요: 카드 · 토스페이 · 카카오페이 · 네이버페이 · 계좌이체 · 휴대폰.<br>• 산 상품은 계정에 남아서, 같은 계정으로 로그인한 모든 기기에서 쓸 수 있어요.<br>• 새 검도 공격력은 상점 최고 검(시간의 검)과 비슷해요. 돈으로 더 세지지 않아요.<br>• 「입어보기」는 미리 써 보기예요(게임을 다시 켜면 풀려요).</div></div></div>';
   body.querySelectorAll('.ssCard').forEach(c=>c.onclick=()=>{sel[tab]=c.dataset.id;try{gmSfx('move')}catch(_){}build()});
   body.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{viewMode=b.dataset.v;build()});
-  body.querySelector('.ssBtn.try').onclick=()=>{const now=toggle(s);try{gmSfx('ok')}catch(_){}build();const n=sheet.querySelector('#ssNote');if(n)n.textContent=now?s.name+' 입어보는 중! 게임 화면에서도 이대로 보여요.':'원래대로 돌아왔어요.'};
-  body.querySelector('.ssBtn.buy').onclick=()=>{try{gmSfx('no')}catch(_){}const n=sheet.querySelector('#ssNote');if(n)n.textContent='결제는 아직 준비 중이에요. 열리면 '+won(s.price)+'로 살 수 있어요. 지금은 「입어보기」로 먼저 써 보세요!'}}
+  body.querySelector('.ssBtn.try').onclick=()=>{const now=toggleSave(s);try{gmSfx('ok')}catch(_){}build();const n=sheet.querySelector('#ssNote');if(n)n.textContent=now?(own?s.name+' 장착! 다음에 켜도 그대로예요.':s.name+' 입어보는 중! 게임 화면에서도 이대로 보여요.'):'원래대로 돌아왔어요.'};
+  const bb=body.querySelector('.ssBtn.buy:not(.own)');if(bb)bb.onclick=()=>{const n=sheet.querySelector('#ssNote'),say=(t,c)=>{const m=sheet.querySelector('#ssNote');if(m){m.textContent=t;m.style.color=c||''}};
+   if(!P){say('결제 기능을 불러오지 못했어요.');return}
+   if(!account().token){try{gmSfx('no')}catch(_){}if(n){n.style.color='';n.innerHTML='산 상품은 계정에 보관돼요. 먼저 로그인해 주세요. <button class="ssBtn buy" id="ssLogin2" style="padding:6px 12px;font-size:12px">로그인</button>'}const lb=sheet.querySelector('#ssLogin2');if(lb)lb.onclick=()=>{sheet.close();window.ACCT55&&ACCT55.open()};return}
+   try{gmSfx('ok')}catch(_){}bb.disabled=true;bb.textContent='결제창 여는 중…';say('');
+   P.buy(s.pid,res=>{if(!sheet.open)return;
+    if(res.opened){const b2=sheet.querySelector('.ssBtn.buy:not(.own)');if(b2){b2.disabled=true;b2.textContent='결제 진행 중…'}say('새 창에서 결제를 마쳐 주세요. 끝나면 여기 저절로 들어와요.'+(res.test?' (테스트 결제)':''));return}
+    if(res.ok){try{if(!isOn(s))toggle(s);P.sync()}catch(e){}try{gmSfx('ok')}catch(_){}build();say('🎉 '+s.name+' 구매 완료! 보관함에 들어갔고 바로 장착했어요.','#7dffb0');return}
+    build();if(res.need==='login')say('먼저 로그인해 주세요.','#ffb2a8');else if(res.fail)say('결제가 승인되지 않았어요. 돈은 빠져나가지 않았어요.','#ffb2a8');else if(res.cancel)say('결제를 마치지 않았어요. 다시 「구매하기」를 눌러 주세요.','#ffd166');else if(res.err)say(res.err,'#ffb2a8')})}}
  async function ownedTab(body){const a=account();if(!a.token){body.innerHTML='<div class="ssEmpty">로그인하면 산 상품을 모든 기기에서 확인할 수 있어요.<br><br><button class="ssBtn buy" id="ssLogin">로그인</button></div>';body.querySelector('#ssLogin').onclick=()=>{sheet.close();window.ACCT55?.open()};return}
   body.innerHTML='<div class="ssEmpty">보관함을 확인하는 중…</div>';
-  try{const base=(a.url||'https://capsule-quest-leaderboard.onrender.com').replace(/\/+$/,''),ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),20000);
-   const r=await fetch(base+'/api/shop/owned',{headers:{Authorization:'Bearer '+a.token},signal:ctl.signal});clearTimeout(tm);if(!r.ok)throw Error(r.status===401?'다시 로그인해 주세요.':'보관함을 확인하지 못했어요.');const j=await r.json();owned=j.owned||[];ownedErr=''}
+  try{const o=PAY()?await PAY().refresh():new Set();owned=[...o];ownedErr=''}
   catch(e){ownedErr=e.name==='AbortError'?'서버가 늦게 답하고 있어요. 잠시 뒤 다시 열어 주세요.':e.message}
   if(tab!=='owned'||!sheet.open)return;const mine=items().filter(x=>(owned||[]).includes(x.pid));
-  body.innerHTML=ownedErr?'<div class="ssEmpty">'+safe(ownedErr)+'</div>':mine.length?'<div class="ssList">'+mine.map(card).join('')+'</div>':'<div class="ssEmpty">아직 산 상품이 없어요.<br>마음에 드는 상품을 입어 보세요!</div>'}
+  body.innerHTML=ownedErr?'<div class="ssEmpty">'+safe(ownedErr)+'</div>':mine.length?'<div class="ssSec" style="margin:0 0 8px">카드를 누르면 그 상품 화면에서 장착할 수 있어요</div><div class="ssList">'+mine.map(card).join('')+'</div>':'<div class="ssEmpty">아직 산 상품이 없어요.<br>마음에 드는 상품을 입어 보세요!</div>';
+  body.querySelectorAll('.ssCard').forEach(c=>c.onclick=()=>{tab=c.dataset.cat;sel[tab]=c.dataset.id;try{gmSfx('move')}catch(_){}build()})}
 
  /* ---------- 무대 그리기 ---------- */
  function stageBg(c,w,h,col,t){c.imageSmoothingEnabled=false;const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'#0b0f1c');g.addColorStop(.7,'#121a2c');g.addColorStop(1,'#05070c');c.fillStyle=g;c.fillRect(0,0,w,h);
@@ -19864,7 +19874,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    c.fillStyle='#ffffffcc';c.font='900 13px '+FONT;c.textAlign='center';c.fillText('+ 승리 연출 · 로비 테마',w/2,h*.95);c.textAlign='left'}}
  function loop(now){if(!sheet.open){raf=0;return}try{const L=items(),cur=L.find(x=>x.cat===tab&&x.id===sel[tab]);const cv=sheet.querySelector('#ssCv');if(cv&&cur)drawItem(cv.getContext('2d'),cur,cv.width,cv.height,now,false);
   sheet.querySelectorAll('.ssCard canvas[data-id]').forEach(m=>{const it=L.find(x=>x.id===m.dataset.id&&x.kind===m.dataset.k);if(it)drawItem(m.getContext('2d'),it,m.width,m.height,now,true)})}catch(e){}raf=requestAnimationFrame(loop)}
- function open(t){if(t)tab=t;if(!sheet.open)sheet.showModal();build();if(!raf)raf=requestAnimationFrame(loop)}
+ function open(t){if(t)tab=t;if(!sheet.open)sheet.showModal();build();if(!raf)raf=requestAnimationFrame(loop);try{if(PAY()&&account().token)PAY().refresh().then(()=>{if(sheet.open&&tab!=='owned')build()}).catch(()=>{})}catch(e){}}
  sheet.addEventListener('close',()=>{if(raf)cancelAnimationFrame(raf);raf=0});
  sheet.addEventListener('keydown',e=>e.stopPropagation());
  sheet.addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===sheet)sheet.close()});
@@ -20461,4 +20471,85 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  {const base=drawScene;drawScene=function(now){const r=base.apply(this,arguments);try{if(FX.hits.length&&mode==='boss')drawHits(now)}catch(e){}return r}}
  window.DELUXE60={theme,TH};
 }catch(e){console.error('v60 deluxe',e)}})();
+/* ================= v58 결제 · 보유 상품 · 장착 저장 (PAY58) =================
+   ① 구매: 서버(app.py)에 주문을 만들고(/api/shop/order) 새 창으로 토스페이먼츠 결제창(/pay/checkout)을 연다.
+      결제 결과는 창 메시지('beatblade-pay')와 주문 상태 확인(/api/shop/order/<번호>)으로 알아낸다.
+   ② 보유: 로그인 계정의 보유 상품(/api/shop/owned)을 읽어 둔다. 세트는 서버가 낱개로 풀어서 준다.
+   ③ 장착 저장: 보유한 상품을 장착하면 saveData.cos58에 남겨, 게임을 다시 켜도(다른 기기에서도) 그대로 입는다.
+      입어보기(보유하지 않은 상품)는 저장하지 않는다.
+   ④ 새 검 능력치: 보유한 새 검(99995)을 장착하면 WEAPONS[장착 번호]가 그 검의 능력치를 돌려준다.
+      태엽 공방(#shopModal)이 열려 있을 때는 원래 검을 돌려줘 코인 상점 표시는 그대로다. */
+(()=>{try{
+ const DEF='https://capsule-quest-leaderboard.onrender.com';
+ const acc=()=>(window.ACCT55&&ACCT55.get())||{};
+ const base=()=>(acc().url||DEF).replace(/\/+$/,'');
+ const API=()=>({skin:window.SKIN58,pet:window.PET59,sword:window.SWORD59,vic:window.VIC59,lob:window.LOB59});
+ const PRE={skin:'skin_',pet:'pet_',sword:'sword_',vic:'fx_',lob:'fx_'};
+ const kindOf=(c,id)=>c==='fx'?(String(id).startsWith('v_')?'vic':'lob'):c;
+ let owned=new Set(),testMode=false,lastTok=null,pending=null;
+ const cacheKey=()=>'bb-owned58:'+(acc().user||'');
+ try{const a=acc();if(a.token){const c=JSON.parse(localStorage.getItem(cacheKey())||'null');if(c&&Array.isArray(c.o))owned=new Set(c.o)}}catch(e){}
+
+ /* 상품 하나(상점 카드 항목)를 가지고 있나 — 세트는 안에 든 것을 모두 가지고 있어야 함 */
+ function ownsItem(it){if(!it)return false;if(it.kind==='set')return (it.parts||[]).every(([c,id])=>owned.has((c==='fx'?'fx_':c+'_')+id));return owned.has(it.pid||'')}
+ const ownsKind=(k,id)=>!!id&&owned.has(PRE[k]+id);
+
+ /* 저장된 장착을 다시 입힘 / 보유하지 않게 된 것(로그아웃 등)은 벗김 */
+ function apply(){const A=API(),cos=saveData.cos58||{};
+  for(const k in PRE){const api=A[k];if(!api)continue;const want=cos[k],cur=api.get();
+   if(want&&ownsKind(k,want)&&!cur)api.equip(want);
+   else if(cur&&cur===want&&!ownsKind(k,want))api.equip(null)}}
+ /* 지금 장착 상태를 저장 (보유한 것만. 입어보기는 저장 안 함) */
+ function sync(){const A=API();saveData.cos58=saveData.cos58||{};const cos=saveData.cos58;
+  for(const k in PRE){const api=A[k];if(!api)continue;const id=api.get();if(!id)delete cos[k];else if(ownsKind(k,id))cos[k]=id}
+  try{saveNow()}catch(e){}}
+
+ async function refresh(){const a=acc();lastTok=a.token||'';
+  if(!a.token){owned=new Set();apply();return owned}
+  const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),20000);
+  try{const r=await fetch(base()+'/api/shop/owned',{headers:{Authorization:'Bearer '+a.token},signal:ctl.signal});
+   if(r.status===401){owned=new Set();apply();throw Error('다시 로그인해 주세요.')}
+   if(!r.ok)throw Error('보관함을 확인하지 못했어요.');const j=await r.json();owned=new Set(j.owned||[]);testMode=!!j.test_mode;
+   try{localStorage.setItem(cacheKey(),JSON.stringify({o:[...owned],t:Date.now()}))}catch(e){}apply();return owned}
+  finally{clearTimeout(tm)}}
+
+ /* ---------- 구매 ---------- */
+ function stopPending(){if(pending){clearInterval(pending.iv);pending=null}}
+ async function check(){const p=pending;if(!p)return;const a=acc();if(!a.token){stopPending();return}
+  try{const r=await fetch(base()+'/api/shop/order/'+encodeURIComponent(p.order),{headers:{Authorization:'Bearer '+a.token}});const j=await r.json();
+   if(pending!==p)return;
+   if(j.status==='paid'){stopPending();try{await refresh()}catch(e){}p.cb({ok:true});return}
+   if(j.status==='failed'){stopPending();p.cb({fail:true});return}
+   const closed=!p.win||p.win.closed;
+   if(closed){p.closedN=(p.closedN||0)+1;if(p.closedN>=3){stopPending();p.cb({cancel:true});return}}
+   if(Date.now()-p.t0>20*60*1000){stopPending();p.cb({cancel:true})}}catch(e){}}
+ async function buy(pid,cb){cb=cb||(()=>{});const a=acc();if(!a.token){cb({need:'login'});return}
+  stopPending();
+  /* 팝업 차단을 피하려고 누른 순간 빈 창부터 연다 */
+  let w=null;try{w=window.open('','bbpay58','width=480,height=760');if(w)w.document.write('<meta name="viewport" content="width=device-width"><body style="margin:0;background:#07090f;color:#eef2ff;font:16px system-ui;display:grid;place-items:center;min-height:100vh">결제창을 여는 중…</body>')}catch(e){}
+  try{const r=await fetch(base()+'/api/shop/order',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+a.token},body:JSON.stringify({product_id:pid})});
+   let j={};try{j=await r.json()}catch(e){}
+   if(!r.ok||!j.ok){if(r.status===409){try{await refresh()}catch(e){}}throw Error(j.error||'주문을 만들지 못했어요.')}
+   if(w&&!w.closed)w.location.href=j.checkout_url;else{w=window.open(j.checkout_url,'_blank');if(!w){cb({err:'팝업이 막혔어요. 브라우저에서 이 사이트의 팝업을 허용해 주세요.'});return}}
+   testMode=!!j.test_mode;pending={order:j.order_id,win:w,cb,t0:Date.now(),iv:setInterval(check,2500)};cb({opened:true,amount:j.amount,test:testMode})}
+  catch(e){try{w&&w.close()}catch(_){}cb({err:e.message||'주문을 만들지 못했어요.'})}}
+ window.addEventListener('message',e=>{const d=e.data;if(d&&d.type==='beatblade-pay'&&pending&&d.order_id===pending.order)setTimeout(check,300)});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&pending)check()});
+
+ /* ---------- 새 검 능력치 (보유 + 장착일 때만) ---------- */
+ const BASE=WEAPONS.slice(),PREM={};
+ function prem(id){if(PREM[id])return PREM[id];const s=window.SWORD59&&SWORD59.byId(id);if(!s)return null;const b=BASE[BASE.length-1];
+  const st=s.stat||{};return PREM[id]=Object.assign({},b,{name:s.name,type:s.type,dmg:st.dmg||b.dmg,crit:st.crit!=null?st.crit:b.crit,range:st.range!=null?st.range:b.range,grogi:st.grogi||0,col:s.col,trail:(s.trail&&s.trail[0]==='#')?s.trail:s.col,desc:s.desc,price:0})}
+ function activeSword(i){const S=window.SWORD59;if(!S)return null;const id=S.get();if(!id||!owned.has('sword_'+id))return null;
+  if(!saveData.eq||saveData.eq.wp!==i)return null;const sm=document.getElementById('shopModal');if(sm&&!sm.hidden)return null;return prem(id)}
+ BASE.forEach((w,i)=>{try{Object.defineProperty(WEAPONS,i,{configurable:true,enumerable:true,get(){return activeSword(i)||BASE[i]},set(v){BASE[i]=v}})}catch(e){}});
+
+ /* 로그인 계정이 바뀌면 보관함을 다시 읽음 (네트워크는 바뀔 때만) */
+ setInterval(()=>{const t=acc().token||'';if(t!==lastTok)refresh().catch(()=>{})},4000);
+ setTimeout(()=>{apply();refresh().catch(()=>{})},1500);
+
+ window.PAY58={refresh,buy,sync,apply,ownsItem,ownsKind,owned:()=>owned,test:()=>testMode,pending:()=>!!pending,kindOf,
+  /* 테스트 도구용: 서버 없이 보유 목록을 넣어 본다 */
+  _set(list){owned=new Set(list||[]);apply()}};
+}catch(e){console.error('v58 payment',e)}})();
 </script></body></html>

@@ -20,6 +20,7 @@ BEAT BLADE · MACHINA 계정 기능 (/api/...):
     가입·로그인하면 게임 진행 기록을 서버에 보관해서 다른 기기에서도 이어 할 수
     있습니다. 배포 방법은 game/서버_로그인_안내.md 를 보세요.
 """
+import base64
 import hashlib
 import json
 import os
@@ -28,12 +29,17 @@ import secrets
 import sqlite3
 import threading
 import time
+import urllib.error
+import urllib.request
 from flask import Flask, request, jsonify, g, send_from_directory, render_template_string
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport.requests import Request as GoogleRequest
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+# Render는 앞단 프록시가 https를 처리하므로, 결제 후 돌아올 주소가 https가 되도록 원래 주소 정보를 믿는다
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 # 저장 기록 하나가 아주 커도 요청 전체는 2MB를 넘지 못하게 막음
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 
@@ -184,6 +190,21 @@ def init_db():
             PRIMARY KEY (user_id, product_id)
         )
     ''')
+    # 결제 주문 (토스페이먼츠). test=1 은 테스트 키로 낸 주문 — 진짜 키로 바꾸면 보관함에서 빠진다
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS shop_orders (
+            order_id    TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            product_id  TEXT NOT NULL,
+            amount      INTEGER NOT NULL,
+            status      TEXT NOT NULL,
+            test        INTEGER NOT NULL,
+            payment_key TEXT,
+            method      TEXT,
+            created_at  DOUBLE PRECISION NOT NULL,
+            paid_at     DOUBLE PRECISION
+        )
+    ''')
     db.commit()
     db.close()
 
@@ -210,118 +231,182 @@ def compute_score(level, wave, rebirths):
 
 # 가격은 원(KRW). 결제가 열리기 전까지 status는 coming_soon (checkout_enabled=False)
 SHOP_PRODUCTS = [
-    # 게임 상점(99991)과 같은 목록. 결제는 아직 연결 전이라 모두 coming_soon.
+    # 게임 상점(99991)과 같은 목록. 값은 서버 것만 믿는다(게임이 보낸 금액은 쓰지 않음).
     {'id': 'skin_void', 'kind': 'skin', 'name': '공허 검사', 'tier': '희귀',
      'description': '빛을 삼킨 갑옷에 청록 눈빛. 찢어진 망토 끝에서 공허 조각이 피어올라요.',
-     'status': 'coming_soon', 'price': 2000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 2000, 'currency': 'KRW'},
     {'id': 'skin_clock', 'kind': 'skin', 'name': '태엽 성기사', 'tier': '영웅',
      'description': '시계골 장인이 만든 상아·황동 갑옷. 등 뒤 톱니 후광이 돌고, 가슴 시계가 박자에 맞춰 가요.',
-     'status': 'coming_soon', 'price': 3500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 3500, 'currency': 'KRW'},
     {'id': 'skin_neon', 'kind': 'skin', 'name': '네온 비트', 'tier': '전설',
      'description': '음악이 곧 갑옷. 재킷 네온과 바이저 이퀄라이저가 박자마다 번쩍이고, 홀로그램 목도리가 흩날려요.',
-     'status': 'coming_soon', 'price': 5000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 5000, 'currency': 'KRW'},
     {'id': 'skin_v_haru', 'kind': 'skin', 'name': '하루 · 은하 변이', 'tier': '변이',
      'description': '밤하늘을 삼킨 하루. 옷 위로 별이 반짝이고 발밑에 별가루가 흩날려요.',
-     'status': 'coming_soon', 'price': 1500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1500, 'currency': 'KRW'},
     {'id': 'skin_v_mina', 'kind': 'skin', 'name': '미나 · 벚꽃 여우불', 'tier': '변이',
      'description': '벚꽃잎처럼 하얗게 바랜 고양이 후드. 곁에서 푸른 여우불 세 개가 맴돌아요.',
-     'status': 'coming_soon', 'price': 1500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1500, 'currency': 'KRW'},
     {'id': 'skin_v_doyun', 'kind': 'skin', 'name': '도윤 · 용암 광부', 'tier': '변이',
      'description': '용암 갱도에서 돌아온 도윤. 검게 탄 옷 틈으로 용암 빛이 맥박처럼 일렁여요.',
-     'status': 'coming_soon', 'price': 1500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1500, 'currency': 'KRW'},
     {'id': 'skin_v_sera', 'kind': 'skin', 'name': '세라 · 서리 마녀', 'tier': '변이',
      'description': '별 대신 서리를 다루는 세라. 망토 끝이 얼어붙고 주위에 눈송이가 내려요.',
-     'status': 'coming_soon', 'price': 1500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1500, 'currency': 'KRW'},
     {'id': 'skin_v_steel', 'kind': 'skin', 'name': '강철 · 황금 코어', 'tier': '변이',
      'description': '코어를 황금으로 갈아 끼운 강철. 몸 곳곳에서 금빛 전류가 튀어요.',
-     'status': 'coming_soon', 'price': 1500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1500, 'currency': 'KRW'},
     {'id': 'skin_v_luna', 'kind': 'skin', 'name': '루나 · 일식 기사', 'tier': '변이',
      'description': '달이 가려진 밤의 루나. 검은 갑옷에 붉은 빛, 머리 뒤에 일식 고리가 떠 있어요.',
-     'status': 'coming_soon', 'price': 1500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1500, 'currency': 'KRW'},
     {'id': 'skin_v_kai', 'kind': 'skin', 'name': '카이 · 그림자 혼', 'tier': '변이',
      'description': '반쯤 사라진 그림자 닌자. 몸이 비치고 지나간 자리에 잔상이 남아요.',
-     'status': 'coming_soon', 'price': 1500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1500, 'currency': 'KRW'},
     {'id': 'skin_v_arin', 'kind': 'skin', 'name': '아린 · 독버섯 요정', 'tier': '변이',
      'description': '버섯 숲의 아린. 보랏빛 몸에 형광 연두 포자가 둥실둥실 떠다녀요.',
-     'status': 'coming_soon', 'price': 1500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1500, 'currency': 'KRW'},
     {'id': 'skin_v_zeno', 'kind': 'skin', 'name': '제노 · 청염 용기사', 'tier': '변이',
      'description': '푸른 불꽃을 삼킨 용기사. 투구 틈에서 청색 불씨가 피어올라요.',
-     'status': 'coming_soon', 'price': 1500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1500, 'currency': 'KRW'},
     {'id': 'skin_v_aurora', 'kind': 'skin', 'name': '오로라 · 무지개 성기사', 'tier': '변이',
      'description': '빛이 갈라지는 갑옷. 몸 위로 무지개 색이 천천히 흘러가요.',
-     'status': 'coming_soon', 'price': 1500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1500, 'currency': 'KRW'},
     {'id': 'pet_p_tick', 'kind': 'pet', 'name': '똑딱 · 황금 시계', 'tier': '변이',
      'description': '금으로 다시 태어난 똑딱. 째깍일 때마다 금빛 불씨가 튀어요.',
-     'status': 'coming_soon', 'price': 1000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1000, 'currency': 'KRW'},
     {'id': 'pet_p_firefly', 'kind': 'pet', 'name': '반딧불 · 오로라', 'tier': '변이',
      'description': '오로라 빛을 품은 반딧불. 날개빛이 초록·하늘·보라로 바뀌어요.',
-     'status': 'coming_soon', 'price': 1000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1000, 'currency': 'KRW'},
     {'id': 'pet_p_mouse', 'kind': 'pet', 'name': '태엽 쥐 · 네온', 'tier': '변이',
      'description': '네온 회로로 개조한 태엽 쥐. 박자에 맞춰 몸이 번쩍여요.',
-     'status': 'coming_soon', 'price': 1000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1000, 'currency': 'KRW'},
     {'id': 'pet_p_sheep', 'kind': 'pet', 'name': '구름 양 · 번개 먹구름', 'tier': '변이',
      'description': '먹구름이 된 양. 털 사이에서 작은 번개가 번쩍여요.',
-     'status': 'coming_soon', 'price': 1000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1000, 'currency': 'KRW'},
     {'id': 'pet_p_owl', 'kind': 'pet', 'name': '부엉이 봇 · 은하', 'tier': '변이',
      'description': '우주를 관측하던 부엉이 봇. 몸에 별이 떠 있어요.',
-     'status': 'coming_soon', 'price': 1000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1000, 'currency': 'KRW'},
     {'id': 'pet_p_fox', 'kind': 'pet', 'name': '불꽃 여우 · 청염 구미호', 'tier': '변이',
      'description': '꼬리마다 푸른 불을 단 구미호. 여우불이 꼬리를 따라와요.',
-     'status': 'coming_soon', 'price': 1000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1000, 'currency': 'KRW'},
     {'id': 'pet_p_penguin', 'kind': 'pet', 'name': '얼음 펭귄 · 벚꽃', 'tier': '변이',
      'description': '봄을 맞은 펭귄. 하늘색 몸이 벚꽃빛으로 물들었어요.',
-     'status': 'coming_soon', 'price': 1000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1000, 'currency': 'KRW'},
     {'id': 'pet_p_dragon', 'kind': 'pet', 'name': '수정 드래곤 · 흑요석', 'tier': '변이',
      'description': '흑요석 비늘 사이로 용암이 흐르는 드래곤.',
-     'status': 'coming_soon', 'price': 1000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1000, 'currency': 'KRW'},
     {'id': 'pet_p_cat', 'kind': 'pet', 'name': '유령 고양이 · 도깨비불', 'tier': '변이',
      'description': '초록 도깨비불을 거느린 유령 고양이. 몸이 반쯤 비쳐요.',
-     'status': 'coming_soon', 'price': 1000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1000, 'currency': 'KRW'},
     {'id': 'pet_p_phoenix', 'kind': 'pet', 'name': '황금 불사조 · 얼음 불사조', 'tier': '변이',
      'description': '불꽃 대신 얼음으로 타오르는 불사조. 날갯짓마다 눈꽃이 흩어져요.',
-     'status': 'coming_soon', 'price': 1000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 1000, 'currency': 'KRW'},
     {'id': 'sword_voidreaver', 'kind': 'sword', 'name': '공허의 대검', 'tier': '영웅',
      'description': '빛을 삼키는 검은 대검. 청록 날을 따라 공허 안개가 피어오르고, 휘두르면 공허 충격파가 퍼져요.',
-     'status': 'coming_soon', 'price': 3000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 3000, 'currency': 'KRW'},
     {'id': 'sword_gearsaber', 'kind': 'sword', 'name': '태엽 톱니검', 'tier': '영웅',
      'description': '날에 톱니 이빨이 달린 황동 검. 손잡이 톱니가 쉬지 않고 돌고, 휘두르면 톱니 불꽃이 튀어요.',
-     'status': 'coming_soon', 'price': 3500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 3500, 'currency': 'KRW'},
     {'id': 'sword_beatbreaker', 'kind': 'sword', 'name': '비트 브레이커', 'tier': '전설',
      'description': '칼날 마디가 박자마다 차례로 켜지는 네온 검. 휘두르면 소리 파동이 고리처럼 번져요.',
-     'status': 'coming_soon', 'price': 4500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 4500, 'currency': 'KRW'},
     {'id': 'fx_v_void', 'kind': 'victory', 'name': '공허의 붕괴', 'tier': '영웅',
      'description': '쓰러진 보스가 검은 구멍으로 빨려 들어가며 사라지고, 청록 충격파가 전장을 휩쓸어요.',
-     'status': 'coming_soon', 'price': 2000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 2000, 'currency': 'KRW'},
     {'id': 'fx_v_clock', 'kind': 'victory', 'name': '태엽 꽃가루', 'tier': '영웅',
      'description': '보스 자리에서 종소리 고리가 퍼지고, 하늘에서 금빛 톱니와 꽃가루가 쏟아져요.',
-     'status': 'coming_soon', 'price': 2000, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 2000, 'currency': 'KRW'},
     {'id': 'fx_v_neon', 'kind': 'victory', 'name': '네온 레이저쇼', 'tier': '전설',
      'description': '전장 위로 레이저가 쏟아지고 바닥에 이퀄라이저가 춤추며, 네온 VICTORY 글자가 번쩍여요.',
-     'status': 'coming_soon', 'price': 2500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 2500, 'currency': 'KRW'},
     {'id': 'fx_p_void', 'kind': 'lobby', 'name': '공허의 무대', 'tier': '영웅',
      'description': '메인 무대가 보라 안개에 잠기고, 하늘이 갈라진 틈에서 공허 조각이 떠다녀요.',
-     'status': 'coming_soon', 'price': 2500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 2500, 'currency': 'KRW'},
     {'id': 'fx_p_clock', 'kind': 'lobby', 'name': '황금 시계탑', 'tier': '영웅',
      'description': '무대 양쪽에서 거대한 황금 톱니가 돌고, 금빛 먼지가 천천히 내려앉아요.',
-     'status': 'coming_soon', 'price': 2500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 2500, 'currency': 'KRW'},
     {'id': 'fx_p_neon', 'kind': 'lobby', 'name': '네온 클럽', 'tier': '전설',
      'description': '메인 무대가 클럽으로! 레이저가 박자에 맞춰 휘젓고, 박자마다 화면이 번쩍여요.',
-     'status': 'coming_soon', 'price': 2500, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 2500, 'currency': 'KRW'},
     {'id': 'set_void', 'kind': 'set', 'name': '공허 세트', 'tier': '세트',
      'description': '공허 검사 + 공허의 대검 + 공허의 붕괴 + 공허의 무대를 한 번에.', 'includes': ['skin_void', 'sword_voidreaver', 'fx_v_void', 'fx_p_void'],
-     'status': 'coming_soon', 'price': 6900, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 6900, 'currency': 'KRW'},
     {'id': 'set_clock', 'kind': 'set', 'name': '태엽 세트', 'tier': '세트',
      'description': '태엽 성기사 + 태엽 톱니검 + 태엽 꽃가루 + 황금 시계탑을 한 번에.', 'includes': ['skin_clock', 'sword_gearsaber', 'fx_v_clock', 'fx_p_clock'],
-     'status': 'coming_soon', 'price': 7900, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 7900, 'currency': 'KRW'},
     {'id': 'set_neon', 'kind': 'set', 'name': '네온 세트', 'tier': '세트',
      'description': '네온 비트 + 비트 브레이커 + 네온 레이저쇼 + 네온 클럽을 한 번에.', 'includes': ['skin_neon', 'sword_beatbreaker', 'fx_v_neon', 'fx_p_neon'],
-     'status': 'coming_soon', 'price': 9900, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 9900, 'currency': 'KRW'},
 ]
+
+
+# ---------------------------------------------------------------------
+# 결제 (토스페이먼츠 결제창)
+#   1) 게임: POST /api/shop/order {product_id}  → 주문 번호 + 결제창 주소
+#   2) 게임이 새 창으로 /pay/checkout?order=… 를 열면 토스 결제창이 뜬다
+#   3) 결제가 끝나면 토스가 /pay/success?paymentKey&orderId&amount 로 돌려보냄
+#      → 서버가 비밀 키로 토스에 "승인"을 요청하고, 금액이 주문과 같을 때만 상품을 준다
+#   4) 게임은 GET /api/shop/order/<번호> 또는 창 메시지로 결과를 알고 보관함을 새로 읽는다
+# 키는 Render 환경변수 TOSS_CLIENT_KEY / TOSS_SECRET_KEY 에 넣는다.
+# 비워 두면 토스 개발자센터 문서에 공개된 "테스트 키"를 쓴다(진짜 돈이 나가지 않음).
+# ---------------------------------------------------------------------
+TOSS_DOCS_CLIENT_KEY = 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq'   # 토스 문서 공개 테스트 키
+TOSS_DOCS_SECRET_KEY = 'test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R'   # 토스 문서 공개 테스트 키
+TOSS_CLIENT_KEY = os.environ.get('TOSS_CLIENT_KEY', '').strip() or TOSS_DOCS_CLIENT_KEY
+TOSS_SECRET_KEY = os.environ.get('TOSS_SECRET_KEY', '').strip() or TOSS_DOCS_SECRET_KEY
+TOSS_TEST = TOSS_CLIENT_KEY.startswith('test_') or TOSS_SECRET_KEY.startswith('test_')
+TOSS_CONFIRM_URL = 'https://api.tosspayments.com/v1/payments/confirm'
+SHOP_CONTACT = os.environ.get('SHOP_CONTACT', '').strip()   # 환불·문의 연락처 (진짜 판매 전에 꼭 넣기)
+ORDER_TTL = 60 * 60          # 결제창을 연 뒤 1시간 안에 끝내야 함
+PRODUCTS_BY_ID = {p['id']: p for p in SHOP_PRODUCTS}
+
+
+def _expand(product_id):
+    """세트는 안에 든 상품들로 풀어서 돌려준다"""
+    p = PRODUCTS_BY_ID.get(product_id)
+    if p and p.get('includes'):
+        return list(p['includes'])
+    return [product_id]
+
+
+def _owned_ids(db, user_id):
+    """보유 상품: 직접 지급(shop_entitlements) + 결제 완료 주문.
+    테스트 키로 결제한 주문은 지금 서버도 테스트 키일 때만 센다."""
+    owned = set(r['product_id'] for r in db.execute(
+        'SELECT product_id FROM shop_entitlements WHERE user_id = ?', (user_id,)).fetchall())
+    rows = db.execute("SELECT product_id FROM shop_orders WHERE user_id = ? AND status = 'paid' AND test = ?",
+                      (user_id, 1 if TOSS_TEST else 0)).fetchall()
+    for r in rows:
+        owned.update(_expand(r['product_id']))
+    return owned
+
+
+def _customer_key(user_id):
+    return 'bb_' + hashlib.sha256(('cust:' + user_id).encode()).hexdigest()[:30]
+
+
+def _toss_confirm(payment_key, order_id, amount):
+    """토스에 결제 승인 요청. (성공여부, 응답 dict)"""
+    auth = base64.b64encode((TOSS_SECRET_KEY + ':').encode()).decode()
+    body = json.dumps({'paymentKey': payment_key, 'orderId': order_id, 'amount': amount}).encode()
+    req = urllib.request.Request(TOSS_CONFIRM_URL, data=body, method='POST', headers={
+        'Authorization': 'Basic ' + auth, 'Content-Type': 'application/json',
+        'Idempotency-Key': 'confirm-' + order_id})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return True, json.loads(r.read().decode() or '{}')
+    except urllib.error.HTTPError as e:
+        try:
+            return False, json.loads(e.read().decode() or '{}')
+        except Exception:
+            return False, {'code': 'HTTP_%d' % e.code, 'message': '결제 승인에 실패했어요'}
+    except Exception:
+        return False, {'code': 'NETWORK', 'message': '결제 회사와 연결하지 못했어요. 잠시 뒤 보관함을 확인해 주세요.'}
 
 
 @app.route('/api/shop')
 def shop_catalog():
-    response = jsonify(ok=True, products=SHOP_PRODUCTS, checkout_enabled=False)
+    response = jsonify(ok=True, products=SHOP_PRODUCTS, checkout_enabled=True, test_mode=TOSS_TEST)
     response.headers['Cache-Control'] = 'no-store'
     return response
 
@@ -331,12 +416,181 @@ def shop_owned():
     user = _current_user()
     if not user:
         return _bad('로그인 후 보유 상품을 확인할 수 있어요', 401)
-    rows = get_db().execute(
-        'SELECT product_id FROM shop_entitlements WHERE user_id = ?',
-        (user['user_id'],)).fetchall()
-    response = jsonify(ok=True, owned=[row['product_id'] for row in rows])
+    response = jsonify(ok=True, owned=sorted(_owned_ids(get_db(), user['user_id'])), test_mode=TOSS_TEST)
     response.headers['Cache-Control'] = 'no-store'
     return response
+
+
+@app.route('/api/shop/order', methods=['POST'])
+def shop_order_create():
+    user = _current_user()
+    if not user:
+        return _bad('로그인한 뒤에 살 수 있어요', 401)
+    data = request.get_json(silent=True) or {}
+    pid = data.get('product_id') if isinstance(data.get('product_id'), str) else ''
+    product = PRODUCTS_BY_ID.get(pid)
+    if not product or product.get('status') != 'on_sale' or not product.get('price'):
+        return _bad('판매하지 않는 상품이에요', 404)
+    key = 'order:' + user['user_id']
+    if _too_many(key, 20, 600):
+        return _bad('주문을 너무 자주 만들었어요. 잠시 뒤 다시 해 주세요', 429)
+    _note(key)
+    db = get_db()
+    owned = _owned_ids(db, user['user_id'])
+    if all(x in owned for x in _expand(pid)):
+        return _bad('이미 가지고 있는 상품이에요', 409)
+    order_id = 'bb' + secrets.token_urlsafe(18).replace('-', 'x').replace('_', 'y')
+    db.execute('INSERT INTO shop_orders (order_id, user_id, product_id, amount, status, test, created_at) '
+               "VALUES (?, ?, ?, ?, 'ready', ?, ?)",
+               (order_id, user['user_id'], pid, int(product['price']), 1 if TOSS_TEST else 0, time.time()))
+    db.commit()
+    base = request.url_root.rstrip('/')
+    resp = jsonify(ok=True, order_id=order_id, amount=int(product['price']), name=product['name'],
+                   checkout_url=base + '/pay/checkout?order=' + order_id, test_mode=TOSS_TEST)
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
+@app.route('/api/shop/order/<order_id>')
+def shop_order_status(order_id):
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    row = get_db().execute('SELECT product_id, amount, status FROM shop_orders WHERE order_id = ? AND user_id = ?',
+                           (order_id[:80], user['user_id'])).fetchone()
+    if not row:
+        return _bad('주문을 찾지 못했어요', 404)
+    resp = jsonify(ok=True, status=row['status'], product_id=row['product_id'], amount=row['amount'])
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
+PAY_PAGE = r"""<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BEAT BLADE 결제</title><meta name="referrer" content="no-referrer">
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 50% 0,#2a1f4a,#07090f 70%);color:#eef2ff;font:15px/1.6 system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif}
+.box{width:min(420px,calc(100% - 32px));padding:24px 22px;border-radius:20px;background:#121726;border:1px solid #ffffff22;box-shadow:0 20px 60px #000a}
+h2{margin:0 0 4px;font-size:20px}.sub{color:#9fb0c8;font-size:13px}.item{margin:18px 0;padding:14px 16px;border-radius:14px;background:#ffffff0a;border:1px solid #ffffff1a;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.item b{font-size:16px}.won{font-size:22px;font-weight:900;color:#ffd166}.test{display:inline-block;margin-bottom:10px;padding:3px 10px;border-radius:99px;background:#ff6a9a33;color:#ffb0c8;font-size:12px;font-weight:800}
+.pay{display:grid;gap:8px}.pay button{padding:13px;border-radius:12px;border:0;font:800 15px inherit;cursor:pointer;background:#ffd166;color:#1a1206}.pay button.alt{background:#ffffff14;color:#eef2ff;border:1px solid #ffffff2a}
+.pay button:disabled{opacity:.5;cursor:wait}.note{color:#9fb0c8;font-size:12px;margin-top:14px}.err{color:#ffb2a8;margin-top:10px;font-size:13px;white-space:pre-line}.ok{font-size:44px;text-align:center}
+</style><div class="box">{% if test %}<span class="test">테스트 결제 · 실제로 돈이 나가지 않아요</span>{% endif %}
+{% if page == 'checkout' %}
+<h2>✦ BEAT BLADE 상점</h2><div class="sub">{{ user }} 님의 주문</div>
+<div class="item"><b>{{ name }}</b><span class="won">₩{{ '{:,}'.format(amount) }}</span></div>
+<div class="pay"><button data-m="CARD">카드 · 간편결제 (토스페이 · 카카오페이 · 네이버페이 등)</button><button class="alt" data-m="TRANSFER">계좌이체</button><button class="alt" data-m="MOBILE_PHONE">휴대폰 결제</button></div>
+<div class="err" id="err"></div>
+<div class="note">• 결제가 끝나면 이 창은 저절로 닫히고 게임 보관함에 바로 들어가요.<br>• 디지털 상품이라 받은 뒤 사용(장착)하면 환불이 어려울 수 있어요.{% if contact %}<br>• 환불·문의: {{ contact }}{% endif %}</div>
+<script src="https://js.tosspayments.com/v2/standard"></script><script>
+const O={{ order|tojson }};const err=document.getElementById('err');
+document.querySelectorAll('[data-m]').forEach(b=>b.onclick=async()=>{err.textContent='';document.querySelectorAll('[data-m]').forEach(x=>x.disabled=true);
+ try{if(!window.TossPayments)throw Error('결제창을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.');
+  const tp=TossPayments(O.clientKey),pay=tp.payment({customerKey:O.customerKey});
+  await pay.requestPayment({method:b.dataset.m,amount:{currency:'KRW',value:O.amount},orderId:O.orderId,orderName:O.orderName,successUrl:O.successUrl,failUrl:O.failUrl,customerName:O.customerName,
+   card:b.dataset.m==='CARD'?{useEscrow:false,flowMode:'DEFAULT',useCardPoint:false,useAppCardOnly:false}:undefined});
+ }catch(e){err.textContent=(e&&e.code==='USER_CANCEL')?'결제를 취소했어요.':(e&&e.message)||'결제를 시작하지 못했어요.'}
+ document.querySelectorAll('[data-m]').forEach(x=>x.disabled=false)});
+</script>
+{% else %}
+<div class="ok">{{ '🎉' if ok else '⚠️' }}</div><h2 style="text-align:center">{{ title }}</h2><div class="sub" style="text-align:center;white-space:pre-line">{{ msg }}</div>
+<div class="pay" style="margin-top:18px"><button onclick="window.close()">게임으로 돌아가기</button></div>
+<script>
+try{window.opener&&window.opener.postMessage({type:'beatblade-pay',ok:{{ 'true' if ok else 'false' }},order_id:{{ order_id|tojson }}},'*')}catch(e){}
+{% if ok %}setTimeout(()=>{try{window.close()}catch(e){}},2200);{% endif %}
+</script>
+{% endif %}</div></html>"""
+
+
+def _pay_page(**kw):
+    kw.setdefault('test', TOSS_TEST)
+    kw.setdefault('contact', SHOP_CONTACT)
+    resp = app.response_class(render_template_string(PAY_PAGE, **kw), mimetype='text/html')
+    resp.headers['Cache-Control'] = 'no-store'
+    resp.headers['Referrer-Policy'] = 'no-referrer'
+    resp.headers['X-Frame-Options'] = 'DENY'
+    return resp
+
+
+def _pay_result(ok, title, msg, order_id='', code=200):
+    resp = _pay_page(page='result', ok=ok, title=title, msg=msg, order_id=order_id)
+    resp.status_code = code
+    return resp
+
+
+@app.route('/pay/checkout')
+def pay_checkout():
+    order_id = (request.args.get('order') or '')[:80]
+    db = get_db()
+    row = db.execute('SELECT o.*, u.username FROM shop_orders o JOIN users u ON u.user_id = o.user_id '
+                     'WHERE o.order_id = ?', (order_id,)).fetchone()
+    if not row:
+        return _pay_result(False, '주문을 찾지 못했어요', '게임에서 다시 「구매하기」를 눌러 주세요.', code=404)
+    if row['status'] == 'paid':
+        return _pay_result(True, '이미 결제가 끝났어요', '게임 보관함에서 확인해 보세요.', order_id)
+    if row['status'] != 'ready' or time.time() - row['created_at'] > ORDER_TTL:
+        return _pay_result(False, '지난 주문이에요', '게임에서 다시 「구매하기」를 눌러 주세요.', order_id, 410)
+    product = PRODUCTS_BY_ID.get(row['product_id'], {})
+    base = request.url_root.rstrip('/')
+    order = {'clientKey': TOSS_CLIENT_KEY, 'customerKey': _customer_key(row['user_id']), 'orderId': order_id,
+             'amount': int(row['amount']), 'orderName': 'BEAT BLADE · ' + product.get('name', row['product_id']),
+             'customerName': row['username'], 'successUrl': base + '/pay/success', 'failUrl': base + '/pay/fail'}
+    return _pay_page(page='checkout', order=order, name=product.get('name', row['product_id']),
+                     amount=int(row['amount']), user=row['username'])
+
+
+@app.route('/pay/success')
+def pay_success():
+    payment_key = (request.args.get('paymentKey') or '')[:200]
+    order_id = (request.args.get('orderId') or '')[:80]
+    try:
+        amount = int(request.args.get('amount') or -1)
+    except ValueError:
+        amount = -1
+    db = get_db()
+    row = db.execute('SELECT * FROM shop_orders WHERE order_id = ?', (order_id,)).fetchone()
+    if not row or not payment_key:
+        return _pay_result(False, '주문을 찾지 못했어요', '돈이 나갔다면 문의해 주세요. 주문 번호: ' + order_id, order_id, 404)
+    if row['status'] == 'paid':
+        return _pay_result(True, '결제 완료!', '보관함에 들어갔어요. 게임으로 돌아가 장착해 보세요.', order_id)
+    if amount != int(row['amount']):
+        # 금액이 주문과 다르면 승인하지 않는다 (주소를 고쳐서 싸게 사는 것 방지)
+        db.execute("UPDATE shop_orders SET status = 'failed' WHERE order_id = ? AND status = 'ready'", (order_id,))
+        db.commit()
+        return _pay_result(False, '결제 금액이 달라요', '결제를 승인하지 않았어요. 돈은 빠져나가지 않아요.', order_id, 400)
+    # 같은 주문을 두 번 승인하지 않도록 먼저 "승인 중"으로 잡는다
+    cur = db.execute("UPDATE shop_orders SET status = 'confirming' WHERE order_id = ? AND status = 'ready'", (order_id,))
+    db.commit()
+    if getattr(cur, 'rowcount', 1) == 0:
+        return _pay_result(False, '이미 처리 중인 주문이에요', '잠시 뒤 게임 보관함을 확인해 주세요.', order_id, 409)
+    ok, res = _toss_confirm(payment_key, order_id, int(row['amount']))
+    if ok and res.get('status') == 'DONE' and int(res.get('totalAmount', -1)) == int(row['amount']):
+        db.execute("UPDATE shop_orders SET status = 'paid', payment_key = ?, method = ?, paid_at = ? WHERE order_id = ?",
+                   (payment_key, str(res.get('method') or '')[:40], time.time(), order_id))
+        db.commit()
+        name = PRODUCTS_BY_ID.get(row['product_id'], {}).get('name', '')
+        return _pay_result(True, '결제 완료!', name + ' — 보관함에 들어갔어요.\n게임으로 돌아가 장착해 보세요.', order_id)
+    if res.get('code') == 'NETWORK':
+        # 승인 결과를 모르면 'ready'로 되돌려 다시 시도할 수 있게 한다 (같은 Idempotency-Key라 두 번 결제되지 않음)
+        db.execute("UPDATE shop_orders SET status = 'ready' WHERE order_id = ?", (order_id,))
+        db.commit()
+        return _pay_result(False, '결제 확인이 늦어지고 있어요', res.get('message', ''), order_id, 502)
+    db.execute("UPDATE shop_orders SET status = 'failed' WHERE order_id = ?", (order_id,))
+    db.commit()
+    return _pay_result(False, '결제가 승인되지 않았어요', str(res.get('message') or '다시 시도해 주세요.')[:200], order_id, 400)
+
+
+@app.route('/pay/fail')
+def pay_fail():
+    order_id = (request.args.get('orderId') or '')[:80]
+    code = (request.args.get('code') or '')[:60]
+    msg = (request.args.get('message') or '')[:200]
+    if order_id:
+        db = get_db()
+        db.execute("UPDATE shop_orders SET status = 'failed' WHERE order_id = ? AND status = 'ready'", (order_id,))
+        db.commit()
+    if code in ('PAY_PROCESS_CANCELED', 'USER_CANCEL'):
+        return _pay_result(False, '결제를 취소했어요', '돈은 빠져나가지 않았어요.', order_id)
+    return _pay_result(False, '결제하지 못했어요', msg or '다시 시도해 주세요.', order_id)
 
 
 @app.route('/health')
