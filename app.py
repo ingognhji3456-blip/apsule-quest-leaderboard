@@ -208,12 +208,19 @@ def compute_score(level, wave, rebirths):
     return rebirths * 100_000_000 + level * 10_000 + wave
 
 
+# 가격은 원(KRW). 결제가 열리기 전까지 status는 coming_soon (checkout_enabled=False)
 SHOP_PRODUCTS = [
+    {'id': 'skin_void', 'kind': 'skin', 'name': '공허 검사', 'tier': '희귀',
+     'description': '빛을 삼킨 갑옷과 청록 눈빛, 머리 위 내려찍기 모션과 공허 틈 이펙트.',
+     'status': 'coming_soon', 'price': 2000, 'currency': 'KRW'},
+    {'id': 'skin_clock', 'kind': 'skin', 'name': '태엽 성기사', 'tier': '영웅',
+     'description': '상아·황동 갑옷과 톱니 후광, 묵직한 내려치기와 황금 톱니 시계 이펙트.',
+     'status': 'coming_soon', 'price': 3500, 'currency': 'KRW'},
+    {'id': 'skin_neon', 'kind': 'skin', 'name': '네온 비트', 'tier': '전설',
+     'description': '박자마다 번쩍이는 네온 테크웨어, 돌려 베기와 무지개 원·박자 고리 이펙트.',
+     'status': 'coming_soon', 'price': 5000, 'currency': 'KRW'},
     {'id': 'boss_pack_01', 'kind': 'boss', 'name': '추가 보스팩',
      'description': '새로운 보스·전용 음악·스토리를 담을 예정이에요.',
-     'status': 'coming_soon', 'price': None},
-    {'id': 'skin_pack_01', 'kind': 'skin', 'name': '외형 스킨팩',
-     'description': '캐릭터와 검의 외형을 꾸미는 상품이에요. 능력치는 바뀌지 않아요.',
      'status': 'coming_soon', 'price': None},
 ]
 

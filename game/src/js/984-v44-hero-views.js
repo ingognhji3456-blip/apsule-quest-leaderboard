@@ -71,9 +71,10 @@
  function swingK(now){if(!P.lungeT)return -1;const d=now-P.lungeT,dur=Math.max(260,(P.lungeDur||120)*2.1);return d>=0&&d<dur?d/dur:-1}
  /* 0~.22 들어올림 · .22~.5 내려베기 · .5~.75 따라 돎 · .75~1 제자리 */
  const ease=k=>k*k*(3-2*k);
- function armAng(k){if(window.__voidSkinEquipped){if(k<.3)return 1.35+(-3.05-1.35)*ease(k/.3);if(k<.48)return -3.05+4.15*ease((k-.3)/.18);if(k<.72)return 1.1+.55*ease((k-.48)/.24);return 1.65-.3*ease((k-.72)/.28);}const rest=1.35,up=-2.35,down=.75,over=1.15;if(k<.22)return rest+(up-rest)*ease(k/.22);if(k<.5){const q=(k-.22)/.28;return up+(down-up)*(q*q*(3-2*q))}if(k<.75)return down+(over-down)*ease((k-.5)/.25);return over+(rest-over)*ease((k-.75)/.25)}
- function handQ(k,side){const v=window.__voidSkinEquipped,a0=armAng(k),a=side?Math.PI-a0:a0,sx=side?(v?17:12.5):19.5,sy=19.5,R=v?(k<.3?5.5:8):(side?6.2:6.6);return [sx+Math.cos(a)*R,sy+Math.sin(a)*R,a0]}
- /* 몸 기울기 */function leanOf(k){if(k<0)return 0;if(window.__voidSkinEquipped){if(k<.3)return -.16*ease(k/.3);if(k<.48)return -.16+.42*ease((k-.3)/.18);return .26*(1-ease((k-.48)/.52));}if(k<.22)return -.09*ease(k/.22);if(k<.5)return -.09+.24*ease((k-.22)/.28);return .15*(1-ease((k-.5)/.5))}
+ /* 스킨마다 다른 휘두르기: window.__skinMotion = {arm(k,ease), hand(k,side) → [어깨x, 팔 길이], lean(k,ease), fx(...)} (99992) */
+ function armAng(k){const SM=window.__skinMotion;if(SM&&SM.arm)return SM.arm(k,ease);const rest=1.35,up=-2.35,down=.75,over=1.15;if(k<.22)return rest+(up-rest)*ease(k/.22);if(k<.5){const q=(k-.22)/.28;return up+(down-up)*(q*q*(3-2*q))}if(k<.75)return down+(over-down)*ease((k-.5)/.25);return over+(rest-over)*ease((k-.75)/.25)}
+ function handQ(k,side){const SM=window.__skinMotion,a0=armAng(k),a=side?Math.PI-a0:a0,hd=SM&&SM.hand?SM.hand(k,side):null,sx=hd?hd[0]:side?12.5:19.5,sy=19.5,R=hd?hd[1]:side?6.2:6.6;return [sx+Math.cos(a)*R,sy+Math.sin(a)*R,a0]}
+ /* 몸 기울기 */function leanOf(k){if(k<0)return 0;{const SM=window.__skinMotion;if(SM&&SM.lean)return SM.lean(k,ease)}if(k<.22)return -.09*ease(k/.22);if(k<.5)return -.09+.24*ease((k-.22)/.28);return .15*(1-ease((k-.5)/.5))}
 
  /* drawSword: 휘두르는 동안은 여기서 그리지 않고, 몸을 그린 뒤 손 위치에 그림 */
  {const _ds=drawSword;drawSword=function(x,y,s,fl,now){const k=swingK(now);if(k<0||!(mode==='boss'||mode==='cave'||mode==='village'))return _ds.apply(this,arguments);HV.pend={x,y,s,fl,now,k,t:now};}}
@@ -82,9 +83,9 @@
   const sk=lean*dirS,toW=(px,py)=>{let wx=dfl?X+40*kk-(px+6)*kk:X+(px+6)*kk,wy=Y+(py+10)*kk;if(side)wx=fx+(wx-fx)*.86;wx-=sk*(wy-fy);return [wx,wy]};
   /* 팔 각도 a0는 '앞(오른쪽)을 보는' 기준 → 화면에서는 바라보는 쪽으로 */const wAng=a0=>fl?Math.PI-a0:a0;
   const [qx,qy,a]=handQ(k,side),[hx,hy]=toW(qx,qy);
-  if(window.__voidSkinEquipped&&k>.3&&k<.64){c.save();c.lineCap='round';for(let j=1;j<=7;j++){const q=Math.max(.3,k-j*.018),[px,py,pa]=handQ(q,side),[tx,ty]=toW(px,py),ang=wAng(pa+.25);c.globalAlpha=(1-j/8)*.22;c.strokeStyle=j%2?'#78ffe0':'#b080ef';c.lineWidth=Math.max(1,s*.7);c.beginPath();c.moveTo(tx+Math.cos(ang)*L*.3,ty+Math.sin(ang)*L*.3);c.lineTo(tx+Math.cos(ang)*L,ty+Math.sin(ang)*L);c.stroke();}c.restore();}
-  if(pose.thrust&&!window.__voidSkinEquipped){const ext=Math.sin(Math.min(1,k/.5)*Math.PI)*L*.45,aw=wAng(-.1);drawWeaponShape(w,hx+Math.cos(aw)*ext,hy+Math.sin(aw)*ext,aw,L,s,p.now,dirS);return}
-  /* 궤적: 내려베는 구간 */if(k>.2&&k<.62){for(let j=6;j>=1;j--){const kj=Math.max(.22,k-j*.035),[jx,jy,ja]=handQ(kj,side),[wx,wy]=toW(jx,jy),aa=wAng(ja+.25);for(let d=L*.35;d<=L*1.05;d+=1.6)RA(wx+Math.cos(aa)*d-1,wy+Math.sin(aa)*d-1,2,2,j===1?'#ffffff':(w.trail||'#ffffff'),.14*(7-j)/6)}}
+  /* 스킨 전용 공격 이펙트 (궤적·불꽃·고리 등) */{const SM=window.__skinMotion;if(SM&&SM.fx)try{SM.fx(c,k,{handQ:q=>handQ(q,side),toW,wAng,L,s,fl,dirS})}catch(e){}}
+  if(pose.thrust&&!window.__skinMotion){const ext=Math.sin(Math.min(1,k/.5)*Math.PI)*L*.45,aw=wAng(-.1);drawWeaponShape(w,hx+Math.cos(aw)*ext,hy+Math.sin(aw)*ext,aw,L,s,p.now,dirS);return}
+  /* 궤적: 내려베는 구간 (스킨 전용 이펙트가 있으면 그쪽이 그림) */if(k>.2&&k<.62&&!(window.__skinMotion&&window.__skinMotion.fx)){for(let j=6;j>=1;j--){const kj=Math.max(.22,k-j*.035),[jx,jy,ja]=handQ(kj,side),[wx,wy]=toW(jx,jy),aa=wAng(ja+.25);for(let d=L*.35;d<=L*1.05;d+=1.6)RA(wx+Math.cos(aa)*d-1,wy+Math.sin(aa)*d-1,2,2,j===1?'#ffffff':(window.__skinTrail?(window.__skinTrail==='rainbow'?['#ff3ad6','#b05cff','#29f0ff','#5affb0','#ffe14d','#ff9a3a'][j%6]:window.__skinTrail):(w.trail||'#ffffff')),.14*(7-j)/6*(window.__skinTrail?1.6:1))}}
   drawWeaponShape(w,hx,hy,wAng(a+.25),L,s,p.now,dirS)}
 
  /* ---------- drawKnight: 방향 결정 · 휘두르기 손 위치 · 기울기 · 옆모습 폭 ---------- */
