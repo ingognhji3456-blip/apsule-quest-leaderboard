@@ -12,3 +12,12 @@ services:
       # 비워 두면 SQLite 파일에 저장합니다. 자세한 건 game/서버_로그인_안내.md
       - key: DATABASE_URL
         sync: false
+      # (선택) 토스페이먼츠 결제 키. 비워 두면 문서 공개 테스트 키로 "테스트 결제"만 돼요.
+      # 진짜 판매 전에는 반드시 DATABASE_URL(Postgres)도 넣으세요 — 구매 기록이 지워지면 안 돼요.
+      - key: TOSS_CLIENT_KEY
+        sync: false
+      - key: TOSS_SECRET_KEY
+        sync: false
+      # 결제창에 보여 줄 환불·문의 연락처 (예: 이메일)
+      - key: SHOP_CONTACT
+        sync: false
