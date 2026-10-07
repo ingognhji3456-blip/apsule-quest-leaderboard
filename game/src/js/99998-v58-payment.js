@@ -54,12 +54,15 @@
   stopPending();
   /* 팝업 차단을 피하려고 누른 순간 빈 창부터 연다 */
   let w=null;try{w=window.open('','bbpay58','width=480,height=760');if(w)w.document.write('<meta name="viewport" content="width=device-width"><body style="margin:0;background:#07090f;color:#eef2ff;font:16px system-ui;display:grid;place-items:center;min-height:100vh">결제창을 여는 중…</body>')}catch(e){}
-  try{const r=await fetch(base()+'/api/shop/order',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+a.token},body:JSON.stringify({product_id:pid})});
+  try{/* 서버가 결제를 아는 새 버전인지 먼저 확인 (옛 서버는 주문 주소가 없어 브라우저가 "Failed to fetch"만 보여 줌) */
+   let cat=null;try{const c=await fetch(base()+'/api/shop',{cache:'no-store'});cat=await c.json()}catch(e){throw Error('서버에 연결하지 못했어요. 무료 서버가 깨어나는 중일 수 있어요(최대 1분). 잠시 뒤 다시 눌러 주세요.')}
+   if(!cat||cat.checkout_enabled!==true)throw Error('서버가 아직 결제를 지원하지 않는 옛 버전이에요. 서버(Render)를 새 버전으로 올린 뒤 다시 눌러 주세요.');
+   const r=await fetch(base()+'/api/shop/order',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+a.token},body:JSON.stringify({product_id:pid})});
    let j={};try{j=await r.json()}catch(e){}
    if(!r.ok||!j.ok){if(r.status===409){try{await refresh()}catch(e){}}throw Error(j.error||'주문을 만들지 못했어요.')}
    if(w&&!w.closed)w.location.href=j.checkout_url;else{w=window.open(j.checkout_url,'_blank');if(!w){cb({err:'팝업이 막혔어요. 브라우저에서 이 사이트의 팝업을 허용해 주세요.'});return}}
    testMode=!!j.test_mode;pending={order:j.order_id,win:w,cb,t0:Date.now(),iv:setInterval(check,2500)};cb({opened:true,amount:j.amount,test:testMode})}
-  catch(e){try{w&&w.close()}catch(_){}cb({err:e.message||'주문을 만들지 못했어요.'})}}
+  catch(e){try{w&&w.close()}catch(_){}const m=e&&e.message||'';cb({err:/Failed to fetch|NetworkError|Load failed/i.test(m)?'서버에 연결하지 못했어요. 잠시 뒤 다시 눌러 주세요.':m||'주문을 만들지 못했어요.'})}}
  window.addEventListener('message',e=>{const d=e.data;if(d&&d.type==='beatblade-pay'&&pending&&d.order_id===pending.order)setTimeout(check,300)});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&pending)check()});
 
