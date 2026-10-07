@@ -28,7 +28,7 @@ import secrets
 import sqlite3
 import threading
 import time
-from flask import Flask, request, jsonify, g, send_from_directory
+from flask import Flask, request, jsonify, g, send_from_directory, render_template_string
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport.requests import Request as GoogleRequest
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -595,6 +595,28 @@ def google_finish():
     resp.headers['Cache-Control'] = 'no-store'
     return resp
 
+
+
+@app.route('/google-bridge')
+def google_bridge():
+    mode = request.args.get('mode', 'login') if request.args.get('mode') in ('login','link') else 'login'
+    token = request.args.get('token', '') if mode == 'link' else ''
+    # This page is hosted on the verified Render origin. It returns only the
+    # short-lived game session result to the opener via postMessage.
+    return render_template_string(r'''<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BeatBlade Google 로그인</title>
+<style>body{margin:0;background:#081217;color:#eaf6ef;font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}.box{width:min(390px,calc(100% - 32px));padding:24px;border:2px solid #80e8b0;border-radius:16px;background:#12242c;text-align:center;box-shadow:0 10px 40px #0008}h2{margin:0 0 10px}.note{color:#b9d7c9;font-size:13px;line-height:1.5;margin:10px 0 18px}.err{color:#ffb2a8;margin-top:14px;font-size:13px}</style>
+<div class="box"><h2>👤 BeatBlade Google 로그인</h2><div id="note" class="note">Google 버튼을 준비하는 중…</div><div id="g"></div><div id="err" class="err"></div></div>
+<script src="https://accounts.google.com/gsi/client" async></script><script>
+const mode={{mode|tojson}}, token={{token|tojson}}, base=location.origin;let nonce='';
+const note=document.getElementById('note'),err=document.getElementById('err');
+function fail(x){err.textContent=x;note.textContent='창을 닫고 게임에서 다시 시도해 주세요.'}
+async function start(){try{
+ const r=await fetch(base+'/api/google/challenge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode})});
+ const j=await r.json();if(!r.ok||!j.nonce)throw Error(j.error||'로그인 요청을 만들지 못했어요');nonce=j.nonce;
+ const wait=()=>{if(!window.google||!google.accounts){setTimeout(wait,80);return}google.accounts.id.initialize({client_id:j.client_id,nonce,auto_select:false,ux_mode:'popup',callback:finish});google.accounts.id.renderButton(document.getElementById('g'),{theme:'outline',size:'large',text:mode==='link'?'continue_with':'signin_with',locale:'ko',width:280});note.textContent=mode==='link'?'연결할 Google 계정을 선택해 주세요.':'로그인할 Google 계정을 선택해 주세요.'};wait();
+ }catch(e){fail(e.message)}}
+async function finish(response){try{note.textContent='인증 확인 중…';const h={'Content-Type':'application/json'};if(mode==='link')h.Authorization='Bearer '+token;const r=await fetch(base+'/api/google/'+mode,{method:'POST',headers:h,body:JSON.stringify({credential:response.credential,nonce})});const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Google 로그인에 실패했어요');window.opener?.postMessage({type:'beatblade-google-auth',ok:true,mode,token:j.token||'',username:j.username||'',google_linked:!!j.google_linked},'*');window.close();}catch(e){fail(e.message)}}start();
+</script></html>''', mode=mode, token=token)
 
 init_db()
 
