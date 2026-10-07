@@ -176,6 +176,14 @@ def init_db():
             updated_at  DOUBLE PRECISION NOT NULL
         )
     ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS shop_entitlements (
+            user_id TEXT NOT NULL,
+            product_id TEXT NOT NULL,
+            granted_at DOUBLE PRECISION NOT NULL,
+            PRIMARY KEY (user_id, product_id)
+        )
+    ''')
     db.commit()
     db.close()
 
@@ -198,6 +206,36 @@ def compute_score(level, wave, rebirths):
     # 환생 > 모험 레벨 > 웨이브 순으로 우선순위를 두는 단순 합산 점수.
     # (레벨/웨이브가 각각 9999를 넘지 않는다고 가정하고 자리수를 나눔)
     return rebirths * 100_000_000 + level * 10_000 + wave
+
+
+SHOP_PRODUCTS = [
+    {'id': 'boss_pack_01', 'kind': 'boss', 'name': '추가 보스팩',
+     'description': '새로운 보스·전용 음악·스토리를 담을 예정이에요.',
+     'status': 'coming_soon', 'price': None},
+    {'id': 'skin_pack_01', 'kind': 'skin', 'name': '외형 스킨팩',
+     'description': '캐릭터와 검의 외형을 꾸미는 상품이에요. 능력치는 바뀌지 않아요.',
+     'status': 'coming_soon', 'price': None},
+]
+
+
+@app.route('/api/shop')
+def shop_catalog():
+    response = jsonify(ok=True, products=SHOP_PRODUCTS, checkout_enabled=False)
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+@app.route('/api/shop/owned')
+def shop_owned():
+    user = _current_user()
+    if not user:
+        return _bad('로그인 후 보유 상품을 확인할 수 있어요', 401)
+    rows = get_db().execute(
+        'SELECT product_id FROM shop_entitlements WHERE user_id = ?',
+        (user['user_id'],)).fetchall()
+    response = jsonify(ok=True, owned=[row['product_id'] for row in rows])
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
 
 @app.route('/health')
