@@ -1,5 +1,5 @@
 /* ================= v56 보스팩 · 스킨 상점 (ChatGPT 작업을 원본으로 옮김) =================
-   메뉴 위 「보스팩 · 스킨」 단추 → 상품 목록(서버 /api/shop)과 계정별 보유 상품(/api/shop/owned).
+   상점(태엽 공방)의 「✦ 보스팩 · 스킨」 탭 → 상품 목록(서버 /api/shop)과 계정별 보유 상품(/api/shop/owned).
    결제는 아직 없음: 모든 상품이 「출시 준비 중」으로 보인다. */
 /* Account-backed add-on store. Checkout and content release are not enabled. */
 (()=>{try{
@@ -39,7 +39,8 @@
  sheet.addEventListener('close',()=>{generation++;});
  sheet.addEventListener('keydown',e=>e.stopPropagation());
  sheet.addEventListener('pointerdown',e=>e.stopPropagation());
- function mount(){const hud=document.querySelector('#gameMenu .gmHud');if(!hud||document.getElementById('bbShopButton'))return;const b=document.createElement('button');b.id='bbShopButton';b.className='gmBtn';b.textContent='보스팩 · 스킨';b.onclick=e=>{e.stopPropagation();open();};hud.appendChild(b);}
- /* 메뉴 화면이 바뀔 때마다 단추가 있는지 확인 (예전: 문서 전체 감시 → 매 변화마다 실행돼서 무거움) */
- mount();{const _gs=gmShow;gmShow=function(){const r=_gs.apply(this,arguments);try{mount()}catch(e){}return r}}
+ /* 메뉴 위 단추는 없애고, 상점(태엽 공방) 탭 줄에 「보스팩 · 스킨」 탭을 붙임 → 누르면 이 창이 열림 */
+ window.BBShopOpen=open;
+ function mount(){const tabs=document.querySelector('#shopModal .shopTabs');if(!tabs||tabs.querySelector('[data-addon]'))return;const b=document.createElement('button');b.className='shopTab bbAddonTab';b.dataset.addon='1';b.innerHTML='✦ <span class="bbL">보스팩 · 스킨</span><span class="bbS">팩·스킨</span>';b.title='보스팩 · 스킨';b.onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}open();};tabs.appendChild(b);}
+ {const _rs=renderShop;renderShop=function(){const r=_rs.apply(this,arguments);try{mount()}catch(e){}return r}}
 }catch(e){console.error('v56 shop',e)}})();
