@@ -28,7 +28,9 @@ import secrets
 import sqlite3
 import threading
 import time
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, send_from_directory
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport.requests import Request as GoogleRequest
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -52,6 +54,12 @@ USE_PG = DATABASE_URL.startswith(('postgres://', 'postgresql://'))
 if USE_PG:
     import psycopg
     from psycopg.rows import dict_row
+
+# Public OAuth client ID, not a client secret.
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID',
+    '888860005488-v3a9bbau8kkuj7790q6hmhb4a4v07t4k.apps.googleusercontent.com').strip()
+GOOGLE_ORIGINS = set(x.strip().rstrip('/') for x in os.environ.get(
+    'GOOGLE_ALLOWED_ORIGINS', 'https://capsule-quest-leaderboard.onrender.com').split(',') if x.strip())
 
 MAX_NAME_LEN = 12
 MAX_TEXT_LEN = 40
@@ -139,6 +147,22 @@ def init_db():
             rev         INTEGER NOT NULL,
             data        TEXT NOT NULL,
             updated_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS google_accounts (
+            google_sub TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL UNIQUE,
+            created_at DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS google_challenges (
+            nonce_hash TEXT PRIMARY KEY,
+            mode TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            session_hash TEXT NOT NULL,
+            expires_at DOUBLE PRECISION NOT NULL
         )
     ''')
     db.commit()
@@ -394,7 +418,9 @@ def api_me():
     user = _current_user()
     if not user:
         return _bad('로그인이 필요해요', 401)
-    return jsonify(ok=True, username=user['username'])
+    linked = get_db().execute('SELECT 1 FROM google_accounts WHERE user_id = ?',
+                              (user['user_id'],)).fetchone() is not None
+    return jsonify(ok=True, username=user['username'], google_linked=linked)
 
 
 @app.route('/api/save', methods=['GET'])
@@ -442,6 +468,132 @@ def api_save_put():
     if res.rowcount != 1:
         return jsonify(ok=False, error='conflict', rev=cur + 1), 409
     return jsonify(ok=True, rev=cur + 1, updated_at=now)
+
+
+
+# Google sign-in uses verified ID tokens + one-use, session-bound nonces.
+@app.route('/play')
+@app.route('/play/')
+def play():
+    resp = send_from_directory(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'game'), 'BeatBlade-53.html')
+    resp.headers['Cross-Origin-Opener-Policy'] = 'same-origin-allow-popups'
+    resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    resp.headers['Cache-Control'] = 'no-cache'
+    return resp
+
+
+def _google_origin_ok():
+    return request.is_json and request.headers.get('Origin', '') in GOOGLE_ORIGINS
+
+
+@app.route('/api/google/challenge', methods=['POST'])
+def google_challenge():
+    if not _google_origin_ok():
+        return _bad('등록된 게임 웹사이트에서 Google 로그인을 이용해 주세요', 403)
+    if not GOOGLE_CLIENT_ID:
+        return _bad('서버에 Google 클라이언트 ID가 설정되지 않았어요', 503)
+    key = 'google:' + _client_ip()
+    if _too_many(key, 60, 600):
+        return _bad('시도가 너무 많아요. 잠시 후 다시 해 주세요', 429)
+    _note(key)
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or body.get('mode') not in ('login', 'link'):
+        return _bad('요청 형식이 잘못됐어요')
+    mode = body['mode']
+    user = _current_user() if mode == 'link' else None
+    if mode == 'link' and not user:
+        return _bad('먼저 기존 아이디로 로그인해 주세요', 401)
+    nonce = secrets.token_urlsafe(32)
+    db = get_db()
+    db.execute('DELETE FROM google_challenges WHERE expires_at < ?', (time.time(),))
+    db.execute('INSERT INTO google_challenges (nonce_hash, mode, user_id, session_hash, expires_at) '
+               'VALUES (?, ?, ?, ?, ?)', (_hash_token(nonce), mode,
+                user['user_id'] if user else '', user['token_hash'] if user else '', time.time() + 600))
+    db.commit()
+    resp = jsonify(ok=True, nonce=nonce, client_id=GOOGLE_CLIENT_ID)
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
+def _verify_google(credential):
+    # Google library verifies signature, audience, expiry and issuer.
+    return google_id_token.verify_oauth2_token(credential, GoogleRequest(), GOOGLE_CLIENT_ID)
+
+
+@app.route('/api/google/login', methods=['POST'])
+@app.route('/api/google/link', methods=['POST'])
+def google_finish():
+    if not _google_origin_ok():
+        return _bad('등록된 게임 웹사이트에서 Google 로그인을 이용해 주세요', 403)
+    mode = 'link' if request.path.endswith('/link') else 'login'
+    user = _current_user() if mode == 'link' else None
+    if mode == 'link' and not user:
+        return _bad('먼저 기존 아이디로 로그인해 주세요', 401)
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return _bad('요청 형식이 잘못됐어요')
+    credential, nonce = body.get('credential'), body.get('nonce')
+    if not isinstance(credential, str) or not 1 <= len(credential) <= 12000 or not isinstance(nonce, str) or not 20 <= len(nonce) <= 128:
+        return _bad('Google 인증 정보가 없어요')
+    db = get_db()
+    challenge = db.execute('SELECT * FROM google_challenges WHERE nonce_hash = ?', (_hash_token(nonce),)).fetchone()
+    if not challenge or challenge['expires_at'] < time.time() or challenge['mode'] != mode:
+        return _bad('로그인 요청이 만료됐어요. 계정 창을 다시 열어 주세요', 401)
+    if mode == 'link' and (challenge['user_id'] != user['user_id'] or challenge['session_hash'] != user['token_hash']):
+        return _bad('계정이 바뀌었어요. 다시 연결해 주세요', 401)
+    # Consume before validation: an invalid or replayed credential cannot reuse a nonce.
+    deleted = db.execute('DELETE FROM google_challenges WHERE nonce_hash = ?', (_hash_token(nonce),))
+    db.commit()
+    if deleted.rowcount != 1:
+        return _bad('이미 사용된 로그인 요청이에요', 401)
+    try:
+        info = _verify_google(credential)
+    except ValueError:
+        return _bad('Google 인증을 확인할 수 없어요. 계정 창을 다시 열어 주세요', 401)
+    except Exception:
+        app.logger.warning('Google token verification unavailable')
+        return _bad('Google 인증 서버에 연결하지 못했어요. 다시 시도해 주세요', 503)
+    sub = info.get('sub')
+    if (not isinstance(sub, str) or not 1 <= len(sub) <= 255 or
+        info.get('iss') not in ('accounts.google.com', 'https://accounts.google.com') or
+        info.get('aud') != GOOGLE_CLIENT_ID or info.get('nonce') != nonce):
+        return _bad('Google 인증 정보가 일치하지 않아요', 401)
+    row = db.execute('SELECT g.user_id, u.username FROM google_accounts g JOIN users u '
+                     'ON u.user_id = g.user_id WHERE g.google_sub = ?', (sub,)).fetchone()
+    if mode == 'link':
+        if row and row['user_id'] != user['user_id']:
+            return _bad('이 Google 계정은 다른 게임 계정에 연결돼 있어요', 409)
+        other = db.execute('SELECT google_sub FROM google_accounts WHERE user_id = ?', (user['user_id'],)).fetchone()
+        if other and other['google_sub'] != sub:
+            return _bad('이미 다른 Google 계정이 연결돼 있어요', 409)
+        if not row:
+            try:
+                db.execute('INSERT INTO google_accounts (google_sub, user_id, created_at) VALUES (?, ?, ?)',
+                           (sub, user['user_id'], time.time()))
+                db.commit()
+            except Exception:
+                db.rollback()
+                return _bad('연결 상태가 바뀌었어요. 계정 창을 다시 열어 주세요', 409)
+        return jsonify(ok=True, google_linked=True, username=user['username'])
+    if not row:
+        uid = secrets.token_hex(12)
+        name = 'G_' + uid[:12]
+        try:
+            # An unguessable unused password; no email/name-based automatic account linking.
+            db.execute('INSERT INTO users (user_id, username, name_key, pw_hash, created_at) VALUES (?, ?, ?, ?, ?)',
+                       (uid, name, name.lower(), generate_password_hash(secrets.token_urlsafe(48)), time.time()))
+            db.execute('INSERT INTO google_accounts (google_sub, user_id, created_at) VALUES (?, ?, ?)',
+                       (sub, uid, time.time()))
+            db.commit()
+            row = {'user_id': uid, 'username': name}
+        except Exception:
+            db.rollback()
+            return _bad('계정 생성이 겹쳤어요. 계정 창을 다시 열고 로그인해 주세요', 409)
+    token = _new_session(db, row['user_id'])
+    db.commit()
+    resp = jsonify(ok=True, token=token, username=row['username'], google_linked=True)
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
 
 
 init_db()
