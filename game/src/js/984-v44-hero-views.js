@@ -68,7 +68,7 @@
 
  /* ---------- 검 휘두르기 ---------- */
  const SWV={};/* 휘두르기 진행: lungeDur보다 길게 보여 줘서 예비·여운이 보이게 */
- function swingK(now){if(!P.lungeT)return -1;const d=now-P.lungeT,dur=Math.max(260,(P.lungeDur||120)*2.1);return d>=0&&d<dur?d/dur:-1}
+ function swingK(now){if(!P.lungeT)return -1;const d=now-P.lungeT,dur=Math.max(380,(P.lungeDur||120)*3);/* v60: 들어 올리는 장면이 보이도록 조금 길게 (판정 시간은 그대로) */return d>=0&&d<dur?d/dur:-1}
  /* 0~.22 들어올림 · .22~.5 내려베기 · .5~.75 따라 돎 · .75~1 제자리 */
  const ease=k=>k*k*(3-2*k);
  /* 스킨마다 다른 휘두르기: window.__skinMotion = {arm(k,ease), hand(k,side) → [어깨x, 팔 길이], lean(k,ease), fx(...)} (99992) */
@@ -77,15 +77,22 @@
  /* 몸 기울기 */function leanOf(k){if(k<0)return 0;{const SM=window.__skinMotion;if(SM&&SM.lean)return SM.lean(k,ease)}if(k<.22)return -.09*ease(k/.22);if(k<.5)return -.09+.24*ease((k-.22)/.28);return .15*(1-ease((k-.5)/.5))}
 
  /* drawSword: 휘두르는 동안은 여기서 그리지 않고, 몸을 그린 뒤 손 위치에 그림 */
- {const _ds=drawSword;drawSword=function(x,y,s,fl,now){const k=swingK(now);if(k<0||!(mode==='boss'||mode==='cave'||mode==='village'))return _ds.apply(this,arguments);HV.pend={x,y,s,fl,now,k,t:now};}}
+ /* v60: 가만히 있을 때도 검을 손에 쥔 채로 몸 앞에 그림 (예전: 몸 뒤 오른쪽에 떠서 걸을 때 이리저리 기울어 '푸딩'처럼 보였음). 뒷모습일 때만 몸 뒤에 그대로 */
+ {const _ds=drawSword;drawSword=function(x,y,s,fl,now){if(!(mode==='boss'||mode==='cave'||mode==='village'))return _ds.apply(this,arguments);const k=swingK(now);
+   if(k<0){const fx=P.face||{x:0,y:1},moving=!!P.walkOn;if(moving&&Math.abs(fx.y)>Math.abs(fx.x)*1.1&&fx.y<0)return _ds.apply(this,arguments)}
+   HV.pend={x,y,s,fl,now,k,t:now};}}
  function drawPendingSword(c,X,Y,kk,fl,side,lean,fx,fy,dfl){const p=HV.pend;HV.pend=null;if(!p)return;const w=curWp(),pose=WPOSE[w.type]||WPOSE.sword,sp=WSPR[w.type]||WSPR.sword,s=p.s,L=(sp.r.length-sp.g)*s*.72,dirS=fl?-1:1,k=p.k;
   /* 그림 좌표(40×48, 옆모습은 왼쪽을 보는 그림) → 화면 좌표: 뒤집기 → 옆모습 폭 → 몸 기울기 */
   const sk=lean*dirS,toW=(px,py)=>{let wx=dfl?X+40*kk-(px+6)*kk:X+(px+6)*kk,wy=Y+(py+10)*kk;if(side)wx=fx+(wx-fx)*.86;wx-=sk*(wy-fy);return [wx,wy]};
   /* 팔 각도 a0는 '앞(오른쪽)을 보는' 기준 → 화면에서는 바라보는 쪽으로 */const wAng=a0=>fl?Math.PI-a0:a0;
+  /* 가만히 · 걷는 중: 손을 허리 앞에 두고 검을 앞으로 비스듬히 쥠 (걸음에 맞춰 위아래로만 살짝) */
+  if(k<0){const sx=side?12.5:19.5,ra=1.25,R0=6.2,f=P.walkOn?((Math.floor((P.walkT||0)/(Math.PI/2))%4)+4)%4:0,bob=(f%2?-1:0)+Math.sin(p.now/700)*.25,[ix,iy]=toW(sx+Math.cos(ra)*R0,19.5+Math.sin(ra)*R0+bob);
+   const ia=pose.shoulder?pose.idle:pose.thrust?-1.45:.95;drawWeaponShape(w,ix,iy,wAng(ia),L,s,p.now,dirS);return}
   const [qx,qy,a]=handQ(k,side),[hx,hy]=toW(qx,qy);
   /* 스킨 전용 공격 이펙트 (궤적·불꽃·고리 등) */{const SM=window.__skinMotion;if(SM&&SM.fx)try{SM.fx(c,k,{handQ:q=>handQ(q,side),toW,wAng,L,s,fl,dirS})}catch(e){}}
+  /* 새 검(99995) 전용 휘두르기 이펙트 */{const WF=window.__wpFx;if(WF)try{WF(c,k,{handQ:q=>handQ(q,side),toW,wAng,L,s,fl,dirS})}catch(e){}}
   if(pose.thrust&&!window.__skinMotion){const ext=Math.sin(Math.min(1,k/.5)*Math.PI)*L*.45,aw=wAng(-.1);drawWeaponShape(w,hx+Math.cos(aw)*ext,hy+Math.sin(aw)*ext,aw,L,s,p.now,dirS);return}
-  /* 궤적: 내려베는 구간 (스킨 전용 이펙트가 있으면 그쪽이 그림) */if(k>.2&&k<.62&&!(window.__skinMotion&&window.__skinMotion.fx)){for(let j=6;j>=1;j--){const kj=Math.max(.22,k-j*.035),[jx,jy,ja]=handQ(kj,side),[wx,wy]=toW(jx,jy),aa=wAng(ja+.25);for(let d=L*.35;d<=L*1.05;d+=1.6)RA(wx+Math.cos(aa)*d-1,wy+Math.sin(aa)*d-1,2,2,j===1?'#ffffff':(window.__skinTrail?(window.__skinTrail==='rainbow'?['#ff3ad6','#b05cff','#29f0ff','#5affb0','#ffe14d','#ff9a3a'][j%6]:window.__skinTrail):(w.trail||'#ffffff')),.14*(7-j)/6*(window.__skinTrail?1.6:1))}}
+  /* 궤적: 내려베는 구간 (스킨 전용 이펙트가 있으면 그쪽이 그림) */if(k>.2&&k<.62&&!(window.__skinMotion&&window.__skinMotion.fx)&&!window.__wpFx){for(let j=6;j>=1;j--){const kj=Math.max(.22,k-j*.035),[jx,jy,ja]=handQ(kj,side),[wx,wy]=toW(jx,jy),aa=wAng(ja+.25);for(let d=L*.35;d<=L*1.05;d+=1.6)RA(wx+Math.cos(aa)*d-1,wy+Math.sin(aa)*d-1,2,2,j===1?'#ffffff':(window.__skinTrail?(window.__skinTrail==='rainbow'?['#ff3ad6','#b05cff','#29f0ff','#5affb0','#ffe14d','#ff9a3a'][j%6]:window.__skinTrail):(w.trail||'#ffffff')),.14*(7-j)/6*(window.__skinTrail?1.6:1))}}
   drawWeaponShape(w,hx,hy,wAng(a+.25),L,s,p.now,dirS)}
 
  /* ---------- drawKnight: 방향 결정 · 휘두르기 손 위치 · 기울기 · 옆모습 폭 ---------- */
