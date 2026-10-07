@@ -76,7 +76,7 @@ function rpMusMount(){const el=$('gmRushDet'),btn=el&&el.querySelector('#rpMusBt
 {const _lbt=typeof lobbyBgmTick==='function'?lobbyBgmTick:null;if(_lbt){lobbyBgmTick=function(){if(RPM.on){LBGM.on=false;return}return _lbt.apply(this,arguments)}}}
 /* ---------- 기록 저장 ---------- */
 function rpSaveRec(key,won){if(!won||!G||G.story)return;saveData.rrec=saveData.rrec||{};const k=key+'|'+diff,t=Math.round((performance.now()-(G.startReal||performance.now()))/1000),o=saveData.rrec[k]||{clears:0};
- o.clears=(o.clears||0)+1;o.score=Math.max(o.score||0,G.score||0);o.time=o.time?Math.min(o.time,t):t;o.combo=Math.max(o.combo||0,G.maxCombo||0);o.hits=o.hits==null?G.hits:Math.min(o.hits,G.hits||0);saveData.rrec[k]=o;try{saveNow()}catch(e){}}
+ o.clears=(o.clears||0)+1;o.score=Math.max(o.score||0,G.score||0);try{if(typeof window.BBRankSubmit==='function'&&G.score>0)window.BBRankSubmit(G.score,{chapter:(()=>{try{const w=window.who54&&who54();if(w)return w[0]+1}catch(_){}return Math.floor((Number(G.bi)||0)/10)+1})(),boss:G.B&&G.B.name||'',difficulty:diff})}catch(e){}o.time=o.time?Math.min(o.time,t):t;o.combo=Math.max(o.combo||0,G.maxCombo||0);o.hits=o.hits==null?G.hits:Math.min(o.hits,G.hits||0);saveData.rrec[k]=o;try{saveNow()}catch(e){}}
 /* ---------- 10연전 러시 ---------- */
 let RUSH=null;
 function rpRunList(ch){return [...Array(10)].map((_,i)=>ch===3?{s4:i}:ch===2?{c3:i}:{bi:ch*10+i})}

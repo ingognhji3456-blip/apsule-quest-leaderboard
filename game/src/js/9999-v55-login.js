@@ -36,7 +36,7 @@
   try{for(const k of Object.keys(saveData))delete saveData[k];Object.assign(saveData,{clear:{},chapter:0},data||{})}catch(e){}
   A.rev=rev;A.synced=canon(data||{});keep();setSt('ok');setTimeout(()=>location.reload(),150)}
  /* 이 기기 기록 올리기 */
- async function push(force){if(!A.token||busy)return;const cur=localStr();if(!force&&cur===A.synced)return;
+ async function push(force){if(!A.token||busy||googleWorking)return;const cur=localStr();if(!force&&cur===A.synced)return;
   busy=true;setSt('up');lastTry=Date.now();
   try{const r=await api('/api/save','PUT',{base_rev:A.rev,force:!!force,data:JSON.parse(cur)});
    if(r.s===200){A.rev=r.j.rev;A.synced=cur;keep();setSt('ok')}
@@ -62,6 +62,7 @@
  #acctBox[hidden]{display:none}
  .acPanel{width:min(400px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;box-sizing:border-box;padding:20px;border-radius:10px;background:linear-gradient(180deg,#15232b,#0a1216);box-shadow:0 0 0 2px #05080a,0 0 0 4px #a6f5c6,0 12px 40px #000c}
  .acPanel h3{margin:0 0 4px;font-size:22px;letter-spacing:.12em;text-shadow:0 3px 0 #0009}
+ .acRankList{display:flex;flex-direction:column;gap:5px;max-height:52vh;overflow:auto;margin:10px 0}.acRankRow{display:grid;grid-template-columns:42px 1fr auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid #2e5051;border-radius:7px;background:#10242a}.acRankRow b{color:#ffd166}.acRankRow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.acRankRow strong{color:#a6f5c6}
  .acNote{font-size:12px;color:#9ab8ac;line-height:1.55;margin:4px 0 12px}
  .acTabs{display:flex;gap:8px;margin:10px 0 12px}.acTabs .gmBtn{flex:1;padding:9px 10px;font-size:14px}
  .acTabs .gmBtn.on{box-shadow:0 0 0 2px #05080a,0 0 0 4px #a6f5c6,0 5px 0 4px #05080a;color:#a6f5c6}
@@ -80,11 +81,70 @@
  box.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'&&!pend)close()});
  box.addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===box&&!pend)close()});
  const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+ // Google sign-in: keep all account/save state in the existing account module.
+ let googleEpoch=0, googleWorking=false, gisPromise=null;
+ function loadGIS(){
+  if(window.google&&google.accounts&&google.accounts.id)return Promise.resolve();
+  if(gisPromise)return gisPromise;
+  gisPromise=new Promise((resolve,reject)=>{
+   const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;
+   const timer=setTimeout(()=>{script.remove();gisPromise=null;reject(new Error('Google 로그인 로딩이 지연돼요. 다시 눌러 주세요.'))},15000);
+   script.onload=()=>{clearTimeout(timer);resolve()};script.onerror=()=>{clearTimeout(timer);script.remove();gisPromise=null;reject(new Error('Google 로그인 화면을 불러오지 못했어요.'))};
+   document.head.appendChild(script);
+  });return gisPromise;
+ }
+ function draw(){
+  drawBase();const epoch=++googleEpoch;
+  if(pend)return;
+  const p=$('acPanel'), area=document.createElement('div');area.className='acCard';area.style.marginTop='12px';
+  p.appendChild(area);
+  if(location.origin!=='https://capsule-quest-leaderboard.onrender.com'){
+   const linking=!!A.token;
+   area.innerHTML='<b>파일에서도 Google 로그인</b><div class="acNote">'+(linking?'현재 아이디 기록에 Google 계정을 연결해요.':'Google 계정으로 로그인하면 서버 기록을 불러와요.')+'</div><button class="gmBtn" id="fileGoogle">'+(linking?'Google 계정 연결':'Google 로그인')+'</button><div class="acNote" style="margin-top:10px">Google 인증 창이 새 탭으로 열립니다.</div>';
+   $('fileGoogle').onclick=()=>{const u='https://capsule-quest-leaderboard.onrender.com/google-bridge?mode='+(linking?'link':'login')+(linking?'#token='+encodeURIComponent(A.token):'');const w=window.open(u,'beatbladeGoogle','width=460,height=650');if(!w)msg('팝업을 허용해 주세요')};return;
+  }
+  const linking=!!A.token, token=A.token, server=A.url;
+  const note=document.createElement('div');note.className='acNote';note.textContent=linking?'기존 기록 그대로 Google 계정을 연결할 수 있어요.':'기존 기록이 있다면 먼저 아이디로 로그인한 뒤 Google 계정을 연결해 주세요.';area.appendChild(note);
+  const button=document.createElement('button');button.className='gmBtn';button.textContent=linking?'Google 계정 연결':'Google 로그인 준비';area.appendChild(button);
+  const slot=document.createElement('div');slot.style.cssText='margin-top:10px;min-height:4px';area.appendChild(slot);
+  const current=()=>epoch===googleEpoch&&A.token===token&&A.url===server&&area.isConnected;
+  if(linking)api('/api/me').then(res=>{if(current()&&res.s===200&&res.j.google_linked){note.textContent='✓ Google 계정이 연결돼 있어요. 다음에는 Google 버튼으로 로그인할 수 있어요.';button.remove()}});
+  button.onclick=async()=>{
+   if(googleWorking)return;
+   button.disabled=true;note.textContent='Google 로그인 버튼을 불러오는 중…';
+   try{
+    await loadGIS();if(!current())return;
+    const c=await api('/api/google/challenge','POST',{mode:linking?'link':'login'});if(!current())return;
+    if(c.s!==200||!c.j.nonce)throw new Error(c.j.error||'서버에 Google 로그인 업데이트를 먼저 적용해 주세요.');
+    google.accounts.id.initialize({client_id:c.j.client_id,nonce:c.j.nonce,auto_select:false,ux_mode:'popup',
+     callback:async response=>{
+      if(!current()||googleWorking)return;
+      googleWorking=true;p.inert=true;note.textContent=linking?'Google 계정을 연결하는 중…':'Google 인증을 확인하는 중…';
+      try{
+       const res=await api('/api/google/'+(linking?'link':'login'),'POST',{credential:response.credential,nonce:c.j.nonce});
+       if(!current())return;
+       if(res.s!==200||(!linking&&!res.j.token))throw new Error(res.j.error||'Google 로그인에 실패했어요.');
+       if(linking){draw();msg('Google 계정을 연결했어요. 기존 기록을 그대로 사용할 수 있어요.',true)}
+       else{
+        A.user=res.j.username;A.token=res.j.token;A.rev=0;A.synced='';keep();setSt('');
+        // Allow the existing pull routine to upload a local save for a new account.
+        googleWorking=false;await pull(true);if(boxOn)draw();
+       }
+      }catch(e){if(current()){slot.replaceChildren();button.disabled=false;note.textContent=e.message+' 버튼을 다시 눌러 주세요.'}}
+      finally{googleWorking=false;p.inert=false}
+     }});
+    slot.replaceChildren();google.accounts.id.renderButton(slot,{type:'standard',theme:'outline',size:'large',text:linking?'continue_with':'signin_with',locale:'ko',width:240});
+    note.textContent=linking?'아래 Google 버튼을 눌러 연결할 계정을 선택해 주세요.':'아래 Google 버튼을 눌러 로그인해 주세요.';button.textContent='버튼 다시 불러오기';button.disabled=false;
+   }catch(e){if(current()){note.textContent=e.message;button.disabled=false}}
+  };
+ }
+
  let tab='login';
  function open(){boxOn=true;box.hidden=false;document.body.classList.add('acctOn');draw()}
  function close(){boxOn=false;box.hidden=true;document.body.classList.remove('acctOn')}
  function msg(t,ok){const m=$('acMsg');if(m){m.textContent=t||'';m.classList.toggle('ok',!!ok)}}
- function draw(){const p=$('acPanel');
+ function drawBase(){const p=$('acPanel');
   if(pend&&A.token){/* 기록이 엇갈렸을 때 */const sv=pend.sv,lo=localObj();
    p.innerHTML='<h3>☁ 기록 고르기</h3><div class="acNote">'+(pend.why==='login'?'이 계정에 저장된 기록과 이 기기의 기록이 달라요.':'다른 기기에서 먼저 저장한 기록이 있어요.')+'<br>어느 쪽으로 계속할지 골라 주세요. 고르지 않은 쪽은 사라져요.</div>'+
     '<div class="acCard"><b>서버 기록</b>'+(pend.at?' · '+when(pend.at):'')+'<br>'+(sv?esc(sum(sv)):'불러오는 중…')+'</div><div class="acCard"><b>이 기기 기록</b><br>'+esc(sum(lo))+'</div>'+
@@ -96,10 +156,10 @@
   if(A.token){/* 로그인한 상태 */
    p.innerHTML='<h3>👤 '+esc(A.user)+'</h3><div class="acNote">진행 기록이 이 계정에 자동으로 저장돼요. 다른 기기에서 같은 아이디로 로그인하면 이어서 할 수 있어요.</div>'+
     '<div class="acCard">'+esc(sum(localObj()))+'<br><span style="color:#9ab8ac;font-size:13px">'+stText()+'</span></div><div class="acMsg" id="acMsg"></div>'+
-    '<div class="acRow"><button class="gmBtn" id="acNow">지금 저장</button><button class="gmBtn" id="acOut">로그아웃</button></div><div class="acRow"><button class="gmBtn" id="acClose">닫기</button></div>';
+    '<div class="acRow"><button class="gmBtn" id="acNow">지금 저장</button><button class="gmBtn" id="acRank">🏆 랭킹</button></div><div class="acRow"><button class="gmBtn" id="acOut">로그아웃</button><button class="gmBtn" id="acClose">닫기</button></div>';
    $('acNow').onclick=async()=>{msg('저장하는 중…',true);await push(false);if(st==='ok'||st==='')msg('저장했어요',true);else if(!pend)msg(stText());draw()};
-   $('acOut').onclick=async()=>{await push(false);api('/api/logout','POST');A.token='';A.rev=0;A.synced='';keep();pend=null;setSt('');draw();msg('로그아웃했어요. 이 기기의 기록은 그대로 남아요.',true)};
-   $('acClose').onclick=close;return}
+   $('acOut').onclick=async()=>{await push(false);api('/api/logout','POST');try{if(window.google)google.accounts.id.disableAutoSelect()}catch(e){};A.token='';A.rev=0;A.synced='';keep();pend=null;setSt('');draw();msg('로그아웃했어요. 이 기기의 기록은 그대로 남아요.',true)};
+   $('acClose').onclick=close;$('acRank').onclick=openRank;return}
   /* 로그인 전 */
   const reg=tab==='reg';
   p.innerHTML='<h3>👤 계정</h3><div class="acNote">로그인하면 진행 기록이 서버에 저장돼서, 폰·컴퓨터 어디서든 이어서 할 수 있어요.'+(st==='lost'?'<br><b style="color:#ffb020">로그인이 끝났어요. 다시 로그인해 주세요.</b>':'')+'</div>'+
@@ -138,7 +198,13 @@
  /* 기록이 바뀌었는지 5초마다 확인 → 바뀌었으면 올림 (연결이 안 되면 30초 뒤 다시) */
  setInterval(()=>{try{if(!A.token)return;if(pend){later();return}if(st==='off'&&Date.now()-lastTry<30000)return;push(false)}catch(e){}},5000);
  /* 창을 닫거나 다른 앱으로 넘어갈 때 한 번 더 */
- document.addEventListener('visibilitychange',()=>{try{if(document.hidden&&A.token&&!busy&&!pend){const cur=localStr();if(cur!==A.synced)fetch(A.url.replace(/\/+$/,'')+'/api/save',{method:'PUT',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+A.token},body:JSON.stringify({base_rev:A.rev,data:JSON.parse(cur)})}).then(r=>r.ok&&r.json()).then(j=>{if(j&&j.ok){A.rev=j.rev;A.synced=cur;keep();setSt('ok')}}).catch(()=>{})}}catch(e){}});
+ document.addEventListener('visibilitychange',()=>{try{if(document.hidden&&A.token&&!busy&&!pend&&!googleWorking){const cur=localStr();if(cur!==A.synced)fetch(A.url.replace(/\/+$/,'')+'/api/save',{method:'PUT',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+A.token},body:JSON.stringify({base_rev:A.rev,data:JSON.parse(cur)})}).then(r=>r.ok&&r.json()).then(j=>{if(j&&j.ok){A.rev=j.rev;A.synced=cur;keep();setSt('ok')}}).catch(()=>{})}}catch(e){}});
+ window.addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='beatblade-google-auth'||!d.ok)return;/* 다른 창이 가짜 로그인 표를 넣지 못하게: 우리 서버 주소에서 온 메시지만 */try{if(e.origin!==new URL(A.url).origin)return}catch(_){return}if(d.mode==='link'){draw();msg('Google 계정을 연결했어요. 기존 기록을 그대로 사용할 수 있어요.',true);return}if(d.token){A.user=d.username||'Google 사용자';A.token=d.token;A.rev=0;A.synced='';keep();setSt('');msg('Google 로그인했어요! 기록을 맞추는 중…',true);pull(true).then(()=>{if(boxOn)draw()})}});
+ async function rankSubmit(score,meta){if(!A.token||!Number.isFinite(Number(score))||Number(score)<=0)return null;const r=await api('/api/ranking','PUT',{score:Math.floor(Number(score)),chapter:meta&&meta.chapter||0,boss:meta&&meta.boss||'',difficulty:meta&&meta.difficulty||''});return r.s===200?r.j:null}
+ async function rankGet(limit){const r=await api('/api/ranking?limit='+(limit||20));return r.s===200?r.j:null}
+ function rankHTML(j){const rows=(j&&j.players||[]).map(x=>'<div class="acRankRow"><b>#'+x.rank+'</b><span>'+esc(x.username)+'</span><strong>'+Number(x.score||0).toLocaleString()+'</strong></div>').join('')||'<div class="acNote">아직 등록된 점수가 없어요.</div>';const m=j&&j.mine;return '<h3>🏆 글로벌 랭킹</h3><div class="acNote">전체 최고 점수 기준 · 보스 클리어 후 자동 등록</div><div class="acRankList">'+rows+'</div>'+(m?'<div class="acCard" style="margin-top:10px">내 순위 <b>#'+m.rank+'</b> · '+Number(m.score||0).toLocaleString()+'점</div>':'<div class="acNote">로그인 후 내 점수를 등록할 수 있어요.</div>')+'<div class="acRow"><button class="gmBtn" id="acRankBack">뒤로</button><button class="gmBtn" id="acRankRefresh">새로고침</button></div>'}
+ async function openRank(){const p=$('acPanel');p.innerHTML='<h3>🏆 글로벌 랭킹</h3><div class="acNote">불러오는 중…</div>';const j=await rankGet(20);if(!j){p.innerHTML='<h3>🏆 글로벌 랭킹</h3><div class="acMsg">랭킹을 불러오지 못했어요.</div><button class="gmBtn" id="acRankBack">뒤로</button>'}else p.innerHTML=rankHTML(j);if($('acRankBack'))$('acRankBack').onclick=draw;if($('acRankRefresh'))$('acRankRefresh').onclick=openRank}
+ window.BBRankSubmit=rankSubmit;
  window.ACCT55={get:()=>A,open,push,pull};
  setTimeout(()=>{chip();if(A.token)pull(false);else if(st==='')chip()},800);
 }catch(e){console.error('v55 login',e)}})();

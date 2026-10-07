@@ -473,6 +473,10 @@ def api_me():
 
 
 
+# 한 판 점수로 나올 수 있는 값보다 넉넉히 큰 상한 (보스 한 명 점수는 보통 수만~수십만)
+MAX_RANK_SCORE = 10_000_000
+
+
 @app.route('/api/ranking', methods=['GET'])
 def api_ranking_get():
     limit = clamp_int(request.args.get('limit'), 1, 100, 20)
@@ -493,8 +497,14 @@ def api_ranking_get():
 def api_ranking_put():
     user=_current_user()
     if not user:return _bad('로그인이 필요해요',401)
+    key='rank:'+user['user_id']
+    if _too_many(key, 30, 600):
+        return _bad('점수 등록이 너무 잦아요. 잠시 뒤에 다시 해 주세요', 429)
+    _note(key)
     body=request.get_json(silent=True) or {}
-    score=clamp_int(body.get('score'),0,2**63-1,0)
+    score=clamp_int(body.get('score'),0,2**62,0)
+    if score > MAX_RANK_SCORE:
+        return _bad('점수가 너무 커요', 400)
     chapter=clamp_int(body.get('chapter'),0,99,0)
     boss=clamp_text(body.get('boss'),80)
     difficulty=clamp_text(body.get('difficulty'),16)
@@ -561,11 +571,22 @@ def api_save_put():
 
 
 
+def _latest_game_file(game_dir):
+    """game 폴더에서 번호가 가장 큰 BeatBlade-NN.html 이름 (새 버전을 올리면 /play도 저절로 따라감)"""
+    best, best_n = 'BeatBlade-53.html', -1
+    for name in os.listdir(game_dir):
+        m = re.fullmatch(r'BeatBlade-(\d+)\.html', name)
+        if m and int(m.group(1)) > best_n:
+            best, best_n = name, int(m.group(1))
+    return best
+
+
 # Google sign-in uses verified ID tokens + one-use, session-bound nonces.
 @app.route('/play')
 @app.route('/play/')
 def play():
-    resp = send_from_directory(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'game'), 'BeatBlade-53.html')
+    game_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'game')
+    resp = send_from_directory(game_dir, _latest_game_file(game_dir))
     resp.headers['Cross-Origin-Opener-Policy'] = 'same-origin-allow-popups'
     resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     resp.headers['Cache-Control'] = 'no-cache'
@@ -690,14 +711,14 @@ def google_finish():
 @app.route('/google-bridge')
 def google_bridge():
     mode = request.args.get('mode', 'login') if request.args.get('mode') in ('login','link') else 'login'
-    token = request.args.get('token', '') if mode == 'link' else ''
     # This page is hosted on the verified Render origin. It returns only the
     # short-lived game session result to the opener via postMessage.
     return render_template_string(r'''<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BeatBlade Google 로그인</title>
 <style>body{margin:0;background:#081217;color:#eaf6ef;font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}.box{width:min(390px,calc(100% - 32px));padding:24px;border:2px solid #80e8b0;border-radius:16px;background:#12242c;text-align:center;box-shadow:0 10px 40px #0008}h2{margin:0 0 10px}.note{color:#b9d7c9;font-size:13px;line-height:1.5;margin:10px 0 18px}.err{color:#ffb2a8;margin-top:14px;font-size:13px}</style>
 <div class="box"><h2>👤 BeatBlade Google 로그인</h2><div id="note" class="note">Google 버튼을 준비하는 중…</div><div id="g"></div><div id="err" class="err"></div></div>
 <script src="https://accounts.google.com/gsi/client" async></script><script>
-const mode={{mode|tojson}}, token={{token|tojson}}, base=location.origin;let nonce='';
+const mode={{mode|tojson}}, base=location.origin;let nonce='';
+const token=mode==='link'?decodeURIComponent((location.hash.match(/token=([^&]+)/)||[])[1]||''):'';if(location.hash)history.replaceState(null,'',location.pathname+location.search);
 const note=document.getElementById('note'),err=document.getElementById('err');
 function fail(x){err.textContent=x;note.textContent='창을 닫고 게임에서 다시 시도해 주세요.'}
 async function start(){try{
@@ -707,7 +728,7 @@ async function start(){try{
  const wait=()=>{if(!window.google||!google.accounts){setTimeout(wait,80);return}google.accounts.id.initialize({client_id:j.client_id,nonce,auto_select:false,ux_mode:'popup',callback:finish});google.accounts.id.renderButton(document.getElementById('g'),{theme:'outline',size:'large',text:mode==='link'?'continue_with':'signin_with',locale:'ko',width:280});note.textContent=mode==='link'?'연결할 Google 계정을 선택해 주세요.':'로그인할 Google 계정을 선택해 주세요.'};wait();
  }catch(e){fail(e.message)}}
 async function finish(response){try{note.textContent='인증 확인 중…';const h={'Content-Type':'application/json'};if(mode==='link')h.Authorization='Bearer '+token;const r=await fetch(base+'/api/google/'+mode,{method:'POST',headers:h,body:JSON.stringify({credential:response.credential,nonce})});const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Google 로그인에 실패했어요');window.opener?.postMessage({type:'beatblade-google-auth',ok:true,mode,token:j.token||'',username:j.username||'',google_linked:!!j.google_linked},'*');window.close();}catch(e){fail(e.message)}}start();
-</script></html>''', mode=mode, token=token)
+</script></html>''', mode=mode)
 
 init_db()
 
