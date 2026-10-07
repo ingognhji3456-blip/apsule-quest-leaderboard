@@ -473,23 +473,25 @@ body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial
 h2{margin:0 0 4px;font-size:20px}.sub{color:#9fb0c8;font-size:13px}.item{margin:18px 0;padding:14px 16px;border-radius:14px;background:#ffffff0a;border:1px solid #ffffff1a;display:flex;justify-content:space-between;gap:10px;align-items:center}
 .item b{font-size:16px}.won{font-size:22px;font-weight:900;color:#ffd166}.test{display:inline-block;margin-bottom:10px;padding:3px 10px;border-radius:99px;background:#ff6a9a33;color:#ffb0c8;font-size:12px;font-weight:800}
 .pay{display:grid;gap:8px}.pay button{padding:13px;border-radius:12px;border:0;font:800 15px inherit;cursor:pointer;background:#ffd166;color:#1a1206}.pay button.alt{background:#ffffff14;color:#eef2ff;border:1px solid #ffffff2a}
-.pay button:disabled{opacity:.5;cursor:wait}.note{color:#9fb0c8;font-size:12px;margin-top:14px}.err{color:#ffb2a8;margin-top:10px;font-size:13px;white-space:pre-line}.ok{font-size:44px;text-align:center}
+.pay button:disabled{opacity:.5;cursor:not-allowed}.minor{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:11px 12px;border-radius:12px;background:#ffd16614;border:1px solid #ffd16655;font-size:13px;line-height:1.5;cursor:pointer}.minor input{width:18px;height:18px;margin:2px 0 0;flex:none;accent-color:#ffd166}.note{color:#9fb0c8;font-size:12px;margin-top:14px}.err{color:#ffb2a8;margin-top:10px;font-size:13px;white-space:pre-line}.ok{font-size:44px;text-align:center}
 </style><div class="box">{% if test %}<span class="test">테스트 결제 · 실제로 돈이 나가지 않아요</span>{% endif %}
 {% if page == 'checkout' %}
 <h2>✦ BEAT BLADE 상점</h2><div class="sub">{{ user }} 님의 주문</div>
 <div class="item"><b>{{ name }}</b><span class="won">₩{{ '{:,}'.format(amount) }}</span></div>
+<label class="minor"><input type="checkbox" id="agree"><span><b>만 19세 미만이라면 보호자(부모님)의 동의를 받고 결제해 주세요.</b><br>위 내용을 확인했어요. (보호자 동의 없이 한 미성년자 결제는 보호자가 취소를 요청할 수 있어요)</span></label>
 <div class="pay"><button data-m="CARD">카드 · 간편결제 (토스페이 · 카카오페이 · 네이버페이 등)</button><button class="alt" data-m="TRANSFER">계좌이체</button><button class="alt" data-m="MOBILE_PHONE">휴대폰 결제</button></div>
 <div class="err" id="err"></div>
 <div class="note">• 결제가 끝나면 이 창은 저절로 닫히고 게임 보관함에 바로 들어가요.<br>• 디지털 상품이라 받은 뒤 사용(장착)하면 환불이 어려울 수 있어요.{% if contact %}<br>• 환불·문의: {{ contact }}{% endif %}</div>
 <script src="https://js.tosspayments.com/v2/standard"></script><script>
-const O={{ order|tojson }};const err=document.getElementById('err');
-document.querySelectorAll('[data-m]').forEach(b=>b.onclick=async()=>{err.textContent='';document.querySelectorAll('[data-m]').forEach(x=>x.disabled=true);
+const O={{ order|tojson }};const err=document.getElementById('err'),agree=document.getElementById('agree');
+const lock=()=>document.querySelectorAll('[data-m]').forEach(x=>x.disabled=!agree.checked);agree.onchange=()=>{err.textContent='';lock()};lock();
+document.querySelectorAll('[data-m]').forEach(b=>b.onclick=async()=>{if(!agree.checked){err.textContent='먼저 위의 확인 칸을 체크해 주세요.';return}err.textContent='';document.querySelectorAll('[data-m]').forEach(x=>x.disabled=true);
  try{if(!window.TossPayments)throw Error('결제창을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.');
   const tp=TossPayments(O.clientKey),pay=tp.payment({customerKey:O.customerKey});
   await pay.requestPayment({method:b.dataset.m,amount:{currency:'KRW',value:O.amount},orderId:O.orderId,orderName:O.orderName,successUrl:O.successUrl,failUrl:O.failUrl,customerName:O.customerName,
    card:b.dataset.m==='CARD'?{useEscrow:false,flowMode:'DEFAULT',useCardPoint:false,useAppCardOnly:false}:undefined});
  }catch(e){err.textContent=(e&&e.code==='USER_CANCEL')?'결제를 취소했어요.':(e&&e.message)||'결제를 시작하지 못했어요.'}
- document.querySelectorAll('[data-m]').forEach(x=>x.disabled=false)});
+ lock()});
 </script>
 {% else %}
 <div class="ok">{{ '🎉' if ok else '⚠️' }}</div><h2 style="text-align:center">{{ title }}</h2><div class="sub" style="text-align:center;white-space:pre-line">{{ msg }}</div>
