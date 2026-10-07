@@ -28,7 +28,7 @@ import secrets
 import sqlite3
 import threading
 import time
-from flask import Flask, request, jsonify, g, send_from_directory
+from flask import Flask, request, jsonify, g, send_from_directory, render_template_string
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport.requests import Request as GoogleRequest
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -163,6 +163,17 @@ def init_db():
             user_id TEXT NOT NULL,
             session_hash TEXT NOT NULL,
             expires_at DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS rank_scores (
+            user_id     TEXT PRIMARY KEY,
+            username    TEXT NOT NULL,
+            score       BIGINT NOT NULL DEFAULT 0,
+            chapter     INTEGER NOT NULL DEFAULT 0,
+            boss        TEXT,
+            difficulty  TEXT,
+            updated_at  DOUBLE PRECISION NOT NULL
         )
     ''')
     db.commit()
@@ -423,6 +434,47 @@ def api_me():
     return jsonify(ok=True, username=user['username'], google_linked=linked)
 
 
+
+@app.route('/api/ranking', methods=['GET'])
+def api_ranking_get():
+    limit = clamp_int(request.args.get('limit'), 1, 100, 20)
+    db = get_db()
+    rows = db.execute('SELECT username, score, chapter, boss, difficulty, updated_at '
+                      'FROM rank_scores ORDER BY score DESC, updated_at ASC LIMIT ?', (limit,)).fetchall()
+    result=[]
+    for i,row in enumerate(rows):
+        d=dict(row);d['rank']=i+1;result.append(d)
+    user=_current_user(); mine=None
+    if user:
+        row=db.execute('SELECT score, chapter, boss, difficulty, updated_at FROM rank_scores WHERE user_id=?', (user['user_id'],)).fetchone()
+        if row:
+            mine=dict(row);mine['rank']=db.execute('SELECT COUNT(*) AS c FROM rank_scores WHERE score > ?', (row['score'],)).fetchone()['c']+1
+    return jsonify(ok=True, players=result, mine=mine)
+
+@app.route('/api/ranking', methods=['PUT'])
+def api_ranking_put():
+    user=_current_user()
+    if not user:return _bad('로그인이 필요해요',401)
+    body=request.get_json(silent=True) or {}
+    score=clamp_int(body.get('score'),0,2**63-1,0)
+    chapter=clamp_int(body.get('chapter'),0,99,0)
+    boss=clamp_text(body.get('boss'),80)
+    difficulty=clamp_text(body.get('difficulty'),16)
+    db=get_db();now=time.time()
+    row=db.execute('SELECT score FROM rank_scores WHERE user_id=?',(user['user_id'],)).fetchone()
+    if row and score <= row['score']:
+        rank=db.execute('SELECT COUNT(*) AS c FROM rank_scores WHERE score > ?', (row['score'],)).fetchone()['c']+1
+        return jsonify(ok=True, improved=False, score=row['score'], rank=rank)
+    if row:
+        db.execute('UPDATE rank_scores SET username=?,score=?,chapter=?,boss=?,difficulty=?,updated_at=? WHERE user_id=?',
+                   (user['username'],score,chapter,boss,difficulty,now,user['user_id']))
+    else:
+        db.execute('INSERT INTO rank_scores (user_id,username,score,chapter,boss,difficulty,updated_at) VALUES (?,?,?,?,?,?,?)',
+                   (user['user_id'],user['username'],score,chapter,boss,difficulty,now))
+    db.commit()
+    rank=db.execute('SELECT COUNT(*) AS c FROM rank_scores WHERE score > ?', (score,)).fetchone()['c']+1
+    return jsonify(ok=True, improved=True, score=score, rank=rank)
+
 @app.route('/api/save', methods=['GET'])
 def api_save_get():
     user = _current_user()
@@ -595,6 +647,28 @@ def google_finish():
     resp.headers['Cache-Control'] = 'no-store'
     return resp
 
+
+
+@app.route('/google-bridge')
+def google_bridge():
+    mode = request.args.get('mode', 'login') if request.args.get('mode') in ('login','link') else 'login'
+    token = request.args.get('token', '') if mode == 'link' else ''
+    # This page is hosted on the verified Render origin. It returns only the
+    # short-lived game session result to the opener via postMessage.
+    return render_template_string(r'''<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BeatBlade Google 로그인</title>
+<style>body{margin:0;background:#081217;color:#eaf6ef;font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh}.box{width:min(390px,calc(100% - 32px));padding:24px;border:2px solid #80e8b0;border-radius:16px;background:#12242c;text-align:center;box-shadow:0 10px 40px #0008}h2{margin:0 0 10px}.note{color:#b9d7c9;font-size:13px;line-height:1.5;margin:10px 0 18px}.err{color:#ffb2a8;margin-top:14px;font-size:13px}</style>
+<div class="box"><h2>👤 BeatBlade Google 로그인</h2><div id="note" class="note">Google 버튼을 준비하는 중…</div><div id="g"></div><div id="err" class="err"></div></div>
+<script src="https://accounts.google.com/gsi/client" async></script><script>
+const mode={{mode|tojson}}, token={{token|tojson}}, base=location.origin;let nonce='';
+const note=document.getElementById('note'),err=document.getElementById('err');
+function fail(x){err.textContent=x;note.textContent='창을 닫고 게임에서 다시 시도해 주세요.'}
+async function start(){try{
+ const r=await fetch(base+'/api/google/challenge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode})});
+ const j=await r.json();if(!r.ok||!j.nonce)throw Error(j.error||'로그인 요청을 만들지 못했어요');nonce=j.nonce;
+ const wait=()=>{if(!window.google||!google.accounts){setTimeout(wait,80);return}google.accounts.id.initialize({client_id:j.client_id,nonce,auto_select:false,ux_mode:'popup',callback:finish});google.accounts.id.renderButton(document.getElementById('g'),{theme:'outline',size:'large',text:mode==='link'?'continue_with':'signin_with',locale:'ko',width:280});note.textContent=mode==='link'?'연결할 Google 계정을 선택해 주세요.':'로그인할 Google 계정을 선택해 주세요.'};wait();
+ }catch(e){fail(e.message)}}
+async function finish(response){try{note.textContent='인증 확인 중…';const h={'Content-Type':'application/json'};if(mode==='link')h.Authorization='Bearer '+token;const r=await fetch(base+'/api/google/'+mode,{method:'POST',headers:h,body:JSON.stringify({credential:response.credential,nonce})});const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Google 로그인에 실패했어요');window.opener?.postMessage({type:'beatblade-google-auth',ok:true,mode,token:j.token||'',username:j.username||'',google_linked:!!j.google_linked},'*');window.close();}catch(e){fail(e.message)}}start();
+</script></html>''', mode=mode, token=token)
 
 init_db()
 
