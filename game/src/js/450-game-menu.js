@@ -177,7 +177,7 @@ function gmHallBuild(){const e=Object.entries(saveData.clear||{}),bs=new Set(e.m
  $('gmBig').innerHTML='<div><b>'+bs.size+'<small style="font-size:14px"> / 20</small></b><small>클리어한 보스</small></div><div><b>'+P+'</b><small>PERFECT</small></div><div><b>'+S+'</b><small>S랭크 이상</small></div><div><b>'+(saveData.bestCombo||0)+'</b><small>최고 콤보</small></div><div><b>'+(saveData.coins||0)+'</b><small>코인</small></div>';
  try{buildStats()}catch(e){}const sp=$('statsPanel');const bar=$('statsBar'),row=$('medalRow');if(bar)$('gmMedals').appendChild(bar);if(row)$('gmMedals').appendChild(row)}
 /* 키보드 */
-function gmKey(e){if(mode!=='menu'||document.body.classList.contains('inBattle'))return;const sm=$('shopModal');if(sm&&!sm.hidden)return;if(document.getElementById('splash'))return;const tag=(e.target&&e.target.tagName)||'';if(tag==='INPUT'||tag==='SELECT')return;
+function gmKey(e){if(mode!=='menu'||document.body.classList.contains('inBattle'))return;const sm=$('shopModal');if(sm&&!sm.hidden)return;if(document.getElementById('splash'))return;if(document.body.classList.contains('acctOn'))return;const tag=(e.target&&e.target.tagName)||'';if(tag==='INPUT'||tag==='SELECT')return;
  const k=e.code;let used=true;
  if(GM.scr==='main'){if(k==='ArrowDown'||k==='KeyS'){GM.sel=(GM.sel+1)%GM_ITEMS.length;gmSfx('move');gmMainSel()}else if(k==='ArrowUp'||k==='KeyW'){GM.sel=(GM.sel+GM_ITEMS.length-1)%GM_ITEMS.length;gmSfx('move');gmMainSel()}else if(k==='Enter'||k==='Space'||k==='KeyJ')gmMainGo();else used=false}
  else if(k==='Escape'||k==='Backspace'){gmSfx('back');gmShow('main')}
