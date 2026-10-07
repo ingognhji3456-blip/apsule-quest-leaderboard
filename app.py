@@ -663,7 +663,8 @@ const mode={{mode|tojson}}, token={{token|tojson}}, base=location.origin;let non
 const note=document.getElementById('note'),err=document.getElementById('err');
 function fail(x){err.textContent=x;note.textContent='창을 닫고 게임에서 다시 시도해 주세요.'}
 async function start(){try{
- const r=await fetch(base+'/api/google/challenge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode})});
+ const headers={'Content-Type':'application/json'};if(mode==='link')headers.Authorization='Bearer '+token;
+ const r=await fetch(base+'/api/google/challenge',{method:'POST',headers,body:JSON.stringify({mode})});
  const j=await r.json();if(!r.ok||!j.nonce)throw Error(j.error||'로그인 요청을 만들지 못했어요');nonce=j.nonce;
  const wait=()=>{if(!window.google||!google.accounts){setTimeout(wait,80);return}google.accounts.id.initialize({client_id:j.client_id,nonce,auto_select:false,ux_mode:'popup',callback:finish});google.accounts.id.renderButton(document.getElementById('g'),{theme:'outline',size:'large',text:mode==='link'?'continue_with':'signin_with',locale:'ko',width:280});note.textContent=mode==='link'?'연결할 Google 계정을 선택해 주세요.':'로그인할 Google 계정을 선택해 주세요.'};wait();
  }catch(e){fail(e.message)}}
