@@ -1066,6 +1066,151 @@ def api_ranking_put():
     rank=db.execute('SELECT COUNT(*) AS c FROM rank_scores WHERE score > ?', (score,)).fetchone()['c']+1
     return jsonify(ok=True, improved=True, score=score, rank=rank)
 
+# ===================== v85 듀오(2인 협동) 방 =====================
+# 방은 서버 메모리에만 둔다(서버가 다시 켜지면 사라짐 — 한 판짜리라 괜찮음). 워커는 하나(gunicorn 기본)라 모두가 같은 방 목록을 본다.
+# 방장(owner)의 게임이 잡몹 · 층을 돌리고, 둘은 /api/duo/sync로 0.1초마다 서로의 메시지를 주고받는다(서버는 전달만).
+_duo_lock = threading.Lock()
+_DUO = {}
+_DUO_CODE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+_DUO_KEEP = 500
+
+
+def _duo_clean(now):
+    for code in [c for c, r in _DUO.items() if now - r['touched'] > 300 or (r['state'] == 'closed' and now - r['touched'] > 30)]:
+        del _DUO[code]
+
+
+def _duo_view(r, uid=None):
+    return {'code': r['code'], 'owner': r['owner_name'], 'floor': r['floor'], 'diff': r['diff'], 'state': r['state'],
+            'players': [{'name': p['name'], 'lv': p['lv'], 'ch': p['ch'], 'owner': p['uid'] == r['owner'], 'me': p['uid'] == uid,
+                         'online': time.time() - p['seen'] < 8} for p in r['players']]}
+
+
+def _duo_best(db, uid):
+    row = db.execute('SELECT floor FROM player_stats WHERE user_id=?', (uid,)).fetchone()
+    return row['floor'] if row else 1
+
+
+@app.route('/api/duo/rooms', methods=['GET'])
+def duo_rooms():
+    user = _current_user()
+    now = time.time()
+    with _duo_lock:
+        _duo_clean(now)
+        rooms = [_duo_view(r, user and user['user_id']) for r in _DUO.values() if r['state'] == 'wait' and len(r['players']) < 2]
+    rooms.sort(key=lambda x: x['floor'])
+    return jsonify(ok=True, rooms=rooms[:50])
+
+
+@app.route('/api/duo/create', methods=['POST'])
+def duo_create():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    floor = clamp_int(body.get('floor'), 1, 1_000_000, 1)
+    best = clamp_int(body.get('best'), 1, 1_000_000, 1)
+    if floor > max(best, 1):
+        return _bad('올라가 본 층까지만 시작할 수 있어요', 400)
+    diff = clamp_text(body.get('diff'), 12) or 'normal'
+    now = time.time()
+    me = {'uid': user['user_id'], 'name': user['username'], 'lv': clamp_int(body.get('lv'), 1, 9999, 1),
+          'ch': clamp_int(body.get('ch'), 0, 999, 0), 'seen': now}
+    with _duo_lock:
+        _duo_clean(now)
+        for r in list(_DUO.values()):  # 한 사람은 방 하나만
+            r['players'] = [p for p in r['players'] if p['uid'] != user['user_id']]
+            if not r['players'] or r['owner'] == user['user_id']:
+                r['state'] = 'closed'
+        for _ in range(50):
+            code = ''.join(secrets.choice(_DUO_CODE) for _ in range(4))
+            if code not in _DUO:
+                break
+        _DUO[code] = {'code': code, 'owner': user['user_id'], 'owner_name': user['username'], 'floor': floor, 'diff': diff,
+                      'state': 'wait', 'players': [me], 'msgs': [], 'seq': 0, 'touched': now}
+        return jsonify(ok=True, room=_duo_view(_DUO[code], user['user_id']))
+
+
+@app.route('/api/duo/join', methods=['POST'])
+def duo_join():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    best = max(clamp_int(body.get('best'), 1, 1_000_000, 1), _duo_best(get_db(), user['user_id']))
+    now = time.time()
+    with _duo_lock:
+        _duo_clean(now)
+        r = _DUO.get(code)
+        if not r or r['state'] == 'closed':
+            return _bad('방을 찾지 못했어요. 코드를 확인해 주세요', 404)
+        if any(p['uid'] == user['user_id'] for p in r['players']):
+            return jsonify(ok=True, room=_duo_view(r, user['user_id']))
+        if len(r['players']) >= 2 or r['state'] != 'wait':
+            return _bad('이미 꽉 찬 방이에요', 409)
+        if best < r['floor']:
+            return _bad('%d층까지 올라가 본 사람만 들어올 수 있어요 (내 최고 %d층)' % (r['floor'], best), 403)
+        r['players'].append({'uid': user['user_id'], 'name': user['username'], 'lv': clamp_int(body.get('lv'), 1, 9999, 1),
+                             'ch': clamp_int(body.get('ch'), 0, 999, 0), 'seen': now})
+        r['touched'] = now
+        r['seq'] += 1
+        r['msgs'].append({'seq': r['seq'], 'from': '#', 'm': {'t': 'join', 'name': user['username']}})
+        return jsonify(ok=True, room=_duo_view(r, user['user_id']))
+
+
+@app.route('/api/duo/leave', methods=['POST'])
+def duo_leave():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    code = clamp_text((request.get_json(silent=True) or {}).get('code'), 8).upper()
+    with _duo_lock:
+        r = _DUO.get(code)
+        if r:
+            r['players'] = [p for p in r['players'] if p['uid'] != user['user_id']]
+            r['seq'] += 1
+            r['msgs'].append({'seq': r['seq'], 'from': '#', 'm': {'t': 'leave', 'name': user['username']}})
+            if r['owner'] == user['user_id'] or not r['players']:
+                r['state'] = 'closed'
+            r['touched'] = time.time()
+    return jsonify(ok=True)
+
+
+@app.route('/api/duo/sync', methods=['POST'])
+def duo_sync():
+    """보낼 메시지(msgs)를 올리고, since 다음의 메시지를 받는다. 방장은 state='play'로 시작을 알린다."""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    since = clamp_int(body.get('since'), 0, 2 ** 62, 0)
+    msgs = body.get('msgs') if isinstance(body.get('msgs'), list) else []
+    now = time.time()
+    with _duo_lock:
+        r = _DUO.get(code)
+        if not r:
+            return _bad('방이 사라졌어요', 404)
+        me = next((p for p in r['players'] if p['uid'] == user['user_id']), None)
+        if not me:
+            return _bad('이 방에 없어요', 403)
+        me['seen'] = now
+        r['touched'] = now
+        if body.get('start') and r['owner'] == user['user_id'] and len(r['players']) == 2 and r['state'] == 'wait':
+            r['state'] = 'play'
+        if body.get('ch') is not None:
+            me['ch'] = clamp_int(body.get('ch'), 0, 999, me['ch'])
+        for m in msgs[:20]:
+            if isinstance(m, dict) and len(json.dumps(m)) < 20000:
+                r['seq'] += 1
+                r['msgs'].append({'seq': r['seq'], 'from': user['user_id'][:6], 'm': m})
+        if len(r['msgs']) > _DUO_KEEP:
+            r['msgs'] = r['msgs'][-_DUO_KEEP:]
+        out = [x for x in r['msgs'] if x['seq'] > since and x['from'] != user['user_id'][:6]]
+        return jsonify(ok=True, room=_duo_view(r, user['user_id']), msgs=out, seq=r['seq'])
+
+
 @app.route('/api/save', methods=['GET'])
 def api_save_get():
     user = _current_user()
