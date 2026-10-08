@@ -169,6 +169,8 @@ function drawCineOverlay(now){const c=G.cine,B=G.B;drawReviveCine(now);
 function drawScene(now){const B=G.B,th=B.c,beat=G.state==='wake'?0:G.beat,fr=beat-Math.floor(beat),b=G.boss;
  ctx.save();let zoom=1,zx=G.ent?HOME.x:b.x,zy=G.ent?geo(G.B,HOME.x,HOME.y).coreY:bgeo().coreY;const c=G.cine;if(c&&c.type==='intro'){const p=clamp((now-c.t0)/Math.max(1,c.dur),0,1);zoom=1+.55*Math.pow(1-p,2.2)}else if(G.state==='dying'){const t=now-G.dyingAt;zoom=1+.12*clamp(t/3000,0,1)}
  if(G.shake>0)ctx.translate(Math.round((RND()-.5)*5*Math.min(2,G.shake+.5)),Math.round((RND()-.5)*5*Math.min(2,G.shake+.5)));
+ /* v78: 확대 중 순간이동 막기 — 확대 중심(등장 끝에 시작 자리 → 지금 자리로 바뀜)과 확대 정도(쓰러진 뒤 1.12배 → 결과창에서 1배로 뚝)를 부드럽게 이어 준다. 등장 확대는 처음부터 크게 시작해야 하니 정도는 그대로 */
+ {const Z=G._zc||(G._zc={x:zx,y:zy,z:zoom});if(!(c&&c.type==='intro'))zoom=Math.abs(Z.z+(zoom-Z.z)*.08-1)<.002?1:Z.z+(zoom-Z.z)*.08;const far=Math.hypot(zx-Z.x,zy-Z.y)>140;Z.x+=(zx-Z.x)*(far?1:.12);Z.y+=(zy-Z.y)*(far?1:.12);Z.z=zoom;zx=Z.x;zy=Z.y}
  if(zoom!==1){ctx.translate(zx,zy);ctx.scale(zoom,zoom);ctx.translate(-zx,-zy)}hdCam(now,zx,zy);
  drawArenaBG2(now,beat,fr,th);const g=bgeo(),ph=G.phase;if(!b.dorm||(c&&c.type==='intro'))bossFXBack(now,g,ph);
  drawFieldPull(now,beat);
