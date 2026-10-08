@@ -71,6 +71,7 @@
 | v88 | 듀오 동료를 `asMate`(P · 장비 · 스킨을 잠깐 바꿔 `drawSword`+`drawKnight`)로 그림, 사건(`ev`: 공격 · 대시 · 패링 · 궁극기 `U` · 맞음)을 시각과 함께 보내 재생, 궁극기는 `drawSpecialFX`로, 대시 잔상(`ghostOf`), 보스전 쓰러짐 실패 처리(`bossLose`), 듀오 일시정지 창(`#duoPz`), 게스트 탄 피해값(snap shots에 dmg) · 탑 `hurt` NaN 막기 |
 | v89 | 탑 화면: `drawZone`(벽돌 · 기둥 · 창문 · 횃불 · 보스 미니 `bossMiniOf` · 내 캐릭터 · 안개, 보이는 구역만 `tickZones`로 0.11초마다), 배너(내 캐릭터 · 마법진 · 빛줄기 · 불씨 `EMB` · 보스 층 경고 띠), 구역 진행 막대 · 보스 보상 미리 보기, 잡몹 카드 움직임(`tickMobs`); 듀오: 99992 `ch2Render`가 `S58.get()`을 읽게, 위치 메시지 `pl`(장소)로 다른 층 상대 숨김 · 새 층 빛기둥 |
 | v90 | 듀오 창 새 디자인(99999993 `draw` · `anim` · `scene` · `bgFx`), 방 만들기 난이도 고르기(`mkDiff`) · 방 안 난이도 바꾸기(`D.wantDiff` → 서버 `duo_sync`의 `diff`, 방장 · 출발 전만) |
+| v91 | 로비 랭킹 카드(`99999994` `RKL91`, `/api/ranking?limit=3&by=…` 1분 기억) · 위쪽 줄 `#gmRank` 단추 → `RANK83.open` |
 
 ---
 
