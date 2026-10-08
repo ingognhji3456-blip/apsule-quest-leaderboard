@@ -1197,8 +1197,14 @@ def duo_sync():
             return _bad('이 방에 없어요', 403)
         me['seen'] = now
         r['touched'] = now
-        if body.get('start') and r['owner'] == user['user_id'] and len(r['players']) == 2 and r['state'] == 'wait':
-            r['state'] = 'play'
+        start_err = ''
+        if body.get('start') and r['state'] == 'wait':
+            if r['owner'] != user['user_id']:
+                start_err = '방장만 시작할 수 있어요'
+            elif len(r['players']) != 2:
+                start_err = '동료가 방에 없어요'
+            else:
+                r['state'] = 'play'
         if body.get('ch') is not None:
             me['ch'] = clamp_int(body.get('ch'), 0, 999, me['ch'])
         for m in msgs[:20]:
@@ -1208,7 +1214,7 @@ def duo_sync():
         if len(r['msgs']) > _DUO_KEEP:
             r['msgs'] = r['msgs'][-_DUO_KEEP:]
         out = [x for x in r['msgs'] if x['seq'] > since and x['from'] != user['user_id'][:6]]
-        return jsonify(ok=True, room=_duo_view(r, user['user_id']), msgs=out, seq=r['seq'])
+        return jsonify(ok=True, room=_duo_view(r, user['user_id']), msgs=out, seq=r['seq'], start_err=start_err)
 
 
 @app.route('/api/save', methods=['GET'])

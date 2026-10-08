@@ -23091,7 +23091,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const acc=()=>(window.ACCT55&&ACCT55.get())||{};
  const base=()=>(acc().url||'https://capsule-quest-leaderboard.onrender.com').replace(/\/+$/,'');
  async function api(path,method,body){const h={'Content-Type':'application/json'};const a=acc();if(a.token)h.Authorization='Bearer '+a.token;
-  try{const r=await fetch(base()+path,{method:method||'GET',headers:h,body:body?JSON.stringify(body):undefined});let j={};try{j=await r.json()}catch(e){}return {s:r.status,j}}catch(e){return {s:0,j:{error:'서버에 연결할 수 없어요'}}}}
+  const ac=window.AbortController?new AbortController():null,tm=ac?setTimeout(()=>ac.abort(),7000):0;
+  try{const r=await fetch(base()+path,{method:method||'GET',headers:h,body:body?JSON.stringify(body):undefined,signal:ac?ac.signal:undefined});clearTimeout(tm);let j={};try{j=await r.json()}catch(e){}return {s:r.status,j}}catch(e){return {s:0,j:{error:'서버에 연결할 수 없어요'}}}}
  const D={on:false,code:null,role:null,room:null,since:0,out:[],busy:false,started:false,mate:{},bAcc:0,down:false,lastSnap:null,dead:new Map(),killed:new Map(),bypass:false};
  const best=()=>Math.max(1,(saveData.tw71&&saveData.tw71.best)||1);
  const myCh=()=>{try{return shopInv().eq.ch||0}catch(e){return 0}};
@@ -23108,9 +23109,12 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
     if(D.role==='host')send(snap())}
    else if(mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo){const d=Math.round(D.bAcc);D.bAcc-=d;send({t:'b',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,d,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999});if(D.role==='host')send({t:'bh',hp:Math.round(G.hp)})}}
   const msgs=D.out.splice(0,20);
-  const r=await api('/api/duo/sync','POST',{code:D.code,since:D.since,msgs,ch:myCh(),start:D.wantStart?1:0});D.wantStart=false;
-  if(r.s===404||r.s===403){end('방이 사라졌어요.');return}
-  if(r.s!==200)return;D.room=r.j.room;
+  const r=await api('/api/duo/sync','POST',{code:D.code,since:D.since,msgs,ch:myCh(),start:D.wantStart&&!D.started?1:0});
+  if(r.s===404||r.s===403){const was=D.started;end('방이 사라졌어요.');if(!was){msgTx='방이 사라졌어요. 다시 만들어 주세요.';openUI('duo');loadRooms()}return}
+  if(r.s!==200){D.fail=(D.fail||0)+1;if(D.wantStart&&!D.started&&D.fail>=3){msgTx='서버 응답을 기다리는 중… ('+(r.s?'오류 '+r.s:'연결 안 됨')+') 계속 시도해요';renderRoom()}return}
+  D.fail=0;D.room=r.j.room;
+  if(D.wantStart&&!D.started&&D.room.state!=='play'){const n=(D.room.players||[]).length;if(r.j.start_err)msgTx=r.j.start_err;else if(n<2)msgTx='동료가 방에 없어요. 동료를 기다려 주세요.';if(n<2)D.wantStart=false}
+  if(D.room.state==='play')D.wantStart=false;
   for(const x of r.j.msgs||[]){D.since=Math.max(D.since,x.seq);try{onMsg(x.m)}catch(e){console.error('duo msg',e)}}
   D.since=Math.max(D.since,r.j.seq||0);
   if(!D.started&&D.room.state==='play')begin();
