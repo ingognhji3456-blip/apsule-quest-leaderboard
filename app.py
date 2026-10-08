@@ -234,6 +234,41 @@ def init_db():
             created_at  DOUBLE PRECISION NOT NULL
         )
     ''')
+    # v94 결투 등급 · 시즌(한 달 = 한 시즌, 'YYYY-MM') · 시즌 보상
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS pvp_rank (
+            user_id     TEXT NOT NULL,
+            season      TEXT NOT NULL,
+            rating      INTEGER NOT NULL DEFAULT 1000,
+            best        INTEGER NOT NULL DEFAULT 1000,
+            wins        INTEGER NOT NULL DEFAULT 0,
+            losses      INTEGER NOT NULL DEFAULT 0,
+            updated_at  DOUBLE PRECISION NOT NULL,
+            PRIMARY KEY (user_id, season)
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS pvp_rewards (
+            id          TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            season      TEXT NOT NULL,
+            tier        TEXT NOT NULL,
+            dia         BIGINT NOT NULL DEFAULT 0,
+            gold        BIGINT NOT NULL DEFAULT 0,
+            claimed     INTEGER NOT NULL DEFAULT 0,
+            created_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    # v94 친구: 신청은 (보낸 사람 → 받는 사람, pending), 수락하면 양쪽으로 accepted 두 줄
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS friends (
+            user_id     TEXT NOT NULL,
+            friend_id   TEXT NOT NULL,
+            status      TEXT NOT NULL,
+            created_at  DOUBLE PRECISION NOT NULL,
+            PRIMARY KEY (user_id, friend_id)
+        )
+    ''')
     db.execute('''
         CREATE TABLE IF NOT EXISTS pvp_stats (
             user_id     TEXT PRIMARY KEY,
@@ -987,10 +1022,29 @@ def api_ranking_get():
     """랭킹. by=score(최고 점수) | level(레벨 · 경험치) | floor(탑 최고 층) | gold(골드). 이름은 계정 이름(users)을 쓴다."""
     limit = clamp_int(request.args.get('limit'), 1, 100, 20)
     by = request.args.get('by', 'score')
-    if by not in ('score', 'level', 'floor', 'gold'):
+    if by not in ('score', 'level', 'floor', 'gold', 'pvp'):
         by = 'score'
     db = get_db()
     user = _current_user()
+    if by == 'pvp':  # v94 이번 시즌 결투 점수
+        season = _pvp_season()
+        rows = db.execute('SELECT p.user_id, u.username, p.rating, p.best, p.wins, p.losses, s.level FROM pvp_rank p '
+                          'JOIN users u ON u.user_id = p.user_id LEFT JOIN player_stats s ON s.user_id = p.user_id '
+                          'WHERE p.season=? AND p.wins + p.losses > 0 ORDER BY p.rating DESC, p.updated_at ASC LIMIT ?', (season, limit)).fetchall()
+        out = []
+        for i, row in enumerate(rows):
+            d = dict(row)
+            d['rank'] = i + 1
+            d['tier'] = _pvp_tier(d['rating'])['name']
+            d['me'] = bool(user and d['user_id'] == user['user_id'])
+            d.pop('user_id', None)
+            out.append(d)
+        mine = None
+        if user:
+            v = _pvp_rank_view(db, user['user_id'])
+            if v['wins'] + v['losses'] > 0:
+                mine = {'rank': v['pos'], 'rating': v['rating'], 'tier': v['tier']['name'], 'wins': v['wins'], 'losses': v['losses']}
+        return jsonify(ok=True, by=by, season=season, players=out, mine=mine)
     if by == 'score':
         rows = db.execute('SELECT r.user_id, u.username, r.score, r.chapter, r.boss, r.difficulty, r.updated_at, '
                           's.level, s.floor, s.gold FROM rank_scores r JOIN users u ON u.user_id = r.user_id '
@@ -1103,7 +1157,7 @@ def _duo_view(r, uid=None):
     return {'code': r['code'], 'owner': r['owner_name'], 'floor': r['floor'], 'diff': r['diff'], 'state': r['state'],
             'kind': r.get('kind', 'coop'), 'ranked': bool(r.get('ranked')), 'stake': r.get('stake', 0),
             'players': [{'name': p['name'], 'lv': p['lv'], 'ch': p['ch'], 'owner': p['uid'] == r['owner'], 'me': p['uid'] == uid,
-                         'online': time.time() - p['seen'] < 8} for p in r['players']]}
+                         'online': time.time() - p['seen'] < 8, 'ready': bool(p.get('ready')) or p['uid'] == r['owner']} for p in r['players']]}
 
 
 def _duo_best(db, uid):
@@ -1245,6 +1299,8 @@ def duo_sync():
                 start_err = '방장만 시작할 수 있어요'
             elif len(r['players']) != 2:
                 start_err = '동료가 방에 없어요'
+            elif not all(p.get('ready') or p['uid'] == r['owner'] for p in r['players']):
+                start_err = '상대가 아직 「준비 완료」를 누르지 않았어요'  # v94
             else:
                 r['state'] = 'play'
         dd = clamp_text(body.get('diff'), 12)
@@ -1252,6 +1308,8 @@ def duo_sync():
             r['diff'] = dd  # 방장은 출발 전까지 난이도를 바꿀 수 있다
         if body.get('ch') is not None:
             me['ch'] = clamp_int(body.get('ch'), 0, 999, me['ch'])
+        if body.get('ready') is not None and r['state'] == 'wait':  # v94 준비 완료
+            me['ready'] = bool(body.get('ready'))
         for m in msgs[:20]:
             if isinstance(m, dict) and len(json.dumps(m)) < 20000:
                 r['seq'] += 1
@@ -1280,6 +1338,59 @@ def _pvp_stake(db, a, b):
     return max(0, min(m, max(20, min(5000, round(m * 0.1)))))
 
 
+PVP_TIERS = [(0, 'bronze', '브론즈'), (1100, 'silver', '실버'), (1250, 'gold', '골드'), (1400, 'plat', '플래티넘'),
+             (1550, 'dia', '다이아'), (1700, 'master', '마스터')]
+PVP_SEASON_REWARD = {'bronze': (20, 500), 'silver': (50, 1000), 'gold': (100, 2000), 'plat': (180, 3500),
+                     'dia': (300, 6000), 'master': (500, 10000)}
+
+
+def _pvp_season(t=None):
+    return time.strftime('%Y-%m', time.gmtime(t or time.time()))
+
+
+def _pvp_tier(rating):
+    cur = PVP_TIERS[0]
+    for t in PVP_TIERS:
+        if rating >= t[0]:
+            cur = t
+    return {'key': cur[1], 'name': cur[2], 'min': cur[0]}
+
+
+def _pvp_rank_get(db, uid):
+    """이번 시즌 내 점수 줄(없으면 만든다). 지난 시즌 기록이 있으면 절반만 남기고(1000 기준) 시즌 보상을 만든다"""
+    season = _pvp_season()
+    row = db.execute('SELECT rating, best, wins, losses FROM pvp_rank WHERE user_id=? AND season=?', (uid, season)).fetchone()
+    if row:
+        return dict(row, season=season)
+    prev = db.execute('SELECT season, rating, best, wins, losses FROM pvp_rank WHERE user_id=? AND season<? ORDER BY season DESC LIMIT 1',
+                      (uid, season)).fetchone()
+    rating = 1000
+    now = time.time()
+    if prev:
+        rating = 1000 + (int(prev['rating']) - 1000) // 2
+        if prev['wins'] + prev['losses'] >= 5 and not db.execute('SELECT 1 FROM pvp_rewards WHERE user_id=? AND season=?',
+                                                                   (uid, prev['season'])).fetchone():
+            tk = _pvp_tier(int(prev['best']))['key']
+            dia, gold = PVP_SEASON_REWARD[tk]
+            db.execute('INSERT INTO pvp_rewards (id, user_id, season, tier, dia, gold, claimed, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?)',
+                       (secrets.token_hex(8), uid, prev['season'], tk, dia, gold, now))
+    db.execute('INSERT INTO pvp_rank (user_id, season, rating, best, wins, losses, updated_at) VALUES (?, ?, ?, ?, 0, 0, ?)',
+               (uid, season, rating, rating, now))
+    db.commit()
+    return {'rating': rating, 'best': rating, 'wins': 0, 'losses': 0, 'season': season}
+
+
+def _pvp_rank_view(db, uid):
+    rk = _pvp_rank_get(db, uid)
+    pos = db.execute('SELECT COUNT(*) AS c FROM pvp_rank WHERE season=? AND rating>?', (rk['season'], rk['rating'])).fetchone()['c'] + 1
+    t = time.gmtime()
+    nxt = time.mktime((t.tm_year + (t.tm_mon == 12), t.tm_mon % 12 + 1, 1, 0, 0, 0, 0, 0, 0)) - time.timezone
+    tier = _pvp_tier(rk['rating'])
+    up = next((x for x in PVP_TIERS if x[0] > rk['rating']), None)
+    return dict(rk, tier=tier, best_tier=_pvp_tier(rk['best']), pos=pos, ends=nxt,
+                next={'name': up[2], 'need': up[0] - rk['rating']} if up else None)
+
+
 def _pvp_settle(r, winner, loser, note):
     """(락 안에서 부름) 한 번만 확정: 장부 · 전적"""
     if r.get('settled'):
@@ -1289,6 +1400,17 @@ def _pvp_settle(r, winner, loser, note):
     now = time.time()
     db = DB()
     try:
+        if r.get('ranked'):  # v94 등급 점수(엘로): 비슷한 상대면 ±16, 강한 상대를 이기면 더 많이
+            a, b = _pvp_rank_get(db, winner), _pvp_rank_get(db, loser)
+            ew = 1 / (1 + 10 ** ((b['rating'] - a['rating']) / 400))
+            d = max(6, round(32 * (1 - ew)))
+            na, nb = a['rating'] + d, max(0, b['rating'] - d)
+            season = _pvp_season()
+            db.execute('UPDATE pvp_rank SET rating=?, best=?, wins=wins+1, updated_at=? WHERE user_id=? AND season=?',
+                       (na, max(a['best'], na), now, winner, season))
+            db.execute('UPDATE pvp_rank SET rating=?, losses=losses+1, updated_at=? WHERE user_id=? AND season=?',
+                       (nb, now, loser, season))
+            r['settled']['rating'] = {winner: [a['rating'], na], loser: [b['rating'], nb]}
         for uid, delta, w in ((winner, stake, 1), (loser, -stake, 0)):
             if stake:
                 db.execute('INSERT INTO pvp_ledger (id, user_id, delta, note, created_at) VALUES (?, ?, ?, ?, ?)',
@@ -1411,7 +1533,9 @@ def pvp_result():
             elif other and win and now - other['seen'] > 20:
                 _pvp_settle(r, uid, other['uid'], '상대 연결 끊김')
         st = r.get('settled') or {}
+        rt = (st.get('rating') or {}).get(uid) if st else None
         res = {'settled': bool(st) and not st.get('void'), 'void': bool(st.get('void')), 'stake': r.get('stake', 0),
+               'rating': rt, 'tier': _pvp_tier(rt[1]) if rt else None,
                'win': st.get('winner') == uid if st and not st.get('void') else None}
         return jsonify(ok=True, **res)
 
@@ -1428,8 +1552,165 @@ def pvp_ledger():
         db.execute('DELETE FROM pvp_ledger WHERE id=?', (x['id'],))
     db.commit()
     st = db.execute('SELECT wins, losses, gold_won FROM pvp_stats WHERE user_id=?', (user['user_id'],)).fetchone()
-    return jsonify(ok=True, items=[{'delta': int(x['delta']), 'note': x['note']} for x in rows],
+    rank = _pvp_rank_view(db, user['user_id'])
+    rw = db.execute('SELECT id, season, tier, dia, gold FROM pvp_rewards WHERE user_id=? AND claimed=0', (user['user_id'],)).fetchall()
+    for x in rw:
+        db.execute('UPDATE pvp_rewards SET claimed=1 WHERE id=?', (x['id'],))
+    db.commit()
+    return jsonify(ok=True, items=[{'delta': int(x['delta']), 'note': x['note']} for x in rows], rank=rank,
+                   rewards=[{'season': x['season'], 'tier': _pvp_tier(next(t[0] for t in PVP_TIERS if t[1] == x['tier']))['name'],
+                             'dia': int(x['dia']), 'gold': int(x['gold'])} for x in rw],
                    stats={'wins': st['wins'], 'losses': st['losses'], 'gold_won': int(st['gold_won'])} if st else {'wins': 0, 'losses': 0, 'gold_won': 0})
+
+
+# ---------------- v94 친구 · 초대 ----------------
+# 접속 여부와 「지금 하는 일」은 메모리(_SEEN: 마지막으로 친구 목록을 받아 간 시각 · 위치). 초대도 메모리(_INV, 2분).
+_SEEN = {}
+_INV = {}
+FRIEND_MAX = 50
+
+
+def _uid_by_name(db, name):
+    row = db.execute('SELECT user_id, username FROM users WHERE name_key=?', (clamp_text(name, 40).strip().lower(),)).fetchone()
+    return (row['user_id'], row['username']) if row else (None, None)
+
+
+def _friend_rows(db, uid):
+    return db.execute('SELECT f.friend_id, f.status, u.username, s.level, s.floor FROM friends f JOIN users u ON u.user_id=f.friend_id '
+                      'LEFT JOIN player_stats s ON s.user_id=f.friend_id WHERE f.user_id=?', (uid,)).fetchall()
+
+
+@app.route('/api/friends', methods=['POST'])
+def friends_list():
+    """친구 목록 · 받은 신청 · 받은 초대. where(지금 하는 일)를 보내면 접속 표시가 갱신된다"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    now = time.time()
+    _SEEN[uid] = (now, clamp_text(body.get('where'), 30) or '로비')
+    db = get_db()
+    out, sent = [], []
+    for x in _friend_rows(db, uid):
+        if x['status'] == 'accepted':
+            seen = _SEEN.get(x['friend_id'])
+            out.append({'name': x['username'], 'lv': x['level'] or 1, 'floor': x['floor'] or 1,
+                        'online': bool(seen and now - seen[0] < 40), 'where': seen[1] if seen and now - seen[0] < 40 else ''})
+        else:
+            sent.append(x['username'])
+    inc = [r['username'] for r in db.execute('SELECT u.username FROM friends f JOIN users u ON u.user_id=f.user_id '
+                                             'WHERE f.friend_id=? AND f.status=?', (uid, 'pending')).fetchall()]
+    out.sort(key=lambda f: (not f['online'], f['name']))
+    with _duo_lock:
+        inv = [i for i in _INV.get(uid, []) if now - i['t'] < 120 and i['code'] in _DUO and _DUO[i['code']]['state'] == 'wait']
+        _INV[uid] = inv
+    return jsonify(ok=True, friends=out, incoming=inc, sent=sent,
+                   invites=[{'id': i['id'], 'from': i['from'], 'kind': i['kind'], 'code': i['code']} for i in inv])
+
+
+@app.route('/api/friends/request', methods=['POST'])
+def friends_request():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    db = get_db()
+    fid, fname = _uid_by_name(db, (request.get_json(silent=True) or {}).get('name'))
+    if not fid:
+        return _bad('그런 이름의 플레이어가 없어요', 404)
+    if fid == uid:
+        return _bad('나 자신은 친구로 추가할 수 없어요', 400)
+    if db.execute('SELECT COUNT(*) AS c FROM friends WHERE user_id=? AND status=?', (uid, 'accepted')).fetchone()['c'] >= FRIEND_MAX:
+        return _bad('친구는 %d명까지예요' % FRIEND_MAX, 400)
+    mine = db.execute('SELECT status FROM friends WHERE user_id=? AND friend_id=?', (uid, fid)).fetchone()
+    if mine and mine['status'] == 'accepted':
+        return jsonify(ok=True, status='friends', name=fname)
+    back = db.execute('SELECT status FROM friends WHERE user_id=? AND friend_id=?', (fid, uid)).fetchone()
+    now = time.time()
+    if back:  # 상대가 먼저 신청했으면 바로 친구
+        db.execute('UPDATE friends SET status=? WHERE user_id=? AND friend_id=?', ('accepted', fid, uid))
+        if mine:
+            db.execute('UPDATE friends SET status=? WHERE user_id=? AND friend_id=?', ('accepted', uid, fid))
+        else:
+            db.execute('INSERT INTO friends (user_id, friend_id, status, created_at) VALUES (?, ?, ?, ?)', (uid, fid, 'accepted', now))
+        db.commit()
+        return jsonify(ok=True, status='friends', name=fname)
+    if not mine:
+        db.execute('INSERT INTO friends (user_id, friend_id, status, created_at) VALUES (?, ?, ?, ?)', (uid, fid, 'pending', now))
+        db.commit()
+    return jsonify(ok=True, status='sent', name=fname)
+
+
+@app.route('/api/friends/respond', methods=['POST'])
+def friends_respond():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    db = get_db()
+    fid, fname = _uid_by_name(db, body.get('name'))
+    if not fid or not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (fid, uid, 'pending')).fetchone():
+        return _bad('받은 친구 신청이 없어요', 404)
+    if body.get('accept'):
+        if db.execute('SELECT COUNT(*) AS c FROM friends WHERE user_id=? AND status=?', (uid, 'accepted')).fetchone()['c'] >= FRIEND_MAX:
+            return _bad('친구는 %d명까지예요' % FRIEND_MAX, 400)
+        db.execute('UPDATE friends SET status=? WHERE user_id=? AND friend_id=?', ('accepted', fid, uid))
+        db.execute('DELETE FROM friends WHERE user_id=? AND friend_id=?', (uid, fid))
+        db.execute('INSERT INTO friends (user_id, friend_id, status, created_at) VALUES (?, ?, ?, ?)', (uid, fid, 'accepted', time.time()))
+    else:
+        db.execute('DELETE FROM friends WHERE user_id=? AND friend_id=?', (fid, uid))
+    db.commit()
+    return jsonify(ok=True, name=fname)
+
+
+@app.route('/api/friends/remove', methods=['POST'])
+def friends_remove():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    fid, _ = _uid_by_name(db, (request.get_json(silent=True) or {}).get('name'))
+    if fid:
+        db.execute('DELETE FROM friends WHERE (user_id=? AND friend_id=?) OR (user_id=? AND friend_id=?)', (user['user_id'], fid, fid, user['user_id']))
+        db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/friends/invite', methods=['POST'])
+def friends_invite():
+    """내가 있는 방(듀오 · 결투)으로 친구를 부른다"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    db = get_db()
+    fid, fname = _uid_by_name(db, body.get('name'))
+    if not fid or not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (uid, fid, 'accepted')).fetchone():
+        return _bad('친구에게만 초대를 보낼 수 있어요', 403)
+    code = clamp_text(body.get('code'), 8).upper()
+    with _duo_lock:
+        r = _DUO.get(code)
+        if not r or r['state'] != 'wait' or not any(p['uid'] == uid for p in r['players']):
+            return _bad('방이 없어요. 방을 먼저 만들어 주세요', 404)
+        if len(r['players']) >= 2:
+            return _bad('방이 이미 꽉 찼어요', 409)
+        lst = [i for i in _INV.get(fid, []) if i['from_uid'] != uid]
+        lst.append({'id': secrets.token_hex(4), 'from': user['username'], 'from_uid': uid, 'kind': r.get('kind', 'coop'), 'code': code, 't': time.time()})
+        _INV[fid] = lst[-5:]
+    return jsonify(ok=True, name=fname)
+
+
+@app.route('/api/friends/invite/dismiss', methods=['POST'])
+def friends_invite_dismiss():
+    user = _duo_user()
+    if user:
+        iid = clamp_text((request.get_json(silent=True) or {}).get('id'), 16)
+        with _duo_lock:
+            _INV[user['user_id']] = [i for i in _INV.get(user['user_id'], []) if i['id'] != iid]
+    return jsonify(ok=True)
 
 
 @app.route('/api/save', methods=['GET'])
@@ -1781,8 +2062,9 @@ def api_account_delete():
         return _bad('확인용 아이디가 맞지 않아요', 400)
     db = get_db()
     uid = user['user_id']
-    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'player_stats', 'pvp_ledger', 'pvp_stats', 'shop_entitlements', 'tester_links', 'users'):
+    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'player_stats', 'pvp_ledger', 'pvp_stats', 'pvp_rank', 'pvp_rewards', 'friends', 'shop_entitlements', 'tester_links', 'users'):
         db.execute('DELETE FROM %s WHERE user_id = ?' % table, (uid,))
+    db.execute('DELETE FROM friends WHERE friend_id = ?', (uid,))
     db.commit()
     return jsonify(ok=True)
 

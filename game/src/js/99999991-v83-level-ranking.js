@@ -37,11 +37,11 @@
 
  /* ---------- 랭킹 창 ---------- */
  const box=document.createElement('div');box.id='rk83';box.hidden=true;box.innerHTML='<div class="rkP"><div class="rkHd"><b>🏆 랭킹</b><button class="rkX">닫기</button></div><div class="rkTabs"></div><div class="rkList"></div><div class="rkMine"></div></div>';document.body.appendChild(box);
- const TABS=[['score','점수'],['level','레벨'],['floor','탑 층'],['gold','골드']];let tab='score';
+ const TABS=[['score','점수'],['level','레벨'],['floor','탑 층'],['gold','골드'],['pvp','결투']];let tab='score';
  const esc=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const num=v=>Number(v||0).toLocaleString();
- function val(x){return tab==='score'?num(x.score)+'점':tab==='level'?'Lv.'+(x.level||1):tab==='floor'?(x.floor||1)+'F':'🪙 '+num(x.gold)}
- function sub(x){const a=[];if(tab!=='level'&&x.level)a.push('Lv.'+x.level);if(tab!=='floor'&&x.floor)a.push(x.floor+'F');if(tab!=='gold'&&x.gold!=null)a.push('🪙'+num(x.gold));return a.join(' · ')}
+ function val(x){if(tab==='pvp')return (x.tier||'')+' '+num(x.rating);return tab==='score'?num(x.score)+'점':tab==='level'?'Lv.'+(x.level||1):tab==='floor'?(x.floor||1)+'F':'🪙 '+num(x.gold)}
+ function sub(x){if(tab==='pvp')return (x.wins||0)+'승 '+(x.losses||0)+'패'+(x.level?' · Lv.'+x.level:'');const a=[];if(tab!=='level'&&x.level)a.push('Lv.'+x.level);if(tab!=='floor'&&x.floor)a.push(x.floor+'F');if(tab!=='gold'&&x.gold!=null)a.push('🪙'+num(x.gold));return a.join(' · ')}
  async function load(){const list=box.querySelector('.rkList'),mine=box.querySelector('.rkMine');box.querySelector('.rkTabs').innerHTML=TABS.map(([k,n])=>'<button data-k="'+k+'" class="'+(k===tab?'on':'')+'">'+n+'</button>').join('');
   box.querySelectorAll('.rkTabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.k;try{gmSfx('move')}catch(_){}load()});
   list.innerHTML='<div class="rkNote">불러오는 중…</div>';mine.innerHTML='';await sync(true);
@@ -61,7 +61,7 @@
  #rk83{position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;background:#000b;font-family:inherit}#rk83[hidden]{display:none}
  #rk83 .rkP{width:min(460px,calc(100vw - 24px));max-height:calc(100dvh - 24px);display:flex;flex-direction:column;border-radius:16px;background:linear-gradient(180deg,#15232b,#0a1216);border:1px solid #a6f5c666;box-shadow:0 20px 60px #000c;color:#eaf6ef;padding:14px}
  #rk83 .rkHd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#rk83 .rkHd b{font-size:20px}
- #rk83 .rkTabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+ #rk83 .rkTabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px}
  #rk83 .rkTabs button{padding:8px 4px;border-radius:10px;border:1px solid #ffffff22;background:#101a20;color:#c8d8d0;font:inherit;font-weight:800;cursor:pointer}
  #rk83 .rkTabs button.on{background:linear-gradient(180deg,#2e6a54,#1c3a30);color:#fff;border-color:#a6f5c6}
  #rk83 .rkList{overflow:auto;min-height:120px;display:flex;flex-direction:column;gap:4px;padding-right:2px}
