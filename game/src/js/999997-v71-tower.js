@@ -217,7 +217,7 @@
  addEventListener('keydown',e=>{if(mode!=='tower'||paused||e.repeat)return;if(e.code==='KeyF'||e.code==='KeyL'){e.preventDefault();parry()}else if(e.code==='KeyC'){e.preventDefault();ult()}});
 
  /* ---------- 피해 ---------- */
- function hurt(dmg,src){const now=performance.now();if(now<P.inv||T.dead||T.clear)return;try{if(window.CB81){dmg=CB81.onHurt(dmg);if(dmg<=0)return}}catch(e){}dmg=Math.max(1,Math.round(dmg*dmgMul()*(1+(T.f-1)*.002)));P.hp-=dmg;P.inv=now+900;T.combo=0;T.shake=Math.max(T.shake||0,.35);T.flash=.35;
+ function hurt(dmg,src){const now=performance.now();dmg=+dmg||6;/* v88: 피해값이 빠져도 체력이 NaN이 되지 않게 */if(now<P.inv||T.dead||T.clear)return;try{if(window.CB81){dmg=CB81.onHurt(dmg);if(dmg<=0)return}}catch(e){}dmg=Math.max(1,Math.round(dmg*dmgMul()*(1+(T.f-1)*.002)));P.hp-=dmg;P.inv=now+900;T.combo=0;T.shake=Math.max(T.shake||0,.35);T.flash=.35;
   addPop(P.x,P.y-26,'-'+dmg,'#ff4d6d');try{sfx(140,.2,'sawtooth',.05,60)}catch(e){}
   if(P.hp<=0){P.hp=0;die()}}
  function die(){try{if(T.duo&&window.DUO85&&DUO85.onDie())return}catch(e){}T.dead=true;const s=sv(),cp=Math.max(1,zoneOf(T.f)*10+1);s.floor=cp;try{saveNow()}catch(e){};try{stopMusic()}catch(e){}

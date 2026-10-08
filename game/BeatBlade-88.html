@@ -21232,7 +21232,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(D.trail.length||D.parts.length||D.marks.length)drawFx(now);
   if(!P.dash&&D.trail.length&&now-D.trail[D.trail.length-1].t>D.st.life+100)D.trail=[]}
  {const base=drawKnight;drawKnight=function(c,x,y,s,fl,wt,idleT){
-  try{if(live(c)&&mode!=='boss'&&typeof P!=='undefined'&&s===2&&Math.abs(x-(P.x-12))<24&&Math.abs(y-(P.y-19))<24)tick(performance.now())}catch(e){}
+  try{if(!window.__mateDraw&&live(c)&&mode!=='boss'&&typeof P!=='undefined'&&s===2&&Math.abs(x-(P.x-12))<24&&Math.abs(y-(P.y-19))<24)tick(performance.now())}catch(e){}
   return base.apply(this,arguments)}}
  window.DASH70={ST,style,D,tick(now){try{tick(now)}catch(e){}}};
 }catch(e){console.error('v70 dash',e)}})();
@@ -21455,7 +21455,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  addEventListener('keydown',e=>{if(mode!=='tower'||paused||e.repeat)return;if(e.code==='KeyF'||e.code==='KeyL'){e.preventDefault();parry()}else if(e.code==='KeyC'){e.preventDefault();ult()}});
 
  /* ---------- 피해 ---------- */
- function hurt(dmg,src){const now=performance.now();if(now<P.inv||T.dead||T.clear)return;try{if(window.CB81){dmg=CB81.onHurt(dmg);if(dmg<=0)return}}catch(e){}dmg=Math.max(1,Math.round(dmg*dmgMul()*(1+(T.f-1)*.002)));P.hp-=dmg;P.inv=now+900;T.combo=0;T.shake=Math.max(T.shake||0,.35);T.flash=.35;
+ function hurt(dmg,src){const now=performance.now();dmg=+dmg||6;/* v88: 피해값이 빠져도 체력이 NaN이 되지 않게 */if(now<P.inv||T.dead||T.clear)return;try{if(window.CB81){dmg=CB81.onHurt(dmg);if(dmg<=0)return}}catch(e){}dmg=Math.max(1,Math.round(dmg*dmgMul()*(1+(T.f-1)*.002)));P.hp-=dmg;P.inv=now+900;T.combo=0;T.shake=Math.max(T.shake||0,.35);T.flash=.35;
   addPop(P.x,P.y-26,'-'+dmg,'#ff4d6d');try{sfx(140,.2,'sawtooth',.05,60)}catch(e){}
   if(P.hp<=0){P.hp=0;die()}}
  function die(){try{if(T.duo&&window.DUO85&&DUO85.onDie())return}catch(e){}T.dead=true;const s=sv(),cp=Math.max(1,zoneOf(T.f)*10+1);s.floor=cp;try{saveNow()}catch(e){};try{stopMusic()}catch(e){}
@@ -23100,13 +23100,24 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const T=()=>window.TW71&&TW71.T;
  const r1=v=>Math.round(v*10)/10;
  function send(m){if(D.on)D.out.push(m)}
+ /* v88: 내 화면에서 일어난 일을 그 순간의 시각과 함께 적어 두었다가 위치와 같이 보냄 → 동료 화면에서 같은 순간에 재생 */
+ D.ev=[];let evN=0;const ES={};
+ function evPush(k,o){D.ev.push(Object.assign({e:++evN,k,t:Math.round(performance.now())},o));if(D.ev.length>60)D.ev.shift()}
+ function watchMe(){if(!D.started||!(mode==='tower'||mode==='boss'))return;
+  if(P.lungeT&&P.lungeT!==ES.l){ES.l=P.lungeT;evPush('a',{a:r1(P.lungeA||0),d:P.lungeDur||130})}
+  if(P.dash&&P.dash.t0!==ES.d){ES.d=P.dash.t0;evPush('d',{vx:Math.sign(P.dash.vx||0),vy:Math.sign(P.dash.vy||0),dur:P.dash.dur||150})}
+  if(P.parryT&&P.parryT!==ES.p){ES.p=P.parryT;evPush('p',{g:P.parryPerf?1:0})}
+  /* 궁극기: 종류 · 세트 · 위치 · 타격 시각을 통째로 보내서 동료 화면에서 같은 연출을 재생 */
+  try{const t=T(),sp=mode==='tower'?(t&&t.U&&t.U.sp):(G&&G.sp);if(sp&&sp.t0!==ES.u){ES.u=sp.t0;const hits=(mode==='tower'?t.U.hits:sp.hits)||[];
+   evPush('U',{sp:{type:sp.type,set:sp.set||null,dur:sp.dur,name:sp.name,col:sp.col,cx:r1(sp.cx),cy:r1(sp.cy),hits}})}}catch(e){}
+  if(ES.hp!=null&&P.hp<ES.hp&&!P.downDuo)evPush('h',{});ES.hp=P.hp}
 
  /* ---------- 0.1초마다 주고받기 ---------- */
  async function tick(){if(!D.on||(D.fly||0)>=3)return;D.fly=(D.fly||0)+1;try{
   const t=T();
-  /* v86: 공격 횟수(휘두를 때마다 +1) — 동료 화면에서 휘두르기를 빠짐없이 보여 주려고 */
-  if(P.lungeT&&P.lungeT!==D.lastLunge){D.lastLunge=P.lungeT;D.atkN=(D.atkN||0)+1;D.atkA=P.lungeA||0}
-  const ex={n:(D.pn=(D.pn||0)+1),ts:Math.round(performance.now()),an:D.atkN||0,la:r1(D.atkA||0),wp:(()=>{try{return shopInv().eq.wp||0}catch(e){return 0}})()};
+  const ev=D.ev.splice(0,30);
+  const ex={n:(D.pn=(D.pn||0)+1),ts:Math.round(performance.now()),wp:(()=>{try{return shopInv().eq.wp||0}catch(e){return 0}})(),sk:(()=>{try{return SKIN58.get()||''}catch(e){return ''}})(),
+   ffx:r1((P.face&&P.face.x)||0),ffy:r1((P.face&&P.face.y)||1),ev};
   if(D.started&&typeof mode!=='undefined'){
    if(mode==='tower'&&t&&t.duo){send({...ex,t:'p',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,w:!!P.walkOn});
     if(D.role==='host')send(snap())}
@@ -23146,7 +23157,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    case 'b':mateIn(m);if(m.d>0&&typeof G!=='undefined'&&G&&G.tw71&&['play','count','wake'].includes(G.state)){G.hp=Math.max(0,G.hp-m.d);G._dp=G.hp;try{G.pops.push({x:G.boss.x+(Math.random()-.5)*30,y:G.boss.y-30,t:performance.now(),tx:'동료 -'+m.d,col:'#8de4ff'});const now=performance.now(),bx=G.boss.x+(Math.random()-.5)*20,by=G.boss.y-14+(Math.random()-.5)*16;fxRing(bx,by,now,240,18+Math.min(16,m.d/40),'#8de4ff');G.slashFx&&G.slashFx.push({x:bx,y:by,a:Math.random()*6.28,t:now,dur:200,col:'#8de4ff',r:16})}catch(e){}if(G.hp<=0)try{startDying(performance.now())}catch(e){}}break;
    case 'bh':if(D.role==='guest'&&typeof G!=='undefined'&&G&&G.duo&&G._duo85&&G.state==='play'&&m.hp<G.hp){G.hp=m.hp;G._dp=G.hp;if(G.hp<=0)try{startDying(performance.now())}catch(e){}}break;
    case 'next':if(D.role==='guest'){$('overlay').hidden=true;startTower(m.f)}break;
-   case 'fail':failBoth();break;
+   case 'fail':if(mode==='boss'){if(P.downDuo)bossLose();else{D.mate=Object.assign(D.mate||{},{down:true,hp:0});note('동료가 쓰러졌어요 · 혼자 버텨요!')}}else failBoth();break;
   }}
  function note(tx){try{banner(tx)}catch(e){}}
 
@@ -23154,7 +23165,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  function snap(){const t=T(),c=t.clk;const id=(o,k)=>o[k]||(o[k]=(t['_'+k]=(t['_'+k]||0)+1));
   return {t:'s',f:t.f,clk:r1(c),clear:t.clear?1:0,door:r1(t.doorK||0),total:t.total||0,q:(t.queue||[]).length,
    mobs:t.mobs.map(m=>[m.id,m.sp,r1(m.x),r1(m.y),Math.round(m.hp),m.max,m.elite?1:0,m.s,r1(m.born),m.bornMax,m.st,r1(m.st0-c),m.hitPose==null?null:r1(m.hitPose-c),m.face,r1(m.stunT-c),m.sh||0,m.shMax||0,m.bubble?1:0,r1(m.hitT-c),r1(m.vx),r1(m.vy),m.kbA==null?null:r1(m.kbA),r1(m.seed),m.dieT==null?null:r1(m.dieT-c)]),
-   shots:t.shots.filter(s=>!s.dead).map(s=>[id(s,'id'),r1(s.x),r1(s.y),r1(s.vx),r1(s.vy),s.r,s.col,s.kind,s.mine?1:0,s.poison?1:0,s.web?1:0,r1(s.t-c),s.home||0]),
+   shots:t.shots.filter(s=>!s.dead).map(s=>[id(s,'id'),r1(s.x),r1(s.y),r1(s.vx),r1(s.vy),s.r,s.col,s.kind,s.mine?1:0,s.poison?1:0,s.web?1:0,r1(s.t-c),s.home||0,s.dmg||6]),
    tels:t.tels.map(z=>[id(z,'id'),z.k,r1(z.x),r1(z.y),z.r||0,z.a==null?null:r1(z.a),z.len||0,z.w||0,z.t0==null?null:r1(z.t0-c),r1((z.t1||0)-c),r1((z.t2||0)-c),z.dmg||0,z.warn?1:0,z.drain?1:0,z.arc==null?null:r1(z.arc),z.col||null,z.splash?1:0,z.boom?1:0]),
    pools:(t.pools||[]).map(q=>[r1(q.x),r1(q.y),q.r,r1(q.t0-c),r1(q.t1-c)]),
    waves:(t.waves||[]).map(w=>[id(w,'id'),r1(w.x),r1(w.y),w.r,w.max,r1(w.t0-c),w.dmg,w.col])}}
@@ -23173,7 +23184,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    if(hp<m.hp||m.hp<=0&&hp>0)m.hp=hp;else m.hp=Math.min(m.hp,hp);if(hitT+c>(m.hitT||-9))m.hitT=hitT+c;if(kbA!=null)m.kbA=kbA;if(dieT!=null){m.hp=0;m.dieT=m.dieT==null?dieT+c:m.dieT}}
   for(const m of t.mobs)if(!seen.has(m.id)&&m.hp>0){m.hp=0;m.dieT=c0}
   t.mobs=t.mobs.filter(m=>m.hp>0||c0-(m.dieT||0)<.35);
-  const ns=[];for(const a of s.shots){const [id,x,y,vx,vy,r,col,kind,mine,poison,web,ts,home]=a;if(D.dead.has(id))continue;let o=t.shots.find(q=>q.id===id);if(!o)o={id};Object.assign(o,{x:x-vx*sh,y:y-vy*sh,vx,vy,r,col,kind,mine:!!mine,poison:!!poison,web:!!web,t:ts+c,home});ns.push(o)}t.shots=ns;
+  const ns=[];for(const a of s.shots){const [id,x,y,vx,vy,r,col,kind,mine,poison,web,ts,home,dmg]=a;if(D.dead.has(id))continue;let o=t.shots.find(q=>q.id===id);if(!o)o={id};Object.assign(o,{x:x-vx*sh,y:y-vy*sh,vx,vy,r,col,kind,mine:!!mine,poison:!!poison,web:!!web,t:ts+c,home,dmg:dmg||6});ns.push(o)}t.shots=ns;
   const nz=[];for(const a of s.tels){const [id,k,x,y,r,an,len,w,t0,t1,t2,dmg,warn,drain,arc,col,splash,boom]=a;let o=t.tels.find(q=>q.id===id);if(!o)o={id};Object.assign(o,{k,x,y,r,a:an,len,w,t0:t0==null?undefined:t0+c,t1:t1+c,t2:t2+c,dmg,warn:!!warn,drain:!!drain,arc:arc==null?undefined:arc,col:col||undefined,splash:!!splash,boom:!!boom});nz.push(o)}t.tels=nz;
   t.pools=s.pools.map(([x,y,r,t0,t1])=>({x,y,r,t0:t0+c,t1:t1+c}));
   const nw=[];for(const a of s.waves){const [id,x,y,r,max,t0,dmg,col]=a;let o=(t.waves||[]).find(q=>q.id===id);if(!o)o={id};Object.assign(o,{x,y,r,max,t0:t0+c,dmg,col});nw.push(o)}t.waves=nw;
@@ -23201,10 +23212,12 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  {const f=toLobby;toLobby=function(){try{if(D.on||D.started||D.code)end()}catch(e){}return f.apply(this,arguments)}}
 
  /* ---------- 쓰러짐 · 부활 ---------- */
- function mateAlive(){return D.mate&&!D.mate.down&&performance.now()-(D.mate.at||0)<6000}
+ function mateAlive(){return D.mate&&!D.mate.down&&!(D.mate.hp!=null&&D.mate.hp<=0)&&performance.now()-(D.mate.at||0)<6000}
  function onDie(){const t=T();if(!t.duo)return false;if(mateAlive()){P.downDuo=true;P.hp=0;t.dead=true;send({t:'p',down:true,x:P.x,y:P.y,hp:0,mx:P.maxhp,ch:myCh()});note('쓰러졌어요 · 동료가 이 층을 깨면 다시 일어나요');return true}
   send({t:'fail'});setTimeout(failBoth,50);return true}
  function revive(){const t=T();P.downDuo=false;P.hp=Math.max(1,Math.round(P.maxhp*.3));if(t)t.dead=false;P.inv=performance.now()+1500;note('다시 일어났어요!')}
+ /* v88 보스전에서 둘 다 쓰러짐 → 나도 보통처럼 쓰러져서 결과창(방장: 둘이 다시 도전)으로 */
+ function bossLose(){try{if(typeof G==='undefined'||!G||!(G.state==='play'||G.state==='count'||G.state==='wake'))return;P.inv=0;P.downDuo=false;G.duo=null;D.failSent=1;hurtP(99999,performance.now())}catch(e){console.error('duo bossLose',e)}}
  let failing=false;
  function failBoth(){if(failing)return;failing=true;setTimeout(()=>failing=false,3000);const t=T(),f=t?t.f:1;try{stopMusic()}catch(e){}
   showOverlay('DUO · '+f+'F','둘 다 쓰러졌어요','<b>'+f+'F</b>에서 함께 쓰러졌어요. 방을 다시 만들어 도전할 수 있어요.',[['로비로',()=>{end();toLobby()},true]])}
@@ -23214,16 +23227,30 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  if(typeof hurtP==='function'){const f=hurtP;hurtP=function(dmg,now){try{if(mode==='boss'&&G&&G.duo&&!(now<P.inv)){const pred=Math.max(1,Math.round(dmg*1.6));/* 난이도 배율까지 넉넉히 잡아 「이번에 맞으면 쓰러짐」을 미리 봄 */
     if(P.downDuo)return;if(P.hp-pred<=0&&mateAlive()){P.downDuo=true;P.inv=now+1e9;P.hp=1;send({t:'b',down:true,x:P.x,y:P.y,hp:0,mx:P.maxhp,ch:myCh(),d:0});note('쓰러졌어요 · 동료가 보스를 쓰러뜨리면 함께 이겨요');return}}}catch(e){}return f.apply(this,arguments)}}
  {const f=doAttack;doAttack=function(){if(P.downDuo&&D.started)return;return f.apply(this,arguments)}}
- /* 둘 다 쓰러지면(보스전): 남은 사람이 쓰러질 때 실패 */
- setInterval(()=>{try{if(D.started&&mode==='boss'&&G&&G.duo&&P.downDuo&&D.mate&&D.mate.down&&G.state==='play'){P.inv=0;P.downDuo=false;const fh=hurtP;send({t:'fail'});G.duo=null;fh(99999,performance.now())}}catch(e){}},300);
+ /* v88: 내가 쓰러져 기다리는데 동료가 살아 있지 않으면(쓰러짐 · 보통 죽음 · 6초 넘게 연결 없음) 바로 실패 — 체력 1 무적으로 남던 문제 */
+ setInterval(()=>{try{if(!D.started||!P.downDuo||mateAlive())return;
+  if(mode==='boss'&&G&&G.state==='play'){send({t:'fail'});bossLose()}
+  else if(mode==='tower'){const t=T();if(t&&t.clear)return;send({t:'fail'});failBoth()}}catch(e){}},300);
+ /* 보스전에서 내가 보통으로 쓰러지면(동료가 이미 쓰러진 상태) 동료에게 알림 */
+ {const f=hurtP;hurtP=function(){const r=f.apply(this,arguments);try{if(D.started&&mode==='boss'&&P.hp<=0&&!P.downDuo&&!D.failSent){D.failSent=1;send({t:'fail'})}}catch(e){}return r}}
 
  /* ---------- 보스 층: 함께 깎기 ---------- */
  /* 내가 깎은 양 재기: 그리기와 상관없이 매 프레임(등장 장면 중에도) */
  function bossTrack(){if(!(D.started&&mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71))return;if(!G.duo&&D.on){G.duo=1;G._dp=null}if(!G.duo)return;
+  if(G!==D.lastG){D.lastG=G;D.failSent=0}
   if(G._tw75&&!G._duo85){G._duo85=1;G.hp=Math.round(G.hp*1.8);G.maxHp=Math.round(G.maxHp*1.8);G.hpShow=G.hp/G.maxHp;G._barLast=undefined;G._dp=G.hp}
   if(G._dp!=null&&G.hp<G._dp)D.bAcc+=G._dp-G.hp;G._dp=G.hp}
- {const f=frame;frame=function(){const r=f.apply(this,arguments);try{bossTrack()}catch(e){}return r}}
+ {const f=frame;frame=function(){const r=f.apply(this,arguments);try{bossTrack()}catch(e){}try{watchMe()}catch(e){}try{downBanner()}catch(e){}return r}}
  {const f=drawScene;drawScene=function(now){const r=f.apply(this,arguments);try{if(D.started&&mode==='boss'&&G&&G.duo)drawMate(now,true)}catch(e){}return r}}
+ /* 쓰러져 있는 동안 화면 가운데 안내 */
+ function downBanner(){if(!D.started||!P.downDuo||!(mode==='tower'||mode==='boss'))return;ctx.save();try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}
+  const y=AY+AH/2-14,a=.75+.2*Math.sin(performance.now()/300);ctx.globalAlpha=.7;ctx.fillStyle='#05070a';ctx.fillRect(W/2-120,y,240,30);ctx.globalAlpha=a;ctx.fillStyle='#ff8a9a';ctx.font='900 11px sans-serif';ctx.textAlign='center';
+  ctx.fillText('💤 쓰러졌어요',W/2,y+13);ctx.fillStyle='#cfe8f0';ctx.font='800 8px sans-serif';ctx.fillText(mode==='boss'?'동료가 보스를 쓰러뜨리면 함께 이겨요':'동료가 이 층을 깨면 다시 일어나요',W/2,y+25);ctx.restore()}
+ /* v88 일시정지: 듀오에서는 게임을 멈추지 않고(동료는 계속 싸우니까) 작은 창만 띄움 — 뒤 화면은 계속 움직임 */
+ const pz=document.createElement('div');pz.id='duoPz';pz.hidden=true;pz.innerHTML='<b>⏸ 듀오 중에는 게임이 멈추지 않아요</b><small>동료는 계속 싸우고 있어요</small><div><button id="dpGo">계속하기</button><button id="dpOut">방 나가기 · 로비로</button></div>';document.body.appendChild(pz);
+ pz.querySelector('#dpGo').onclick=()=>{pz.hidden=true};pz.querySelector('#dpOut').onclick=()=>{pz.hidden=true;end();toLobby()};
+ {const f=pause;pause=function(){if(D.started&&D.on&&(mode==='tower'||mode==='boss')){if(paused)return f.apply(this,arguments);pz.hidden=!pz.hidden;return}return f.apply(this,arguments)}}
+ setInterval(()=>{if(!pz.hidden&&!(D.started&&(mode==='tower'||mode==='boss')))pz.hidden=true},500);
  /* 보스 결과창 단추: 방장만 다음 층을 연다 */
  function bossButtons(f,retry){if(D.role==='host')return [[(retry?'↺ 다시 도전 (둘이 함께)':'▲ '+f+'F 함께 오르기'),()=>{send({t:'next',f});$('overlay').hidden=true;startTower(f)},true],['방 나가기',()=>{end();toLobby()},false]];
   return [['⏳ 방장이 '+(retry?'다시 도전':'다음 층')+'을 누르면 함께 가요',()=>{},true],['방 나가기',()=>{end();toLobby()},false]]}
@@ -23231,36 +23258,67 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* ---------- 동료 그리기 ---------- */
  /* v86 동료 위치: 보낸 시각(ts)을 내 시계로 옮겨 시간표에 쌓고, 0.16초 늦게 두 점 사이를 이어 그린다 */
  function mateIn(m){const now=performance.now(),M=D.mate||(D.mate={});
-  if(m.n!=null&&M.n!=null&&m.n<=M.n&&!m.d){return}/* 순서가 뒤바뀌어 온 옛 위치는 버림 */
   if(m.ts!=null){const o=now-m.ts;D.mOff=D.mOff==null||o<D.mOff?o:D.mOff+.5;D.mDly=lagOf(D.mJ||(D.mJ=[]),o-D.mOff,1)}
+  if(m.n!=null&&M.n!=null&&m.n<=M.n&&!m.d){if(m.ev&&m.ev.length)mateEv(M,m.ev);return}/* 순서가 뒤바뀌어 온 옛 위치는 버림(사건은 살림) */
   const lt=m.ts!=null?m.ts+D.mOff:now;
-  if(M.an!=null&&m.an!=null&&m.an!==M.an){(M.sw||(M.sw=[])).push({t:lt,a:m.la||0});if(M.sw.length>6)M.sw.shift()}
-  const hs=M.hs||[];hs.push({t:lt,x:m.x,y:m.y});while(hs.length>24)hs.shift();
-  Object.assign(M,m,{at:now,hs})}
+
+  if(m.ev)mateEv(M,m.ev);const hs=M.hs||[];hs.push({t:lt,x:m.x,y:m.y,fx:m.ffx,fy:m.ffy});while(hs.length>24)hs.shift();
+  const ev0=m.ev;delete m.ev;Object.assign(M,m,{at:now,hs});m.ev=ev0}
  /* 늦게 도착하는 정도(가장 빨리 온 것 대비)를 모아 90%가 도착하는 만큼만 늦게 그림: 매끄럽게 + 너무 늦지 않게 */
  function lagOf(a,v,ms){a.push(v);if(a.length>40)a.shift();const q=a.slice().sort((x,y)=>x-y)[Math.floor(a.length*.9)];return ms?Math.max(110,Math.min(700,q+70)):Math.max(.11,Math.min(.7,q+.07))}
  const MDLY=()=>D.mDly||160;
+ function mateEv(M,list){for(const e of list){if((M.seen||(M.seen=new Set())).has(e.e))continue;M.seen.add(e.e);if(M.seen.size>200)M.seen=new Set([...M.seen].slice(-100));
+   (M.evs||(M.evs=[])).push(Object.assign({},e,{t:e.t+(D.mOff||0)}));if(M.evs.length>40)M.evs.shift();if(e.k==='U'&&e.sp)setTimeout(()=>note('동료 필살기! '+(e.sp.name||'')),MDLY())}}
  function matePos(now){const M=D.mate,hs=M.hs;if(!hs||!hs.length)return [M.x,M.y];const rt=now-MDLY();
   if(rt<=hs[0].t)return [hs[0].x,hs[0].y];
-  for(let i=hs.length-1;i>0;i--){const a=hs[i-1],b=hs[i];if(rt>=a.t&&rt<=b.t){const k=b.t>a.t?(rt-a.t)/(b.t-a.t):1;return [a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k]}}
-  const b=hs[hs.length-1],a=hs[hs.length-2];if(a&&b.t>a.t){const k=Math.min(rt-b.t,120)/(b.t-a.t);return [b.x+(b.x-a.x)*k,b.y+(b.y-a.y)*k]}return [b.x,b.y]}
- function drawMate(now,boss){const m=D.mate;if(!m||m.x==null||performance.now()-(m.at||0)>5000)return;const c=ctx,pn=performance.now();
+  for(let i=hs.length-1;i>0;i--){const a=hs[i-1],b=hs[i];if(rt>=a.t&&rt<=b.t){const k=b.t>a.t?(rt-a.t)/(b.t-a.t):1;M.cf=k<.5?a:b;return [a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k]}}
+  const b=hs[hs.length-1],a=hs[hs.length-2];M.cf=b;if(a&&b.t>a.t){const k=Math.min(rt-b.t,120)/(b.t-a.t);return [b.x+(b.x-a.x)*k,b.y+(b.y-a.y)*k]}return [b.x,b.y]}
+ /* v88: 동료를 「내 캐릭터 그리기」 그대로 그림 — 잠깐 내 값(P · 장비 · 스킨)을 동료 값으로 바꿔 그리고 되돌림.
+    그래서 앞 · 옆 · 뒤 모습, 걷기, 스킨 연출, 검 휘두르기, 패링 자세가 내 화면에서 보이는 것과 같다. */
+ const PK=['x','y','face','walkOn','walkT','lungeT','lungeA','lungeDur','parryT','parryPerf','parryUsed','dash','inv','hp','maxhp'];
+ function asMate(m,st,fn){const inv=shopInv(),sv={},e0={ch:inv.eq.ch,wp:inv.eq.wp},g0=SKIN58.get,mo=window.__skinMotion,tr=window.__skinTrail,om=mode;for(const q of PK)sv[q]=P[q];
+  try{Object.assign(P,st);inv.eq.ch=m.ch||0;inv.eq.wp=m.wp||0;const sk=m.sk&&SKIN58.byId(m.sk);SKIN58.get=()=>sk?sk.id:null;window.__skinMotion=sk?sk.motion:null;window.__skinTrail=sk?sk.trail:null;
+   window.__mateDraw=1;if(mode==='tower')mode='village';fn()}
+  catch(e){}finally{mode=om;window.__mateDraw=0;inv.eq.ch=e0.ch;inv.eq.wp=e0.wp;SKIN58.get=g0;window.__skinMotion=mo;window.__skinTrail=tr;for(const q of PK)P[q]=sv[q]}}
+ /* 대시 잔상용 실루엣(캐릭터 · 스킨 · 방향별로 한 번만 만듦) */
+ const GH={};
+ function ghostOf(m,fl,col){const k=(m.ch||0)+'|'+(m.sk||'')+'|'+fl+'|'+col;if(GH[k])return GH[k];const cv=document.createElement('canvas');cv.width=64;cv.height=64;const o=cv.getContext('2d');o.imageSmoothingEnabled=false;
+  asMate(m,{},()=>{try{drawKnight(o,20,22,2,fl,null,0)}catch(e){}});o.globalCompositeOperation='source-atop';o.fillStyle=col;o.globalAlpha=.75;o.fillRect(0,0,64,64);return GH[k]=cv}
+ function drawMate(now,boss){const m=D.mate;if(!m||m.x==null||performance.now()-(m.at||0)>5000)return;const c=ctx,pn=performance.now(),rt=pn-MDLY();
   const [gx,gy]=matePos(pn);m.sx=m.sx==null?gx:m.sx+(gx-m.sx)*.6;m.sy=m.sy==null?gy:m.sy+(gy-m.sy)*.6;const x=m.sx,y=m.sy;
-  m.wk=Math.hypot(gx-(m.px==null?gx:m.px),gy-(m.py==null?gy:m.py))>.15;m.px=gx;m.py=gy;
-  c.save();if(m.down)c.globalAlpha=.4;c.fillStyle='#000';c.globalAlpha*=.35;c.beginPath();c.ellipse(x,y+2,9,3,0,0,6.28);c.fill();c.globalAlpha=m.down?.4:1;
-  const walk=m.w||m.wk;
-  /* 동료의 검: 내 그리기 도구를 잠깐 동료 값(무기 · 휘두르는 시각 · 걷기)으로 바꿔 그대로 그림 */
-  {const inv=shopInv(),k=['lungeT','lungeDur','lungeA','walkOn','walkT','face'],sv={},wp0=inv.eq.wp;for(const q of k)sv[q]=P[q];
-   try{const rt0=pn-MDLY();let sw=null;for(const z of (m.sw||[]))if(rt0>=z.t&&rt0-z.t<200)sw=z;
-    inv.eq.wp=m.wp||0;P.lungeT=sw?pn-(rt0-sw.t):0;P.lungeDur=150;P.lungeA=sw?sw.a:0;P.walkOn=!!walk;P.walkT=pn/90;P.face={x:m.fx<0?-1:1,y:0};
-    const om=mode;if(mode==='tower')mode='village';try{drawSword(x-12,y-19,2,m.fx<0,pn)}finally{mode=om}}catch(e){}finally{inv.eq.wp=wp0;for(const q of k)P[q]=sv[q]}}
-  try{ch2DrawIdx(c,m.ch||0,x-12,y-19,2,m.fx<0,walk?now/90:null,walk?null:now/430)}catch(e){}
-  /* 휘두르기: 받은 공격마다 0.22초 초승달 베기 */
-  const rt=pn-MDLY();for(const sw of (m.sw||[])){const q=(rt-sw.t)/220;if(q<0||q>1)continue;const a=sw.a,cx=x+Math.cos(a)*6,cy=y-9+Math.sin(a)*6;
-   c.globalAlpha=(1-q)*.9;c.fillStyle='#bff4ff';c.beginPath();c.arc(cx,cy,19,a-1.25+q*.5,a+1.25+q*.5);c.arc(cx,cy,12,a+1.05+q*.5,a-1.05+q*.5,true);c.closePath();c.fill();
-   c.globalAlpha=(1-q);c.strokeStyle='#ffffff';c.lineWidth=1.5;c.beginPath();c.arc(cx,cy,19,a-1.1+q*.5,a+1.1+q*.5);c.stroke();c.lineWidth=1}
-  c.globalAlpha=1;const nm=(D.room&&(D.room.players.find(p=>!p.me)||{}).name)||'동료';c.font='900 7px sans-serif';c.textAlign='center';c.fillStyle='#000';c.fillText(nm,x+.5,y-37.5);c.fillStyle=m.down?'#ff8a9a':'#8de4ff';c.fillText(m.down?nm+' (쓰러짐)':nm,x,y-38);
-  const q=Math.max(0,Math.min(1,(m.hp||0)/(m.mx||1)));c.fillStyle='#05070ae6';c.fillRect(x-12,y-35,24,4);c.fillStyle='#3a0a14';c.fillRect(x-11,y-34,22,2);c.fillStyle='#7dffa8';c.fillRect(x-11,y-34,22*q,2);c.textAlign='left';c.restore()}
+  const mv=Math.hypot(gx-(m.px==null?gx:m.px),gy-(m.py==null?gy:m.py));m.wkT=mv>.15?pn:(m.wkT||0);m.px=gx;m.py=gy;const walk=pn-m.wkT<120;
+  m.wph=(m.wph||0)+(walk?Math.min(.5,mv*.35):0);
+  const cf=m.cf||{},fx=cf.fx!=null?cf.fx:(m.fx<0?-1:1),fy=cf.fy!=null?cf.fy:0;const fl=fx<0;
+  /* 지금(늦게 그리는 시각) 일어나고 있는 사건 */
+  let atk=null,dash=null,par=null,ult=null,hurt=null;for(const e of (m.evs||[])){const a=rt-e.t;if(a<0)continue;
+   if((e.k==='a'||e.k==='u')&&a<(e.d||130)+60)atk=e;if(e.k==='d'&&a<(e.dur||150)+40)dash=e;if(e.k==='p'&&a<420)par=e;if(e.k==='U'&&e.sp&&a<e.sp.dur)ult=e;if(e.k==='h'&&a<160)hurt=e}
+  const col=(()=>{try{const sk=m.sk&&SKIN58.byId(m.sk);return sk&&sk.trail&&sk.trail!=='rainbow'?sk.trail:sk&&sk.trail==='rainbow'?'hsl('+((pn/4)%360)+',100%,70%)':'#8de4ff'}catch(e){return '#8de4ff'}})();
+  /* 대시: 잔상 + 속도선 */
+  m.tr=(m.tr||[]).filter(q=>pn-q.t<260);if(dash&&(!m.tr.length||pn-m.tr[m.tr.length-1].t>28))m.tr.push({x,y,t:pn,fl});
+  if(m.tr.length){const gc=col.startsWith('hsl')?'#ffffff':col;for(const q of m.tr){const a=1-(pn-q.t)/260;c.save();c.globalAlpha=a*.5;c.globalCompositeOperation='lighter';c.drawImage(ghostOf(m,q.fl,gc),q.x-32,q.y-41);c.restore()}}
+  if(dash){const k=Math.min(1,(rt-dash.t)/(dash.dur||150)),an=Math.atan2(dash.vy||0,dash.vx||0);c.save();c.translate(x,y-9);c.rotate(an);c.fillStyle=col;for(let i=0;i<7;i++){c.globalAlpha=.55*(1-k);const off=(i-3)*4,len=14+((i*13)%10);c.fillRect(-len-10-((pn/3+i*9)%8),off,len,1)}c.restore()}
+  c.save();c.globalAlpha=m.down?.3:.35;c.fillStyle='#000';c.beginPath();c.ellipse(x,y+2,9,3,0,0,6.28);c.fill();c.restore();
+  if(m.down)c.globalAlpha=.45;
+  /* 공격 몸 앞으로 밀기(내 캐릭터와 같은 0.6배 반동) */
+  let lx=0,ly=0;if(atk){const q=Math.min(1,(rt-atk.t)/(atk.d||130)),p=Math.sin(q*Math.PI)*4;lx=Math.cos(atk.a||0)*p;ly=Math.sin(atk.a||0)*p}
+  const st={x,y,face:{x:fx,y:fy},walkOn:walk,walkT:m.wph,lungeT:atk?pn-(rt-atk.t):0,lungeA:atk?atk.a:0,lungeDur:atk?atk.d:130,parryT:par?pn-(rt-par.t):0,parryPerf:!!(par&&par.g),parryUsed:false,dash:null,inv:0,hp:m.hp||1,maxhp:m.mx||100};
+  asMate(m,st,()=>{drawSword(x-12+lx,y-19+ly,2,fl,pn);drawKnight(ctx,x-12+lx,y-19+ly,2,fl,walk?m.wph:null,walk?null:pn/430)});
+  c.globalAlpha=1;
+  /* 휘두르기 베기 빛(무기 궤적 색) */
+  if(atk&&atk.k==='a'){const q=(rt-atk.t)/220;if(q>=0&&q<=1){const a=atk.a||0,cx=x+Math.cos(a)*6,cy=y-9+Math.sin(a)*6;c.save();c.globalAlpha=(1-q)*.75;c.fillStyle=col;c.beginPath();c.arc(cx,cy,19,a-1.25+q*.5,a+1.25+q*.5);c.arc(cx,cy,12,a+1.05+q*.5,a-1.05+q*.5,true);c.closePath();c.fill();
+   c.globalAlpha=(1-q);c.strokeStyle='#ffffff';c.lineWidth=1.5;c.beginPath();c.arc(cx,cy,19,a-1.1+q*.5,a+1.1+q*.5);c.stroke();c.restore()}}
+  /* 패링: 방패 고리 */
+  if(par){const q=(rt-par.t)/420;c.save();c.globalAlpha=(1-q)*.9;c.strokeStyle=par.g?'#ffe79a':'#9fe8ff';c.lineWidth=2;c.beginPath();c.arc(x+(fl?-7:7),y-10,8+q*10,0,6.28);c.stroke();c.restore()}
+  /* 필살기: 내 궁극기와 같은 그리기(drawSpecialFX)로 재생 — 검 종류 · 현질 세트 연출 그대로 */
+  if(ult){const a=rt-ult.t,sp=ult.spo||(ult.spo=Object.assign({},ult.sp,{done:[]}));sp.t0=pn-a;const hs=sp.hits||[];while(sp.done.length<hs.length&&a>=hs[sp.done.length])sp.done.push(pn-(a-hs[sp.done.length]));
+   asMate(m,st,()=>{const og=(typeof G!=='undefined')?G:null;
+    try{if(mode==='boss'&&og){const o=og.sp;og.sp=sp;try{drawSpecialFX(pn)}finally{og.sp=o}}
+     else{G=Object.assign(Object.create(og||{}),{sp,ms:(og&&og.ms)||500,state:'play',B:BOSSES[0],boss:{x:sp.cx,y:sp.cy+26,slump:0},vuln:null,pops:[],parts:[],fxr:[],slashFx:[]});drawSpecialFX(pn)}}
+    catch(e){}finally{G=og}})}
+  /* 맞음: 빨간 번쩍 */
+  if(hurt){c.save();c.globalAlpha=.55*(1-(rt-hurt.t)/160);c.fillStyle='#ff3a4a';c.beginPath();c.ellipse(x,y-10,12,15,0,0,6.28);c.fill();c.restore()}
+  c.globalAlpha=1;const nm=(D.room&&(D.room.players.find(p=>!p.me)||{}).name)||'동료';c.save();c.font='900 7px sans-serif';c.textAlign='center';c.fillStyle='#000';c.fillText(nm,x+.5,y-37.5);c.fillStyle=m.down?'#ff8a9a':'#8de4ff';c.fillText(m.down?nm+' (쓰러짐)':nm,x,y-38);
+  const q=Math.max(0,Math.min(1,(m.hp||0)/(m.mx||1)));c.fillStyle='#05070ae6';c.fillRect(x-12,y-35,24,4);c.fillStyle='#3a0a14';c.fillRect(x-11,y-34,22,2);c.fillStyle='#7dffa8';c.fillRect(x-11,y-34,22*q,2);c.restore()}
  function drawList(list,now){list.push({y:(D.mate&&D.mate.sy)||0,fn:()=>drawMate(now,false)})}
  /* 동료 칸(위 오른쪽): 이름 · 레벨 · 체력 */
  {const f=frame;frame=function(){const r=f.apply(this,arguments);try{const tt=T();if(D.started&&D.on&&(mode==='tower'&&tt&&tt.duo||mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo)){const m=D.mate||{},pl=(D.room&&D.room.players.find(p=>!p.me))||{};ctx.save();try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}
@@ -23343,6 +23401,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  #duo85 .dSlot{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px;border-radius:14px;background:#0d161b;border:1px solid #8de4ff44;min-height:140px;justify-content:center}
  #duo85 .dSlot.empty{border-style:dashed;color:#8aa0a8;text-align:center}#duo85 .dSlot i{font-style:normal;font-size:30px}#duo85 .dSlot small{color:#8aa0a8}
  #duo85 .dSlot canvas{width:80px;height:80px;image-rendering:pixelated}
+ #duoPz{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:95;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 14px;border-radius:14px;background:#0a1216e6;border:1px solid #8de4ff88;color:#eaf6ef;box-shadow:0 8px 30px #0009;font-family:inherit}#duoPz[hidden]{display:none}
+ #duoPz small{color:#9ab8ac;font-size:11px}#duoPz div{display:flex;gap:8px;margin-top:4px}#duoPz button{font:inherit;font-weight:800;padding:8px 14px;border-radius:10px;border:1px solid #ffffff2a;background:#13202a;color:#e8f4ef;cursor:pointer}#duoPz #dpGo{background:linear-gradient(180deg,#d4ffe6,#74d3b0);color:#04120c}
  @media (max-width:640px){#duo85 .dCols{grid-template-columns:1fr}#duo85 .dPick{grid-template-columns:1fr}}`;document.head.appendChild(st);
  window.DUO85={state:D,send,hitSent,guestMobs,onDie,drawList,bossButtons,open:openUI,end,_applySnap:applySnap,_snap:snap};
 }catch(e){console.error('v85 duo',e)}})();
