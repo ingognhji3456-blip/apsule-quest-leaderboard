@@ -13,7 +13,7 @@
  const API=()=>({skin:window.SKIN58,pet:window.PET59,sword:window.SWORD59,vic:window.VIC59,lob:window.LOB59});
  const PRE={skin:'skin_',pet:'pet_',sword:'sword_',vic:'fx_',lob:'fx_'};
  const kindOf=(c,id)=>c==='fx'?(String(id).startsWith('v_')?'vic':'lob'):c;
- let owned=new Set(),testMode=false,lastTok=null,pending=null;
+ let owned=new Set(),testMode=false,tester=false,lastTok=null,pending=null;
  const cacheKey=()=>'bb-owned58:'+(acc().user||'');
  try{const a=acc();if(a.token){const c=JSON.parse(localStorage.getItem(cacheKey())||'null');if(c&&Array.isArray(c.o))owned=new Set(c.o)}}catch(e){}
 
@@ -32,11 +32,11 @@
   try{saveNow()}catch(e){}}
 
  async function refresh(){const a=acc();lastTok=a.token||'';
-  if(!a.token){owned=new Set();apply();return owned}
+  if(!a.token){owned=new Set();tester=false;apply();return owned}
   const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),20000);
   try{const r=await fetch(base()+'/api/shop/owned',{headers:{Authorization:'Bearer '+a.token},signal:ctl.signal});
    if(r.status===401){owned=new Set();apply();throw Error('다시 로그인해 주세요.')}
-   if(!r.ok)throw Error('보관함을 확인하지 못했어요.');const j=await r.json();owned=new Set(j.owned||[]);testMode=!!j.test_mode;
+   if(!r.ok)throw Error('보관함을 확인하지 못했어요.');const j=await r.json();owned=new Set(j.owned||[]);testMode=!!j.test_mode;tester=!!j.tester;try{window.APP59&&APP59.reFree&&APP59.reFree()}catch(e){}
    try{localStorage.setItem(cacheKey(),JSON.stringify({o:[...owned],t:Date.now()}))}catch(e){}apply();return owned}
   finally{clearTimeout(tm)}}
 
@@ -78,7 +78,7 @@
  setInterval(()=>{const t=acc().token||'';if(t!==lastTok)refresh().catch(()=>{})},4000);
  setTimeout(()=>{apply();refresh().catch(()=>{})},1500);
 
- window.PAY58={refresh,buy,sync,apply,ownsItem,ownsKind,owned:()=>owned,test:()=>testMode,pending:()=>!!pending,kindOf,
+ window.PAY58={refresh,buy,sync,apply,ownsItem,ownsKind,owned:()=>owned,test:()=>testMode,tester:()=>tester,pending:()=>!!pending,kindOf,
   /* 테스트 도구용: 서버 없이 보유 목록을 넣어 본다 */
   _set(list){owned=new Set(list||[]);apply()}};
 }catch(e){console.error('v58 payment',e)}})();

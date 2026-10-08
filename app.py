@@ -371,7 +371,18 @@ def _expand(product_id):
     return [product_id]
 
 
-def _owned_ids(db, user_id):
+# 테스터: Render 환경변수 TESTER_USERS 에 아이디를 쉼표로 넣으면, 그 계정은 모든 유료 상품을 가진 것으로 친다
+# (결제 없이 현질템을 시험해 보는 용도. 무료 모드여도 테스터에게는 상점이 보인다)
+TESTER_USERS = set(x.strip().lower() for x in os.environ.get('TESTER_USERS', '').split(',') if x.strip())
+
+
+def _is_tester(user):
+    return bool(user) and (user.get('username') or '').lower() in TESTER_USERS
+
+
+def _owned_ids(db, user_id, tester=False):
+    if tester:
+        return set(x for p in SHOP_PRODUCTS for x in _expand(p['id']))
     """보유 상품: 직접 지급(shop_entitlements) + 결제 완료 주문.
     테스트 키로 결제한 주문은 지금 서버도 테스트 키일 때만 센다."""
     owned = set(r['product_id'] for r in db.execute(
@@ -418,7 +429,8 @@ def shop_owned():
     user = _current_user()
     if not user:
         return _bad('로그인 후 보유 상품을 확인할 수 있어요', 401)
-    response = jsonify(ok=True, owned=sorted(_owned_ids(get_db(), user['user_id'])), test_mode=TOSS_TEST)
+    tester = _is_tester(user)
+    response = jsonify(ok=True, owned=sorted(_owned_ids(get_db(), user['user_id'], tester)), test_mode=TOSS_TEST, tester=tester)
     response.headers['Cache-Control'] = 'no-store'
     return response
 
