@@ -22,7 +22,7 @@ function fsToast(msg){let t=document.getElementById('fsToast');if(!t){t=document
  document.addEventListener('pointerup',()=>{const bv=document.getElementById('battleView');if(bv&&!bv.hidden&&document.body.classList.contains('touch')&&!fsElem()&&!goFullscreen._tried){goFullscreen._tried=1;goFullscreen()}},{passive:true});
  // 모달 · 대화 · 회상 중에는 조이스틱/버튼 영역이 화면을 가리지 않게
  setInterval(()=>{const tc=document.getElementById('touch');if(!tc)return;const ov=document.getElementById('overlay'),dl=document.getElementById('dlg');
-  const block=(ov&&!ov.hidden)||(dl&&!dl.hidden)||(typeof paused!=='undefined'&&paused)||(typeof mode!=='undefined'&&mode!=='boss'&&mode!=='cave'&&mode!=='village'&&!(mode==='case'&&typeof CS!=='undefined'&&CS&&CS.ph==='explore'&&!CS.note))||(typeof G!=='undefined'&&G&&mode==='boss'&&G.cine&&(G.cine.type==='intro'||(G.cine.type==='revive'&&G.cine.ph==='mem')));
+  const block=(ov&&!ov.hidden)||(dl&&!dl.hidden)||(typeof paused!=='undefined'&&paused)||(typeof mode!=='undefined'&&mode!=='boss'&&mode!=='cave'&&mode!=='village'&&mode!=='tower'/* v71 탑 */&&!(mode==='case'&&typeof CS!=='undefined'&&CS&&CS.ph==='explore'&&!CS.note))||(typeof G!=='undefined'&&G&&mode==='boss'&&G.cine&&(G.cine.type==='intro'||(G.cine.type==='revive'&&G.cine.ph==='mem')));
   tc.classList.toggle('tHide',!!block)},120);
 }catch(e){}})();
 /*MOB_END*/
