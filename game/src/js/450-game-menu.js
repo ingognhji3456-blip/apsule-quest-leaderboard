@@ -134,7 +134,7 @@ function gmShow(scr){gmBuild();GM.scr=scr;document.querySelectorAll('#gameMenu .
  const stage=$('titleCv');if(scr==='main'&&stage){$('gmStageSlot').appendChild(stage);stage.style.cssText='display:block;width:100%;height:auto;image-rendering:pixelated';gmMainSel()}
  if(scr==='story')gmStoryBuild();if(scr==='rush')gmRushBuild();if(scr==='hall')gmHallBuild();if(scr==='set'){const np=$('namePanel');if(np&&!$('gmNameSlot').contains(np))$('gmNameSlot').appendChild(np)}
  gmHud()}
-function gmMainSel(){document.querySelectorAll('#gmList .gmItem').forEach((b,i)=>b.classList.toggle('sel',i===GM.sel));const tips=['이야기: 시계골을 구하는 모험. 이어하기도 여기서!','보스 러시: 원하는 수호자를 골라 바로 한 판!','상점: 코인으로 캐릭터 · 무기 · 펫을 사고 장착해요.','명예의 전당: 깬 보스의 메달과 랭크를 모아 보세요.','설정: 소리, 박자 싱크, 난이도, 이름을 바꿔요.','조작법: 이동 · 대시 · 패링 · 반격 · 궁극기.'];if($('gmTip'))$('gmTip').textContent='💡 '+tips[GM.sel]}
+function gmMainSel(){document.querySelectorAll('#gmList .gmItem').forEach((b,i)=>b.classList.toggle('sel',i===GM.sel));const tips=['탑 오르기: 잡몹을 뚫고 10층마다 보스! 이어서 오르기도 여기서.','보스 러시: 원하는 수호자를 골라 바로 한 판!','상점: 코인으로 캐릭터 · 무기 · 펫을 사고 장착해요.','명예의 전당: 깬 보스의 메달과 랭크를 모아 보세요.','설정: 소리, 박자 싱크, 난이도, 이름을 바꿔요.','조작법: 이동 · 대시 · 패링 · 반격 · 궁극기.'];if($('gmTip'))$('gmTip').textContent='💡 '+tips[GM.sel]}
 function gmMainGo(){const it=GM_ITEMS[GM.sel];gmSfx('ok');if(it.id==='shop'){try{openShop('ch')}catch(e){}return}gmShow(it.id)}
 /* 챕터 선택 */
 function gmStoryBuild(){try{refreshMenu()}catch(e){}const box=$('gmCh');{let pk=$('gmCvPark');if(!pk){pk=document.createElement('div');pk.id='gmCvPark';pk.style.display='none';document.body.appendChild(pk)}box.querySelectorAll('canvas').forEach(cv=>pk.appendChild(cv))}box.innerHTML='';const c1=ch1Cleared(),c2=ch2Cleared(),ch=saveData.chapter||0;
