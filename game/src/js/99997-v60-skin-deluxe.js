@@ -16,7 +16,7 @@
   v_sera:{kind:'frost',c:'#c8f4ff',c2:'#ffffff'},v_steel:{kind:'gold',c:'#ffe36b',c2:'#ffffff'},v_luna:{kind:'eclipse',c:'#ff4d6d',c2:'#1a0a10'},
   v_kai:{kind:'ghost',c:'#5affd8',c2:'#0a2a2a'},v_arin:{kind:'spore',c:'#b6ff4a',c2:'#c86aff'},v_zeno:{kind:'azure',c:'#8ad8ff',c2:'#2a6aff'},v_aurora:{kind:'prism',c:'#ff9af0',c2:'#29f0ff'}};
  const RAINBOW=['#ff3ad6','#b05cff','#29f0ff','#5affb0','#ffe14d','#ff9a3a'];
- const theme=()=>{const id=SKIN58.get();if(!id)return null;const T=TH[id];if(!T)return null;const s=SKIN58.byId(id);return Object.assign({id,map:T.map||(s&&s.map)},T)};
+ const theme=()=>{/* v61: 스킨이 없으면 현질 검의 세트 테마 */const id=SKIN58.get()||({voidreaver:'void',gearsaber:'clock',beatbreaker:'neon'})[window.SWORD59&&SWORD59.get()];if(!id)return null;const T=TH[id];if(!T)return null;const s=SKIN58.byId(id);return Object.assign({id,map:T.map||(s&&s.map)},T)};
  const live=c=>c===ctx&&(mode==='boss'||mode==='cave'||mode==='village');
  const shopOpen=()=>{const sm=document.getElementById('shopModal');return !!(sm&&!sm.hidden)};
  const col=(T,i)=>T.kind==='neon'||T.kind==='prism'?RAINBOW[(i+Math.floor(performance.now()/120))%6]:(i%2?T.c2:T.c);

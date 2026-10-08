@@ -357,6 +357,8 @@ TOSS_SECRET_KEY = os.environ.get('TOSS_SECRET_KEY', '').strip() or TOSS_DOCS_SEC
 TOSS_TEST = TOSS_CLIENT_KEY.startswith('test_') or TOSS_SECRET_KEY.startswith('test_')
 TOSS_CONFIRM_URL = 'https://api.tosspayments.com/v1/payments/confirm'
 SHOP_CONTACT = os.environ.get('SHOP_CONTACT', '').strip()   # 환불·문의 연락처 (진짜 판매 전에 꼭 넣기)
+# 무료 출시 모드: Render 환경변수 SHOP_MODE=free 로 켠다. 게임의 가격·「구매하기」가 숨겨지고 주문도 받지 않는다.
+FREE_MODE = os.environ.get('SHOP_MODE', '').strip().lower() == 'free'
 ORDER_TTL = 60 * 60          # 결제창을 연 뒤 1시간 안에 끝내야 함
 PRODUCTS_BY_ID = {p['id']: p for p in SHOP_PRODUCTS}
 
@@ -406,7 +408,7 @@ def _toss_confirm(payment_key, order_id, amount):
 
 @app.route('/api/shop')
 def shop_catalog():
-    response = jsonify(ok=True, products=SHOP_PRODUCTS, checkout_enabled=True, test_mode=TOSS_TEST)
+    response = jsonify(ok=True, products=SHOP_PRODUCTS, checkout_enabled=not FREE_MODE, free_mode=FREE_MODE, test_mode=TOSS_TEST)
     response.headers['Cache-Control'] = 'no-store'
     return response
 
@@ -423,6 +425,8 @@ def shop_owned():
 
 @app.route('/api/shop/order', methods=['POST'])
 def shop_order_create():
+    if FREE_MODE:
+        return _bad('지금은 무료 버전이라 판매하지 않아요', 403)
     user = _current_user()
     if not user:
         return _bad('로그인한 뒤에 살 수 있어요', 401)
@@ -521,6 +525,8 @@ def _pay_result(ok, title, msg, order_id='', code=200):
 
 @app.route('/pay/checkout')
 def pay_checkout():
+    if FREE_MODE:
+        return _pay_result(False, '지금은 판매하지 않아요', '무료 버전이에요. 게임에서 「입어보기」로 마음껏 써 보세요.', code=403)
     order_id = (request.args.get('order') or '')[:80]
     db = get_db()
     row = db.execute('SELECT o.*, u.username FROM shop_orders o JOIN users u ON u.user_id = o.user_id '
