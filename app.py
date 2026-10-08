@@ -884,7 +884,49 @@ def api_me():
         return _bad('로그인이 필요해요', 401)
     linked = get_db().execute('SELECT 1 FROM google_accounts WHERE user_id = ?',
                               (user['user_id'],)).fetchone() is not None
-    return jsonify(ok=True, username=user['username'], google_linked=linked)
+    return jsonify(ok=True, username=user['username'], google_linked=linked,
+                   need_name=_needs_name(user['username']))
+
+
+def _needs_name(username):
+    """Google로 처음 만든 계정은 'G_...' 임시 이름이라 게임에서 이름을 정해야 한다"""
+    return str(username or '').startswith('G_')
+
+
+NICK_RE = re.compile(r'^[0-9A-Za-z가-힣_]{2,10}$')
+
+
+@app.route('/api/account/name', methods=['POST'])
+def api_account_name():
+    """임시 이름(G_...)인 계정이 게임 이름을 한 번 정한다. 랭킹에 이 이름이 나온다.
+    아이디·비밀번호로 만든 계정은 아이디가 곧 이름이라 바꾸지 않는다."""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    if not _needs_name(user['username']):
+        return _bad('이름은 이미 정해져 있어요', 409)
+    key = 'name:' + user['user_id']
+    if _too_many(key, 20, 600):
+        return _bad('너무 자주 시도했어요. 잠시 뒤에 다시 해 주세요', 429)
+    _note(key)
+    body = request.get_json(silent=True) or {}
+    name = body.get('name') if isinstance(body.get('name'), str) else ''
+    name = name.strip()
+    if not NICK_RE.match(name) or name.lower().startswith('g_'):
+        return _bad('이름은 2~10자의 한글·영문·숫자·_ 만 쓸 수 있어요')
+    db = get_db()
+    if db.execute('SELECT 1 FROM users WHERE name_key = ? AND user_id <> ?',
+                  (name.lower(), user['user_id'])).fetchone():
+        return _bad('이미 있는 이름이에요. 다른 이름을 골라 주세요', 409)
+    try:
+        db.execute('UPDATE users SET username = ?, name_key = ? WHERE user_id = ?',
+                   (name, name.lower(), user['user_id']))
+        db.execute('UPDATE rank_scores SET username = ? WHERE user_id = ?', (name, user['user_id']))
+        db.commit()
+    except Exception:
+        db.rollback()
+        return _bad('이미 있는 이름이에요. 다른 이름을 골라 주세요', 409)
+    return jsonify(ok=True, username=name)
 
 
 
@@ -1119,7 +1161,8 @@ def google_finish():
     token = _new_session(db, row['user_id'])
     db.commit()
     _note_tester_email(db, row['user_id'], info)
-    resp = jsonify(ok=True, token=token, username=row['username'], google_linked=True)
+    resp = jsonify(ok=True, token=token, username=row['username'], google_linked=True,
+                   need_name=_needs_name(row['username']))
     resp.headers['Cache-Control'] = 'no-store'
     return resp
 
