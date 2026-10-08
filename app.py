@@ -190,6 +190,14 @@ def init_db():
             PRIMARY KEY (user_id, product_id)
         )
     ''')
+    # 테스터 표시: Google 로그인 때 확인한 이메일이 TESTER_USERS 에 있으면 남긴다(이메일 대신 해시만 저장)
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS tester_links (
+            user_id    TEXT PRIMARY KEY,
+            email_hash TEXT NOT NULL,
+            created_at DOUBLE PRECISION NOT NULL
+        )
+    ''')
     # 결제 주문 (토스페이먼츠). test=1 은 테스트 키로 낸 주문 — 진짜 키로 바꾸면 보관함에서 빠진다
     db.execute('''
         CREATE TABLE IF NOT EXISTS shop_orders (
@@ -373,11 +381,43 @@ def _expand(product_id):
 
 # 테스터: Render 환경변수 TESTER_USERS 에 아이디를 쉼표로 넣으면, 그 계정은 모든 유료 상품을 가진 것으로 친다
 # (결제 없이 현질템을 시험해 보는 용도. 무료 모드여도 테스터에게는 상점이 보인다)
-TESTER_USERS = set(x.strip().lower() for x in os.environ.get('TESTER_USERS', '').split(',') if x.strip())
+# 아이디 대신 이메일(@ 포함)을 넣으면, 그 이메일의 Google 계정으로 로그인한 게임 계정이 테스터가 된다.
+_TESTER_RAW = [x.strip().lower() for x in os.environ.get('TESTER_USERS', '').split(',') if x.strip()]
+TESTER_USERS = set(x for x in _TESTER_RAW if '@' not in x)
+
+
+def _email_hash(email):
+    return hashlib.sha256(('tester:' + email.strip().lower()).encode()).hexdigest()
+
+
+TESTER_EMAIL_HASHES = set(_email_hash(x) for x in _TESTER_RAW if '@' in x)
 
 
 def _is_tester(user):
-    return bool(user) and (user.get('username') or '').lower() in TESTER_USERS
+    if not user:
+        return False
+    if (user.get('username') or '').lower() in TESTER_USERS:
+        return True
+    if not TESTER_EMAIL_HASHES:
+        return False
+    row = get_db().execute('SELECT email_hash FROM tester_links WHERE user_id = ?', (user['user_id'],)).fetchone()
+    return bool(row) and row['email_hash'] in TESTER_EMAIL_HASHES
+
+
+def _note_tester_email(db, user_id, info):
+    """Google 로그인 때: 확인된 이메일이 테스터 목록에 있으면 그 계정을 테스터로 표시(이메일은 저장하지 않음)"""
+    try:
+        email = info.get('email') if info.get('email_verified') in (True, 'true') else None
+        if not email or not TESTER_EMAIL_HASHES:
+            return
+        eh = _email_hash(email)
+        if eh not in TESTER_EMAIL_HASHES:
+            return
+        db.execute('DELETE FROM tester_links WHERE user_id = ?', (user_id,))
+        db.execute('INSERT INTO tester_links (user_id, email_hash, created_at) VALUES (?, ?, ?)', (user_id, eh, time.time()))
+        db.commit()
+    except Exception:
+        db.rollback()
 
 
 def _owned_ids(db, user_id, tester=False):
@@ -1060,6 +1100,7 @@ def google_finish():
             except Exception:
                 db.rollback()
                 return _bad('연결 상태가 바뀌었어요. 계정 창을 다시 열어 주세요', 409)
+        _note_tester_email(db, user['user_id'], info)
         return jsonify(ok=True, google_linked=True, username=user['username'])
     if not row:
         uid = secrets.token_hex(12)
@@ -1077,6 +1118,7 @@ def google_finish():
             return _bad('계정 생성이 겹쳤어요. 계정 창을 다시 열고 로그인해 주세요', 409)
     token = _new_session(db, row['user_id'])
     db.commit()
+    _note_tester_email(db, row['user_id'], info)
     resp = jsonify(ok=True, token=token, username=row['username'], google_linked=True)
     resp.headers['Cache-Control'] = 'no-store'
     return resp
@@ -1204,6 +1246,7 @@ def app_privacy():
 <tr><td>게임 진행 기록, 랭킹 점수</td><td>로그인해서 게임할 때</td><td>다른 기기에서 이어 하기, 랭킹 표시(아이디와 점수가 다른 사람에게 보임)</td></tr>
 <tr><td>구매 기록(주문 번호, 상품, 금액, 결제 수단 종류)</td><td>상품을 살 때</td><td>산 상품 지급·확인, 환불 처리</td></tr>
 <tr><td>접속 IP(잠깐)</td><td>로그인 시도할 때</td><td>비밀번호 무차별 대입 막기(메모리에만 잠깐, 저장 안 함)</td></tr></table>
+<p>운영자가 지정한 테스터 이메일과 같은 Google 계정으로 로그인한 경우에만, 그 이메일을 되돌릴 수 없게 바꾼 값(해시)을 테스터 확인용으로 저장합니다.</p>
 <p>카드 번호 등 결제 정보는 결제 회사(토스페이먼츠)가 처리하며, 이 게임 서버에는 저장되지 않습니다. 광고나 분석 도구는 쓰지 않습니다. 기기 안(브라우저 저장소)에는 게임 기록과 로그인 정보가 저장됩니다.</p>
 <h2>2. 다른 곳에 맡기거나 주는 정보</h2>
 <p>서버 운영(Render), 데이터 보관(설정한 경우 Postgres 서비스), 결제(토스페이먼츠), Google 로그인(Google). 법에 따른 요청이 아니면 다른 곳에 주지 않습니다.</p>
@@ -1243,7 +1286,7 @@ def api_account_delete():
         return _bad('확인용 아이디가 맞지 않아요', 400)
     db = get_db()
     uid = user['user_id']
-    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'shop_entitlements', 'users'):
+    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'shop_entitlements', 'tester_links', 'users'):
         db.execute('DELETE FROM %s WHERE user_id = ?' % table, (uid,))
     db.commit()
     return jsonify(ok=True)
