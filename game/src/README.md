@@ -181,3 +181,4 @@
 | `99999991-v83-level-ranking.js` | 60 | 레벨(`LV83`): `saveData.lv83={lv,xp,tot}`, 경험치는 `CB81.onKill` · 층 클리어 · `fightEnd` 감싸기에서, 로비 칩 `#gmLv`, 서버에 `PUT /api/stats`. 랭킹 창(`RANK83`, 탭 score · level · floor · gold) |
 | `99999992-v84-tiers-premchars.js` | 45 | 등급 정리 · 프리미엄 캐릭터(`TP84`): 공방 목록 정렬(`sortGrid`, 화면 순서만), 프리미엄 스킨 3종 → `CHARS[25~27]`(`prem` = 스킨 id, 그림은 스킨 `CH2DEF` 그대로), 공방 버튼 · 스킨 장착 ↔ 캐릭터 목록 동기화(`sync`) |
 | `99999993-v85-duo.js` | 219 | 듀오 탑(`DUO85`): 솔로/듀오 선택 창 `#duo85`(방 목록 · 코드 · 방 화면), 서버 `/api/duo/*`를 100ms마다 주고받기(`tick`/`onMsg`), 방장 스냅숏(`snap`/`applySnap`), 동료 그리기(`drawMate`), 보스 공동 체력(`bossTrack`), 쓰러짐 · 부활(`onDie`/`revive`/`failBoth`). 탑 쪽 연결은 999997의 `T.duo` 분기 |
+| `99999994-v91-lobby-rank.js` | 75 | 로비 랭킹(`RKL91`): 로비 오른쪽 위 랭킹 카드(점수 · 레벨 · 탑 층 · 골드 1~3등 + 내 순위, 6초마다 종류 바뀜, 폰은 1등 + 내 순위만), 위쪽 줄 금색 「🏆 랭킹」 단추. 누르면 `RANK83.open(종류)` |
