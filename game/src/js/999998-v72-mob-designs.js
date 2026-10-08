@@ -9,7 +9,7 @@
  if(typeof MON==='undefined')return;
  const mix=(a,b,k)=>{try{return monMix(a,b,k)}catch(e){return a}};
  const TAU2=Math.PI*2,R=MON.reg;
- function pal(A){const p=A.o.pal||{a:'#9fb3c8',b:'#3c4a5c',c:'#5affd8'};return {a:p.a,b:p.b,c:p.c,lt:mix(p.a,'#ffffff',.38),dk:mix(p.a,'#000000',.42),dd:mix(p.b,'#000000',.35),cl:mix(p.c,'#ffffff',.45)}}
+ function pal(A){const p0=A.o.pal||{a:'#9fb3c8',b:'#3c4a5c',c:'#5affd8'},tr=A.o.tier||0,p={a:tr>=3?mix(p0.a,'#4a1030',.22):tr>=2?mix(p0.a,'#000000',.12):p0.a,b:tr>=3?mix(p0.b,'#1a0010',.3):p0.b,c:tr>=3?mix(p0.c,'#ff3a5a',.55):tr>=2?mix(p0.c,'#ffb040',.35):p0.c};return {a:p.a,b:p.b,c:p.c,lt:mix(p.a,'#ffffff',.38),dk:mix(p.a,'#000000',.42),dd:mix(p.b,'#000000',.35),cl:mix(p.c,'#ffffff',.45)}}
  function st(A){const o=A.o,w=o.walk,s=w==null?0:Math.sin(w*TAU2),c=w==null?0:Math.cos(w*TAU2);return {v:o.view||'front',w,s,c,walking:w!=null,k:o.atk?1:0,h:o.hit?1:0,bob:w!=null?-Math.abs(s)*.8:Math.sin(A.t*2.4)*.35}}
  function fin(A,bb,p){A.bbox=bb;A.aura=A.o.elite?'#ffd166':p.c;if(A.o.elite)A.rim='rgba(255,226,140,.75)'}
  /* 다리 두 개: 앞·뒤 모습은 번갈아 들리고, 옆모습은 앞뒤로 벌어짐 */
@@ -205,5 +205,16 @@
   knight:(A,p,S)=>{const b=S.bob,x0=S.v==='side'||S.k||S.h?.6:0;A.P([[x0-1,-24+b],[x0+5,-27+b],[x0+7,-23+b],[x0+2,-22+b]],'#ff4d6d');A.P([[x0,-24+b],[x0+4.6,-26+b],[x0+6,-23.6+b],[x0+2,-22.6+b]],'#ff8aa0');
    A.R(-5.5,-14.2+b,11,.8,GOLD);A.R(-5,-6.6+b,10,.8,GOLD);if(S.v==='back')A.P([[-5,-14+b],[5,-14+b],[7,-1],[-7,-1]],'#7a1a2a',.9);A.glow(0,-20,5,GOLD,.5)}};
  for(const k of Object.keys(EL)){const base=R['m_'+k];if(!base)continue;R['m_'+k]=A=>{base(A);if(A.o.elite){try{EL[k](A,pal(A),st(A))}catch(e){}A.aura='#ffd166';A.rim='rgba(255,226,140,.8)'}}}
+ /* ---------- v75 난이도 단계: 보통 → 어려움 → 익스트림으로 갈수록 보스처럼 무장 (쉬움은 기본 모습) ----------
+    t: 머리 꼭대기 y, c: 몸 가운데 y, w: 몸 반폭 */
+ const ANC={slime:{t:-15,c:-7,w:9},bat:{t:-19,c:-13,w:5},archer:{t:-23,c:-10,w:5},boar:{t:-14,c:-8,w:8},gear:{t:-18,c:-9,w:8},mage:{t:-24,c:-8,w:5},bomb:{t:-17,c:-8,w:7},golem:{t:-24,c:-12,w:9},wisp:{t:-26,c:-12,w:6},drone:{t:-17,c:-13,w:6},spider:{t:-11,c:-6,w:6},knight:{t:-24,c:-10,w:5}};
+ function tierDeco(k,A){const tr=A.o.tier||0;if(!tr)return;const p=pal(A),S=st(A),n=ANC[k]||{t:-18,c:-9,w:6},t=A.t,metal=tr>=3?'#3a2a3a':'#5a6270',ml='#c8d0dc',side=S.v==='side',hx=side?1.5:0;
+  /* 보통: 어깨 가시 · 눈빛 */for(const s of (side?[1]:[-1,1]))A.spike(s*n.w+hx,n.t+5,-1.57+s*.7,2.4+tr*.6,1.4,metal,ml);
+  if(tr>=2){/* 어려움: 쇠띠 · 리벳 · 빛나는 문양 · 가시 줄 */A.R(-n.w+hx,n.c-.6,n.w*2,1.4,metal);A.R(-n.w+hx,n.c-.6,n.w*2,.4,ml,.7);for(let i=-1;i<=1;i++)A.C(hx+i*n.w*.6,n.c+.1,.45,ml);
+   if(S.v!=='back'){A.P([[hx-1.2,n.c+2],[hx,n.c+.6],[hx+1.2,n.c+2],[hx,n.c+3.6]],p.c);A.glow(hx,n.c+2,4,p.c,.9)}
+   for(let i=0;i<3;i++)A.spike(hx-2+i*2,n.t+1.5,-1.57+(i-1)*.35,2+tr*.5,1.2,metal,ml)}
+  if(tr>=3){/* 익스트림: 뿔 · 붉은 기운 · 떠오르는 불티 · 사슬 */for(const s of (side?[1]:[-1,1])){A.P([[s*2.6+hx,n.t+2.4],[s*4.2+hx,n.t+1.2],[s*6.8+hx,n.t-4.6],[s*5.2+hx,n.t-1]],'#1a0a14');A.L(s*4+hx,n.t+1,s*6.6+hx,n.t-4.4,'#ff6a7a',.4)}
+   A.glow(0,n.c,n.w*2.6,'#ff2d55',.55);A.rise(6,-n.w,n.w,n.c+4,14,.7,'#ff6a4a',.9,.4);A.L(-n.w+hx,n.c+2.4,n.w+hx,n.c+3.2,'#6a5a6a',.6);A.aura='#ff2d55';A.rim='rgba(255,120,140,.75)'}}
+ for(const k of Object.keys(ANC)){const base=R['m_'+k];if(!base)continue;R['m_'+k]=A=>{base(A);try{tierDeco(k,A)}catch(e){}}}
  window.MOB72=true;
 }catch(e){console.error('v72 mobs',e)}})();
