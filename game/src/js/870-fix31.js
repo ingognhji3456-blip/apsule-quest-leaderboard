@@ -30,5 +30,5 @@ try{T5_ARCH.homing.fn=(t,th,L)=>{const n=1+L,tel=t5T(),life=4.5,s=t5S();
 /* 4) 전체화면이 가끔 안 되던 문제: 컷신 뒤 전투 시작처럼 손가락 입력이 없을 때는 브라우저가 거절함 → 다음 터치에서 다시 시도.
       '창 모드'를 직접 누른 뒤에는 다시 켜지 않음 */
 (function(){let noFs=false;document.addEventListener('click',e=>{const b=e.target&&e.target.closest&&e.target.closest('#mbFs,#fsBtn');if(b)noFs=!!fsElem()&&b.id==='mbFs'},true);
- document.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'||noFs||fsElem())return;if(!(('ontouchstart' in window)||navigator.maxTouchPoints>0))return;try{goFullscreen()}catch(_){}},true)})();
+ /* v68: 터치할 때마다 전체화면을 다시 켜던 것을 없앰 (⛶ 단추로만) */})();
 

@@ -2,9 +2,8 @@
 const MB={short:()=>innerHeight<=500&&innerWidth>innerHeight,port:()=>innerWidth<innerHeight&&innerWidth<=600};
 /* 1) 자동 전체화면 끄기 → 브라우저 '전체 화면을 종료하려면…' 경고가 안 뜸. 대신 화면을 꽉 채우는 가짜 전체화면 */
 try{goFullscreen._tried=1}catch(e){}
-enterGame=function(){document.body.classList.add('inBattle');$('battleView').hidden=false;const tch=document.body.classList.contains('touch')||'ontouchstart' in window;if(tch){document.body.classList.add('pseudoFS');if(!fsElem())try{goFullscreen()}catch(e){}}fitBattle()};
-/* 폰: 처음 화면을 누르는 순간 한 번 전체화면 → 나갈 때까지 유지 (브라우저 안내는 이때 한 번만) */
-document.addEventListener('pointerup',function f(e){if(e.pointerType==='mouse')return;if(!(('ontouchstart' in window)||navigator.maxTouchPoints>0))return;document.removeEventListener('pointerup',f,true);if(!fsElem())try{goFullscreen()}catch(_){}},true);
+enterGame=function(){document.body.classList.add('inBattle');$('battleView').hidden=false;const tch=document.body.classList.contains('touch')||'ontouchstart' in window;if(tch){document.body.classList.add('pseudoFS')/* v68: 저절로 전체화면 켜지 않음 (⛶ 단추로만) */}fitBattle()};
+/* v68: 처음 화면을 누를 때 저절로 전체화면 켜던 것을 없앰 → 「전체 화면을 종료하려면…」 안내가 뜨지 않는다. 전체화면은 ⛶ 단추로만 */
 /* 전투 화면 크기: 가로로 눕힌 폰에서는 위 막대를 화면 위에 띄우고 높이를 끝까지 씀 */
 fitBattle=function(){
  const v=$('battleView');if(!v||v.hidden)return;
