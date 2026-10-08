@@ -19584,10 +19584,19 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   const j=r.j,sv=j.data,cur=localStr();
   if(!sv||!j.rev){A.rev=0;keep();return push(false)}/* 서버가 비었으면 이 기기 기록을 올림 */
   if(canon(sv)===cur){A.rev=j.rev;A.synced=cur;keep();return setSt('ok')}
-  if(afterLogin){if(blank(localObj()))return useServer(sv,j.rev);pend={why:'login',sv,rev:j.rev,at:j.updated_at};setSt('clash');return later()}
+  if(afterLogin){if(blank(localObj()))return useServer(sv,j.rev);return autoPick(sv,j.rev)}
   if(j.rev===A.rev)return push(false);/* 서버는 그대로, 이 기기만 바뀜 */
   if(cur===A.synced&&inMenu())return useServer(sv,j.rev);/* 이 기기는 그대로, 서버가 더 새것 */
-  pend={why:'conflict',sv,rev:j.rev,at:j.updated_at};setSt('clash');later()}
+  return autoPick(sv,j.rev)}
+ /* v93: 「기록 고르기」 없음 — 서버 기록과 이 기기 기록이 엇갈리면 더 많이 진행한 쪽을 저절로 고른다.
+    고르지 않은 쪽은 이 기기의 localStorage['bb-save-backup']에 남겨 둔다(만일을 위해). 서버 기록으로 바꾸는 건 메뉴 화면에서만(싸우는 중엔 기다림). */
+ const prog=d=>{d=d||{};const l=d.lv83||{},t=d.tw71||{},dm=d.dia80||{};return (l.tot||0)+(t.best||0)*400+(t.bosses||0)*3000+clears(d)*2000+(dm.n||0)*5+(d.coins||0)*.05};
+ let waitSv=null;
+ function autoPick(sv,rev){const lo=localObj(),useSv=prog(sv)>=prog(lo);
+  try{localStorage.setItem('bb-save-backup',JSON.stringify({at:Date.now(),kept:useSv?'server':'device',data:useSv?lo:sv}))}catch(e){}
+  if(useSv){if(inMenu())return useServer(sv,rev);waitSv={sv,rev};return}
+  A.rev=rev;keep();return push(true)}
+ setInterval(()=>{if(waitSv&&inMenu()){const w=waitSv;waitSv=null;useServer(w.sv,w.rev)}},1500);
  function lost(){A.token='';keep();setSt('lost')}
  /* 엇갈린 기록은 메뉴 화면에 있을 때만 물어본다 (싸우는 중에 창이 뜨지 않게) */
  function later(){if(pend&&inMenu()&&!boxOn&&Date.now()>snooze)open()}
