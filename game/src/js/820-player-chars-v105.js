@@ -88,7 +88,12 @@ function ch2Finish(src){const M=ch2Cv(),out=M.out,oc=out.getContext('2d'),sh=M.s
  const rg=sc.createLinearGradient(6,0,34,0);rg.addColorStop(0,'rgba(255,255,255,.06)');rg.addColorStop(1,'rgba(0,0,30,.2)');sc.fillStyle=rg;sc.fillRect(0,0,40,48);sc.globalCompositeOperation='source-over';
  for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]])oc.drawImage(sh,dx,dy);oc.globalCompositeOperation='source-in';oc.fillStyle='#0c0f16';oc.fillRect(0,0,40,48);oc.globalCompositeOperation='source-over';oc.drawImage(sh,0,0);
  /* 윗면 빛 */oc.globalCompositeOperation='source-atop';oc.globalAlpha=.35;oc.drawImage(sh,0,1);oc.globalAlpha=1;oc.globalCompositeOperation='source-over';return out}
-function ch2Render(idx,f,b,bl,t){const D=CH2DEF[idx]||CH2DEF[0],M=ch2Cv(),o=M.cv.getContext('2d');o.setTransform(1,0,0,1,0,0);o.globalAlpha=1;o.globalCompositeOperation='source-over';o.clearRect(0,0,40,48);o.imageSmoothingEnabled=false;
+/* v76: 렉 줄이기 — 같은 캐릭터 · 같은 자세 그림은 1/12초 동안 다시 그리지 않고 저장해 둔 것을 쓴다(상점 목록처럼 한 화면에 여럿 그릴 때 크게 빨라짐).
+   팔다리 자세를 따로 정한 그림(CH2.pose)이나 휘두르는 중(HV.sw)은 그때그때 그린다. */
+const CH2C=new Map();
+function ch2Render(idx,f,b,bl,t){const HVv=window.__HV,can=!CH2.pose&&!(HVv&&HVv.sw);let key=null;if(can){const q=Math.floor(t*12);t=q/12;key=idx+'|'+f+'|'+b+'|'+(bl?1:0)+'|'+(HVv?HVv.view:'')+'|'+q;const h=CH2C.get(key);if(h)return h}
+ const out=ch2Render0(idx,f,b,bl,t);if(!key)return out;const c=document.createElement('canvas');c.width=40;c.height=48;c.getContext('2d').drawImage(out,0,0);CH2C.set(key,c);if(CH2C.size>500)CH2C.delete(CH2C.keys().next().value);return c}
+function ch2Render0(idx,f,b,bl,t){const D=CH2DEF[idx]||CH2DEF[0],M=ch2Cv(),o=M.cv.getContext('2d');o.setTransform(1,0,0,1,0,0);o.globalAlpha=1;o.globalCompositeOperation='source-over';o.clearRect(0,0,40,48);o.imageSmoothingEnabled=false;
  try{D.paint(ch2API(o),f,b,bl,t)}catch(e){if(!CH2.err){CH2.err=1;console.error('ch2',idx,e)}}return ch2Finish(M.cv)}
 function ch2Draw(c,idx,x,y,s,fl,wt,idleT){const now=performance.now(),t=now/1000;
  let f=0,b=0;if(wt!=null){f=((Math.floor(wt/(Math.PI/2))%4)+4)%4;b=f%2?-1:0}else if(idleT!=null)b=Math.round(Math.sin(idleT)*.6);const bl=Math.floor(now/170)%26===0;

@@ -90,7 +90,7 @@
 
  let tab='skin',sel={},viewMode='auto',raf=0,owned=null,ownedErr='';
  const TABS=[['skin','캐릭터 스킨','🧍'],['pet','펫 스킨','🐾'],['sword','무기','⚔'],['fx','연출','✨'],['set','세트','🎁'],['owned','내 보관함','🗄']];
- function build(){
+ function build(){loop.mt=0;
   sheet.innerHTML='<div class="ssHead"><div><h2>✦ 스킨 · 무기 · 연출 상점</h2><small>겉모습과 연출이 바뀌어요 · 실력은 공평하게</small></div><div class="ssTabs" role="tablist">'+TABS.map(([k,n,ic])=>'<button data-tab="'+k+'" aria-pressed="'+(tab===k)+'"><i class="ti">'+ic+'</i>'+n+'</button>').join('')+'</div><button class="ssX" aria-label="닫기">✕</button></div><div class="ssBody" id="ssBody"></div>';
   sheet.querySelector('.ssX').onclick=()=>sheet.close();
   sheet.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;try{gmSfx('move')}catch(_){}build()});
@@ -147,7 +147,8 @@
    const o=SKIN58.render(sk[1],'front',0,t),S=Math.floor(h/48*.6);c.drawImage(o,Math.round(w*.34-20*S),Math.round(h*.84-48*S*.94),40*S,48*S);SWORD59.preview(c,sw[1],w*.66,h*.82,-Math.PI/2+.45,8,now);
    c.fillStyle='#ffffffcc';c.font='900 13px '+FONT;c.textAlign='center';c.fillText('+ 승리 연출 · 로비 테마',w/2,h*.95);c.textAlign='left'}}
  function loop(now){if(!sheet.open){raf=0;return}try{const L=items(),cur=L.find(x=>x.cat===tab&&x.id===sel[tab]);const cv=sheet.querySelector('#ssCv');if(cv&&cur)drawItem(cv.getContext('2d'),cur,cv.width,cv.height,now,false);
-  sheet.querySelectorAll('.ssCard canvas[data-id]').forEach(m=>{const it=L.find(x=>x.id===m.dataset.id&&x.kind===m.dataset.k);if(it)drawItem(m.getContext('2d'),it,m.width,m.height,now,true)})}catch(e){}raf=requestAnimationFrame(loop)}
+  /* v76: 렉 줄이기 — 목록 카드 그림은 1초에 8번만, 화면에 보이는 카드만 다시 그린다 */
+  if(now-(loop.mt||0)>=120){loop.mt=now;const vh=innerHeight;sheet.querySelectorAll('.ssCard canvas[data-id]').forEach(m=>{const r=m.getBoundingClientRect();if(r.bottom<0||r.top>vh||!r.width)return;const it=L.find(x=>x.id===m.dataset.id&&x.kind===m.dataset.k);if(it)drawItem(m.getContext('2d'),it,m.width,m.height,now,true)})}}catch(e){}raf=requestAnimationFrame(loop)}
  function open(t){if(t)tab=t;if(!sheet.open)sheet.showModal();build();if(!raf)raf=requestAnimationFrame(loop);try{if(PAY()&&account().token)PAY().refresh().then(()=>{if(sheet.open&&tab!=='owned')build()}).catch(()=>{})}catch(e){}}
  sheet.addEventListener('close',()=>{if(raf)cancelAnimationFrame(raf);raf=0});
  sheet.addEventListener('keydown',e=>e.stopPropagation());

@@ -4470,12 +4470,18 @@ function tryUlt(){if(mode!=='boss'||paused||!G||G.state!=='play'||G.cine||G.sp||
 function useSpecialV(now){const hadV=!!G.vuln;if(!hadV){G.vuln={type:'stun',t0:G.beat,t1:G.beat+.01,fake:true}}useSpecial();if(!hadV){G.vuln=null}P.inv=Math.max(P.inv,now+(G.sp?G.sp.dur:1200)+400);bossSay('ult')}
 addEventListener('keydown',e=>{if(e.code==='KeyC'&&!e.repeat&&mode==='boss'){e.preventDefault();tryUlt()}});
 function ensureUltBtn(){if($('btnU'))return;const b=document.createElement('button');b.id='btnU';b.className='tbtn';b.textContent='궁';b.style.cssText='right:30px;bottom:140px;width:70px;height:70px;font-size:18px;background:#ffd16655;border-color:#ffd166;display:none';b.addEventListener('pointerdown',e=>{e.preventDefault();tryUlt()});($('btnA').parentNode||document.body).appendChild(b)}
+/* v76: 폰의 궁 단추는 늘 보이고, 게이지만큼 아래에서부터 금빛이 차오른다. 다 차면 빛나며 흔들림 */
+function ultBtnPaint(k,can){const b=$('btnU');if(!b)return;k=clamp(k||0,0,1);const full=k>=1&&can!==false,pct=Math.round(k*100);
+ if(b._k!==pct||b._f!==full){b._k=pct;b._f=full;b.style.background=full?'radial-gradient(circle,#fff6c8,#ffcf5a 55%,#c88a10)':'linear-gradient(0deg,#ffcf5acc '+pct+'%,#05090bb0 '+pct+'%)';
+  b.style.borderColor=full?'#fff6c8':'#ffd16688';b.style.color=full?'#3a2600':'#ffe79a';b.style.boxShadow=full?'0 0 18px #ffd166,0 0 40px #ffb02088':'none';b.innerHTML=full?'궁':'궁<small style="display:block;font-size:10px;line-height:1">'+pct+'%</small>';
+  b.style.flexDirection='column';b.classList.toggle('ultReady',full)}}
+(function(){const st=document.createElement('style');st.textContent='@keyframes ultPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}#btnU.ultReady{animation:ultPulse .7s ease-in-out infinite}';document.head.appendChild(st)})();
 function drawUltGauge(now){const x=8,y=H-53,w=132,h=5,k=clamp((G.ult||0)/100,0,1),full=k>=1;
  RA(x-2,y-8,w+4,h+11,'#05090b',.7);ctx.font='bold 7px monospace';ctx.textAlign='left';ctx.fillStyle=full?(Math.floor(now/120)%2?'#ffffff':'#ffe79a'):'#ffcf5a';ctx.fillText(full?'궁극기 준비! [C]  '+curWp().sp:'궁극기  '+Math.floor(k*100)+'%',x,y-1);
  R(x-1,y-1,w+2,h+2,'#161c22');R(x,y,w,h,'#2a2410');const fw=w*k;R(x,y,fw,h,full?(Math.floor(now/90)%2?'#fff0a0':'#ffcf5a'):'#ffb020');R(x,y,fw,1,'#fff6cf');if(full)RA(x-2,y-2,w+4,h+4,'#ffe79a',.15+.1*Math.sin(now/100));for(let i=1;i<4;i++)R(x+w*i/4,y,1,h,'#05090b')}
 /* 이전 필살기 HUD 대체: 궁극기 게이지 + 이펙트 + 전투 대사 */
 function drawSpecialHUD(now){drawSpecialFX(now);drawAwakenFX(now);drawTalk(now);if(G.state==='play'||G.state==='count')drawUltGauge(now);
- const t=isTouchUI();if(t){ensureUltBtn();const b=$('btnU'),want=(mode==='boss'&&G.state==='play'&&(G.ult||0)>=100&&!G.sp)?'':'none';if(b.style.display!==want)b.style.display=want}
+ const t=isTouchUI();if(t){ensureUltBtn();const b=$('btnU'),want=(mode==='boss'&&G.state==='play')?'':'none';if(b.style.display!==want)b.style.display=want;ultBtnPaint((G.ult||0)/100,!G.sp)}
  if(G.state==='play'&&!G.cine)talkTriggers(now)}
 /* ---------- 새 보스 패턴 8종 ---------- */
 Object.assign(EST,{crossLaser:9,bulletRain:10,spiralArms:9,checkerQuake:9,meteorFall:10,pincerWall:10,sweepCone:8,tripleWave:10});
@@ -10866,7 +10872,7 @@ function lvLed(now){const W=240,H=100;if(!LV.led){LV.led=document.createElement(
  const bg=c.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#050810');bg.addColorStop(1,shade(P[0].length===7?P[0]:'#6affc8',.18));c.fillStyle=bg;c.fillRect(0,0,W,H);
  const big=(txt,y,col,sz)=>{c.font='900 '+sz+'px '+FONT_STACK;c.textAlign='center';c.fillStyle='#000';c.fillText(txt,W/2+1,y+1);c.fillStyle=col;c.fillText(txt,W/2,y);c.textAlign='left'};
  const S=gmStats();
- if(sel===0){const src=lbCv(lbTheme());if(src&&src.width){c.globalAlpha=.9;c.drawImage(src,0,0,src.width,src.height,0,0,W,H);c.globalAlpha=1}c.fillStyle='#00000066';c.fillRect(0,H-34,W,34);big(window.TW71?'TOWER':'STORY',H-12,'#ffffff',22);c.font='700 8px monospace';c.fillStyle=P[0];c.textAlign='center';c.fillText(window.TW71?TW71.badge()+' · 최고 '+(TW71.sv().best||1)+'F':/* v71: 이야기 대신 탑 */lbTheme()==='c5'?'CHAPTER 5 · ABYSS '+Math.min(10,s5Save().ci||0)+'/10':lbTheme()==='c4'?'CHAPTER 4 · ECLIPSE '+Math.min(10,(saveData.ch4||{}).ci||0)+'/10':S.ch<10?'CHAPTER 1 · '+S.ch+'/10':!S.c2?'CHAPTER 2 · '+(S.ch-10)+'/10':'ORIGIN · CASE '+(S.ci3+1),W/2,H-3);c.textAlign='left'}
+ if(sel===0){const src=window.TW71&&TW71.led?null:lbCv(lbTheme());if(window.TW71&&TW71.led){try{TW71.led(c,W,H,t,P)}catch(e){}}else if(src&&src.width){c.globalAlpha=.9;c.drawImage(src,0,0,src.width,src.height,0,0,W,H);c.globalAlpha=1}c.fillStyle='#00000066';c.fillRect(0,H-34,W,34);big(window.TW71?'TOWER':'STORY',H-12,'#ffffff',22);c.font='700 8px monospace';c.fillStyle=P[0];c.textAlign='center';c.fillText(window.TW71?TW71.badge()+' · 최고 '+(TW71.sv().best||1)+'F':/* v71: 이야기 대신 탑 */lbTheme()==='c5'?'CHAPTER 5 · ABYSS '+Math.min(10,s5Save().ci||0)+'/10':lbTheme()==='c4'?'CHAPTER 4 · ECLIPSE '+Math.min(10,(saveData.ch4||{}).ci||0)+'/10':S.ch<10?'CHAPTER 1 · '+S.ch+'/10':!S.c2?'CHAPTER 2 · '+(S.ch-10)+'/10':'ORIGIN · CASE '+(S.ci3+1),W/2,H-3);c.textAlign='left'}
  else if(sel===1){for(let i=0;i<5;i++){const bi=(Math.floor(t/1.2)+i)%20,B=BOSSES[bi],x=((i*56+t*28)%(W+60))-30,y=70+Math.sin(t*3+i)*2;try{drawMech(c,B,x,y,now,{pulse:kk*.6},1)}catch(e){}}big('BOSS RUSH',30,P[1],24);c.font='700 8px monospace';c.fillStyle='#fff';c.textAlign='center';c.fillText('쓰러뜨린 수호자 '+S.n+' / 20',W/2,H-6);c.textAlign='left'}
  else if(sel===2){for(let i=0;i<24;i++){const q=((t*.5)+i/24)%1;c.fillStyle='#ffd166';c.fillRect((i*37)%W,q*H,3,3);c.fillStyle='#a8781a';c.fillRect((i*37)%W+1,q*H+1,1,1)}const inv=shopInv(),sv=inv.eq.ch;inv.eq.ch=Math.floor(t*2)%CHARS.length;try{drawKnight(c,W/2-16,26,3,Math.floor(t)%2===1,null,now/430)}catch(e){}inv.eq.ch=sv;big('SHOP',22,P[2],20);c.font='700 8px monospace';c.fillStyle='#ffe9a8';c.textAlign='center';c.fillText('🪙 '+(saveData.coins||0)+' · '+CHARS[Math.floor(t*2)%CHARS.length].name,W/2,H-4);c.textAlign='left'}
  else if(sel===3){for(let i=0;i<60;i++){const a=.4+.6*Math.abs(Math.sin(t*1.5+i));c.fillStyle='rgba(255,255,255,'+a*.7+')';c.fillRect((i*53)%W,(i*29)%H,1,1)}const pts=[[40,70],[70,40],[110,56],[150,30],[190,52],[210,80]];c.strokeStyle=P[0];c.lineWidth=1;c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.stroke();pts.forEach((p,i)=>{c.fillStyle=i===Math.floor(t*3)%6?'#fff':P[1];c.fillRect(p[0]-2,p[1]-2,4,4)});big('HALL OF FAME',24,'#fff6cf',18);c.font='700 8px monospace';c.fillStyle=P[2];c.textAlign='center';c.fillText('★ '+(typeof HF_BADGE==='function'?HF_BADGE():'')+' 별이 된 수호자',W/2,H-5);c.textAlign='left'}
@@ -12769,7 +12775,12 @@ function ch2Finish(src){const M=ch2Cv(),out=M.out,oc=out.getContext('2d'),sh=M.s
  const rg=sc.createLinearGradient(6,0,34,0);rg.addColorStop(0,'rgba(255,255,255,.06)');rg.addColorStop(1,'rgba(0,0,30,.2)');sc.fillStyle=rg;sc.fillRect(0,0,40,48);sc.globalCompositeOperation='source-over';
  for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]])oc.drawImage(sh,dx,dy);oc.globalCompositeOperation='source-in';oc.fillStyle='#0c0f16';oc.fillRect(0,0,40,48);oc.globalCompositeOperation='source-over';oc.drawImage(sh,0,0);
  /* 윗면 빛 */oc.globalCompositeOperation='source-atop';oc.globalAlpha=.35;oc.drawImage(sh,0,1);oc.globalAlpha=1;oc.globalCompositeOperation='source-over';return out}
-function ch2Render(idx,f,b,bl,t){const D=CH2DEF[idx]||CH2DEF[0],M=ch2Cv(),o=M.cv.getContext('2d');o.setTransform(1,0,0,1,0,0);o.globalAlpha=1;o.globalCompositeOperation='source-over';o.clearRect(0,0,40,48);o.imageSmoothingEnabled=false;
+/* v76: 렉 줄이기 — 같은 캐릭터 · 같은 자세 그림은 1/12초 동안 다시 그리지 않고 저장해 둔 것을 쓴다(상점 목록처럼 한 화면에 여럿 그릴 때 크게 빨라짐).
+   팔다리 자세를 따로 정한 그림(CH2.pose)이나 휘두르는 중(HV.sw)은 그때그때 그린다. */
+const CH2C=new Map();
+function ch2Render(idx,f,b,bl,t){const HVv=window.__HV,can=!CH2.pose&&!(HVv&&HVv.sw);let key=null;if(can){const q=Math.floor(t*12);t=q/12;key=idx+'|'+f+'|'+b+'|'+(bl?1:0)+'|'+(HVv?HVv.view:'')+'|'+q;const h=CH2C.get(key);if(h)return h}
+ const out=ch2Render0(idx,f,b,bl,t);if(!key)return out;const c=document.createElement('canvas');c.width=40;c.height=48;c.getContext('2d').drawImage(out,0,0);CH2C.set(key,c);if(CH2C.size>500)CH2C.delete(CH2C.keys().next().value);return c}
+function ch2Render0(idx,f,b,bl,t){const D=CH2DEF[idx]||CH2DEF[0],M=ch2Cv(),o=M.cv.getContext('2d');o.setTransform(1,0,0,1,0,0);o.globalAlpha=1;o.globalCompositeOperation='source-over';o.clearRect(0,0,40,48);o.imageSmoothingEnabled=false;
  try{D.paint(ch2API(o),f,b,bl,t)}catch(e){if(!CH2.err){CH2.err=1;console.error('ch2',idx,e)}}return ch2Finish(M.cv)}
 function ch2Draw(c,idx,x,y,s,fl,wt,idleT){const now=performance.now(),t=now/1000;
  let f=0,b=0;if(wt!=null){f=((Math.floor(wt/(Math.PI/2))%4)+4)%4;b=f%2?-1:0}else if(idleT!=null)b=Math.round(Math.sin(idleT)*.6);const bl=Math.floor(now/170)%26===0;
@@ -19818,7 +19829,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
 
  let tab='skin',sel={},viewMode='auto',raf=0,owned=null,ownedErr='';
  const TABS=[['skin','캐릭터 스킨','🧍'],['pet','펫 스킨','🐾'],['sword','무기','⚔'],['fx','연출','✨'],['set','세트','🎁'],['owned','내 보관함','🗄']];
- function build(){
+ function build(){loop.mt=0;
   sheet.innerHTML='<div class="ssHead"><div><h2>✦ 스킨 · 무기 · 연출 상점</h2><small>겉모습과 연출이 바뀌어요 · 실력은 공평하게</small></div><div class="ssTabs" role="tablist">'+TABS.map(([k,n,ic])=>'<button data-tab="'+k+'" aria-pressed="'+(tab===k)+'"><i class="ti">'+ic+'</i>'+n+'</button>').join('')+'</div><button class="ssX" aria-label="닫기">✕</button></div><div class="ssBody" id="ssBody"></div>';
   sheet.querySelector('.ssX').onclick=()=>sheet.close();
   sheet.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;try{gmSfx('move')}catch(_){}build()});
@@ -19875,7 +19886,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    const o=SKIN58.render(sk[1],'front',0,t),S=Math.floor(h/48*.6);c.drawImage(o,Math.round(w*.34-20*S),Math.round(h*.84-48*S*.94),40*S,48*S);SWORD59.preview(c,sw[1],w*.66,h*.82,-Math.PI/2+.45,8,now);
    c.fillStyle='#ffffffcc';c.font='900 13px '+FONT;c.textAlign='center';c.fillText('+ 승리 연출 · 로비 테마',w/2,h*.95);c.textAlign='left'}}
  function loop(now){if(!sheet.open){raf=0;return}try{const L=items(),cur=L.find(x=>x.cat===tab&&x.id===sel[tab]);const cv=sheet.querySelector('#ssCv');if(cv&&cur)drawItem(cv.getContext('2d'),cur,cv.width,cv.height,now,false);
-  sheet.querySelectorAll('.ssCard canvas[data-id]').forEach(m=>{const it=L.find(x=>x.id===m.dataset.id&&x.kind===m.dataset.k);if(it)drawItem(m.getContext('2d'),it,m.width,m.height,now,true)})}catch(e){}raf=requestAnimationFrame(loop)}
+  /* v76: 렉 줄이기 — 목록 카드 그림은 1초에 8번만, 화면에 보이는 카드만 다시 그린다 */
+  if(now-(loop.mt||0)>=120){loop.mt=now;const vh=innerHeight;sheet.querySelectorAll('.ssCard canvas[data-id]').forEach(m=>{const r=m.getBoundingClientRect();if(r.bottom<0||r.top>vh||!r.width)return;const it=L.find(x=>x.id===m.dataset.id&&x.kind===m.dataset.k);if(it)drawItem(m.getContext('2d'),it,m.width,m.height,now,true)})}}catch(e){}raf=requestAnimationFrame(loop)}
  function open(t){if(t)tab=t;if(!sheet.open)sheet.showModal();build();if(!raf)raf=requestAnimationFrame(loop);try{if(PAY()&&account().token)PAY().refresh().then(()=>{if(sheet.open&&tab!=='owned')build()}).catch(()=>{})}catch(e){}}
  sheet.addEventListener('close',()=>{if(raf)cancelAnimationFrame(raf);raf=0});
  sheet.addEventListener('keydown',e=>e.stopPropagation());
@@ -20776,7 +20788,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    '<div class="dots">'+STEPS.map((_,j)=>'<i class="'+(j<i?'on':j===i?'cur':'')+'"></i>').join('')+'</div><span class="ck">✓</span>';
   box.querySelector('.sk').onclick=e=>{e.stopPropagation();finish(true)};shownI=i;shownWait=waiting}
  /* 경기장 왼쪽 빈 곳에 붙임 (보스 체력바 · 보스 · 내 체력 칸을 가리지 않게) */
- function place(){try{const g=document.getElementById('game');if(!g)return;const r=g.getBoundingClientRect();let w=Math.max(250,Math.min(340,r.width*.31));/* v66: 화면 배율(zoom)이 걸려 있으면 위치 값도 함께 나눈다. 세로 화면에서 게임 화면 위가 비어 있으면 그 빈자리에 띄운다 */const z=parseFloat(getComputedStyle(box).zoom)||1;let L=Math.max(6,r.left+r.width*.035),T=Math.max(6,r.top+r.height*.2);if(innerHeight>innerWidth*1.2&&(r.top>170||innerHeight-r.bottom>200)){const vw=Math.min(innerWidth-16,440);w=vw/z;L=(innerWidth-vw)/2;T=innerHeight-r.bottom>200?r.bottom+12/* v67: 게임 화면 아래 빈자리 */:Math.max(6,r.top-64-(box.offsetHeight||110)*z)}box.style.width=w+'px';box.style.left=L/z+'px';box.style.top=T/z+'px'}catch(e){}}
+ function place(){try{const g=document.getElementById('game');if(!g)return;const r=g.getBoundingClientRect();let w=Math.max(250,Math.min(340,r.width*.31));/* v66: 화면 배율(zoom)이 걸려 있으면 위치 값도 함께 나눈다. 세로 화면에서 게임 화면 위가 비어 있으면 그 빈자리에 띄운다 */const z=parseFloat(getComputedStyle(box).zoom)||1;let L=Math.max(6,r.left+r.width*.035),T=Math.max(6,r.top+r.height*.2);if(document.documentElement.classList.contains('pv76')){/* v76 세로 큰 화면: 화면 왼쪽 위 안쪽 */const vw=Math.min(innerWidth*.62,300);w=vw/z;L=8;T=r.top+6}else if(innerHeight>innerWidth*1.2&&(r.top>170||innerHeight-r.bottom>200)){const vw=Math.min(innerWidth-16,440);w=vw/z;L=(innerWidth-vw)/2;T=innerHeight-r.bottom>200?r.bottom+12/* v67: 게임 화면 아래 빈자리 */:Math.max(6,r.top-64-(box.offsetHeight||110)*z)}box.style.width=w+'px';box.style.left=L/z+'px';box.style.top=T/z+'px'}catch(e){}}
  function finish(skip){const s=S();s.done=1;s.i=STEPS.length;save();box.style.display='none';
   try{if(!skip){banner('전투 가이드 끝! 이제 마음껏 싸워 봐요');sfx(784,.3,'triangle',.05,1568)}}catch(e){}}
 
@@ -21281,7 +21293,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  function vetPool(z){const cur=speciesOf(z),pool=[];for(let y=z-1;y>=0;y--)for(const q of speciesOf(y))if(!cur.includes(q)&&!pool.includes(q))pool.push(q);return pool}
  TW.vetsOf=vetsOf;TW.vetPool=vetPool;
  function buildFloor(f){const z=zoneOf(f),k=((f-1)%10)+1,tier=Math.floor(z/70),pal=palOf(z),[s1,s2]=speciesOf(z);
-  Object.assign(T,{f,z,k,pal,mobs:[],shots:[],tels:[],parts:[],pops:[],slash:[],clk:0,clear:false,clearT:0,doorK:0,trans:{t:0,txt:f+'F',sub:pal.n+' 구역 · '+TW.zoneMobs(z).join(' · ')+(vetsOf(z,k).length?'  +  다시 나온 '+vetsOf(z,k).map(q=>SP[q].n).join(' · '):'')},dead:false,spawned:false});
+  Object.assign(T,{f,z,k,pal,hfx:[],mobs:[],shots:[],tels:[],parts:[],pops:[],slash:[],clk:0,clear:false,clearT:0,doorK:0,trans:{t:0,txt:f+'F',sub:pal.n+' 구역 · '+TW.zoneMobs(z).join(' · ')+(vetsOf(z,k).length?'  +  다시 나온 '+vetsOf(z,k).map(q=>SP[q].n).join(' · '):'')},dead:false,spawned:false});
   const n=3+Math.floor(k/3)+Math.min(3,Math.floor(z/8))+tier,hpz=TF(f)*(1+tier*.8)*hpMul();
   const list=[];for(let i=0;i<n;i++)list.push({sp:i%3===2?s2:s1,elite:false});
   const vets=vetsOf(z,k);vets.forEach((q,i)=>{const c=1+((k+i)%2);for(let j=0;j<c;j++)list.push({sp:q,elite:false});if(k===9&&i===0)list.push({sp:q,elite:true})});T.vets=vets;
@@ -21296,7 +21308,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
 
  /* ---------- 들어가기 · 나가기 ---------- */
  function hud(on){try{$('bossName').style.visibility=on?'hidden':'';const bA=$('btnA');if(bA){bA.style.display='';bA.textContent='ATTACK'}$('touch').style.display='';try{ensureParryBtn()}catch(e){}const bp=$('btnP');if(bp)bp.style.display=''}catch(e){}}
- function music(){try{stopMusic();startMusic(makeCaveSong(T.z%20),performance.now(),0)}catch(e){}}
+ /* v76 BGM: 구역마다 보스전 곡을 하나씩(20곡을 돌아가며). 박자가 곡에 맞춰지므로 PERFECT도 곡 박자 기준 */
+ function music(){try{stopMusic();let S=null;try{S=makeSong(((T.z%20)+20)%20)}catch(e){}startMusic(S||makeCaveSong(T.z%20),performance.now(),0)}catch(e){try{startMusic(makeCaveSong(T.z%20),performance.now(),0)}catch(_){}}}
  TW.start=function(f){const s=sv();f=f||s.floor||1;initAudio();story=false;try{if(typeof CS!=='undefined')CS=null}catch(e){}
   enterGame();$('overlay').hidden=true;mode='tower';paused=false;try{resetP(AX+AW/2,AY+AH-24)}catch(e){}
   T.ult=0;T.combo=0;T.kills=0;T.score=0;
@@ -21305,7 +21318,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  function nextFloor(){const s=sv();const f=T.f+1;s.floor=f;s.best=Math.max(s.best||1,f);try{saveNow()}catch(e){}
   try{addCoins(T.k===9?12:6)}catch(e){}
   if(f%10===0){goBoss(f);return}
-  P.hp=Math.min(P.maxhp,P.hp+Math.round(P.maxhp*.15));buildFloor(f);$('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F';
+  const oz=T.z;P.hp=Math.min(P.maxhp,P.hp+Math.round(P.maxhp*.15));buildFloor(f);if(T.z!==oz)music();$('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F';
   try{sfx(660,.2,'triangle',.04,1320)}catch(e){}}
  /* 보스 층: 짧은 소개 뒤 보스 전투 */
  function goBoss(f){const g=zoneOf(f),B=bossOf(g);T.f=f;T.z=g;T.pal=palOf(g);T.bossCard={t:0,g,B};mode='tower';hud(true);
@@ -21344,12 +21357,12 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    const da=Math.abs(((Math.atan2(dy,dx)-a+9.42)%6.28)-3.14);if(d>14&&da>1.25)continue;
    const crit=Math.random()<((w&&w.crit)||0),armor=m.sp==='knight'&&T.clk>m.stunT+1.2&&Math.cos(Math.atan2(-dy,-dx)-(m.face>0?0:3.14))>.3?.55:1;
    let dmg=Math.round(34*((w&&w.dmg)||1)*(1+(curPet().dmg||0))*mult*(crit?1.8:1)*armor*(1+Math.min(T.combo,20)*.02));
-   m.hp-=dmg;m.hitT=T.clk;m.vx+=Math.cos(a)*90;m.vy+=Math.sin(a)*90;hit++;
-   addPop(m.x,m.y-12,(crit?'CRIT ':'')+(bg===2?'PERFECT ':'')+dmg,bg===2?'#ffe79a':crit?'#ff9a5a':'#ffffff');burst(m.x,m.y,6,T.pal.c,70);
+   m.hp-=dmg;m.hitT=T.clk;m.kbA=a;m.vx+=Math.cos(a)*(bg===2?150:110);m.vy+=Math.sin(a)*(bg===2?150:110);hit++;T.hfx.push({x:m.x,y:m.y-8,a,t:T.clk,big:bg===2||crit,col:bg===2?'#ffe79a':crit?'#ff9a5a':'#ffffff'});
+   T.pops.push({x:m.x+rnd(-4,4),y:m.y-14,tx:(crit?'CRIT ':'')+(bg===2?'PERFECT ':'')+dmg,col:bg===2?'#ffe79a':crit?'#ff9a5a':'#ffffff',t:T.clk,big:bg===2||crit});burst(m.x,m.y,6,T.pal.c,70);
    if(m.hp<=0)kill(m)}
-  if(hit){T.combo++;T.score=(T.score||0)+hit*(bg===2?150:bg===1?110:80)*(1+Math.min(T.combo,20)*.05)|0;T.ult=Math.min(100,T.ult+3+hit*2);try{sfx(320+Math.min(T.combo,14)*22+(bg===2?80:0),.12,'triangle',.05,90);sfx(160,.1,'square',.04,60)}catch(e){};T.shake=Math.max(T.shake||0,.12);T.stop=now+40}
+  if(hit){T.stop=now+(bg===2?95:60);try{const at=audio.currentTime;perc('snare',at,bg===2?.55:.35);if(bg===2)perc('hat',at+.02,.4)}catch(e){}T.combo++;T.score=(T.score||0)+hit*(bg===2?150:bg===1?110:80)*(1+Math.min(T.combo,20)*.05)|0;T.ult=Math.min(100,T.ult+3+hit*2);try{sfx(320+Math.min(T.combo,14)*22+(bg===2?80:0),.12,'triangle',.05,90);sfx(160,.1,'square',.04,60)}catch(e){};T.shake=Math.max(T.shake||0,bg===2?.32:.2);T.punch=T.clk}
   else try{sfx(230,.06,'triangle',.025,70)}catch(e){}}
- function kill(m){m.hp=0;T.score=(T.score||0)+(m.elite?2000:400);m.dieT=T.clk;T.kills++;sv().kills=(sv().kills||0)+1;T.ult=Math.min(100,T.ult+(m.elite?25:10));burst(m.x,m.y,m.elite?40:20,T.pal.a,140);burst(m.x,m.y,10,'#ffffff',90);
+ function kill(m){T.stop=performance.now()+(m.elite?160:110);T.hfx.push({x:m.x,y:m.y-8,a:0,t:T.clk,kill:1,big:1,col:m.elite?'#ffd166':'#ffffff'});try{perc('kick',audio.currentTime,.7);if(m.elite)perc('crash',audio.currentTime+.02,.5)}catch(e){}m.hp=0;T.score=(T.score||0)+(m.elite?2000:400);m.dieT=T.clk;T.kills++;sv().kills=(sv().kills||0)+1;T.ult=Math.min(100,T.ult+(m.elite?25:10));burst(m.x,m.y,m.elite?40:20,T.pal.a,140);burst(m.x,m.y,10,'#ffffff',90);
   try{sfx(m.elite?180:300,.18,'square',.05,80);sfx(520,.1,'sine',.03,1100)}catch(e){};T.shake=Math.max(T.shake||0,m.elite?.5:.25);try{addCoins(m.elite?8:2)}catch(e){}
   addPop(m.x,m.y-20,m.elite?'+8 🪙':'+2 🪙','#ffd166')}
  function dash(){if(T.bossCard||T.dead||T.U)return;const now=performance.now(),cost=(curPet()||{}).dashCost||.2;if(P.stam===undefined)P.stam=stamMax();if(now<P.dashCd)return;
@@ -21452,7 +21465,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(!T.clear&&!T.dead&&T.mobs.length===0&&!(T.queue&&T.queue.length)&&T.clk>1){T.clear=true;T.clearT=T.clk;T.shots=[];try{sfx(523,.15,'triangle',.05,784);setTimeout(()=>sfx(784,.25,'triangle',.05,1046),150)}catch(e){}addPop(AX+AW/2,AY+60,'FLOOR CLEAR!','#a6f5c6')}
   if(T.clear){T.doorK=Math.min(1,T.doorK+dt*2);if(T.doorK>=1&&Math.abs(P.x-(AX+AW/2))<18&&P.y<AY+36)nextFloor()}
   T.shake=Math.max(0,(T.shake||0)-dt*2.2);T.flash=Math.max(0,(T.flash||0)-dt*2);
-  const bU=$('btnU');if(bU)bU.style.display=T.ult>=100?'':'none'}
+  try{if(isTouchUI()){ensureUltBtn();const bU=$('btnU');if(bU.style.display!=='')bU.style.display='';ultBtnPaint(T.ult/100,!T.U)}}catch(e){}}
 
  /* ---------- 그리기 ---------- */
  function A(a){ctx.globalAlpha=clampN(a,0,1)}
@@ -21497,7 +21510,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(m.sp==='mage'&&m.st==='fade')al*=1-clampN((T.clk-m.st0)/.35,0,1);
   if(m.hp<=0){const q=(T.clk-m.dieT)/.35;al*=1-q;sx*=1+q*.7;sy*=1-q*.7}
   const footY=m.y+sp.r*m.s*.75;
-  if(img){ctx.save();ctx.translate(m.x,footY+bob);ctx.scale(sideFlip?-sx:sx,sy);A(al);ctx.drawImage(img,-COX*us,-COY*us,CW*us,CH*us);
+  const hq=T.clk-m.hitT;let rx=0,ry=0;if(hq<.14&&m.kbA!=null){const k2=(1-hq/.14);rx=Math.cos(m.kbA)*3*k2+rnd(-1,1)*k2;ry=Math.sin(m.kbA)*2*k2;sx*=1+.12*k2;sy*=1-.1*k2}
+  if(img){ctx.save();ctx.translate(m.x+rx,footY+bob+ry);ctx.scale(sideFlip?-sx:sx,sy);A(al);ctx.drawImage(img,-COX*us,-COY*us,CW*us,CH*us);
    if(T.clk-m.hitT<.12){ctx.globalCompositeOperation='lighter';A(.75);ctx.drawImage(img,-COX*us,-COY*us,CW*us,CH*us);ctx.globalCompositeOperation='source-over'}ctx.restore();A(1)}
   else{const im=spr(m.sp,T.pal,m.elite),s=2*m.s;ctx.save();ctx.translate(m.x,m.y+bob);ctx.scale(m.face<0?-sx:sx,sy);A(al);ctx.drawImage(im,-7*s,-6*s,14*s,12*s);ctx.restore();A(1)}
   const top=footY+bob-(FLY[m.sp]?26:24)*us;
@@ -21545,13 +21559,21 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  function draw(now){try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}ctx.imageSmoothingEnabled=false;ctx.save();
   if(T.bossCard){drawBossCard(now);ctx.restore();return}
   if(T.shake>0)ctx.translate(rnd(-1,1)*T.shake*4,rnd(-1,1)*T.shake*4);
+  if(T.punch!=null&&T.clk-T.punch<.12){const z=1+.025*(1-(T.clk-T.punch)/.12);ctx.translate(P.x,P.y);ctx.scale(z,z);ctx.translate(-P.x,-P.y)}
   bg();drawTels();
   const list=T.mobs.map(m=>({y:m.y,fn:()=>drawMob(m)}));list.push({y:P.y,fn:()=>drawHero(now)});list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
   drawSlash();
+  /* v76 타격 이펙트: 빛 갈래 · 고리 · 베인 줄. 처치는 더 크게 */
+  for(const h of (T.hfx||[])){const L=h.kill?.42:.24,q=(T.clk-h.t)/L;if(q>=1)continue;ctx.save();ctx.translate(h.x,h.y);ctx.globalCompositeOperation='lighter';
+   const R=(h.kill?26:h.big?18:12)*(.4+q);A((1-q)*.95);ctx.strokeStyle=h.col;ctx.lineWidth=(h.kill?3:2)*(1-q)+.5;ctx.beginPath();ctx.arc(0,0,R,0,6.28);ctx.stroke();
+   ctx.fillStyle=h.col;const n=h.kill?12:8;for(let i=0;i<n;i++){const a=i/n*6.28+h.t*7,l=R*(1.1+(i%2)*.6);ctx.save();ctx.rotate(a);ctx.fillRect(R*.4,-.7,l-R*.4,1.4);ctx.restore()}
+   if(!h.kill){ctx.rotate(h.a+Math.PI/2);A((1-q));ctx.fillStyle='#ffffff';ctx.fillRect(-22*(1-q*.3),-1.2,44*(1-q*.3),2.4);ctx.fillStyle=h.col;ctx.fillRect(-26,-.5,52,1)}
+   else{A((1-q)*.5);ctx.fillStyle=h.col;ctx.beginPath();ctx.arc(0,0,R*.7,0,6.28);ctx.fill()}
+   ctx.restore();A(1)}T.hfx=(T.hfx||[]).filter(h=>T.clk-h.t<(h.kill?.42:.24));
   for(const s of T.shots)drawShot(s);
   for(const w of (T.waves||[])){if(w.cur==null)continue;const q=(w.cur-w.r)/(w.max-w.r);A(.8*(1-q));ctx.strokeStyle=w.col;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(w.x,w.y,w.cur,w.cur/1.4,0,0,6.28);ctx.stroke();ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(w.x,w.y,w.cur-2,(w.cur-2)/1.4,0,0,6.28);ctx.stroke();A(1)}
   for(const q of T.parts){const k=(T.clk-q.t)/q.l;if(k>=1)continue;q.x+=q.vx/60;q.y+=q.vy/60;q.vy+=3;A(1-k);ctx.fillStyle=q.col;ctx.fillRect(q.x-1,q.y-1,2,2)}T.parts=T.parts.filter(q=>T.clk-q.t<q.l);
-  ctx.font='900 9px sans-serif';ctx.textAlign='center';for(const p of T.pops){const k=(T.clk-p.t)/.9;if(k>=1)continue;A(1-k);ctx.fillStyle='#000';ctx.fillText(p.tx,p.x+1,p.y-k*16+1);ctx.fillStyle=p.col;ctx.fillText(p.tx,p.x,p.y-k*16)}ctx.textAlign='left';T.pops=T.pops.filter(p=>T.clk-p.t<.9);A(1);
+  ctx.textAlign='center';for(const p of T.pops){const k=(T.clk-p.t)/.9;if(k>=1)continue;const sz=(p.big?13:9)*(k<.08?1.6-k*7.5:1);ctx.font='900 '+sz.toFixed(1)+'px sans-serif';A(1-k*k);const yy=p.y-k*16-(k<.15?Math.sin(k/.15*3.14)*4:0);ctx.fillStyle='#000';ctx.fillText(p.tx,p.x+1,yy+1);ctx.fillStyle=p.col;ctx.fillText(p.tx,p.x,yy)}ctx.textAlign='left';T.pops=T.pops.filter(p=>T.clk-p.t<.9);A(1);
   drawUlt(now);
   if(T.flash>0){A(T.flash*.5);ctx.fillStyle='#ff2d55';ctx.fillRect(0,0,W,H);A(1)}
   drawHud(now);
@@ -21593,6 +21615,23 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  if(typeof lvDock==='function'){const f=lvDock;lvDock=function(){const r=f.apply(this,arguments);try{const g=$('lvGoBtn');if(g&&GM.sel===0)g.innerHTML='<small>NOW · TOWER</small>▶ 탑 오르기'}catch(e){}return r}}
  setInterval(()=>{try{const p=document.querySelector('#phPlay');if(p){const b=p.querySelector('b'),s=p.querySelector('small');if(b&&b.textContent!=='▲ 탑 오르기')b.textContent='▲ 탑 오르기';if(s&&s.textContent!=='NOW · TOWER')s.textContent='NOW · TOWER'}
   const e=document.querySelector('#lvSet .lvI[data-i="0"] em');if(e&&e.textContent!==badge())e.textContent=badge()}catch(e){}},700);
+ /* v76: 처음 그려진 로비 메뉴가 옛 글자(이야기)로 남아 있던 것 → 글자가 다르면 다시 그린다 */
+ function relabel(){try{const b=document.querySelector('#lvSet .lvI[data-i="0"] b');if(b&&b.textContent.indexOf('탑 오르기')<0){lvSet();lvDock()}
+  const g=$('lvGoBtn');if(g&&GM.sel===0&&g.textContent.indexOf('탑 오르기')<0)lvDock()}catch(e){}}
+ setTimeout(relabel,0);setInterval(relabel,600);
+ /* v76: 로비 LED 화면 = 탑 그림(밤하늘 · 층마다 불 켜진 탑 · 올라간 만큼 빛) — 예전엔 챕터 배경을 늘여 붙여서 이상하게 보였다 */
+ TW.led=function(c,W,H,t,P){const s=sv(),best=s.best||1,z=Math.min(6,zoneOf(best)),zp=ZPAL[z];
+  const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#04060c');g.addColorStop(1,zp.b);c.fillStyle=g;c.fillRect(0,0,W,H);
+  for(let i=0;i<40;i++){const a=.3+.7*Math.abs(Math.sin(t*1.3+i*1.7));c.fillStyle='rgba(255,255,255,'+(a*.6)+')';c.fillRect((i*61)%W,(i*23)%(H-40),1,1)}
+  c.fillStyle=zp.wall;for(let i=0;i<12;i++){const x=i*22-4,hh=10+(i*37)%18;c.fillRect(x,H-34-hh,18,hh+34)}
+  const tw=34,tx=W/2-tw/2,top=6,base=H-30,fl=14,fh=(base-top)/fl,lit=Math.min(fl,Math.ceil(fl*Math.min(1,best/700))+1);
+  c.fillStyle='#000';c.fillRect(tx-2,top,tw+4,base-top);
+  for(let i=0;i<fl;i++){const y=base-(i+1)*fh,on=i<lit,zc=ZPAL[Math.min(6,Math.floor(i/2))];c.fillStyle=on?zc.wall:'#0c1018';c.fillRect(tx,y+1,tw,fh-1);
+   for(let k=0;k<4;k++){const wx=tx+3+k*8;c.fillStyle=on?((Math.floor(t*2+i+k)%7)?zc.c:'#ffffff'):'#141a24';c.fillRect(wx,y+3,4,Math.max(2,fh-6))}}
+  const tip=base-lit*fh;c.fillStyle=zp.c;c.beginPath();c.moveTo(tx-4,top+2);c.lineTo(W/2,top-6);c.lineTo(tx+tw+4,top+2);c.fill();
+  const gl=c.createRadialGradient(W/2,tip,0,W/2,tip,30);gl.addColorStop(0,zp.c+'88');gl.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=gl;c.fillRect(W/2-30,tip-30,60,60);
+  const py=tip-4+Math.sin(t*4)*1.5;c.fillStyle='#ffe79a';c.fillRect(W/2-1,py-3,3,3);
+  c.fillStyle='#00000088';c.fillRect(0,H-26,W,26)};
 
  /* ---------- v73 탑 화면: 스크롤로 700층 전체 보기 · 원하는 층 골라 오르기 · 처음부터 ---------- */
  const TV={sel:null,zc:[],io:null,raf:0};
@@ -21902,4 +21941,181 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  for(const k of Object.keys(ANC)){const base=R['m_'+k];if(!base)continue;R['m_'+k]=A=>{base(A);try{tierDeco(k,A)}catch(e){}}}
  window.MOB72=true;
 }catch(e){console.error('v72 mobs',e)}})();
+/* ================= v76 폰 세로 전투 화면 (PV76) =================
+   세로 폰에서는 480×300 화면이 위쪽에 작게만 나와서 불편했다. 세로일 때만:
+   ① 가운데 큰 화면: 원래 게임 그림에서 캐릭터 주변을 잘라 확대해 보여 준다(위아래는 경기장 전체, 좌우는 캐릭터를 따라감).
+      보스전에서는 보스 쪽으로 조금 당겨서 보스도 같이 보이게.
+   ② 위 띠: 보스 체력바 · 탑 층 정보(원래 그림의 맨 위 줄을 그대로 옮김)
+   ③ 아래 띠: 내 체력 · 대시 · 궁극기 · 점수 · 박자(원래 그림의 맨 아래 줄을 그대로 옮김)
+   ④ 작은 지도: 오른쪽 위에 경기장 전체를 작게(지금 보이는 곳은 흰 네모) — 화면 밖 공격도 보인다.
+   원래 캔버스(#game)는 그대로 그려지고 보이지만 않는다. 화면을 누르는 것(그로기 때 약점 누르기)은 게임 좌표로 바꿔서 그대로 전달.
+   가로 폰 · 컴퓨터는 바뀌지 않는다. */
+(()=>{try{
+ const root=document.documentElement,bv=$('battleView'),arena=$('arena'),cv=$('game');if(!bv||!arena||!cv)return;
+ const V={on:false,cx:240,k:2,sw:200,sh:258,sy:30,vh:400,tH:34,snap:0};
+ /* 정보 칸(HUD)을 그리기 직전 그림을 따로 떠 둔다 → 큰 화면에서는 정보 칸 자리를 이 그림으로 덮어 겹쳐 보이지 않게 */
+ const clean=document.createElement('canvas');
+ function snap(){if(!V.on)return;if(clean.width!==cv.width||clean.height!==cv.height){clean.width=cv.width;clean.height=cv.height}const c=clean.getContext('2d');c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,clean.width,clean.height);c.drawImage(cv,0,0);V.snap=V.fid}
+ V.fid=0;
+ {const f=drawFightHUD;drawFightHUD=function(){try{snap()}catch(e){}return f.apply(this,arguments)}}
+ {const f=drawPlayerHUD;drawPlayerHUD=function(){try{if(mode==='tower')snap()}catch(e){}return f.apply(this,arguments)}}
+ const mk=(id,tag)=>{const e=document.createElement(tag||'canvas');e.id=id;return e};
+ const top=mk('pvTop'),bot=mk('pvBot'),view=mk('pvView'),mini=mk('pvMini');
+ arena.parentNode.insertBefore(top,arena);arena.parentNode.insertBefore(bot,arena.nextSibling);arena.insertBefore(view,arena.firstChild);arena.appendChild(mini);
+ const st=document.createElement('style');st.textContent=`
+ #pvTop,#pvBot,#pvView,#pvMini{display:none}
+ html.pv76 #pvTop,html.pv76 #pvBot{display:block;width:100%;height:auto;image-rendering:pixelated;flex:none}
+ html.pv76 #pvView{display:block;position:absolute;inset:0;width:100%;height:100%;image-rendering:auto;touch-action:none}
+ html.pv76 #pvMini{display:block;position:absolute;right:6px;top:6px;width:34%;height:auto;border:1px solid #ffffff55;border-radius:6px;box-shadow:0 4px 12px #000a;opacity:.85;pointer-events:none;z-index:3}
+ html.pv76 #arena #game{opacity:0!important;pointer-events:none!important;position:absolute;inset:0;width:100%!important;height:100%!important}
+ html.pv76 #arena{position:relative;flex:none;max-width:none!important;max-height:none!important;margin:0!important;overflow:hidden}
+ html.pv76 #battleView{gap:0!important}
+ /* 보스 공격 경고문: 더 투명하게(가로·세로 모두) */
+ html body #banner.atk{background:#0b050766!important;border-top-color:#ff2d5599!important;border-bottom-color:#ff2d5599!important;box-shadow:none!important;text-shadow:0 1px 2px #000,0 0 6px #000!important}
+ html body #banner.atk small{color:#ffd9a0dd!important;opacity:.9}
+ html.pv76 #banner.atk{top:6px!important;font-size:13px!important}html.pv76 #banner.atk small{font-size:10px!important}`;document.head.appendChild(st);
+
+ const active=()=>root.classList.contains('phP')&&!bv.hidden&&(mode==='boss'||mode==='tower')&&innerHeight>innerWidth;
+ /* 화면 크기 정하기 */
+ function layout(){const on=active();root.classList.toggle('pv76',on);V.on=on;if(!on)return;
+  V.tH=mode==='boss'?50:34;const vw=innerWidth,bar=(bv.querySelector('.bar')||{}).offsetHeight||46,topH=Math.round(vw*V.tH/480),botH=Math.round(vw*66/480),ctrl=Math.min(300,innerHeight*.33);
+  V.vh=Math.max(220,Math.min(innerHeight*.62,innerHeight-bar-topH-botH-ctrl));V.k=V.vh/V.sh;V.sw=vw/V.k;
+  arena.style.width=vw+'px';arena.style.height=Math.round(V.vh)+'px';arena.style.setProperty('--u',(vw/W)+'px');
+  const dpr=Math.min(2.5,devicePixelRatio||1);for(const [c,w,h] of [[view,vw,V.vh],[top,vw,topH],[bot,vw,botH]]){const ww=Math.round(w*dpr),hh=Math.round(h*dpr);if(c.width!==ww)c.width=ww;if(c.height!==hh)c.height=hh}
+  mini.width=240;mini.height=150;try{applyHiRes(W*V.k)}catch(e){}}
+ {const f=fitBattle;fitBattle=function(){const r=f.apply(this,arguments);try{layout()}catch(e){}return r}}
+ addEventListener('resize',()=>setTimeout(()=>{try{layout()}catch(e){}},60));
+
+ /* 매 화면: 원래 그림에서 잘라 옮기기 */
+ function follow(){let x=(typeof P!=='undefined'&&P)?P.x:W/2;try{if(mode==='boss'&&G&&G.boss&&!G.cine)x=P.x*.62+G.boss.x*.38;else if(mode==='boss'&&G&&G.boss)x=G.boss.x}catch(e){}
+  const want=Math.max(V.sw/2,Math.min(W-V.sw/2,x));V.cx+=(want-V.cx)*.12;if(!isFinite(V.cx))V.cx=W/2}
+ function paint(){if(!V.on)return;follow();const sx=cv.width/W,sy=cv.height/H;
+  const v=view.getContext('2d');v.imageSmoothingEnabled=false;v.drawImage(cv,(V.cx-V.sw/2)*sx,V.sy*sx,V.sw*sx,V.sh*sy,0,0,view.width,view.height);
+  const t=top.getContext('2d');t.imageSmoothingEnabled=false;t.drawImage(cv,0,0,cv.width,V.tH*sy,0,0,top.width,top.height);
+  /* 정보 칸 자리 덮기: 위(보스 이름·체력 줄 ~50)와 아래(내 체력·궁극기·점수·박자 H-62~) */
+  if(V.snap===V.fid){const x0=(V.cx-V.sw/2),ky=view.height/V.sh,kx=view.width/V.sw;
+   for(const [a,b2] of [[0,mode==='boss'?50:0],[H-62,H]]){const y0=Math.max(a,V.sy),y1=Math.min(b2,V.sy+V.sh);if(y1<=y0)continue;
+    v.drawImage(clean,x0*sx,y0*sy,V.sw*sx,(y1-y0)*sy,0,(y0-V.sy)*ky,view.width,(y1-y0)*ky)}}
+  const b=bot.getContext('2d');b.imageSmoothingEnabled=false;b.fillStyle='#05070a';b.fillRect(0,0,bot.width,bot.height);b.drawImage(cv,0,(H-66)*sy,cv.width,66*sy,0,0,bot.width,bot.height);
+  const m=mini.getContext('2d');m.imageSmoothingEnabled=true;m.drawImage(cv,0,0,cv.width,cv.height,0,0,240,150);m.strokeStyle='#ffffff';m.lineWidth=3;m.strokeRect((V.cx-V.sw/2)/W*240,V.sy/H*150,V.sw/W*240,V.sh/H*150)}
+ {const f=frame;frame=function(){V.fid++;const r=f.apply(this,arguments);try{if(active()!==V.on||(V.on&&V.tH!==(mode==='boss'?50:34)))layout();paint()}catch(e){}return r}}
+
+ /* 큰 화면을 누르면 게임 좌표로 바꿔서 원래처럼 */
+ view.addEventListener('pointerdown',e=>{if(!V.on||(mode!=='boss'&&mode!=='cave')||dlg.active)return;e.preventDefault();const r=view.getBoundingClientRect(),gx=V.cx-V.sw/2+(e.clientX-r.left)/r.width*V.sw,gy=V.sy+(e.clientY-r.top)/r.height*V.sh;try{doAttack({x:gx,y:gy})}catch(_){}});
+ window.PV76={V,layout,active};
+}catch(e){console.error('v76 portrait',e)}})();
+/* ================= v76 폰 가로 메뉴 한 화면 맞춤 (PL76) =================
+   폰 가로(html.phL)에서 메뉴 화면을 아래로 내려 보지 않고 한 화면에 다 들어오게 배치를 바꾼다.
+   - 태엽 공방(#shopModal): 위아래로 쌓던 것을 좌우 두 칸으로(왼쪽 = 무대 · 정보 · 장착 단추, 오른쪽 = 탭 · 물건 목록).
+     물건 목록만 그 칸 안에서 넘긴다.
+   - 설정(#gmSet): 탭을 왼쪽 세로 목록으로, 오른쪽에 내용을 촘촘하게(제목 · 줄 높이 줄임).
+   - 명예의 전당(#gmHall): 왼쪽 단추 줄이 제목을 가리지 않게 제목 · 범례를 오른쪽으로 비킨다.
+   컴퓨터 · 폰 세로는 그대로. */
+(()=>{try{
+ const st=document.createElement('style');st.id='pl76';st.textContent=`
+ /* ---------- 태엽 공방 ---------- */
+ html.phL #shopModal.wsFull{display:flex!important;flex-direction:column}
+ html.phL #shopModal.wsFull .rushBar{flex:none;padding:6px 12px!important}
+ html.phL #shopModal.wsFull #wsMain#wsMain{flex:1 1 0;min-height:0;display:grid!important;grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr);grid-template-rows:minmax(0,1fr);gap:10px;padding:8px 10px 10px!important;overflow:hidden!important}
+ html.phL #shopModal.wsFull #wsMain>*{min-height:0}
+ html.phL #shopModal.wsFull #wsLeft#wsLeft{display:flex;flex-direction:column;gap:6px;overflow:hidden!important;min-height:0}
+ html.phL #shopModal.wsFull #wsStageBox{flex:1 1 0!important;min-height:70px;display:flex;align-items:center;justify-content:center}
+ html.phL #shopModal.wsFull #wsStageBox #wsCv{height:100%!important;width:auto!important;max-width:100%}
+ html.phL #shopModal.wsFull #wsBubble{display:none!important}
+ html.phL #shopModal.wsFull #wsInfo{flex:none;padding:8px 10px!important}
+ html.phL #shopModal.wsFull #wsInfo .wsSub{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:11px!important;margin:2px 0 4px!important}
+ html.phL #shopModal.wsFull #wsInfo .wsRow{margin:2px 0!important}
+ html.phL #shopModal.wsFull #wsBtn{margin-top:6px!important;padding:8px!important;min-height:0!important}
+ html.phL #shopModal.wsFull #wsRight#wsRight{display:flex;flex-direction:column;overflow:hidden!important;min-height:0}
+ html.phL #shopModal.wsFull #wsRight .shopTabs{flex:none;grid-template-columns:repeat(4,1fr)!important;padding:8px 8px 4px!important;gap:5px!important}
+ html.phL #shopModal.wsFull #wsRight .shopTab{padding:7px 4px!important;font-size:12px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ html.phL #shopModal.wsFull #wsRight .rushBody{flex:1 1 0;min-height:0;overflow:auto!important;padding:6px 8px 8px!important;scrollbar-width:thin}
+ html.phL #shopModal.wsFull #shopGrid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))!important}
+ /* 스킨 상점(#bbShop)도 같은 화면 안에서 */
+ html.phL #bbShop{max-height:100%;overflow:auto}
+
+ /* ---------- 설정 ---------- */
+ html.phL #gmSet.cfFull .gmHead{margin:0!important}
+ html.phL #gmSet.cfFull #gmSetPanel#gmSetPanel{inset:50px 10px 8px!important;display:grid!important;grid-template-columns:168px minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;gap:10px!important;padding:8px!important}
+ html.phL #gmSet #cfNav#cfNav{flex-direction:column!important;overflow:auto!important;padding:6px!important;gap:6px!important;min-height:0}
+ html.phL #gmSet #cfNav #ui65card{display:none!important}
+ html.phL #gmSet #cfNav .cfLever{grid-template-columns:8px 22px 1fr!important;padding:9px 8px!important;flex:none;white-space:nowrap;font-size:14px!important}
+ html.phL #gmSet #cfNav .cfLever:hover{transform:none}
+ html.phL #gmSet #cfBody#cfBody{min-height:0;overflow:auto!important;padding:8px 12px!important}
+ html.phL #gmSet .cfSec h3{font-size:16px!important;padding:6px 12px!important;margin:0 0 6px!important}
+ html.phL #gmSet .cfSec h3 small{display:none}
+ html.phL #gmSet .cfSec>p,html.phL #gmSet .cfSec .cfDesc,html.phL #gmSet .cfSec>.ui65desc{font-size:11px!important;margin:0 0 6px!important}
+ html.phL #gmSet .cfSec .cfg{padding:6px 12px!important;margin:0 0 6px!important;min-height:0!important}
+ html.phL #gmSet .cfSec .cfIn{gap:6px!important}
+
+ /* ---------- 명예의 전당 ---------- */
+ html.phL #gmHall #hfTop{left:104px!important;top:10px!important;flex-direction:row!important}
+ html.phL #gmHall .hfLeg{left:104px!important}
+ html.phL #gmHall #hfNav{top:44px!important;left:8px!important;max-height:calc(100% - 52px)!important}
+ html.phL #gmHall .hfTitle{white-space:nowrap}
+ `;document.head.appendChild(st);
+}catch(e){console.error('v76 phone land menus',e)}})();
+/* ================= v76 기기별 배치 (DV76) =================
+   컴퓨터 · 노트북 · 패드 · 휴대폰을 따로 판단해서 <html>에 표시를 붙이고, 기기마다 배치를 다르게 한다.
+   - dvPhone : 휴대폰(999995의 ph와 같음). 배치는 999995(폰 전용) · 999999(세로 전투) · 9999991(가로 메뉴)이 맡는다.
+   - dvPad   : 손가락 화면인데 휴대폰보다 큰 것(아이패드 · 갤럭시 탭). 누르기 쉽게 단추 · 목록을 크게,
+               세로 전투는 게임 화면을 위로 붙이고 아래 넓은 자리를 조작 칸으로.
+   - dvLap   : 마우스 화면인데 폭 1600 이하 또는 높이 900 이하(노트북). 높이가 낮으니 목록 · 단추를 촘촘하게.
+   - dvDesk  : 그보다 큰 모니터(컴퓨터). 기본 디자인에 목록을 조금 크게.
+   방향은 dvL(가로) · dvP(세로). */
+(()=>{try{
+ const root=document.documentElement,K=['dvPhone','dvPad','dvLap','dvDesk'];
+ function kind(){const w=innerWidth,h=innerHeight,coarse=matchMedia('(pointer:coarse)').matches,fine=matchMedia('(pointer:fine)').matches;
+  if(root.classList.contains('ph'))return 'dvPhone';
+  if(coarse&&!fine)return 'dvPad';
+  return (w<=1600||h<=900)?'dvLap':'dvDesk'}
+ function apply(){const k=kind();for(const c of K)root.classList.toggle(c,c===k);root.classList.toggle('dvL',innerWidth>innerHeight);root.classList.toggle('dvP',innerWidth<=innerHeight);window.DV76.kind=k}
+ window.DV76={kind:'',apply};
+ addEventListener('resize',()=>setTimeout(apply,30));addEventListener('orientationchange',()=>setTimeout(apply,300));apply();setTimeout(apply,500);
+
+ const st=document.createElement('style');st.id='dv76';st.textContent=`
+ /* ======== 컴퓨터(큰 모니터) ======== */
+ html.dvDesk #lvSet{width:min(400px,28vw)!important;gap:8px!important}
+ html.dvDesk .lvI{padding:10px 14px!important}
+ html.dvDesk .lvI b{font-size:22px!important}html.dvDesk .lvI.sel b{font-size:30px!important}
+ html.dvDesk .lvI small{font-size:10.5px!important}
+
+ /* ======== 노트북(높이가 낮은 화면) ======== */
+ html.dvLap #lvSet{width:min(350px,31vw)!important;bottom:auto!important;gap:2px!important;top:2px!important;padding:6px 8px 8px!important;border-radius:14px;
+  background:linear-gradient(90deg,#05070cd0,#05070c90 70%,transparent)!important}
+ html.dvLap .lvI{padding:5px 10px!important}
+ html.dvLap .lvI b{font-size:17px!important}html.dvLap .lvI.sel b{font-size:22px!important}
+ html.dvLap .lvI small{font-size:9px!important}
+ html.dvLap #gameMenu .gmHud>*{height:32px!important;font-size:12px!important}
+ html.dvLap #gmSet.cfFull #gmSetPanel{inset:58px 14px 12px!important}
+ html.dvLap #battleView .bar{min-height:0!important;padding-top:2px!important;padding-bottom:2px!important}
+
+ /* ======== 패드 ======== */
+ /* 로비: 손가락으로 누르기 쉬운 큰 목록, 무대 위에 겹쳐도 읽히게 반투명 판 */
+ html.dvPad.dvL #lvSet{width:min(380px,34vw)!important;bottom:auto!important;gap:6px!important;padding:10px!important;border-radius:18px;background:#05070cb8!important;backdrop-filter:blur(8px)}
+ html.dvPad .lvI{min-height:56px;padding:8px 14px!important;border-radius:14px!important}
+ html.dvPad .lvI b{font-size:21px!important}html.dvPad.dvL .lvI.sel b{font-size:25px!important}
+ html.dvPad #gameMenu .gmHud>*{min-height:44px!important;min-width:44px}
+ html.dvPad .gmBtn,html.dvPad #shopModal button,html.dvPad #gmSet button{min-height:44px}
+ html.dvPad #lvGoBtn{min-height:72px!important;font-size:24px!important}
+ /* 전투: 누르는 단추를 크게(패드는 손가락이 화면 끝까지 멀어서) */
+ html.dvPad .tbtn{zoom:1.3}
+ /* 세로 패드 전투: 게임 화면은 위로, 아래 넓은 자리는 조작 칸 */
+ html.dvPad.dvP #battleView{justify-content:flex-start!important;padding-top:max(8px,env(safe-area-inset-top))!important}
+ html.dvPad.dvP #battleView .bar{order:-1}
+ html.dvPad.dvP #battleView #arena{margin-top:6px!important}
+ html.dvPad.dvP .tbtn{zoom:1.55}
+ /* 세로 패드 메뉴: 설정 판을 위아래로 */
+ html.dvPad.dvP #gmSet.cfFull #gmSetPanel{grid-template-columns:1fr!important;grid-template-rows:auto 1fr!important}
+ html.dvPad.dvP #gmSet #cfNav{flex-direction:row!important;overflow-x:auto}
+ `;document.head.appendChild(st);
+}catch(e){console.error('v76 device',e)}})();
+/* ================= v76 렉 줄이기 (PF76) =================
+   - 상점(태엽 공방 · 스킨 상점)이 화면을 덮고 있으면 뒤의 로비 무대(lvDraw: 레이저 · 관객 · LED)는 안 보이므로 그리지 않는다.
+   - 캐릭터 그림 저장(820 ch2Render)과 스킨 상점 목록 그림 줄이기(99991 loop)는 각 파일에서 직접 한다. */
+(()=>{try{
+ const covered=()=>{const sm=document.getElementById('shopModal'),bb=document.getElementById('bbShop');return !!((sm&&!sm.hidden)||(bb&&bb.open))};
+ if(typeof lvDraw==='function'){const f=lvDraw;lvDraw=function(){if(covered())return;return f.apply(this,arguments)}}
+ window.PF76={covered};
+}catch(e){console.error('v76 perf',e)}})();
 </script></body></html>
