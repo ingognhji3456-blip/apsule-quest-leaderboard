@@ -224,6 +224,25 @@ def init_db():
             updated_at  DOUBLE PRECISION NOT NULL
         )
     ''')
+    # v92 PvP 결투: 골드 주고받기 장부(게임이 받아 가면 지움) · 전적
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS pvp_ledger (
+            id          TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            delta       BIGINT NOT NULL,
+            note        TEXT,
+            created_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS pvp_stats (
+            user_id     TEXT PRIMARY KEY,
+            wins        INTEGER NOT NULL DEFAULT 0,
+            losses      INTEGER NOT NULL DEFAULT 0,
+            gold_won    BIGINT NOT NULL DEFAULT 0,
+            updated_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
     db.commit()
     db.close()
 
@@ -1082,6 +1101,7 @@ def _duo_clean(now):
 
 def _duo_view(r, uid=None):
     return {'code': r['code'], 'owner': r['owner_name'], 'floor': r['floor'], 'diff': r['diff'], 'state': r['state'],
+            'kind': r.get('kind', 'coop'), 'ranked': bool(r.get('ranked')), 'stake': r.get('stake', 0),
             'players': [{'name': p['name'], 'lv': p['lv'], 'ch': p['ch'], 'owner': p['uid'] == r['owner'], 'me': p['uid'] == uid,
                          'online': time.time() - p['seen'] < 8} for p in r['players']]}
 
@@ -1097,7 +1117,7 @@ def duo_rooms():
     now = time.time()
     with _duo_lock:
         _duo_clean(now)
-        rooms = [_duo_view(r, user and user['user_id']) for r in _DUO.values() if r['state'] == 'wait' and len(r['players']) < 2]
+        rooms = [_duo_view(r, user and user['user_id']) for r in _DUO.values() if r['state'] == 'wait' and len(r['players']) < 2 and r.get('kind', 'coop') == 'coop']
     rooms.sort(key=lambda x: x['floor'])
     return jsonify(ok=True, rooms=rooms[:50])
 
@@ -1149,7 +1169,7 @@ def duo_join():
             return jsonify(ok=True, room=_duo_view(r, user['user_id']))
         if len(r['players']) >= 2 or r['state'] != 'wait':
             return _bad('이미 꽉 찬 방이에요', 409)
-        if best < r['floor']:
+        if best < r['floor'] and r.get('kind', 'coop') == 'coop':
             return _bad('%d층까지 올라가 본 사람만 들어올 수 있어요 (내 최고 %d층)' % (r['floor'], best), 403)
         r['players'].append({'uid': user['user_id'], 'name': user['username'], 'lv': clamp_int(body.get('lv'), 1, 9999, 1),
                              'ch': clamp_int(body.get('ch'), 0, 999, 0), 'seen': now})
@@ -1168,6 +1188,10 @@ def duo_leave():
     with _duo_lock:
         r = _DUO.get(code)
         if r:
+            if r.get('kind') == 'pvp' and r.get('ranked') and r['state'] == 'play' and not r.get('settled'):
+                other = next((p['uid'] for p in r['players'] if p['uid'] != user['user_id']), None)
+                if other:
+                    _pvp_settle(r, other, user['user_id'], '상대 기권')
             r['players'] = [p for p in r['players'] if p['uid'] != user['user_id']]
             r['seq'] += 1
             r['msgs'].append({'seq': r['seq'], 'from': '#', 'm': {'t': 'leave', 'name': user['username']}})
@@ -1236,6 +1260,176 @@ def duo_sync():
             r['msgs'] = r['msgs'][-_DUO_KEEP:]
         out = [x for x in r['msgs'] if x['seq'] > since and x['from'] != user['user_id'][:6]]
         return jsonify(ok=True, room=_duo_view(r, user['user_id']), msgs=out, seq=r['seq'], start_err=start_err)
+
+
+# ---------------- v92 PvP 결투 ----------------
+# 빠른 대전: 기다리는 사람과 바로 짝(메모리 대기열). 친구 대전: 방 코드(골드 없음).
+# 결과: 두 사람이 같은 결과를 보내면 확정 → 이긴 사람 +판돈, 진 사람 -판돈(장부 pvp_ledger, 게임이 받아 가서 골드에 반영).
+# 판돈 = 두 사람 중 골드가 적은 쪽의 10% (최소 20, 최대 5000, 그보다 골드가 적으면 가진 만큼).
+_PVPQ = {}
+_PVPMATCH = {}
+
+
+def _pvp_gold(db, uid):
+    row = db.execute('SELECT gold FROM player_stats WHERE user_id=?', (uid,)).fetchone()
+    return int(row['gold']) if row else 0
+
+
+def _pvp_stake(db, a, b):
+    m = min(_pvp_gold(db, a), _pvp_gold(db, b))
+    return max(0, min(m, max(20, min(5000, round(m * 0.1)))))
+
+
+def _pvp_settle(r, winner, loser, note):
+    """(락 안에서 부름) 한 번만 확정: 장부 · 전적"""
+    if r.get('settled'):
+        return
+    r['settled'] = {'winner': winner, 'loser': loser}
+    stake = int(r.get('stake') or 0)
+    now = time.time()
+    db = DB()
+    try:
+        for uid, delta, w in ((winner, stake, 1), (loser, -stake, 0)):
+            if stake:
+                db.execute('INSERT INTO pvp_ledger (id, user_id, delta, note, created_at) VALUES (?, ?, ?, ?, ?)',
+                           (secrets.token_hex(8), uid, delta, note, now))
+            if db.execute('SELECT 1 FROM pvp_stats WHERE user_id=?', (uid,)).fetchone():
+                db.execute('UPDATE pvp_stats SET wins=wins+?, losses=losses+?, gold_won=gold_won+?, updated_at=? WHERE user_id=?',
+                           (w, 1 - w, delta if w else 0, now, uid))
+            else:
+                db.execute('INSERT INTO pvp_stats (user_id, wins, losses, gold_won, updated_at) VALUES (?, ?, ?, ?, ?)',
+                           (uid, w, 1 - w, delta if w else 0, now))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _pvp_room(code, owner, players, ranked, stake, state):
+    now = time.time()
+    _DUO[code] = {'code': code, 'owner': owner['uid'], 'owner_name': owner['name'], 'floor': 10 * secrets.randbelow(70) + 5,
+                  'diff': 'normal', 'state': state, 'players': players, 'msgs': [], 'seq': 0, 'touched': now,
+                  'kind': 'pvp', 'ranked': ranked, 'stake': stake, 'claims': {}}
+    return _DUO[code]
+
+
+def _new_code():
+    for _ in range(50):
+        code = ''.join(secrets.choice(_DUO_CODE) for _ in range(4))
+        if code not in _DUO:
+            return code
+    return code
+
+
+@app.route('/api/pvp/queue', methods=['POST'])
+def pvp_queue():
+    """빠른 대전 찾기(1초마다 부름). 짝이 생기면 room을 돌려준다"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    uid = user['user_id']
+    now = time.time()
+    me = {'uid': uid, 'name': user['username'], 'lv': clamp_int(body.get('lv'), 1, 9999, 1),
+          'ch': clamp_int(body.get('ch'), 0, 999, 0), 'seen': now}
+    with _duo_lock:
+        _duo_clean(now)
+        code = _PVPMATCH.pop(uid, None)
+        if code and code in _DUO:
+            return jsonify(ok=True, room=_duo_view(_DUO[code], uid))
+        for k in [k for k, q in _PVPQ.items() if now - q['seen'] > 6]:
+            del _PVPQ[k]
+        other = next((q for k, q in _PVPQ.items() if k != uid), None)
+        if not other:
+            _PVPQ[uid] = me
+            return jsonify(ok=True, waiting=True, queue=len(_PVPQ))
+        del _PVPQ[other['uid']]
+        _PVPQ.pop(uid, None)
+        db = get_db()
+        stake = _pvp_stake(db, uid, other['uid'])
+        other = dict(other, seen=now)
+        r = _pvp_room(_new_code(), other, [other, me], True, stake, 'play')
+        _PVPMATCH[other['uid']] = r['code']
+        return jsonify(ok=True, room=_duo_view(r, uid))
+
+
+@app.route('/api/pvp/cancel', methods=['POST'])
+def pvp_cancel():
+    user = _duo_user()
+    if user:
+        with _duo_lock:
+            _PVPQ.pop(user['user_id'], None)
+            _PVPMATCH.pop(user['user_id'], None)
+    return jsonify(ok=True)
+
+
+@app.route('/api/pvp/create', methods=['POST'])
+def pvp_create():
+    """친구 대전 방(골드 주고받기 없음)"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    now = time.time()
+    me = {'uid': user['user_id'], 'name': user['username'], 'lv': clamp_int(body.get('lv'), 1, 9999, 1),
+          'ch': clamp_int(body.get('ch'), 0, 999, 0), 'seen': now}
+    with _duo_lock:
+        _duo_clean(now)
+        for r in list(_DUO.values()):
+            r['players'] = [p for p in r['players'] if p['uid'] != user['user_id']]
+            if not r['players'] or r['owner'] == user['user_id']:
+                r['state'] = 'closed'
+        r = _pvp_room(_new_code(), me, [me], False, 0, 'wait')
+        return jsonify(ok=True, room=_duo_view(r, user['user_id']))
+
+
+@app.route('/api/pvp/result', methods=['POST'])
+def pvp_result():
+    """내가 본 결과(win: true/false). 두 사람이 맞으면 확정. 상대가 20초 넘게 연결이 없으면 내 결과로 확정"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    win = bool(body.get('win'))
+    uid = user['user_id']
+    now = time.time()
+    with _duo_lock:
+        r = _DUO.get(code)
+        if not r or r.get('kind') != 'pvp':
+            return _bad('방이 사라졌어요', 404)
+        if not any(p['uid'] == uid for p in r['players']) and not (r.get('settled') and uid in r['settled'].values()):
+            return _bad('이 방에 없어요', 403)
+        r.setdefault('claims', {})[uid] = win
+        other = next((p for p in r['players'] if p['uid'] != uid), None)
+        if r.get('ranked') and not r.get('settled'):
+            oc = r['claims'].get(other['uid']) if other else None
+            if other and oc is not None:
+                if oc != win:
+                    _pvp_settle(r, uid if win else other['uid'], other['uid'] if win else uid, '결투')
+                else:
+                    r['settled'] = {'void': True}
+            elif other and win and now - other['seen'] > 20:
+                _pvp_settle(r, uid, other['uid'], '상대 연결 끊김')
+        st = r.get('settled') or {}
+        res = {'settled': bool(st) and not st.get('void'), 'void': bool(st.get('void')), 'stake': r.get('stake', 0),
+               'win': st.get('winner') == uid if st and not st.get('void') else None}
+        return jsonify(ok=True, **res)
+
+
+@app.route('/api/pvp/ledger', methods=['POST'])
+def pvp_ledger():
+    """아직 게임에 반영하지 않은 골드 변화를 받아 가고 지운다 + 내 전적"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    rows = db.execute('SELECT id, delta, note FROM pvp_ledger WHERE user_id=?', (user['user_id'],)).fetchall()
+    for x in rows:
+        db.execute('DELETE FROM pvp_ledger WHERE id=?', (x['id'],))
+    db.commit()
+    st = db.execute('SELECT wins, losses, gold_won FROM pvp_stats WHERE user_id=?', (user['user_id'],)).fetchone()
+    return jsonify(ok=True, items=[{'delta': int(x['delta']), 'note': x['note']} for x in rows],
+                   stats={'wins': st['wins'], 'losses': st['losses'], 'gold_won': int(st['gold_won'])} if st else {'wins': 0, 'losses': 0, 'gold_won': 0})
 
 
 @app.route('/api/save', methods=['GET'])
@@ -1587,7 +1781,7 @@ def api_account_delete():
         return _bad('확인용 아이디가 맞지 않아요', 400)
     db = get_db()
     uid = user['user_id']
-    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'player_stats', 'shop_entitlements', 'tester_links', 'users'):
+    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'player_stats', 'pvp_ledger', 'pvp_stats', 'shop_entitlements', 'tester_links', 'users'):
         db.execute('DELETE FROM %s WHERE user_id = ?' % table, (uid,))
     db.commit()
     return jsonify(ok=True)
