@@ -99,7 +99,7 @@
  function card(x){return '<button class="ssCard" data-tier="'+x.tier+'" data-id="'+x.id+'" data-cat="'+x.cat+'" aria-pressed="'+(sel[tab]===x.id)+'" style="--tc:'+x.col+'"><canvas width="72" height="72" data-k="'+x.kind+'" data-id="'+x.id+'"></canvas><div style="min-width:0"><em style="background:'+TIER_BG[x.tier]+'">'+x.tier+'</em><b>'+safe(x.name)+'</b><div class="sub">'+safe(x.en)+'</div></div><div>'+(owns(x)?'<div class="pr own">✓ 보유</div>':'<div class="pr">'+won(x.price)+'</div>'+(window.DIA80?'<div class="dpr">💎 '+DIA80.price(x).toLocaleString()+'</div>':''))+(isOn(x)?'<span class="on">'+(owns(x)?'장착 중':'입어보는 중')+'</span>':'')+'</div></button>'}
  function listTab(body){const L=items().filter(x=>x.cat===tab);if(!L.length){body.innerHTML='<div class="ssEmpty">상품을 불러오지 못했어요.</div>';return}
   if(!sel[tab]||!L.find(x=>x.id===sel[tab]))sel[tab]=L[0].id;const s=L.find(x=>x.id===sel[tab]),on=isOn(s),own=owns(s),P=PAY(),test=P&&P.test();
-  let list='';if(tab==='skin'){const pr=L.filter(x=>!x.variant),va=L.filter(x=>x.variant);list='<div class="ssSec">프리미엄 스킨</div>'+pr.map(card).join('')+'<div class="ssSec">변이 스킨 · 원래 캐릭터의 변이종</div>'+va.map(card).join('')}
+  let list='';if(tab==='skin'){const pr=L.filter(x=>!x.variant),va=L.filter(x=>x.variant);list='<div class="ssSec">프리미엄 캐릭터 · 사면 캐릭터 목록에 들어가요</div>'+pr.map(card).join('')+'<div class="ssSec">변이 스킨 · 원래 캐릭터의 변이종</div>'+va.map(card).join('')}
   else if(tab==='fx'){list='<div class="ssSec">승리 연출 · 보스를 쓰러뜨리는 순간</div>'+L.filter(x=>x.kind==='vic').map(card).join('')+'<div class="ssSec">로비 테마 · 메인 메뉴 무대</div>'+L.filter(x=>x.kind==='lob').map(card).join('')}
   else list=L.map(card).join('');
   const views=s.kind==='skin'?'<div class="ssViews">'+[['auto','돌려 보기'],['front','정면'],['side','옆'],['back','뒤']].map(([k,n])=>'<button data-v="'+k+'" aria-pressed="'+(viewMode===k)+'">'+n+'</button>').join('')+'</div>':'';
@@ -155,7 +155,7 @@
  function loop(now){if(!sheet.open){raf=0;return}try{const L=items(),cur=L.find(x=>x.cat===tab&&x.id===sel[tab]);const cv=sheet.querySelector('#ssCv');if(cv&&cur)drawItem(cv.getContext('2d'),cur,cv.width,cv.height,now,false);
   /* v76: 렉 줄이기 — 목록 카드 그림은 1초에 8번만, 화면에 보이는 카드만 다시 그린다 */
   if(now-(loop.mt||0)>=120){loop.mt=now;const vh=innerHeight;sheet.querySelectorAll('.ssCard canvas[data-id]').forEach(m=>{const r=m.getBoundingClientRect();if(r.bottom<0||r.top>vh||!r.width)return;const it=L.find(x=>x.id===m.dataset.id&&x.kind===m.dataset.k);if(it)drawItem(m.getContext('2d'),it,m.width,m.height,now,true)})}}catch(e){}raf=requestAnimationFrame(loop)}
- function open(t){if(t)tab=t;if(!sheet.open)sheet.showModal();build();if(!raf)raf=requestAnimationFrame(loop);try{if(PAY()&&account().token)PAY().refresh().then(()=>{if(sheet.open&&tab!=='owned')build()}).catch(()=>{})}catch(e){}}
+ function open(t,id){if(t)tab=t;if(t&&id)sel[t]=id;/* v84: 특정 상품을 바로 보여 주기 */if(!sheet.open)sheet.showModal();build();if(!raf)raf=requestAnimationFrame(loop);try{if(PAY()&&account().token)PAY().refresh().then(()=>{if(sheet.open&&tab!=='owned')build()}).catch(()=>{})}catch(e){}}
  sheet.addEventListener('close',()=>{if(raf)cancelAnimationFrame(raf);raf=0});
  sheet.addEventListener('keydown',e=>e.stopPropagation());
  sheet.addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===sheet)sheet.close()});

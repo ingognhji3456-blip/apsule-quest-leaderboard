@@ -179,3 +179,4 @@
 | `9999998-v82-new-gear.js` | 120 | 새 장비(`NG82`): CHARS · WEAPONS · PETS 10~24번, 캐릭터 그림 틀 `paintChar`(부품 조합, 앞·옆·뒤) → `CH2DEF[10~24]`, 새 무기 종류(`WSPR`) · 필살기는 `w.ult`(기본 종류), 새 무기 칸도 현질 검이 덮도록 `PAY58.swordFor`, 특성 흡혈 `leech` · 막기 `guard` · 대시 효과 `dashFx`(CB81 감싸기), 새 캐릭터 · 펫 변이 스킨(`SKIN58.list` 140~ · `PET59.list`) |
 | `9999999-v82-detail.js` | 110 | 디테일 패스: 새 펫 15 손그림(300과 같은 방식), 새 캐릭터 음영 · 소품(`PROP`), 무기 25종 도트 리마스터(`POM` 손잡이 끝 · `GUARD` 코등이 · `blade` 칼날 · `HEAD` 머리) |
 | `99999991-v83-level-ranking.js` | 60 | 레벨(`LV83`): `saveData.lv83={lv,xp,tot}`, 경험치는 `CB81.onKill` · 층 클리어 · `fightEnd` 감싸기에서, 로비 칩 `#gmLv`, 서버에 `PUT /api/stats`. 랭킹 창(`RANK83`, 탭 score · level · floor · gold) |
+| `99999992-v84-tiers-premchars.js` | 45 | 등급 정리 · 프리미엄 캐릭터(`TP84`): 공방 목록 정렬(`sortGrid`, 화면 순서만), 프리미엄 스킨 3종 → `CHARS[25~27]`(`prem` = 스킨 id, 그림은 스킨 `CH2DEF` 그대로), 공방 버튼 · 스킨 장착 ↔ 캐릭터 목록 동기화(`sync`) |
