@@ -21,3 +21,9 @@ services:
       # 결제창에 보여 줄 환불·문의 연락처 (예: 이메일)
       - key: SHOP_CONTACT
         sync: false
+      # (구글 플레이 앱) PWABuilder가 준 assetlinks.json 의 package_name 과 sha256 지문.
+      # 지문이 여러 개면 쉼표로 이어서. 자세한 건 game/구글플레이_출시_안내.md
+      - key: TWA_PACKAGE
+        sync: false
+      - key: TWA_SHA256
+        sync: false

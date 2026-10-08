@@ -1087,6 +1087,150 @@ async function start(){try{
 async function finish(response){try{note.textContent='인증 확인 중…';const h={'Content-Type':'application/json'};if(mode==='link')h.Authorization='Bearer '+token;const r=await fetch(base+'/api/google/'+mode,{method:'POST',headers:h,body:JSON.stringify({credential:response.credential,nonce})});const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Google 로그인에 실패했어요');window.opener?.postMessage({type:'beatblade-google-auth',ok:true,mode,token:j.token||'',username:j.username||'',google_linked:!!j.google_linked},'*');window.close();}catch(e){fail(e.message)}}start();
 </script></html>''', mode=mode)
 
+# =====================================================================
+# 구글 플레이 앱(TWA) 준비: 앱 설정 파일 · 오프라인 저장 · 아이콘 · 앱 연결 확인 ·
+# 개인정보처리방침 · 계정 삭제
+# 안내 문서: game/구글플레이_출시_안내.md
+# =====================================================================
+APP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'game', 'app')
+# PWABuilder가 알려 주는 앱 패키지 이름과 서명 지문(SHA-256)을 Render 환경변수에 넣는다.
+TWA_PACKAGE = os.environ.get('TWA_PACKAGE', '').strip()
+TWA_SHA256 = [x.strip() for x in os.environ.get('TWA_SHA256', '').split(',') if x.strip()]
+
+APP_MANIFEST = {
+    'name': 'BEAT BLADE · MACHINA',
+    'short_name': 'BEAT BLADE',
+    'description': '박자에 맞춰 베는 리듬 액션. 70명의 보스와 7개의 챕터.',
+    'lang': 'ko',
+    'id': '/play',
+    'start_url': '/play?source=app',
+    'scope': '/',
+    'display': 'fullscreen',
+    'orientation': 'landscape',
+    'background_color': '#07060f',
+    'theme_color': '#07060f',
+    'categories': ['games', 'music'],
+    'icons': [
+        {'src': '/app/icon-192.png', 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any'},
+        {'src': '/app/icon-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any'},
+        {'src': '/app/icon-maskable-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'maskable'},
+    ],
+}
+
+# 오프라인 저장(서비스 워커): 게임 파일은 저장해 둔 것을 먼저 보여 주고 뒤에서 새 버전을 받아 둔다
+# (그래서 서버를 고치면 앱에는 "다음 실행"부터 반영). /api/ · /pay/ 는 절대 저장하지 않는다.
+SW_JS = r"""const C='bb-app-v1';
+self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(['/play','/manifest.webmanifest','/app/icon-192.png','/app/icon-512.png'])).catch(()=>{}))});
+self.addEventListener('activate',e=>e.waitUntil((async()=>{for(const k of await caches.keys())if(k!==C)await caches.delete(k);await self.clients.claim()})()));
+self.addEventListener('fetch',e=>{const q=e.request,u=new URL(q.url);if(q.method!=='GET'||u.origin!==location.origin)return;
+ if(u.pathname==='/play'||u.pathname==='/play/'){e.respondWith(caches.open(C).then(async c=>{const hit=await c.match('/play');
+  const net=fetch(q).then(r=>{if(r.ok)c.put('/play',r.clone());return r}).catch(()=>null);
+  if(hit){e.waitUntil(net);return hit}const r=await net;return r||new Response('<meta charset=utf-8><body style="background:#07060f;color:#eee;font:16px sans-serif;padding:24px">인터넷에 연결한 뒤 다시 열어 주세요.',{status:503,headers:{'Content-Type':'text/html; charset=utf-8'}})}));return}
+ if(u.pathname.startsWith('/app/')||u.pathname==='/manifest.webmanifest'){e.respondWith(caches.match(q).then(h=>h||fetch(q).then(r=>{if(r.ok){const cl=r.clone();caches.open(C).then(c=>c.put(q,cl))}return r})))}});
+"""
+
+
+@app.route('/manifest.webmanifest')
+def app_manifest():
+    resp = app.response_class(json.dumps(APP_MANIFEST, ensure_ascii=False), mimetype='application/manifest+json')
+    resp.headers['Cache-Control'] = 'no-cache'
+    return resp
+
+
+@app.route('/sw.js')
+def app_service_worker():
+    resp = app.response_class(SW_JS, mimetype='application/javascript')
+    resp.headers['Cache-Control'] = 'no-cache'
+    resp.headers['Service-Worker-Allowed'] = '/'
+    return resp
+
+
+@app.route('/app/<name>')
+def app_file(name):
+    if not re.fullmatch(r'[a-z0-9-]+\.png', name):
+        return _bad('없는 파일이에요', 404)
+    resp = send_from_directory(APP_DIR, name)
+    resp.headers['Cache-Control'] = 'public, max-age=86400'
+    return resp
+
+
+@app.route('/.well-known/assetlinks.json')
+def app_assetlinks():
+    """구글 플레이 앱이 "이 사이트의 공식 앱"임을 확인하는 파일. 주소창 없이 전체 화면으로 뜨게 해 준다."""
+    links = []
+    if TWA_PACKAGE and TWA_SHA256:
+        links.append({'relation': ['delegate_permission/common.handle_all_urls'],
+                      'target': {'namespace': 'android_app', 'package_name': TWA_PACKAGE,
+                                 'sha256_cert_fingerprints': TWA_SHA256}})
+    resp = jsonify(links)
+    resp.headers['Cache-Control'] = 'no-cache'
+    return resp
+
+
+INFO_PAGE = r"""<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ title }} · BEAT BLADE</title>
+<style>body{margin:0;background:#0b0d16;color:#e8ecf8;font:15px/1.75 system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif}main{max-width:760px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:24px;margin:0 0 6px}h2{font-size:17px;margin:26px 0 6px;color:#ffd166}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #ffffff22;padding:7px 9px;text-align:left;vertical-align:top}th{background:#ffffff0c}
+.sub{color:#9fb0c8;font-size:13px}input{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #ffffff33;background:#121726;color:#fff;font:15px inherit;margin:4px 0 10px}
+button{padding:12px 16px;border-radius:10px;border:0;background:#ff5a6a;color:#fff;font:800 15px inherit;cursor:pointer}button:disabled{opacity:.5}.msg{margin-top:12px;white-space:pre-line}.box{padding:16px;border-radius:14px;background:#121726;border:1px solid #ffffff1a}</style>
+<main>{{ body|safe }}</main></html>"""
+
+
+@app.route('/privacy')
+def app_privacy():
+    contact = SHOP_CONTACT or '(운영자 연락처를 SHOP_CONTACT 환경변수에 넣어 주세요)'
+    body = render_template_string(r"""<h1>개인정보처리방침</h1><div class="sub">BEAT BLADE · MACHINA · 시행일 {{ day }}</div>
+<h2>1. 모으는 정보와 쓰는 곳</h2>
+<table><tr><th>정보</th><th>언제</th><th>쓰는 곳</th></tr>
+<tr><td>아이디, 비밀번호(복원할 수 없게 바꿔서 저장)</td><td>가입할 때</td><td>로그인</td></tr>
+<tr><td>Google 계정 고유번호(이메일·이름은 저장하지 않음)</td><td>Google로 로그인·연결할 때</td><td>로그인</td></tr>
+<tr><td>게임 진행 기록, 랭킹 점수</td><td>로그인해서 게임할 때</td><td>다른 기기에서 이어 하기, 랭킹 표시(아이디와 점수가 다른 사람에게 보임)</td></tr>
+<tr><td>구매 기록(주문 번호, 상품, 금액, 결제 수단 종류)</td><td>상품을 살 때</td><td>산 상품 지급·확인, 환불 처리</td></tr>
+<tr><td>접속 IP(잠깐)</td><td>로그인 시도할 때</td><td>비밀번호 무차별 대입 막기(메모리에만 잠깐, 저장 안 함)</td></tr></table>
+<p>카드 번호 등 결제 정보는 결제 회사(토스페이먼츠)가 처리하며, 이 게임 서버에는 저장되지 않습니다. 광고나 분석 도구는 쓰지 않습니다. 기기 안(브라우저 저장소)에는 게임 기록과 로그인 정보가 저장됩니다.</p>
+<h2>2. 다른 곳에 맡기거나 주는 정보</h2>
+<p>서버 운영(Render), 데이터 보관(설정한 경우 Postgres 서비스), 결제(토스페이먼츠), Google 로그인(Google). 법에 따른 요청이 아니면 다른 곳에 주지 않습니다.</p>
+<h2>3. 보관 기간과 지우기</h2>
+<p>계정을 지우면 아이디·진행 기록·랭킹·보유 상품·Google 연결 정보를 바로 지웁니다. 다만 구매 기록은 전자상거래법에 따라 5년 동안 보관한 뒤 지웁니다.</p>
+<p>계정 삭제: 게임 안 「👤 계정」 → 「계정 삭제」, 또는 <a href="/delete-account" style="color:#7dd8ff">계정 삭제 페이지</a>.</p>
+<h2>4. 어린이</h2><p>만 14세 미만은 보호자 동의를 받고 가입해 주세요. 만 19세 미만은 보호자 동의를 받고 결제해 주세요.</p>
+<h2>5. 문의</h2><p>{{ contact }}</p>""", day=time.strftime('%Y-%m-%d'), contact=contact)
+    return render_template_string(INFO_PAGE, title='개인정보처리방침', body=body)
+
+
+@app.route('/delete-account')
+def app_delete_page():
+    body = r"""<h1>계정 삭제</h1><div class="sub">BEAT BLADE · MACHINA</div>
+<p>계정을 지우면 <b>아이디, 진행 기록, 랭킹, 산 상품, Google 연결</b>이 모두 지워지고 되돌릴 수 없어요. (구매 기록은 법에 따라 5년 보관)</p>
+<p>게임 안에서는 「👤 계정」 → 「계정 삭제」로도 지울 수 있어요. Google로만 로그인하는 계정은 게임 안에서 지워 주세요.</p>
+<div class="box"><label>아이디<input id="u" autocomplete="username"></label><label>비밀번호<input id="p" type="password" autocomplete="current-password"></label>
+<button id="go">계정 영구 삭제</button><div class="msg" id="m"></div></div>
+<script>
+const m=document.getElementById('m'),go=document.getElementById('go');
+go.onclick=async()=>{const u=document.getElementById('u').value.trim(),p=document.getElementById('p').value;if(!u||!p){m.textContent='아이디와 비밀번호를 넣어 주세요.';return}
+ if(!confirm(u+' 계정을 정말 지울까요? 되돌릴 수 없어요.'))return;go.disabled=true;m.textContent='지우는 중…';
+ try{let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});let j=await r.json();if(!r.ok||!j.token)throw Error(j.error||'로그인하지 못했어요');
+  r=await fetch('/api/account/delete',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+j.token},body:JSON.stringify({confirm:j.username||u})});j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'지우지 못했어요');
+  m.textContent='계정을 지웠어요. 이용해 주셔서 고마워요.';}catch(e){m.textContent=e.message;go.disabled=false}};
+</script>"""
+    return render_template_string(INFO_PAGE, title='계정 삭제', body=body)
+
+
+@app.route('/api/account/delete', methods=['POST'])
+def api_account_delete():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    data = request.get_json(silent=True) or {}
+    if data.get('confirm') != user['username']:
+        return _bad('확인용 아이디가 맞지 않아요', 400)
+    db = get_db()
+    uid = user['user_id']
+    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'shop_entitlements', 'users'):
+        db.execute('DELETE FROM %s WHERE user_id = ?' % table, (uid,))
+    db.commit()
+    return jsonify(ok=True)
+
+
 init_db()
 
 if __name__ == '__main__':
