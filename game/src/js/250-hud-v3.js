@@ -38,7 +38,7 @@ function drawPlayerHUD(now){const x=6,y=H-33,w=112,r=clamp(P.hp/P.maxhp,0,1);P.h
  {const t=Math.max(0,Math.ceil(P.hp))+' / '+P.maxhp;ctx.font='bold 8px monospace';ctx.textAlign='left';ctx.fillStyle='#05090b';for(const [ox,oy] of [[-1,0],[1,0],[0,-1],[0,1],[1,1]])ctx.fillText(t,bx+4+ox,by+8+oy);ctx.fillStyle='#ffffff';ctx.fillText(t,bx+4,by+8)}
  ctx.fillStyle='#ffe79a';ctx.font='bold 7px monospace';ctx.fillText(PNAME(),x,y-6);
  const st=P.stam===undefined?1:P.stam,sy=by+13,shk=P.stamShake&&now-P.stamShake<250?Math.round(Math.sin(now/20)*2):0;ctx.fillStyle=P.stamLock?'#ff9aa8':'#8dcdf5';ctx.font='bold 6px monospace';ctx.fillText(P.stamLock?'충전':'DASH',x+shk,sy+7);
- const NC=curChar().dash;for(let i=0;i<NC;i++){const cx=bx+i*(w/NC)+shk,cw=w/NC-2,f=clamp((st-i*.2)/.2,0,1);R(cx,sy,cw,7,'#161c22');R(cx+1,sy+1,cw-2,5,'#10222e');if(f>0){R(cx+1,sy+1,(cw-2)*f,5,P.stamLock?'#4a6a8a':'#8dcdf5');R(cx+1,sy+1,(cw-2)*f,1,P.stamLock?'#6a8aaa':'#d8f4ff')}}
+ const NC=Math.max(1,Math.round(stamMax()/.2));/* v81: 태엽 세트 +1칸도 보이게 */for(let i=0;i<NC;i++){const cx=bx+i*(w/NC)+shk,cw=w/NC-2,f=clamp((st-i*.2)/.2,0,1);R(cx,sy,cw,7,'#161c22');R(cx+1,sy+1,cw-2,5,'#10222e');if(f>0){R(cx+1,sy+1,(cw-2)*f,5,P.stamLock?'#4a6a8a':'#8dcdf5');R(cx+1,sy+1,(cw-2)*f,1,P.stamLock?'#6a8aaa':'#d8f4ff')}}
  if(P.stamLock)RA(bx,sy,w*st/(NC*.2),7,'#ffffff',.12+.1*Math.sin(now/90))}
 function drawPlayerBar(now){drawPlayerHUD(now)}
 function drawPlayerBarCave(now){drawPlayerHUD(now);

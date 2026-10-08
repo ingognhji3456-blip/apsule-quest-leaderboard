@@ -65,6 +65,8 @@
  const st0=document.createElement('style');st0.textContent=`
  #acctBox{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;background:#000b;color:#eaf6ef;font-family:${typeof FONT_STACK!=='undefined'?FONT_STACK:'sans-serif'}}
  #acctBox[hidden]{display:none}
+ #acctBox .acG81{border-color:#a6f5c688!important;box-shadow:0 0 18px #a6f5c622}
+ #acctBox .acOld{margin-top:12px;font-size:13px;color:#9ab8ac}#acctBox .acOld summary{cursor:pointer;padding:4px 0}
  #acctBox .acGate{margin:-4px 0 10px;padding:8px 12px;border-radius:10px;background:linear-gradient(90deg,#1f4a3c,#14262a);color:#a6f5c6;font-weight:900;font-size:13px;letter-spacing:.04em}
  .acPanel{width:min(400px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;box-sizing:border-box;padding:20px;border-radius:10px;background:linear-gradient(180deg,#15232b,#0a1216);box-shadow:0 0 0 2px #05080a,0 0 0 4px #a6f5c6,0 12px 40px #000c}
  .acPanel h3{margin:0 0 4px;font-size:22px;letter-spacing:.12em;text-shadow:0 3px 0 #0009}
@@ -104,14 +106,14 @@
   drawBase();const epoch=++googleEpoch;
   if(pend||(needName&&A.token))return;
   const p=$('acPanel'), area=document.createElement('div');area.className='acCard';area.style.marginTop='12px';
-  p.appendChild(area);
+  const slot0=$('acGoogleSlot');if(slot0&&!A.token){slot0.appendChild(area);area.classList.add('acG81')}else p.appendChild(area);
   if(location.origin!=='https://capsule-quest-leaderboard.onrender.com'){
    const linking=!!A.token;
-   area.innerHTML='<b>파일에서도 Google 로그인</b><div class="acNote">'+(linking?'현재 아이디 기록에 Google 계정을 연결해요.':'Google 계정으로 로그인하면 서버 기록을 불러와요.')+'</div><button class="gmBtn" id="fileGoogle">'+(linking?'Google 계정 연결':'Google 로그인')+'</button><div class="acNote" style="margin-top:10px">Google 인증 창이 새 탭으로 열립니다.</div>';
+   area.innerHTML='<b>'+(linking?'파일에서도 Google 로그인':'Google 계정으로 시작')+'</b><div class="acNote">'+(linking?'현재 아이디 기록에 Google 계정을 연결해요.':'Google 계정으로 로그인하면 서버 기록을 불러와요.')+'</div><button class="gmBtn" id="fileGoogle">'+(linking?'Google 계정 연결':'Google 로그인')+'</button><div class="acNote" style="margin-top:10px">Google 인증 창이 새 탭으로 열립니다.</div>';
    $('fileGoogle').onclick=()=>{const u='https://capsule-quest-leaderboard.onrender.com/google-bridge?mode='+(linking?'link':'login')+(linking?'#token='+encodeURIComponent(A.token):'');const w=window.open(u,'beatbladeGoogle','width=460,height=650');if(!w)msg('팝업을 허용해 주세요')};return;
   }
   const linking=!!A.token, token=A.token, server=A.url;
-  const note=document.createElement('div');note.className='acNote';note.textContent=linking?'기존 기록 그대로 Google 계정을 연결할 수 있어요.':'기존 기록이 있다면 먼저 아이디로 로그인한 뒤 Google 계정을 연결해 주세요.';area.appendChild(note);
+  const note=document.createElement('div');note.className='acNote';note.textContent=linking?'기존 기록 그대로 Google 계정을 연결할 수 있어요.':'Google 버튼을 불러오는 중…';area.appendChild(note);
   const button=document.createElement('button');button.className='gmBtn';button.textContent=linking?'Google 계정 연결':'Google 로그인 준비';area.appendChild(button);
   const slot=document.createElement('div');slot.style.cssText='margin-top:10px;min-height:4px';area.appendChild(slot);
   const current=()=>epoch===googleEpoch&&A.token===token&&A.url===server&&area.isConnected;
@@ -142,8 +144,10 @@
      }});
     slot.replaceChildren();google.accounts.id.renderButton(slot,{type:'standard',theme:'outline',size:'large',text:linking?'continue_with':'signin_with',locale:'ko',width:240});
     note.textContent=linking?'아래 Google 버튼을 눌러 연결할 계정을 선택해 주세요.':'아래 Google 버튼을 눌러 로그인해 주세요.';button.textContent='버튼 다시 불러오기';button.disabled=false;
-   }catch(e){if(current()){note.textContent=e.message;button.disabled=false}}
+   }catch(e){if(current()){note.textContent=e.message;button.disabled=false;if(/연결|불러오지|지연/.test(e.message)&&!netFail&&locked()){netFail=true;draw()}}}
   };
+  /* v81: 로그인 전에는 Google 버튼을 바로 불러온다(한 번 더 누를 필요 없게) */
+  if(!linking)setTimeout(()=>{if(current()&&!button.disabled)button.onclick()},30);
  }
 
  let tab='login';
@@ -177,34 +181,29 @@
     '<div class="acRow"><button class="gmBtn" id="acNow">지금 저장</button><button class="gmBtn" id="acRank">🏆 랭킹</button></div><div class="acRow"><button class="gmBtn" id="acOut">로그아웃</button><button class="gmBtn" id="acClose">닫기</button></div>';
    $('acNow').onclick=async()=>{msg('저장하는 중…',true);await push(false);if(st==='ok'||st==='')msg('저장했어요',true);else if(!pend)msg(stText());draw()};
    $('acOut').onclick=async()=>{await push(false);api('/api/logout','POST');try{if(window.google)google.accounts.id.disableAutoSelect()}catch(e){};A.token='';A.rev=0;A.synced='';keep();pend=null;setSt('');gate=!autoTest();draw();msg('로그아웃했어요. 이 기기의 기록은 그대로 남아요.',true)};
-   $('acClose').onclick=close;$('acRank').onclick=openRank;return}
-  /* 로그인 전 */
-  const reg=tab==='reg';
-  p.innerHTML='<h3>👤 계정</h3><div class="acNote">로그인하면 진행 기록이 서버에 저장돼서, 폰·컴퓨터 어디서든 이어서 할 수 있어요.'+(st==='lost'?'<br><b style="color:#ffb020">로그인이 끝났어요. 다시 로그인해 주세요.</b>':'')+'</div>'+
-   '<div class="acTabs"><button class="gmBtn'+(reg?'':' on')+'" id="acTL">로그인</button><button class="gmBtn'+(reg?' on':'')+'" id="acTR">새 계정 만들기</button></div>'+
-   '<label>아이디<input id="acId" maxlength="16" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="한글·영문·숫자 2~16자" value="'+esc(A.user||'')+'"></label>'+
-   '<label>비밀번호<input id="acPw" type="password" maxlength="64" autocomplete="'+(reg?'new-password':'current-password')+'" placeholder="6자 이상"></label>'+
-   (reg?'<label>비밀번호 한 번 더<input id="acPw2" type="password" maxlength="64" autocomplete="new-password"></label>':'')+
-   '<div class="acMsg" id="acMsg"></div><div class="acRow"><button class="gmBtn go" id="acGo" style="font-size:16px">'+(reg?'만들고 로그인':'로그인')+'</button>'+(locked()?'':'<button class="gmBtn" id="acClose">닫기</button>')+'</div>'+
+   $('acClose').onclick=close;$('acRank').onclick=()=>{if(window.RANK83){close();RANK83.open()}else openRank()};return}
+  /* 로그인 전 — v81: Google로만 로그인 · 가입. 예전 아이디 계정은 한 번 로그인해서 Google을 연결하는 용도로만(접혀 있음) */
+  p.innerHTML='<h3>👤 Google로 로그인</h3><div class="acNote">Google 계정으로 로그인하면 진행 기록이 서버에 저장돼서, 폰·컴퓨터 어디서든 이어서 할 수 있어요. 처음이면 그대로 가입돼요.'+(st==='lost'?'<br><b style="color:#ffb020">로그인이 끝났어요. 다시 로그인해 주세요.</b>':'')+'</div>'+
+   '<div id="acGoogleSlot"></div><div class="acMsg" id="acMsg"></div>'+(locked()?'':'<div class="acRow"><button class="gmBtn" id="acClose">닫기</button></div>')+
    (locked()&&netFail?'<div class="acRow"><button class="gmBtn" id="acOff">서버 연결이 안 돼요 · 오프라인으로 하기</button></div><div class="acNote">오프라인으로 하면 기록이 이 기기에만 남고 랭킹에 오르지 않아요. 다음에 켤 때 다시 로그인 화면이 나와요.</div>':'')+
-   (reg?'<div class="acNote" style="margin-top:10px">비밀번호를 잊으면 되찾을 수 없어요. 다른 곳에 쓰지 않는 비밀번호로 정해 주세요.</div>':'')+
+   '<details class="acOld"><summary>예전 아이디 계정이 있어요</summary><div class="acNote">예전에 아이디·비밀번호로 만든 계정은 여기서 한 번 로그인한 뒤, 계정 창의 「Google 계정 연결」을 눌러 주세요. 그다음부터는 Google로 들어올 수 있어요. 새 아이디 가입은 더 이상 안 돼요.</div>'+
+   '<label>아이디<input id="acId" maxlength="16" autocomplete="username" autocapitalize="off" spellcheck="false" value="'+esc(A.user&&!/^G_/.test(A.user)?A.user:'')+'"></label>'+
+   '<label>비밀번호<input id="acPw" type="password" maxlength="64" autocomplete="current-password"></label><div class="acRow"><button class="gmBtn" id="acGo">아이디로 로그인</button></div></details>'+
    '<details><summary>서버 주소</summary><input id="acUrl" spellcheck="false" autocapitalize="off" value="'+esc(A.url)+'"><button class="gmBtn" id="acUrlOk" style="padding:7px 12px;font-size:13px">바꾸기</button></details>';
-  $('acTL').onclick=()=>{tab='login';draw()};$('acTR').onclick=()=>{tab='reg';draw()};if($('acClose'))$('acClose').onclick=close;
+  if($('acClose'))$('acClose').onclick=close;
   if($('acOff'))$('acOff').onclick=()=>{offline=true;close()};
   if(locked())p.insertAdjacentHTML('afterbegin','<div class="acGate">BEAT BLADE · 시작하려면 로그인해 주세요</div>');
   $('acUrlOk').onclick=()=>{const v=$('acUrl').value.trim();if(!/^https?:\/\/\S+$/.test(v))return msg('http:// 또는 https:// 로 시작하는 주소를 넣어 주세요');A.url=v;keep();msg('서버 주소를 바꿨어요',true)};
   const go=async()=>{const id=$('acId').value.trim(),pw=$('acPw').value;
    if(!/^[0-9A-Za-z가-힣_]{2,16}$/.test(id))return msg('아이디는 2~16자의 한글·영문·숫자·_ 만 쓸 수 있어요');
-   if(pw.length<6)return msg('비밀번호는 6자 이상으로 해 주세요');
-   if(reg&&pw!==$('acPw2').value)return msg('비밀번호가 서로 달라요');
+   if(pw.length<6)return msg('비밀번호는 6자 이상이에요');
    const b=$('acGo');b.disabled=true;msg('서버에 연결하는 중… (서버가 자고 있으면 1분쯤 걸려요)',true);
-   const r=await api(reg?'/api/register':'/api/login','POST',{username:id,password:pw});b.disabled=false;
+   const r=await api('/api/login','POST',{username:id,password:pw});b.disabled=false;
    if(r.s!==200||!r.j.token){if(r.s===0&&!netFail){netFail=true;draw();msg('서버에 연결할 수 없어요. 인터넷을 확인하고 다시 눌러 주세요')}return msg(r.j.error||'잠시 뒤에 다시 해 주세요')}
    A.user=r.j.username;A.token=r.j.token;A.rev=0;A.synced='';keep();setSt('');msg('로그인했어요! 기록을 맞추는 중…',true);
-   syncName();await pull(true);if(!pend&&boxOn){if(gate){close();return}draw();msg(reg?'계정을 만들었어요. 이제 기록이 자동으로 저장돼요.':'로그인했어요. 기록을 맞췄어요.',true)}else if(pend)draw()};
+   syncName();await pull(true);if(!pend&&boxOn){draw();msg('로그인했어요. 아래 「Google 계정 연결」을 눌러 Google로도 들어올 수 있게 해 주세요.',true)}else if(pend)draw()};
   $('acGo').onclick=go;
-  for(const id of ['acId','acPw','acPw2'])if($(id))$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go()}});
-  setTimeout(()=>{try{($('acId').value?$('acPw'):$('acId')).focus({preventScroll:true})}catch(e){}},30)}
+  for(const id of ['acId','acPw'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go()}})}
 
  /* ---------- 메뉴 위쪽 단추 ---------- */
  function stText(){return st==='ok'?'☁ 서버에 저장됨':st==='up'?'☁ 저장하는 중…':st==='off'?'⚠ 서버에 연결 안 됨 (나중에 다시 저장해요)':st==='clash'?'⚠ 기록이 엇갈려요 — 눌러서 고르기':st==='lost'?'⚠ 다시 로그인해 주세요':''}

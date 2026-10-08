@@ -8,16 +8,23 @@
  const RE=/^\s*(✕\s*)?닫기(\s*✕)?\s*$/;
  const st=document.createElement('style');st.id='cx77';st.textContent=`
  html body button.cx77,html body #bbShop .ssX{all:unset;box-sizing:border-box;display:inline-flex!important;align-items:center;justify-content:center;flex:none;
-  width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;padding:0!important;margin:0!important;border-radius:50%!important;cursor:pointer;
+  width:var(--cxs,44px)!important;height:var(--cxs,44px)!important;min-width:var(--cxs,44px)!important;min-height:var(--cxs,44px)!important;pointer-events:auto!important;touch-action:manipulation;padding:0!important;margin:0!important;border-radius:50%!important;cursor:pointer;
   background:radial-gradient(circle at 35% 30%,#ff7a8a,#e0284a 60%,#9a1030)!important;color:#fff!important;font:900 22px/1 system-ui,sans-serif!important;
   border:2px solid #ffffffcc!important;box-shadow:0 0 0 3px #e0284a55,0 6px 16px #000a,0 0 18px #ff3a5a88!important;text-shadow:0 1px 2px #0008;
   transition:transform .12s,box-shadow .12s;-webkit-tap-highlight-color:transparent;z-index:5}
  html body button.cx77:hover,html body #bbShop .ssX:hover{transform:scale(1.1) rotate(90deg);box-shadow:0 0 0 4px #ff3a5a77,0 6px 16px #000a,0 0 26px #ff3a5acc!important}
  html body button.cx77:active,html body #bbShop .ssX:active{transform:scale(.92)}
- /* ✕ 글자는 글꼴마다 크기가 달라서, 굵은 막대 두 개로 직접 그린다 */
+ /* ✕ 글자는 글꼴마다 크기가 달라서, 굵은 막대 두 개(+자를 45도 돌림)로 직접 그린다 */
  html body button.cx77{position:relative;color:transparent!important;text-shadow:none!important}
- html body button.cx77::before,html body button.cx77::after{content:"";position:absolute;left:50%;top:50%;width:20px;height:4px;border-radius:2px;background:#fff;box-shadow:0 1px 2px #0006;transform:translate(-50%,-50%) rotate(45deg)}
- html body button.cx77::after{transform:translate(-50%,-50%) rotate(-45deg)}
+ html body button.cx77::after{content:"";position:absolute;left:50%;top:50%;width:46%;height:46%;pointer-events:none;
+  background:linear-gradient(#fff,#fff) center/100% 18% no-repeat,linear-gradient(#fff,#fff) center/18% 100% no-repeat;filter:drop-shadow(0 1px 1px #0006);transform:translate(-50%,-50%) rotate(45deg)}
+ /* v79: 손가락이 단추 가장자리 밖을 눌러도 닫히게 — 보이지 않는 누르는 자리를 둘레로 넓힌다 */
+ html body button.cx77::before,html body #bbShop .ssX::before{content:"";position:absolute;inset:calc(var(--cxs,44px) * -.35);border-radius:50%}
+ html body #bbShop .ssX{position:relative}
+ /* 폰에서 창 전체를 줄여 그리는 곳(zoom)에서는 ✕가 같이 작아지지 않게 되돌린다 */
+ html.uiFit :is(#shopModal,#acctBox,#bbShop){--cxs:calc(44px / var(--uis,1))}
+ html.ph :is(#shopModal,#acctBox,#bbShop,#gameMenu){--cxs:calc(48px / var(--uis,1))}
+ html.phL #shopModal #shopClose{margin-right:env(safe-area-inset-right,0px)!important}
  html body button.cx77:focus-visible{outline:3px solid #ffe79a;outline-offset:2px}
  #acPanel{position:relative}
  #acPanel>button#acClose.cx77{position:absolute!important;top:10px;right:10px}
@@ -25,7 +32,7 @@
  `;document.head.appendChild(st);
  function fix(){document.querySelectorAll('button:not(.cx77)').forEach(b=>{if(!RE.test(b.textContent||''))return;
    b.textContent='✕';b.classList.add('cx77');b.setAttribute('aria-label','닫기');b.title='닫기';
-   /* 다른 화면의 단추 글씨 크기 규칙이 더 세서, 크기는 단추에 직접 박는다 */for(const [k,v] of [['font-size','22px'],['width','42px'],['height','42px'],['padding','0'],['line-height','1'],['border-radius','50%']])b.style.setProperty(k,v,'important');
+   /* 다른 화면의 단추 글씨 크기 규칙이 더 세서, 크기는 단추에 직접 박는다 */for(const [k,v] of [['font-size','22px'],['width','var(--cxs,44px)'],['height','var(--cxs,44px)'],['padding','0'],['line-height','1'],['border-radius','50%']])b.style.setProperty(k,v,'important');
    if(b.id==='acClose'){const p=document.getElementById('acPanel'),row=b.parentElement;if(p&&row!==p){p.appendChild(b);if(row&&row.classList.contains('acRow')&&!row.children.length)row.remove()}}})}
  function noNameEdit(){const i=document.getElementById('nameIn');if(!i)return;const row=i.closest('.row');if(row&&!row.hidden){row.hidden=true;row.style.display='none';const p=row.nextElementSibling;if(p&&p.tagName==='P')p.textContent='이름은 로그인할 때 정한 계정 이름으로 나와요. 랭킹에도 이 이름이 올라가요.'}}
  /* 창이 다시 그려지면 바로(다음 화면 그리기 전에) 바꾼다 + 혹시 몰라 1초마다 한 번 */

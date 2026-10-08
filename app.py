@@ -213,6 +213,17 @@ def init_db():
             paid_at     DOUBLE PRECISION
         )
     ''')
+    # v83: 레벨 · 골드 · 탑 층 (랭킹 탭용). 계정마다 한 줄
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS player_stats (
+            user_id     TEXT PRIMARY KEY,
+            level       INTEGER NOT NULL DEFAULT 1,
+            xp          BIGINT NOT NULL DEFAULT 0,
+            gold        BIGINT NOT NULL DEFAULT 0,
+            floor       INTEGER NOT NULL DEFAULT 1,
+            updated_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
     db.commit()
     db.close()
 
@@ -368,6 +379,21 @@ SHOP_CONTACT = os.environ.get('SHOP_CONTACT', '').strip()   # 환불·문의 연
 # 무료 출시 모드: Render 환경변수 SHOP_MODE=free 로 켠다. 게임의 가격·「구매하기」가 숨겨지고 주문도 받지 않는다.
 FREE_MODE = os.environ.get('SHOP_MODE', '').strip().lower() == 'free'
 ORDER_TTL = 60 * 60          # 결제창을 연 뒤 1시간 안에 끝내야 함
+# v82: 새 캐릭터 15 · 새 펫 15의 변이 스킨 (게임 9999998과 같은 번호 · 이름)
+_V82_CH = [('rio', '리오', '은하'), ('hana', '하나', '벚꽃'), ('gaon', '가온', '용암'), ('sora', '소라', '서리'), ('yuki', '유키', '황금'),
+           ('dark', '다크', '핏빛'), ('volt', '볼트', '유령'), ('momo', '모모', '독'), ('leo', '레오', '청염'), ('mir', '미르', '무지개'),
+           ('silvy', '실비', '밤하늘'), ('terra', '테라', '석양'), ('nova', '노바', '심해'), ('kage', '카게', '자수정'), ('serena', '세레나', '백금')]
+_V82_PET = [('turtle', '약초 거북'), ('squirrel', '전기 다람쥐'), ('golem', '아기 골렘'), ('bee', '독침 벌'), ('lizard', '불씨 도마뱀'),
+            ('snowfairy', '눈송이 요정'), ('batcookie', '박쥐 쿠키'), ('clockowl', '시계 부엉이'), ('luckycat', '행운 고양이'), ('drone', '방패 드론'),
+            ('jelly', '번개 해파리'), ('hawk', '바람 매'), ('viper', '맹독 뱀'), ('whale', '별빛 고래'), ('skydragon', '창공의 용')]
+_V82_TH = ['은하', '벚꽃', '용암', '서리', '황금', '핏빛', '유령', '독', '청염', '무지개', '밤하늘', '석양', '심해', '자수정', '백금']
+for _id, _nm, _th in _V82_CH:
+    SHOP_PRODUCTS.append({'id': 'skin_v_' + _id, 'kind': 'skin', 'name': _nm + ' · ' + _th + ' 변이', 'tier': '변이',
+                          'description': _nm + '의 ' + _th + ' 변이 모습.', 'status': 'on_sale', 'price': 1500, 'currency': 'KRW'})
+for _i, (_id, _nm) in enumerate(_V82_PET):
+    SHOP_PRODUCTS.append({'id': 'pet_p_' + _id, 'kind': 'pet', 'name': _nm + ' · ' + _V82_TH[(_i + 5) % 15], 'tier': '변이',
+                          'description': _nm + '의 변이 모습.', 'status': 'on_sale', 'price': 1000, 'currency': 'KRW'})
+
 PRODUCTS_BY_ID = {p['id']: p for p in SHOP_PRODUCTS}
 
 
@@ -820,6 +846,9 @@ def _too_large(e):
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
+    # v81: 새 가입은 Google로만 받는다(게임 화면에서도 아이디 가입을 뺐음). 예전 아이디 계정의 로그인(/api/login)은 그대로 둔다.
+    if os.environ.get('ALLOW_ID_SIGNUP', '') != '1':
+        return _bad('이제 Google 계정으로만 가입할 수 있어요', 403)
     ip = _client_ip()
     if _too_many('reg:' + ip, 10, 3600):
         return _bad('가입 시도가 너무 많아요. 잠시 뒤에 다시 해 주세요', 429)
@@ -936,19 +965,76 @@ MAX_RANK_SCORE = 10_000_000
 
 @app.route('/api/ranking', methods=['GET'])
 def api_ranking_get():
+    """랭킹. by=score(최고 점수) | level(레벨 · 경험치) | floor(탑 최고 층) | gold(골드). 이름은 계정 이름(users)을 쓴다."""
     limit = clamp_int(request.args.get('limit'), 1, 100, 20)
+    by = request.args.get('by', 'score')
+    if by not in ('score', 'level', 'floor', 'gold'):
+        by = 'score'
     db = get_db()
-    rows = db.execute('SELECT username, score, chapter, boss, difficulty, updated_at '
-                      'FROM rank_scores ORDER BY score DESC, updated_at ASC LIMIT ?', (limit,)).fetchall()
-    result=[]
-    for i,row in enumerate(rows):
-        d=dict(row);d['rank']=i+1;result.append(d)
-    user=_current_user(); mine=None
+    user = _current_user()
+    if by == 'score':
+        rows = db.execute('SELECT r.user_id, u.username, r.score, r.chapter, r.boss, r.difficulty, r.updated_at, '
+                          's.level, s.floor, s.gold FROM rank_scores r JOIN users u ON u.user_id = r.user_id '
+                          'LEFT JOIN player_stats s ON s.user_id = r.user_id '
+                          'ORDER BY r.score DESC, r.updated_at ASC LIMIT ?', (limit,)).fetchall()
+    else:
+        order = {'level': 's.level DESC, s.xp DESC', 'floor': 's.floor DESC', 'gold': 's.gold DESC'}[by]
+        rows = db.execute('SELECT s.user_id, u.username, s.level, s.xp, s.floor, s.gold, s.updated_at, r.score '
+                          'FROM player_stats s JOIN users u ON u.user_id = s.user_id '
+                          'LEFT JOIN rank_scores r ON r.user_id = s.user_id '
+                          'ORDER BY ' + order + ', s.updated_at ASC LIMIT ?', (limit,)).fetchall()
+    result = []
+    for i, row in enumerate(rows):
+        d = dict(row)
+        d['rank'] = i + 1
+        d['me'] = bool(user and d.pop('user_id', None) == user['user_id'])
+        d.pop('user_id', None)
+        result.append(d)
+    mine = None
     if user:
-        row=db.execute('SELECT score, chapter, boss, difficulty, updated_at FROM rank_scores WHERE user_id=?', (user['user_id'],)).fetchone()
-        if row:
-            mine=dict(row);mine['rank']=db.execute('SELECT COUNT(*) AS c FROM rank_scores WHERE score > ?', (row['score'],)).fetchone()['c']+1
-    return jsonify(ok=True, players=result, mine=mine)
+        st = db.execute('SELECT level, xp, floor, gold FROM player_stats WHERE user_id=?', (user['user_id'],)).fetchone()
+        rs = db.execute('SELECT score, chapter, boss, difficulty, updated_at FROM rank_scores WHERE user_id=?', (user['user_id'],)).fetchone()
+        if by == 'score' and rs:
+            mine = dict(rs)
+            mine['rank'] = db.execute('SELECT COUNT(*) AS c FROM rank_scores WHERE score > ?', (rs['score'],)).fetchone()['c'] + 1
+        elif by != 'score' and st:
+            mine = dict(st)
+            if by == 'level':
+                c = db.execute('SELECT COUNT(*) AS c FROM player_stats WHERE level > ? OR (level = ? AND xp > ?)',
+                               (st['level'], st['level'], st['xp'])).fetchone()['c']
+            else:
+                c = db.execute('SELECT COUNT(*) AS c FROM player_stats WHERE ' + by + ' > ?', (st[by],)).fetchone()['c']
+            mine['rank'] = c + 1
+        if mine is not None and st:
+            mine.update({'level': st['level'], 'floor': st['floor'], 'gold': st['gold']})
+    return jsonify(ok=True, by=by, players=result, mine=mine)
+
+
+@app.route('/api/stats', methods=['PUT'])
+def api_stats_put():
+    """v83: 내 레벨 · 경험치 · 골드 · 탑 최고 층을 올린다(랭킹 탭). 게임이 바뀔 때마다(최대 몇십 초에 한 번) 보냄."""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    key = 'stats:' + user['user_id']
+    if _too_many(key, 40, 600):
+        return _bad('너무 자주 보냈어요', 429)
+    _note(key)
+    body = request.get_json(silent=True) or {}
+    level = clamp_int(body.get('level'), 1, 9999, 1)
+    xp = clamp_int(body.get('xp'), 0, 10 ** 12, 0)
+    gold = clamp_int(body.get('gold'), 0, 10 ** 12, 0)
+    floor = clamp_int(body.get('floor'), 1, 1_000_000, 1)
+    db = get_db()
+    now = time.time()
+    if db.execute('SELECT 1 FROM player_stats WHERE user_id=?', (user['user_id'],)).fetchone():
+        db.execute('UPDATE player_stats SET level=?, xp=?, gold=?, floor=?, updated_at=? WHERE user_id=?',
+                   (level, xp, gold, floor, now, user['user_id']))
+    else:
+        db.execute('INSERT INTO player_stats (user_id, level, xp, gold, floor, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+                   (user['user_id'], level, xp, gold, floor, now))
+    db.commit()
+    return jsonify(ok=True)
 
 @app.route('/api/ranking', methods=['PUT'])
 def api_ranking_put():
@@ -979,6 +1065,151 @@ def api_ranking_put():
     db.commit()
     rank=db.execute('SELECT COUNT(*) AS c FROM rank_scores WHERE score > ?', (score,)).fetchone()['c']+1
     return jsonify(ok=True, improved=True, score=score, rank=rank)
+
+# ===================== v85 듀오(2인 협동) 방 =====================
+# 방은 서버 메모리에만 둔다(서버가 다시 켜지면 사라짐 — 한 판짜리라 괜찮음). 워커는 하나(gunicorn 기본)라 모두가 같은 방 목록을 본다.
+# 방장(owner)의 게임이 잡몹 · 층을 돌리고, 둘은 /api/duo/sync로 0.1초마다 서로의 메시지를 주고받는다(서버는 전달만).
+_duo_lock = threading.Lock()
+_DUO = {}
+_DUO_CODE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+_DUO_KEEP = 500
+
+
+def _duo_clean(now):
+    for code in [c for c, r in _DUO.items() if now - r['touched'] > 300 or (r['state'] == 'closed' and now - r['touched'] > 30)]:
+        del _DUO[code]
+
+
+def _duo_view(r, uid=None):
+    return {'code': r['code'], 'owner': r['owner_name'], 'floor': r['floor'], 'diff': r['diff'], 'state': r['state'],
+            'players': [{'name': p['name'], 'lv': p['lv'], 'ch': p['ch'], 'owner': p['uid'] == r['owner'], 'me': p['uid'] == uid,
+                         'online': time.time() - p['seen'] < 8} for p in r['players']]}
+
+
+def _duo_best(db, uid):
+    row = db.execute('SELECT floor FROM player_stats WHERE user_id=?', (uid,)).fetchone()
+    return row['floor'] if row else 1
+
+
+@app.route('/api/duo/rooms', methods=['GET'])
+def duo_rooms():
+    user = _current_user()
+    now = time.time()
+    with _duo_lock:
+        _duo_clean(now)
+        rooms = [_duo_view(r, user and user['user_id']) for r in _DUO.values() if r['state'] == 'wait' and len(r['players']) < 2]
+    rooms.sort(key=lambda x: x['floor'])
+    return jsonify(ok=True, rooms=rooms[:50])
+
+
+@app.route('/api/duo/create', methods=['POST'])
+def duo_create():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    floor = clamp_int(body.get('floor'), 1, 1_000_000, 1)
+    best = clamp_int(body.get('best'), 1, 1_000_000, 1)
+    if floor > max(best, 1):
+        return _bad('올라가 본 층까지만 시작할 수 있어요', 400)
+    diff = clamp_text(body.get('diff'), 12) or 'normal'
+    now = time.time()
+    me = {'uid': user['user_id'], 'name': user['username'], 'lv': clamp_int(body.get('lv'), 1, 9999, 1),
+          'ch': clamp_int(body.get('ch'), 0, 999, 0), 'seen': now}
+    with _duo_lock:
+        _duo_clean(now)
+        for r in list(_DUO.values()):  # 한 사람은 방 하나만
+            r['players'] = [p for p in r['players'] if p['uid'] != user['user_id']]
+            if not r['players'] or r['owner'] == user['user_id']:
+                r['state'] = 'closed'
+        for _ in range(50):
+            code = ''.join(secrets.choice(_DUO_CODE) for _ in range(4))
+            if code not in _DUO:
+                break
+        _DUO[code] = {'code': code, 'owner': user['user_id'], 'owner_name': user['username'], 'floor': floor, 'diff': diff,
+                      'state': 'wait', 'players': [me], 'msgs': [], 'seq': 0, 'touched': now}
+        return jsonify(ok=True, room=_duo_view(_DUO[code], user['user_id']))
+
+
+@app.route('/api/duo/join', methods=['POST'])
+def duo_join():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    best = max(clamp_int(body.get('best'), 1, 1_000_000, 1), _duo_best(get_db(), user['user_id']))
+    now = time.time()
+    with _duo_lock:
+        _duo_clean(now)
+        r = _DUO.get(code)
+        if not r or r['state'] == 'closed':
+            return _bad('방을 찾지 못했어요. 코드를 확인해 주세요', 404)
+        if any(p['uid'] == user['user_id'] for p in r['players']):
+            return jsonify(ok=True, room=_duo_view(r, user['user_id']))
+        if len(r['players']) >= 2 or r['state'] != 'wait':
+            return _bad('이미 꽉 찬 방이에요', 409)
+        if best < r['floor']:
+            return _bad('%d층까지 올라가 본 사람만 들어올 수 있어요 (내 최고 %d층)' % (r['floor'], best), 403)
+        r['players'].append({'uid': user['user_id'], 'name': user['username'], 'lv': clamp_int(body.get('lv'), 1, 9999, 1),
+                             'ch': clamp_int(body.get('ch'), 0, 999, 0), 'seen': now})
+        r['touched'] = now
+        r['seq'] += 1
+        r['msgs'].append({'seq': r['seq'], 'from': '#', 'm': {'t': 'join', 'name': user['username']}})
+        return jsonify(ok=True, room=_duo_view(r, user['user_id']))
+
+
+@app.route('/api/duo/leave', methods=['POST'])
+def duo_leave():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    code = clamp_text((request.get_json(silent=True) or {}).get('code'), 8).upper()
+    with _duo_lock:
+        r = _DUO.get(code)
+        if r:
+            r['players'] = [p for p in r['players'] if p['uid'] != user['user_id']]
+            r['seq'] += 1
+            r['msgs'].append({'seq': r['seq'], 'from': '#', 'm': {'t': 'leave', 'name': user['username']}})
+            if r['owner'] == user['user_id'] or not r['players']:
+                r['state'] = 'closed'
+            r['touched'] = time.time()
+    return jsonify(ok=True)
+
+
+@app.route('/api/duo/sync', methods=['POST'])
+def duo_sync():
+    """보낼 메시지(msgs)를 올리고, since 다음의 메시지를 받는다. 방장은 state='play'로 시작을 알린다."""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    since = clamp_int(body.get('since'), 0, 2 ** 62, 0)
+    msgs = body.get('msgs') if isinstance(body.get('msgs'), list) else []
+    now = time.time()
+    with _duo_lock:
+        r = _DUO.get(code)
+        if not r:
+            return _bad('방이 사라졌어요', 404)
+        me = next((p for p in r['players'] if p['uid'] == user['user_id']), None)
+        if not me:
+            return _bad('이 방에 없어요', 403)
+        me['seen'] = now
+        r['touched'] = now
+        if body.get('start') and r['owner'] == user['user_id'] and len(r['players']) == 2 and r['state'] == 'wait':
+            r['state'] = 'play'
+        if body.get('ch') is not None:
+            me['ch'] = clamp_int(body.get('ch'), 0, 999, me['ch'])
+        for m in msgs[:20]:
+            if isinstance(m, dict) and len(json.dumps(m)) < 20000:
+                r['seq'] += 1
+                r['msgs'].append({'seq': r['seq'], 'from': user['user_id'][:6], 'm': m})
+        if len(r['msgs']) > _DUO_KEEP:
+            r['msgs'] = r['msgs'][-_DUO_KEEP:]
+        out = [x for x in r['msgs'] if x['seq'] > since and x['from'] != user['user_id'][:6]]
+        return jsonify(ok=True, room=_duo_view(r, user['user_id']), msgs=out, seq=r['seq'])
+
 
 @app.route('/api/save', methods=['GET'])
 def api_save_get():
@@ -1329,7 +1560,7 @@ def api_account_delete():
         return _bad('확인용 아이디가 맞지 않아요', 400)
     db = get_db()
     uid = user['user_id']
-    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'shop_entitlements', 'tester_links', 'users'):
+    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'player_stats', 'shop_entitlements', 'tester_links', 'users'):
         db.execute('DELETE FROM %s WHERE user_id = ?' % table, (uid,))
     db.commit()
     return jsonify(ok=True)

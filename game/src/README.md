@@ -173,3 +173,11 @@
 | `9999992-v76-device-layouts.js` | 55 | 기기별 배치(`DV76`): `<html>`에 `dvPhone`·`dvPad`·`dvLap`·`dvDesk` + `dvL`/`dvP`. 컴퓨터 목록 크게, 노트북 촘촘하게, 패드 큰 목록 · 단추(`.tbtn` zoom) · 세로 패드 전투 화면 위로 |
 | `9999993-v76-perf.js` | 8 | 렉 줄이기(`PF76`): 상점이 덮고 있으면 로비 무대 `lvDraw` 건너뜀. (캐릭터 그림 저장은 820 `ch2Render`의 `CH2C`, 스킨 상점 목록 그림 줄이기는 99991 `loop`) |
 | `9999994-v77-close-x.js` | 37 | 닫기 단추 → ✕ 단추(`CX77`): 글자가 「닫기」·「✕ 닫기」·「닫기 ✕」인 단추를 빨간 동그라미 ✕로(창 내용이 바뀔 때마다 찾음). 로그인 창 ✕는 오른쪽 위로. 설정의 이름 고치기 칸(`#nameIn` 줄) 숨김 |
+| `9999995-v80-diamonds.js` | 38 | 다이아(`DIA80`): `saveData.dia80={n,own,fl}`. 탑 보스 층 보상 `floorReward(f)`(999997 `bossDone`이 부름), 상품 다이아 값 `price(it)`(원화÷5, 100~10,000), `buy(it)`(세트는 낱개로 `own`에 넣음, 99998이 보유로 침), 로비 💎 칩 `#gmDia` |
+| `9999996-v81-combat.js` | 150 | 전투 확장(`CB81`): 내 상태 이상(중독 `poison` · 탈진 `drain`), 무기 특성 `WT`(화상 · 냉기 · 방패 꿰뚫기 `pierce` · 부수기 `shBreak`), 현질 스킨 능력 `PERK`(13종), 세트 효과 `SETB`(스킨+검), 장비 특성 칸(`poisonRes` · `critAdd` · `dmgAdd` · `pierce` · `shBreak` · `onHit`) 읽기. 탑은 999997이 부르고, 보스전은 `doParry` · `hurtP` · `stamMax` · `stamTick` · `doDash` · `drawScene` 감싸기 + 100 `win`(winMul) · 180 반격식 |
+| `9999997-v81-new-mobs.js` | 60 | 새 잡몹 디자인 `m_toad`(독두꺼비) · `m_wraith`(기력 망령) |
+| `9999998-v82-new-gear.js` | 120 | 새 장비(`NG82`): CHARS · WEAPONS · PETS 10~24번, 캐릭터 그림 틀 `paintChar`(부품 조합, 앞·옆·뒤) → `CH2DEF[10~24]`, 새 무기 종류(`WSPR`) · 필살기는 `w.ult`(기본 종류), 새 무기 칸도 현질 검이 덮도록 `PAY58.swordFor`, 특성 흡혈 `leech` · 막기 `guard` · 대시 효과 `dashFx`(CB81 감싸기), 새 캐릭터 · 펫 변이 스킨(`SKIN58.list` 140~ · `PET59.list`) |
+| `9999999-v82-detail.js` | 110 | 디테일 패스: 새 펫 15 손그림(300과 같은 방식), 새 캐릭터 음영 · 소품(`PROP`), 무기 25종 도트 리마스터(`POM` 손잡이 끝 · `GUARD` 코등이 · `blade` 칼날 · `HEAD` 머리) |
+| `99999991-v83-level-ranking.js` | 60 | 레벨(`LV83`): `saveData.lv83={lv,xp,tot}`, 경험치는 `CB81.onKill` · 층 클리어 · `fightEnd` 감싸기에서, 로비 칩 `#gmLv`, 서버에 `PUT /api/stats`. 랭킹 창(`RANK83`, 탭 score · level · floor · gold) |
+| `99999992-v84-tiers-premchars.js` | 45 | 등급 정리 · 프리미엄 캐릭터(`TP84`): 공방 목록 정렬(`sortGrid`, 화면 순서만), 프리미엄 스킨 3종 → `CHARS[25~27]`(`prem` = 스킨 id, 그림은 스킨 `CH2DEF` 그대로), 공방 버튼 · 스킨 장착 ↔ 캐릭터 목록 동기화(`sync`) |
+| `99999993-v85-duo.js` | 219 | 듀오 탑(`DUO85`): 솔로/듀오 선택 창 `#duo85`(방 목록 · 코드 · 방 화면), 서버 `/api/duo/*`를 100ms마다 주고받기(`tick`/`onMsg`), 방장 스냅숏(`snap`/`applySnap`), 동료 그리기(`drawMate`), 보스 공동 체력(`bossTrack`), 쓰러짐 · 부활(`onDie`/`revive`/`failBoth`). 탑 쪽 연결은 999997의 `T.duo` 분기 |
