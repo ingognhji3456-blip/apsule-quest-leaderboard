@@ -47,10 +47,10 @@
  const watch=()=>{const p=document.getElementById('acPanel');if(p)mo.observe(p,{childList:true,subtree:false});else setTimeout(watch,1000)};watch();
 
  /* ④ 무료 출시 모드 */
- function setFree(on){window.BB_FREE=!!on;document.documentElement.classList.toggle('bbFree',!!on);if(on){document.querySelectorAll('#shopModal [data-addon]').forEach(e=>e.remove());const d=document.getElementById('bbShop');if(d&&d.open)d.close()}try{localStorage.setItem('bb-free60',on?'1':'0')}catch(e){}}
+ let srvFree=false;function setFree(on){srvFree=!!on;/* 테스터(서버 TESTER_USERS)는 무료 모드여도 상점을 본다 */try{if(on&&window.PAY58&&PAY58.tester())on=false}catch(e){}window.BB_FREE=!!on;document.documentElement.classList.toggle('bbFree',!!on);if(on){document.querySelectorAll('#shopModal [data-addon]').forEach(e=>e.remove());const d=document.getElementById('bbShop');if(d&&d.open)d.close()}try{localStorage.setItem('bb-free60',on?'1':'0')}catch(e){}}
  try{if(localStorage.getItem('bb-free60')==='1')setFree(true)}catch(e){}
  setTimeout(async()=>{try{const a=(window.ACCT55&&ACCT55.get())||{},ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),70000);
   const r=await fetch((a.url||DEF).replace(/\/+$/,'')+'/api/shop',{cache:'no-store',signal:ctl.signal});clearTimeout(tm);const j=await r.json();if(j&&j.ok)setFree(!!j.free_mode)}catch(e){}},1200);
 
- window.APP59={app:()=>app,free:()=>!!window.BB_FREE};
+ window.APP59={app:()=>app,free:()=>!!window.BB_FREE,reFree(){if(srvFree)setFree(true)}};
 }catch(e){console.error('v59 app',e)}})();

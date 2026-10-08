@@ -30,3 +30,6 @@ services:
       # 무료 출시 모드: free 를 넣으면 게임의 가격·「구매하기」가 숨겨지고 주문을 받지 않아요. 비우면 판매.
       - key: SHOP_MODE
         sync: false
+      # 테스터 아이디(쉼표로 여러 개): 이 계정은 결제 없이 모든 유료 상품을 가진 것으로 쳐요(시험용)
+      - key: TESTER_USERS
+        sync: false
