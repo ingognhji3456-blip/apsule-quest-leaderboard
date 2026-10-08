@@ -39,7 +39,7 @@
   const t=T();
   const ev=D.ev.splice(0,30);
   const ex={n:(D.pn=(D.pn||0)+1),ts:Math.round(performance.now()),wp:(()=>{try{return shopInv().eq.wp||0}catch(e){return 0}})(),sk:(()=>{try{return SKIN58.get()||''}catch(e){return ''}})(),
-   ffx:r1((P.face&&P.face.x)||0),ffy:r1((P.face&&P.face.y)||1),ev};
+   ffx:r1((P.face&&P.face.x)||0),ffy:r1((P.face&&P.face.y)||1),ev,pl:(mode==='boss'?'b':'t')+((t&&t.f)||0)};
   if(D.started&&typeof mode!=='undefined'){
    if(mode==='tower'&&t&&t.duo){send({...ex,t:'p',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,w:!!P.walkOn});
     if(D.role==='host')send(snap())}
@@ -184,7 +184,8 @@
   if(m.n!=null&&M.n!=null&&m.n<=M.n&&!m.d){if(m.ev&&m.ev.length)mateEv(M,m.ev);return}/* 순서가 뒤바뀌어 온 옛 위치는 버림(사건은 살림) */
   const lt=m.ts!=null?m.ts+D.mOff:now;
 
-  if(m.ev)mateEv(M,m.ev);const hs=M.hs||[];hs.push({t:lt,x:m.x,y:m.y,fx:m.ffx,fy:m.ffy});while(hs.length>24)hs.shift();
+  if(m.ev)mateEv(M,m.ev);if(m.pl&&m.pl!==M.pl){M.pl=m.pl;M.hs=[];M.sx=null;M.sy=null;M.tr=[];M.spawnT=lt}
+  const hs=M.hs||[];hs.push({t:lt,x:m.x,y:m.y,fx:m.ffx,fy:m.ffy});while(hs.length>24)hs.shift();
   const ev0=m.ev;delete m.ev;Object.assign(M,m,{at:now,hs});m.ev=ev0}
  /* 늦게 도착하는 정도(가장 빨리 온 것 대비)를 모아 90%가 도착하는 만큼만 늦게 그림: 매끄럽게 + 너무 늦지 않게 */
  function lagOf(a,v,ms){a.push(v);if(a.length>40)a.shift();const q=a.slice().sort((x,y)=>x-y)[Math.floor(a.length*.9)];return ms?Math.max(110,Math.min(700,q+70)):Math.max(.11,Math.min(.7,q+.07))}
@@ -207,6 +208,8 @@
  function ghostOf(m,fl,col){const k=(m.ch||0)+'|'+(m.sk||'')+'|'+fl+'|'+col;if(GH[k])return GH[k];const cv=document.createElement('canvas');cv.width=64;cv.height=64;const o=cv.getContext('2d');o.imageSmoothingEnabled=false;
   asMate(m,{},()=>{try{drawKnight(o,20,22,2,fl,null,0)}catch(e){}});o.globalCompositeOperation='source-atop';o.fillStyle=col;o.globalAlpha=.75;o.fillRect(0,0,64,64);return GH[k]=cv}
  function drawMate(now,boss){const m=D.mate;if(!m||m.x==null||performance.now()-(m.at||0)>5000)return;const c=ctx,pn=performance.now(),rt=pn-MDLY();
+  /* v88: 다른 층에 있는 동료는 그리지 않음(층을 오를 때 순간이동처럼 보이던 것) */
+  {const t=T(),my=(mode==='boss'?'b':'t')+((t&&t.f)||0);if(m.pl&&m.pl!==my)return;if(m.spawnT!=null&&rt<m.spawnT)return}
   const [gx,gy]=matePos(pn);m.sx=m.sx==null?gx:m.sx+(gx-m.sx)*.6;m.sy=m.sy==null?gy:m.sy+(gy-m.sy)*.6;const x=m.sx,y=m.sy;
   const mv=Math.hypot(gx-(m.px==null?gx:m.px),gy-(m.py==null?gy:m.py));m.wkT=mv>.15?pn:(m.wkT||0);m.px=gx;m.py=gy;const walk=pn-m.wkT<120;
   m.wph=(m.wph||0)+(walk?Math.min(.5,mv*.35):0);
@@ -220,6 +223,10 @@
   if(m.tr.length){const gc=col.startsWith('hsl')?'#ffffff':col;for(const q of m.tr){const a=1-(pn-q.t)/260;c.save();c.globalAlpha=a*.5;c.globalCompositeOperation='lighter';c.drawImage(ghostOf(m,q.fl,gc),q.x-32,q.y-41);c.restore()}}
   if(dash){const k=Math.min(1,(rt-dash.t)/(dash.dur||150)),an=Math.atan2(dash.vy||0,dash.vx||0);c.save();c.translate(x,y-9);c.rotate(an);c.fillStyle=col;for(let i=0;i<7;i++){c.globalAlpha=.55*(1-k);const off=(i-3)*4,len=14+((i*13)%10);c.fillRect(-len-10-((pn/3+i*9)%8),off,len,1)}c.restore()}
   c.save();c.globalAlpha=m.down?.3:.35;c.fillStyle='#000';c.beginPath();c.ellipse(x,y+2,9,3,0,0,6.28);c.fill();c.restore();
+  /* 동료 표시: 발밑 하늘색 고리(같은 캐릭터여도 한눈에 구분) */
+  c.save();c.globalAlpha=.75;c.strokeStyle='#8de4ff';c.lineWidth=1.5;c.beginPath();c.ellipse(x,y+2,11,4,0,0,6.28);c.stroke();c.globalAlpha=.25+.15*Math.sin(pn/250);c.fillStyle='#8de4ff';c.beginPath();c.ellipse(x,y+2,11,4,0,0,6.28);c.fill();c.restore();
+  /* 새 층에 나타날 때: 빛기둥 */
+  if(m.spawnT!=null&&rt-m.spawnT<450){const q=(rt-m.spawnT)/450;c.save();c.globalCompositeOperation='lighter';c.globalAlpha=(1-q)*.8;c.fillStyle='#8de4ff';c.fillRect(x-6*(1-q)-2,y-60,12*(1-q)+4,62);c.globalAlpha=(1-q);c.strokeStyle='#ffffff';c.beginPath();c.ellipse(x,y+2,8+q*18,3+q*6,0,0,6.28);c.stroke();c.restore();if(q<.35)return}
   if(m.down)c.globalAlpha=.45;
   /* 공격 몸 앞으로 밀기(내 캐릭터와 같은 0.6배 반동) */
   let lx=0,ly=0;if(atk){const q=Math.min(1,(rt-atk.t)/(atk.d||130)),p=Math.sin(q*Math.PI)*4;lx=Math.cos(atk.a||0)*p;ly=Math.sin(atk.a||0)*p}
