@@ -149,5 +149,5 @@
   /* 미리보기용: 원하는 방향·걸음으로 스킨 그림(40×48 캔버스) */
   render(id,viewName,f,t){const s=S58.byId(id);if(!s)return null;const ov=HV.view,osw=HV.sw;HV.view=viewName||'front';HV.sw=null;try{return ch2Render(s.idx,f||0,0,false,t!=null?t:performance.now()/1000)}finally{HV.view=ov;HV.sw=osw}}};
  /* 내 캐릭터를 그릴 때만 스킨으로 바꿈 */
- {const base=ch2Render;ch2Render=function(idx,f,b,bl,t){try{const sm=document.getElementById('shopModal');if(cur&&idx<100&&!(sm&&!sm.hidden)&&idx===((shopInv().eq||{}).ch||0)){const s=S58.byId(cur);if(s)return base.call(this,s.idx,f,b,bl,t)}}catch(e){}return base.apply(this,arguments)}}
+ {const base=ch2Render;ch2Render=function(idx,f,b,bl,t){try{const sm=document.getElementById('shopModal'),ck=S58.get();/* v88: cur 대신 S58.get() — 듀오 동료를 그릴 때 동료 스킨으로 바뀌도록 */if(ck&&idx<100&&!(sm&&!sm.hidden)&&idx===((shopInv().eq||{}).ch||0)){const s=S58.byId(ck);if(s)return base.call(this,s.idx,f,b,bl,t)}}catch(e){}return base.apply(this,arguments)}}
 }catch(e){console.error('v58 skins',e)}})();

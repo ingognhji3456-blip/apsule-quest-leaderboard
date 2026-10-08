@@ -1223,6 +1223,9 @@ def duo_sync():
                 start_err = '동료가 방에 없어요'
             else:
                 r['state'] = 'play'
+        dd = clamp_text(body.get('diff'), 12)
+        if dd in ('easy', 'normal', 'hard', 'extreme') and r['owner'] == user['user_id'] and r['state'] == 'wait':
+            r['diff'] = dd  # 방장은 출발 전까지 난이도를 바꿀 수 있다
         if body.get('ch') is not None:
             me['ch'] = clamp_int(body.get('ch'), 0, 999, me['ch'])
         for m in msgs[:20]:
