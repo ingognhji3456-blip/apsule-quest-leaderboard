@@ -42,8 +42,8 @@ function drawSword(x,y,s,fl,now){const w=curWp(),pose=WPOSE[w.type]||WPOSE.sword
 /* ---------- 필살기 ---------- */
 function spOnHit(now){if(!G.vuln)return;if(G._spV!==G.vuln){G._spV=G.vuln;G.spMeter=G.spMeter||0;G.spUsed=false}G.spMeter=Math.min(5,(G.spMeter||0)+1);if(G.spMeter===5&&!G.spUsed){G.pops.push({x:P.x,y:P.y-40,t:now,tx:'필살기 준비!',col:'#ffe79a'});sfx(880,.2,'triangle',.05,1320)}}
 function spDmg(amt,x,y,col,now){if(G.state!=='play'||(G.cine&&G.cine.type==='revive'))return;const d=Math.round(amt);G.hp=Math.max(0,G.hp-d);G.hurt=.16;G.score+=d*12;G.pops.push({x:x+(RND()-.5)*20,y:y-10-RND()*16,t:now,tx:'-'+d,col:col||'#ffffff'});spawnPuff(x,y,10,col||'#ffffff');G.shake=Math.max(G.shake,.35);if(G.hp<=0)startDying(now)}
-function useSpecial(){const now=performance.now(),w=curWp(),wi=WEAPONS.indexOf(w),g=bgeo();G.spUsed=true;G.spMeter=0;initAudio();
- const total=G.maxHp*(.07+.015*wi)*(1+(curPet().dmg||0)),type=w.type;
+function useSpecial(){const now=performance.now(),w=curWp(),wi0=WEAPONS.indexOf(w),wi=wi0>=0&&wi0<10?wi0:Math.min(9,Math.max(0,Math.round(((w.dmg||1)-1)/.1))),g=bgeo();/* v82: 새 무기 · 현질 검은 공격력으로 단계를 정함 */G.spUsed=true;G.spMeter=0;initAudio();
+ const total=G.maxHp*(.07+.015*wi)*(1+(curPet().dmg||0)),type=w.ult||w.type;
  const plan={sword:[2,[200,520]],dagger:[8,[0,90,180,270,360,450,540,630]],great:[1,[560]],katana:[1,[900]],axe:[3,[380,560,740]],rapier:[5,[200,300,400,500,600]],flame:[5,[250,400,550,700,850]],spear:[4,[300,500,700,900]],scythe:[1,[520]],chrono:[12,[1100]]}[type]||[1,[400]];
  const hits=plan[1],dur=Math.max(...hits)+700;G.sp={type,t0:now,dur,name:w.sp,col:w.trail,cx:g.x,cy:g.coreY,done:[]};
  G.vuln.t1=Math.max(G.vuln.t1,G.beat+dur/G.ms+(type==='chrono'?2:type==='rapier'?1.5:.6));G.clickTarget=null;G.nextCircle=now+dur;

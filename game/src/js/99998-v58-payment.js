@@ -82,7 +82,7 @@
  setInterval(()=>{const t=acc().token||'';if(t!==lastTok)refresh().catch(()=>{})},4000);
  setTimeout(()=>{apply();refresh().catch(()=>{})},1500);
 
- window.PAY58={refresh,buy,sync,apply,ownsItem,ownsKind,owned:()=>allOwned(),test:()=>testMode,tester:()=>tester,pending:()=>!!pending,kindOf,
+ window.PAY58={swordFor:i=>activeSword(i),refresh,buy,sync,apply,ownsItem,ownsKind,owned:()=>allOwned(),test:()=>testMode,tester:()=>tester,pending:()=>!!pending,kindOf,
   /* 테스트 도구용: 서버 없이 보유 목록을 넣어 본다 */
   _set(list){owned=new Set(list||[]);apply()}};
 }catch(e){console.error('v58 payment',e)}})();

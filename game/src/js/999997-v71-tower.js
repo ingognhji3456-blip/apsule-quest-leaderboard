@@ -196,7 +196,7 @@
   T.ult=0;let S=null;try{S=window.SET61&&SET61.ultSet&&SET61.ultSet()}catch(e){}
   const w=curWp()||{},U=S&&SET61.ULT[S];let sp,hits,name,col,hitF;
   if(U){hits=U.hits();const dur=Math.max(...hits)+U.tail;name=U.name;col=U.c;sp={type:'p61',set:S,t0:now,dur,name,col,cx,cy,done:[],hits};try{U.start()}catch(e){}}
-  else{const type=w.type||'sword';hits=PLAN[type]||[400];const dur=Math.max(...hits)+700;name=w.sp||'필살';col=w.trail||'#ffffff';hitF=w.hitF||400;sp={type,t0:now,dur,name,col,cx,cy,done:[]};try{sfx(220,.4,'sawtooth',.07,1760);sfx(110,.5,'square',.05,55)}catch(e){}}
+  else{const type=w.ult||w.type||'sword';hits=PLAN[type]||[400];const dur=Math.max(...hits)+700;name=w.sp||'필살';col=w.trail||'#ffffff';hitF=w.hitF||400;sp={type,t0:now,dur,name,col,cx,cy,done:[]};try{sfx(220,.4,'sawtooth',.07,1760);sfx(110,.5,'square',.05,55)}catch(e){}}
   T.U={sp,hits,t0:now,k:0,end:now+sp.dur,U,col,hitF,type:sp.type};P.inv=Math.max(P.inv,now+sp.dur+400);T.shots=[];T.tels=[];T.waves=[];T.shake=.4;
   P.lungeT=now;P.lungeA=Math.atan2(cy-P.y,cx-P.x);P.lungeDur=260;try{banner('필살! '+name)}catch(e){}}
  function ultTick(){const U=T.U,now=performance.now();

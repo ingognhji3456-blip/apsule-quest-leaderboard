@@ -368,6 +368,21 @@ SHOP_CONTACT = os.environ.get('SHOP_CONTACT', '').strip()   # 환불·문의 연
 # 무료 출시 모드: Render 환경변수 SHOP_MODE=free 로 켠다. 게임의 가격·「구매하기」가 숨겨지고 주문도 받지 않는다.
 FREE_MODE = os.environ.get('SHOP_MODE', '').strip().lower() == 'free'
 ORDER_TTL = 60 * 60          # 결제창을 연 뒤 1시간 안에 끝내야 함
+# v82: 새 캐릭터 15 · 새 펫 15의 변이 스킨 (게임 9999998과 같은 번호 · 이름)
+_V82_CH = [('rio', '리오', '은하'), ('hana', '하나', '벚꽃'), ('gaon', '가온', '용암'), ('sora', '소라', '서리'), ('yuki', '유키', '황금'),
+           ('dark', '다크', '핏빛'), ('volt', '볼트', '유령'), ('momo', '모모', '독'), ('leo', '레오', '청염'), ('mir', '미르', '무지개'),
+           ('silvy', '실비', '밤하늘'), ('terra', '테라', '석양'), ('nova', '노바', '심해'), ('kage', '카게', '자수정'), ('serena', '세레나', '백금')]
+_V82_PET = [('turtle', '약초 거북'), ('squirrel', '전기 다람쥐'), ('golem', '아기 골렘'), ('bee', '독침 벌'), ('lizard', '불씨 도마뱀'),
+            ('snowfairy', '눈송이 요정'), ('batcookie', '박쥐 쿠키'), ('clockowl', '시계 부엉이'), ('luckycat', '행운 고양이'), ('drone', '방패 드론'),
+            ('jelly', '번개 해파리'), ('hawk', '바람 매'), ('viper', '맹독 뱀'), ('whale', '별빛 고래'), ('skydragon', '창공의 용')]
+_V82_TH = ['은하', '벚꽃', '용암', '서리', '황금', '핏빛', '유령', '독', '청염', '무지개', '밤하늘', '석양', '심해', '자수정', '백금']
+for _id, _nm, _th in _V82_CH:
+    SHOP_PRODUCTS.append({'id': 'skin_v_' + _id, 'kind': 'skin', 'name': _nm + ' · ' + _th + ' 변이', 'tier': '변이',
+                          'description': _nm + '의 ' + _th + ' 변이 모습.', 'status': 'on_sale', 'price': 1500, 'currency': 'KRW'})
+for _i, (_id, _nm) in enumerate(_V82_PET):
+    SHOP_PRODUCTS.append({'id': 'pet_p_' + _id, 'kind': 'pet', 'name': _nm + ' · ' + _V82_TH[(_i + 5) % 15], 'tier': '변이',
+                          'description': _nm + '의 변이 모습.', 'status': 'on_sale', 'price': 1000, 'currency': 'KRW'})
+
 PRODUCTS_BY_ID = {p['id']: p for p in SHOP_PRODUCTS}
 
 
