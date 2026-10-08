@@ -51,6 +51,8 @@
  html.ph #gmMain.lvFull>#phNav#phNav#phNav{display:flex!important}
  html.ph #gmMain.lvFull>#phPlay#phPlay#phPlay{display:flex!important}
  html.ph #lvGoBtn,html.ph .lvTip{display:none!important}
+ /* v69: 로비 메뉴 칸은 손가락 입력을 뒤의 무대로 넘기게(pointer-events:none) 되어 있어서, 새 단추는 직접 켠다 */
+ #phNav,#phPlay,#phNav button{pointer-events:auto!important}
  #phNav{position:absolute;z-index:5;gap:8px}
  #phNav button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:16px;cursor:pointer;
   background:linear-gradient(180deg,#141c28ee,#0a1018ee);border:1px solid #ffffff1f;color:#e9f3ff;font:inherit;padding:0;
