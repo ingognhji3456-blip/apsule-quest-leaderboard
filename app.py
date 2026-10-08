@@ -213,6 +213,17 @@ def init_db():
             paid_at     DOUBLE PRECISION
         )
     ''')
+    # v83: 레벨 · 골드 · 탑 층 (랭킹 탭용). 계정마다 한 줄
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS player_stats (
+            user_id     TEXT PRIMARY KEY,
+            level       INTEGER NOT NULL DEFAULT 1,
+            xp          BIGINT NOT NULL DEFAULT 0,
+            gold        BIGINT NOT NULL DEFAULT 0,
+            floor       INTEGER NOT NULL DEFAULT 1,
+            updated_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
     db.commit()
     db.close()
 
@@ -954,19 +965,76 @@ MAX_RANK_SCORE = 10_000_000
 
 @app.route('/api/ranking', methods=['GET'])
 def api_ranking_get():
+    """랭킹. by=score(최고 점수) | level(레벨 · 경험치) | floor(탑 최고 층) | gold(골드). 이름은 계정 이름(users)을 쓴다."""
     limit = clamp_int(request.args.get('limit'), 1, 100, 20)
+    by = request.args.get('by', 'score')
+    if by not in ('score', 'level', 'floor', 'gold'):
+        by = 'score'
     db = get_db()
-    rows = db.execute('SELECT username, score, chapter, boss, difficulty, updated_at '
-                      'FROM rank_scores ORDER BY score DESC, updated_at ASC LIMIT ?', (limit,)).fetchall()
-    result=[]
-    for i,row in enumerate(rows):
-        d=dict(row);d['rank']=i+1;result.append(d)
-    user=_current_user(); mine=None
+    user = _current_user()
+    if by == 'score':
+        rows = db.execute('SELECT r.user_id, u.username, r.score, r.chapter, r.boss, r.difficulty, r.updated_at, '
+                          's.level, s.floor, s.gold FROM rank_scores r JOIN users u ON u.user_id = r.user_id '
+                          'LEFT JOIN player_stats s ON s.user_id = r.user_id '
+                          'ORDER BY r.score DESC, r.updated_at ASC LIMIT ?', (limit,)).fetchall()
+    else:
+        order = {'level': 's.level DESC, s.xp DESC', 'floor': 's.floor DESC', 'gold': 's.gold DESC'}[by]
+        rows = db.execute('SELECT s.user_id, u.username, s.level, s.xp, s.floor, s.gold, s.updated_at, r.score '
+                          'FROM player_stats s JOIN users u ON u.user_id = s.user_id '
+                          'LEFT JOIN rank_scores r ON r.user_id = s.user_id '
+                          'ORDER BY ' + order + ', s.updated_at ASC LIMIT ?', (limit,)).fetchall()
+    result = []
+    for i, row in enumerate(rows):
+        d = dict(row)
+        d['rank'] = i + 1
+        d['me'] = bool(user and d.pop('user_id', None) == user['user_id'])
+        d.pop('user_id', None)
+        result.append(d)
+    mine = None
     if user:
-        row=db.execute('SELECT score, chapter, boss, difficulty, updated_at FROM rank_scores WHERE user_id=?', (user['user_id'],)).fetchone()
-        if row:
-            mine=dict(row);mine['rank']=db.execute('SELECT COUNT(*) AS c FROM rank_scores WHERE score > ?', (row['score'],)).fetchone()['c']+1
-    return jsonify(ok=True, players=result, mine=mine)
+        st = db.execute('SELECT level, xp, floor, gold FROM player_stats WHERE user_id=?', (user['user_id'],)).fetchone()
+        rs = db.execute('SELECT score, chapter, boss, difficulty, updated_at FROM rank_scores WHERE user_id=?', (user['user_id'],)).fetchone()
+        if by == 'score' and rs:
+            mine = dict(rs)
+            mine['rank'] = db.execute('SELECT COUNT(*) AS c FROM rank_scores WHERE score > ?', (rs['score'],)).fetchone()['c'] + 1
+        elif by != 'score' and st:
+            mine = dict(st)
+            if by == 'level':
+                c = db.execute('SELECT COUNT(*) AS c FROM player_stats WHERE level > ? OR (level = ? AND xp > ?)',
+                               (st['level'], st['level'], st['xp'])).fetchone()['c']
+            else:
+                c = db.execute('SELECT COUNT(*) AS c FROM player_stats WHERE ' + by + ' > ?', (st[by],)).fetchone()['c']
+            mine['rank'] = c + 1
+        if mine is not None and st:
+            mine.update({'level': st['level'], 'floor': st['floor'], 'gold': st['gold']})
+    return jsonify(ok=True, by=by, players=result, mine=mine)
+
+
+@app.route('/api/stats', methods=['PUT'])
+def api_stats_put():
+    """v83: 내 레벨 · 경험치 · 골드 · 탑 최고 층을 올린다(랭킹 탭). 게임이 바뀔 때마다(최대 몇십 초에 한 번) 보냄."""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    key = 'stats:' + user['user_id']
+    if _too_many(key, 40, 600):
+        return _bad('너무 자주 보냈어요', 429)
+    _note(key)
+    body = request.get_json(silent=True) or {}
+    level = clamp_int(body.get('level'), 1, 9999, 1)
+    xp = clamp_int(body.get('xp'), 0, 10 ** 12, 0)
+    gold = clamp_int(body.get('gold'), 0, 10 ** 12, 0)
+    floor = clamp_int(body.get('floor'), 1, 1_000_000, 1)
+    db = get_db()
+    now = time.time()
+    if db.execute('SELECT 1 FROM player_stats WHERE user_id=?', (user['user_id'],)).fetchone():
+        db.execute('UPDATE player_stats SET level=?, xp=?, gold=?, floor=?, updated_at=? WHERE user_id=?',
+                   (level, xp, gold, floor, now, user['user_id']))
+    else:
+        db.execute('INSERT INTO player_stats (user_id, level, xp, gold, floor, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+                   (user['user_id'], level, xp, gold, floor, now))
+    db.commit()
+    return jsonify(ok=True)
 
 @app.route('/api/ranking', methods=['PUT'])
 def api_ranking_put():
@@ -1347,7 +1415,7 @@ def api_account_delete():
         return _bad('확인용 아이디가 맞지 않아요', 400)
     db = get_db()
     uid = user['user_id']
-    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'shop_entitlements', 'tester_links', 'users'):
+    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'player_stats', 'shop_entitlements', 'tester_links', 'users'):
         db.execute('DELETE FROM %s WHERE user_id = ?' % table, (uid,))
     db.commit()
     return jsonify(ok=True)

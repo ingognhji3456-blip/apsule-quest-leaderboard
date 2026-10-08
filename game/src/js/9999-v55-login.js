@@ -181,7 +181,7 @@
     '<div class="acRow"><button class="gmBtn" id="acNow">지금 저장</button><button class="gmBtn" id="acRank">🏆 랭킹</button></div><div class="acRow"><button class="gmBtn" id="acOut">로그아웃</button><button class="gmBtn" id="acClose">닫기</button></div>';
    $('acNow').onclick=async()=>{msg('저장하는 중…',true);await push(false);if(st==='ok'||st==='')msg('저장했어요',true);else if(!pend)msg(stText());draw()};
    $('acOut').onclick=async()=>{await push(false);api('/api/logout','POST');try{if(window.google)google.accounts.id.disableAutoSelect()}catch(e){};A.token='';A.rev=0;A.synced='';keep();pend=null;setSt('');gate=!autoTest();draw();msg('로그아웃했어요. 이 기기의 기록은 그대로 남아요.',true)};
-   $('acClose').onclick=close;$('acRank').onclick=openRank;return}
+   $('acClose').onclick=close;$('acRank').onclick=()=>{if(window.RANK83){close();RANK83.open()}else openRank()};return}
   /* 로그인 전 — v81: Google로만 로그인 · 가입. 예전 아이디 계정은 한 번 로그인해서 Google을 연결하는 용도로만(접혀 있음) */
   p.innerHTML='<h3>👤 Google로 로그인</h3><div class="acNote">Google 계정으로 로그인하면 진행 기록이 서버에 저장돼서, 폰·컴퓨터 어디서든 이어서 할 수 있어요. 처음이면 그대로 가입돼요.'+(st==='lost'?'<br><b style="color:#ffb020">로그인이 끝났어요. 다시 로그인해 주세요.</b>':'')+'</div>'+
    '<div id="acGoogleSlot"></div><div class="acMsg" id="acMsg"></div>'+(locked()?'':'<div class="acRow"><button class="gmBtn" id="acClose">닫기</button></div>')+
