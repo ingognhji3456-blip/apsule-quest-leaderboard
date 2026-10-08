@@ -14,6 +14,11 @@
  try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&typeof s==='object')A=Object.assign(A,s)}catch(e){}
  const keep=()=>{try{localStorage.setItem(KEY,JSON.stringify(A))}catch(e){}};
  let st='',busy=false,pend=null,lastTry=0,boxOn=false,snooze=0;
+ /* v77: 게임에 들어가면 무조건 로그인부터(gate), Google로 처음 만든 계정(G_…)은 이름부터 정하기(needName).
+    서버에 연결이 안 될 때만 「오프라인으로 하기」가 나온다(offline). 자동 시험 도구(webdriver)는 건너뜀. */
+ let gate=false,needName=false,offline=false,netFail=false;
+ const autoTest=()=>{try{return navigator.webdriver&&!localStorage.getItem('bb-gate-test')}catch(e){return false}};
+ const locked=()=>!offline&&((gate&&!A.token)||(needName&&!!A.token));
  /* 키 순서와 상관없이 같은 기록이면 같은 글자가 되게 */
  const canon=v=>Array.isArray(v)?'['+v.map(canon).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canon(v[k])).join(',')+'}':JSON.stringify(v===undefined?null:v);
  const localObj=()=>{try{return JSON.parse(localStorage.getItem(SAVE))||{}}catch(e){return {}}};
@@ -60,6 +65,7 @@
  const st0=document.createElement('style');st0.textContent=`
  #acctBox{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;background:#000b;color:#eaf6ef;font-family:${typeof FONT_STACK!=='undefined'?FONT_STACK:'sans-serif'}}
  #acctBox[hidden]{display:none}
+ #acctBox .acGate{margin:-4px 0 10px;padding:8px 12px;border-radius:10px;background:linear-gradient(90deg,#1f4a3c,#14262a);color:#a6f5c6;font-weight:900;font-size:13px;letter-spacing:.04em}
  .acPanel{width:min(400px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;box-sizing:border-box;padding:20px;border-radius:10px;background:linear-gradient(180deg,#15232b,#0a1216);box-shadow:0 0 0 2px #05080a,0 0 0 4px #a6f5c6,0 12px 40px #000c}
  .acPanel h3{margin:0 0 4px;font-size:22px;letter-spacing:.12em;text-shadow:0 3px 0 #0009}
  .acRankList{display:flex;flex-direction:column;gap:5px;max-height:52vh;overflow:auto;margin:10px 0}.acRankRow{display:grid;grid-template-columns:42px 1fr auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid #2e5051;border-radius:7px;background:#10242a}.acRankRow b{color:#ffd166}.acRankRow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.acRankRow strong{color:#a6f5c6}
@@ -78,8 +84,8 @@
  document.head.appendChild(st0);
  const box=document.createElement('div');box.id='acctBox';box.hidden=true;box.innerHTML='<div class="acPanel" id="acPanel"></div>';document.body.appendChild(box);
  /* 창 안에서 누른 키가 뒤의 게임 메뉴로 가지 않게 */
- box.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'&&!pend)close()});
- box.addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===box&&!pend)close()});
+ box.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'&&!pend&&!locked())close()});
+ box.addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===box&&!pend&&!locked())close()});
  const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
  // Google sign-in: keep all account/save state in the existing account module.
@@ -96,7 +102,7 @@
  }
  function draw(){
   drawBase();const epoch=++googleEpoch;
-  if(pend)return;
+  if(pend||(needName&&A.token))return;
   const p=$('acPanel'), area=document.createElement('div');area.className='acCard';area.style.marginTop='12px';
   p.appendChild(area);
   if(location.origin!=='https://capsule-quest-leaderboard.onrender.com'){
@@ -129,7 +135,7 @@
        else{
         A.user=res.j.username;A.token=res.j.token;A.rev=0;A.synced='';keep();setSt('');
         // Allow the existing pull routine to upload a local save for a new account.
-        googleWorking=false;await pull(true);if(boxOn)draw();
+        googleWorking=false;needName=!!res.j.need_name||/^G_/.test(A.user);await pull(true);if(needName){open();draw()}else{syncName();if(boxOn){if(gate&&!pend){close()}else draw()}}
        }
       }catch(e){if(current()){slot.replaceChildren();button.disabled=false;note.textContent=e.message+' 버튼을 다시 눌러 주세요.'}}
       finally{googleWorking=false;p.inert=false}
@@ -142,7 +148,7 @@
 
  let tab='login';
  function open(){boxOn=true;box.hidden=false;document.body.classList.add('acctOn');draw()}
- function close(){boxOn=false;box.hidden=true;document.body.classList.remove('acctOn')}
+ function close(){if(locked())return;boxOn=false;box.hidden=true;document.body.classList.remove('acctOn')}
  function msg(t,ok){const m=$('acMsg');if(m){m.textContent=t||'';m.classList.toggle('ok',!!ok)}}
  function drawBase(){const p=$('acPanel');
   if(pend&&A.token){/* 기록이 엇갈렸을 때 */const sv=pend.sv,lo=localObj();
@@ -153,12 +159,24 @@
    if(!sv)api('/api/save').then(r=>{if(r.s===200&&r.j.data&&pend){pend.sv=r.j.data;pend.rev=r.j.rev;pend.at=r.j.updated_at;draw()}else if(r.s!==200)msg(r.j.error||'서버에 연결할 수 없어요')});
    $('acUseSv').onclick=()=>{if(!pend||!pend.sv)return;const q=pend;pend=null;msg('서버 기록을 불러와요…',true);useServer(q.sv,q.rev)};
    $('acUseLo').onclick=async()=>{msg('이 기기 기록을 올리는 중…',true);pend=null;await push(true);if(st==='ok'){close();chip()}else{msg('올리지 못했어요. 인터넷을 확인해 주세요');draw()}};return}
+  if(A.token&&needName){/* v77: 이름 정하기 (Google로 처음 들어온 계정) */
+   p.innerHTML='<h3>✏ 이름 정하기</h3><div class="acNote">게임과 랭킹에 나올 이름을 정해 주세요. <b>한 번 정하면 바꿀 수 없어요.</b></div>'+
+    '<label>이름<input id="acNick" maxlength="10" autocomplete="nickname" autocapitalize="off" spellcheck="false" placeholder="한글·영문·숫자 2~10자"></label>'+
+    '<div class="acMsg" id="acMsg"></div><div class="acRow"><button class="gmBtn go" id="acNickGo" style="font-size:16px">이 이름으로 시작</button></div>';
+   const go=async()=>{const v=$('acNick').value.trim();
+    if(!/^[0-9A-Za-z가-힣_]{2,10}$/.test(v)||/^g_/i.test(v))return msg('이름은 2~10자의 한글·영문·숫자·_ 만 쓸 수 있어요');
+    const b=$('acNickGo');b.disabled=true;msg('정하는 중…',true);const r=await api('/api/account/name','POST',{name:v});b.disabled=false;
+    if(r.s===200&&r.j.username){A.user=r.j.username;keep();needName=false;syncName();chip();msg('',true);close();try{gmSfx('ok')}catch(_){}return}
+    if(r.s===409&&/이미 정해/.test(r.j.error||'')){needName=false;return checkName()}
+    if(r.s===401)return lost(),draw();msg(r.j.error||'서버에 연결할 수 없어요. 잠시 뒤에 다시 해 주세요')};
+   $('acNickGo').onclick=go;$('acNick').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go()}});
+   setTimeout(()=>{try{$('acNick').focus({preventScroll:true})}catch(e){}},30);return}
   if(A.token){/* 로그인한 상태 */
    p.innerHTML='<h3>👤 '+esc(A.user)+'</h3><div class="acNote">진행 기록이 이 계정에 자동으로 저장돼요. 다른 기기에서 같은 아이디로 로그인하면 이어서 할 수 있어요.</div>'+
     '<div class="acCard">'+esc(sum(localObj()))+'<br><span style="color:#9ab8ac;font-size:13px">'+stText()+'</span></div><div class="acMsg" id="acMsg"></div>'+
     '<div class="acRow"><button class="gmBtn" id="acNow">지금 저장</button><button class="gmBtn" id="acRank">🏆 랭킹</button></div><div class="acRow"><button class="gmBtn" id="acOut">로그아웃</button><button class="gmBtn" id="acClose">닫기</button></div>';
    $('acNow').onclick=async()=>{msg('저장하는 중…',true);await push(false);if(st==='ok'||st==='')msg('저장했어요',true);else if(!pend)msg(stText());draw()};
-   $('acOut').onclick=async()=>{await push(false);api('/api/logout','POST');try{if(window.google)google.accounts.id.disableAutoSelect()}catch(e){};A.token='';A.rev=0;A.synced='';keep();pend=null;setSt('');draw();msg('로그아웃했어요. 이 기기의 기록은 그대로 남아요.',true)};
+   $('acOut').onclick=async()=>{await push(false);api('/api/logout','POST');try{if(window.google)google.accounts.id.disableAutoSelect()}catch(e){};A.token='';A.rev=0;A.synced='';keep();pend=null;setSt('');gate=!autoTest();draw();msg('로그아웃했어요. 이 기기의 기록은 그대로 남아요.',true)};
    $('acClose').onclick=close;$('acRank').onclick=openRank;return}
   /* 로그인 전 */
   const reg=tab==='reg';
@@ -167,10 +185,13 @@
    '<label>아이디<input id="acId" maxlength="16" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="한글·영문·숫자 2~16자" value="'+esc(A.user||'')+'"></label>'+
    '<label>비밀번호<input id="acPw" type="password" maxlength="64" autocomplete="'+(reg?'new-password':'current-password')+'" placeholder="6자 이상"></label>'+
    (reg?'<label>비밀번호 한 번 더<input id="acPw2" type="password" maxlength="64" autocomplete="new-password"></label>':'')+
-   '<div class="acMsg" id="acMsg"></div><div class="acRow"><button class="gmBtn go" id="acGo" style="font-size:16px">'+(reg?'만들고 로그인':'로그인')+'</button><button class="gmBtn" id="acClose">닫기</button></div>'+
+   '<div class="acMsg" id="acMsg"></div><div class="acRow"><button class="gmBtn go" id="acGo" style="font-size:16px">'+(reg?'만들고 로그인':'로그인')+'</button>'+(locked()?'':'<button class="gmBtn" id="acClose">닫기</button>')+'</div>'+
+   (locked()&&netFail?'<div class="acRow"><button class="gmBtn" id="acOff">서버 연결이 안 돼요 · 오프라인으로 하기</button></div><div class="acNote">오프라인으로 하면 기록이 이 기기에만 남고 랭킹에 오르지 않아요. 다음에 켤 때 다시 로그인 화면이 나와요.</div>':'')+
    (reg?'<div class="acNote" style="margin-top:10px">비밀번호를 잊으면 되찾을 수 없어요. 다른 곳에 쓰지 않는 비밀번호로 정해 주세요.</div>':'')+
    '<details><summary>서버 주소</summary><input id="acUrl" spellcheck="false" autocapitalize="off" value="'+esc(A.url)+'"><button class="gmBtn" id="acUrlOk" style="padding:7px 12px;font-size:13px">바꾸기</button></details>';
-  $('acTL').onclick=()=>{tab='login';draw()};$('acTR').onclick=()=>{tab='reg';draw()};$('acClose').onclick=close;
+  $('acTL').onclick=()=>{tab='login';draw()};$('acTR').onclick=()=>{tab='reg';draw()};if($('acClose'))$('acClose').onclick=close;
+  if($('acOff'))$('acOff').onclick=()=>{offline=true;close()};
+  if(locked())p.insertAdjacentHTML('afterbegin','<div class="acGate">BEAT BLADE · 시작하려면 로그인해 주세요</div>');
   $('acUrlOk').onclick=()=>{const v=$('acUrl').value.trim();if(!/^https?:\/\/\S+$/.test(v))return msg('http:// 또는 https:// 로 시작하는 주소를 넣어 주세요');A.url=v;keep();msg('서버 주소를 바꿨어요',true)};
   const go=async()=>{const id=$('acId').value.trim(),pw=$('acPw').value;
    if(!/^[0-9A-Za-z가-힣_]{2,16}$/.test(id))return msg('아이디는 2~16자의 한글·영문·숫자·_ 만 쓸 수 있어요');
@@ -178,9 +199,9 @@
    if(reg&&pw!==$('acPw2').value)return msg('비밀번호가 서로 달라요');
    const b=$('acGo');b.disabled=true;msg('서버에 연결하는 중… (서버가 자고 있으면 1분쯤 걸려요)',true);
    const r=await api(reg?'/api/register':'/api/login','POST',{username:id,password:pw});b.disabled=false;
-   if(r.s!==200||!r.j.token)return msg(r.j.error||'잠시 뒤에 다시 해 주세요');
+   if(r.s!==200||!r.j.token){if(r.s===0&&!netFail){netFail=true;draw();msg('서버에 연결할 수 없어요. 인터넷을 확인하고 다시 눌러 주세요')}return msg(r.j.error||'잠시 뒤에 다시 해 주세요')}
    A.user=r.j.username;A.token=r.j.token;A.rev=0;A.synced='';keep();setSt('');msg('로그인했어요! 기록을 맞추는 중…',true);
-   await pull(true);if(!pend&&boxOn){draw();msg(reg?'계정을 만들었어요. 이제 기록이 자동으로 저장돼요.':'로그인했어요. 기록을 맞췄어요.',true)}else if(pend)draw()};
+   syncName();await pull(true);if(!pend&&boxOn){if(gate){close();return}draw();msg(reg?'계정을 만들었어요. 이제 기록이 자동으로 저장돼요.':'로그인했어요. 기록을 맞췄어요.',true)}else if(pend)draw()};
   $('acGo').onclick=go;
   for(const id of ['acId','acPw','acPw2'])if($(id))$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go()}});
   setTimeout(()=>{try{($('acId').value?$('acPw'):$('acId')).focus({preventScroll:true})}catch(e){}},30)}
@@ -199,12 +220,17 @@
  setInterval(()=>{try{if(!A.token)return;if(pend){later();return}if(st==='off'&&Date.now()-lastTry<30000)return;push(false)}catch(e){}},5000);
  /* 창을 닫거나 다른 앱으로 넘어갈 때 한 번 더 */
  document.addEventListener('visibilitychange',()=>{try{if(document.hidden&&A.token&&!busy&&!pend&&!googleWorking){const cur=localStr();if(cur!==A.synced)fetch(A.url.replace(/\/+$/,'')+'/api/save',{method:'PUT',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+A.token},body:JSON.stringify({base_rev:A.rev,data:JSON.parse(cur)})}).then(r=>r.ok&&r.json()).then(j=>{if(j&&j.ok){A.rev=j.rev;A.synced=cur;keep();setSt('ok')}}).catch(()=>{})}}catch(e){}});
- window.addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='beatblade-google-auth'||!d.ok)return;/* 다른 창이 가짜 로그인 표를 넣지 못하게: 우리 서버 주소에서 온 메시지만 */try{if(e.origin!==new URL(A.url).origin)return}catch(_){return}if(d.mode==='link'){draw();msg('Google 계정을 연결했어요. 기존 기록을 그대로 사용할 수 있어요.',true);return}if(d.token){A.user=d.username||'Google 사용자';A.token=d.token;A.rev=0;A.synced='';keep();setSt('');msg('Google 로그인했어요! 기록을 맞추는 중…',true);pull(true).then(()=>{if(boxOn)draw()})}});
+ window.addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='beatblade-google-auth'||!d.ok)return;/* 다른 창이 가짜 로그인 표를 넣지 못하게: 우리 서버 주소에서 온 메시지만 */try{if(e.origin!==new URL(A.url).origin)return}catch(_){return}if(d.mode==='link'){draw();msg('Google 계정을 연결했어요. 기존 기록을 그대로 사용할 수 있어요.',true);return}if(d.token){A.user=d.username||'Google 사용자';A.token=d.token;A.rev=0;A.synced='';keep();setSt('');msg('Google 로그인했어요! 기록을 맞추는 중…',true);needName=/^G_/.test(A.user);pull(true).then(()=>{checkName()})}});
  async function rankSubmit(score,meta){if(!A.token||!Number.isFinite(Number(score))||Number(score)<=0)return null;const r=await api('/api/ranking','PUT',{score:Math.floor(Number(score)),chapter:meta&&meta.chapter||0,boss:meta&&meta.boss||'',difficulty:meta&&meta.difficulty||''});return r.s===200?r.j:null}
  async function rankGet(limit){const r=await api('/api/ranking?limit='+(limit||20));return r.s===200?r.j:null}
  function rankHTML(j){const rows=(j&&j.players||[]).map(x=>'<div class="acRankRow"><b>#'+x.rank+'</b><span>'+esc(x.username)+'</span><strong>'+Number(x.score||0).toLocaleString()+'</strong></div>').join('')||'<div class="acNote">아직 등록된 점수가 없어요.</div>';const m=j&&j.mine;return '<h3>🏆 글로벌 랭킹</h3><div class="acNote">전체 최고 점수 기준 · 보스 클리어 후 자동 등록</div><div class="acRankList">'+rows+'</div>'+(m?'<div class="acCard" style="margin-top:10px">내 순위 <b>#'+m.rank+'</b> · '+Number(m.score||0).toLocaleString()+'점</div>':'<div class="acNote">로그인 후 내 점수를 등록할 수 있어요.</div>')+'<div class="acRow"><button class="gmBtn" id="acRankBack">뒤로</button><button class="gmBtn" id="acRankRefresh">새로고침</button></div>'}
  async function openRank(){const p=$('acPanel');p.innerHTML='<h3>🏆 글로벌 랭킹</h3><div class="acNote">불러오는 중…</div>';const j=await rankGet(20);if(!j){p.innerHTML='<h3>🏆 글로벌 랭킹</h3><div class="acMsg">랭킹을 불러오지 못했어요.</div><button class="gmBtn" id="acRankBack">뒤로</button>'}else p.innerHTML=rankHTML(j);if($('acRankBack'))$('acRankBack').onclick=draw;if($('acRankRefresh'))$('acRankRefresh').onclick=openRank}
  window.BBRankSubmit=rankSubmit;
- window.ACCT55={get:()=>A,open,push,pull};
- setTimeout(()=>{chip();if(A.token)pull(false);else if(st==='')chip()},800);
+ window.ACCT55={get:()=>A,open,push,pull,checkName,state:()=>({gate,needName,offline,netFail,locked:locked()})};
+ /* v77: 이름 맞추기 · 확인 */
+ function syncName(){try{if(!A.token||!A.user||/^G_/.test(A.user))return;const n=String(A.user).slice(0,10);if(saveData.name!==n){saveData.name=n;saveNow();try{gmHud()}catch(e){}}}catch(e){}}
+ async function checkName(){if(!A.token)return;const r=await api('/api/me');if(r.s===401)return lost(),(gate&&(open(),draw()));if(r.s!==200)return;
+  if(r.j.username&&r.j.username!==A.user){A.user=r.j.username;keep();chip()}
+  needName=!!r.j.need_name;if(needName){open();draw()}else{syncName();if(boxOn&&gate&&!pend)close()}}
+ setTimeout(()=>{chip();if(A.token){syncName();pull(false);checkName()}else{if(st==='')chip();if(!autoTest()){gate=true;open()}}},800);
 }catch(e){console.error('v55 login',e)}})();

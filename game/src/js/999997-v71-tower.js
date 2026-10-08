@@ -92,7 +92,7 @@
  function vetPool(z){const cur=speciesOf(z),pool=[];for(let y=z-1;y>=0;y--)for(const q of speciesOf(y))if(!cur.includes(q)&&!pool.includes(q))pool.push(q);return pool}
  TW.vetsOf=vetsOf;TW.vetPool=vetPool;
  function buildFloor(f){const z=zoneOf(f),k=((f-1)%10)+1,tier=Math.floor(z/70),pal=palOf(z),[s1,s2]=speciesOf(z);
-  Object.assign(T,{f,z,k,pal,mobs:[],shots:[],tels:[],parts:[],pops:[],slash:[],clk:0,clear:false,clearT:0,doorK:0,trans:{t:0,txt:f+'F',sub:pal.n+' 구역 · '+TW.zoneMobs(z).join(' · ')+(vetsOf(z,k).length?'  +  다시 나온 '+vetsOf(z,k).map(q=>SP[q].n).join(' · '):'')},dead:false,spawned:false});
+  Object.assign(T,{f,z,k,pal,hfx:[],mobs:[],shots:[],tels:[],parts:[],pops:[],slash:[],clk:0,clear:false,clearT:0,doorK:0,trans:{t:0,txt:f+'F',sub:pal.n+' 구역 · '+TW.zoneMobs(z).join(' · ')+(vetsOf(z,k).length?'  +  다시 나온 '+vetsOf(z,k).map(q=>SP[q].n).join(' · '):'')},dead:false,spawned:false});
   const n=3+Math.floor(k/3)+Math.min(3,Math.floor(z/8))+tier,hpz=TF(f)*(1+tier*.8)*hpMul();
   const list=[];for(let i=0;i<n;i++)list.push({sp:i%3===2?s2:s1,elite:false});
   const vets=vetsOf(z,k);vets.forEach((q,i)=>{const c=1+((k+i)%2);for(let j=0;j<c;j++)list.push({sp:q,elite:false});if(k===9&&i===0)list.push({sp:q,elite:true})});T.vets=vets;
@@ -107,7 +107,8 @@
 
  /* ---------- 들어가기 · 나가기 ---------- */
  function hud(on){try{$('bossName').style.visibility=on?'hidden':'';const bA=$('btnA');if(bA){bA.style.display='';bA.textContent='ATTACK'}$('touch').style.display='';try{ensureParryBtn()}catch(e){}const bp=$('btnP');if(bp)bp.style.display=''}catch(e){}}
- function music(){try{stopMusic();startMusic(makeCaveSong(T.z%20),performance.now(),0)}catch(e){}}
+ /* v76 BGM: 구역마다 보스전 곡을 하나씩(20곡을 돌아가며). 박자가 곡에 맞춰지므로 PERFECT도 곡 박자 기준 */
+ function music(){try{stopMusic();let S=null;try{S=makeSong(((T.z%20)+20)%20)}catch(e){}startMusic(S||makeCaveSong(T.z%20),performance.now(),0)}catch(e){try{startMusic(makeCaveSong(T.z%20),performance.now(),0)}catch(_){}}}
  TW.start=function(f){const s=sv();f=f||s.floor||1;initAudio();story=false;try{if(typeof CS!=='undefined')CS=null}catch(e){}
   enterGame();$('overlay').hidden=true;mode='tower';paused=false;try{resetP(AX+AW/2,AY+AH-24)}catch(e){}
   T.ult=0;T.combo=0;T.kills=0;T.score=0;
@@ -116,7 +117,7 @@
  function nextFloor(){const s=sv();const f=T.f+1;s.floor=f;s.best=Math.max(s.best||1,f);try{saveNow()}catch(e){}
   try{addCoins(T.k===9?12:6)}catch(e){}
   if(f%10===0){goBoss(f);return}
-  P.hp=Math.min(P.maxhp,P.hp+Math.round(P.maxhp*.15));buildFloor(f);$('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F';
+  const oz=T.z;P.hp=Math.min(P.maxhp,P.hp+Math.round(P.maxhp*.15));buildFloor(f);if(T.z!==oz)music();$('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F';
   try{sfx(660,.2,'triangle',.04,1320)}catch(e){}}
  /* 보스 층: 짧은 소개 뒤 보스 전투 */
  function goBoss(f){const g=zoneOf(f),B=bossOf(g);T.f=f;T.z=g;T.pal=palOf(g);T.bossCard={t:0,g,B};mode='tower';hud(true);
@@ -155,12 +156,12 @@
    const da=Math.abs(((Math.atan2(dy,dx)-a+9.42)%6.28)-3.14);if(d>14&&da>1.25)continue;
    const crit=Math.random()<((w&&w.crit)||0),armor=m.sp==='knight'&&T.clk>m.stunT+1.2&&Math.cos(Math.atan2(-dy,-dx)-(m.face>0?0:3.14))>.3?.55:1;
    let dmg=Math.round(34*((w&&w.dmg)||1)*(1+(curPet().dmg||0))*mult*(crit?1.8:1)*armor*(1+Math.min(T.combo,20)*.02));
-   m.hp-=dmg;m.hitT=T.clk;m.vx+=Math.cos(a)*90;m.vy+=Math.sin(a)*90;hit++;
-   addPop(m.x,m.y-12,(crit?'CRIT ':'')+(bg===2?'PERFECT ':'')+dmg,bg===2?'#ffe79a':crit?'#ff9a5a':'#ffffff');burst(m.x,m.y,6,T.pal.c,70);
+   m.hp-=dmg;m.hitT=T.clk;m.kbA=a;m.vx+=Math.cos(a)*(bg===2?150:110);m.vy+=Math.sin(a)*(bg===2?150:110);hit++;T.hfx.push({x:m.x,y:m.y-8,a,t:T.clk,big:bg===2||crit,col:bg===2?'#ffe79a':crit?'#ff9a5a':'#ffffff'});
+   T.pops.push({x:m.x+rnd(-4,4),y:m.y-14,tx:(crit?'CRIT ':'')+(bg===2?'PERFECT ':'')+dmg,col:bg===2?'#ffe79a':crit?'#ff9a5a':'#ffffff',t:T.clk,big:bg===2||crit});burst(m.x,m.y,6,T.pal.c,70);
    if(m.hp<=0)kill(m)}
-  if(hit){T.combo++;T.score=(T.score||0)+hit*(bg===2?150:bg===1?110:80)*(1+Math.min(T.combo,20)*.05)|0;T.ult=Math.min(100,T.ult+3+hit*2);try{sfx(320+Math.min(T.combo,14)*22+(bg===2?80:0),.12,'triangle',.05,90);sfx(160,.1,'square',.04,60)}catch(e){};T.shake=Math.max(T.shake||0,.12);T.stop=now+40}
+  if(hit){T.stop=now+(bg===2?95:60);try{const at=audio.currentTime;perc('snare',at,bg===2?.55:.35);if(bg===2)perc('hat',at+.02,.4)}catch(e){}T.combo++;T.score=(T.score||0)+hit*(bg===2?150:bg===1?110:80)*(1+Math.min(T.combo,20)*.05)|0;T.ult=Math.min(100,T.ult+3+hit*2);try{sfx(320+Math.min(T.combo,14)*22+(bg===2?80:0),.12,'triangle',.05,90);sfx(160,.1,'square',.04,60)}catch(e){};T.shake=Math.max(T.shake||0,bg===2?.32:.2);T.punch=T.clk}
   else try{sfx(230,.06,'triangle',.025,70)}catch(e){}}
- function kill(m){m.hp=0;T.score=(T.score||0)+(m.elite?2000:400);m.dieT=T.clk;T.kills++;sv().kills=(sv().kills||0)+1;T.ult=Math.min(100,T.ult+(m.elite?25:10));burst(m.x,m.y,m.elite?40:20,T.pal.a,140);burst(m.x,m.y,10,'#ffffff',90);
+ function kill(m){T.stop=performance.now()+(m.elite?160:110);T.hfx.push({x:m.x,y:m.y-8,a:0,t:T.clk,kill:1,big:1,col:m.elite?'#ffd166':'#ffffff'});try{perc('kick',audio.currentTime,.7);if(m.elite)perc('crash',audio.currentTime+.02,.5)}catch(e){}m.hp=0;T.score=(T.score||0)+(m.elite?2000:400);m.dieT=T.clk;T.kills++;sv().kills=(sv().kills||0)+1;T.ult=Math.min(100,T.ult+(m.elite?25:10));burst(m.x,m.y,m.elite?40:20,T.pal.a,140);burst(m.x,m.y,10,'#ffffff',90);
   try{sfx(m.elite?180:300,.18,'square',.05,80);sfx(520,.1,'sine',.03,1100)}catch(e){};T.shake=Math.max(T.shake||0,m.elite?.5:.25);try{addCoins(m.elite?8:2)}catch(e){}
   addPop(m.x,m.y-20,m.elite?'+8 🪙':'+2 🪙','#ffd166')}
  function dash(){if(T.bossCard||T.dead||T.U)return;const now=performance.now(),cost=(curPet()||{}).dashCost||.2;if(P.stam===undefined)P.stam=stamMax();if(now<P.dashCd)return;
@@ -263,7 +264,7 @@
   if(!T.clear&&!T.dead&&T.mobs.length===0&&!(T.queue&&T.queue.length)&&T.clk>1){T.clear=true;T.clearT=T.clk;T.shots=[];try{sfx(523,.15,'triangle',.05,784);setTimeout(()=>sfx(784,.25,'triangle',.05,1046),150)}catch(e){}addPop(AX+AW/2,AY+60,'FLOOR CLEAR!','#a6f5c6')}
   if(T.clear){T.doorK=Math.min(1,T.doorK+dt*2);if(T.doorK>=1&&Math.abs(P.x-(AX+AW/2))<18&&P.y<AY+36)nextFloor()}
   T.shake=Math.max(0,(T.shake||0)-dt*2.2);T.flash=Math.max(0,(T.flash||0)-dt*2);
-  const bU=$('btnU');if(bU)bU.style.display=T.ult>=100?'':'none'}
+  try{if(isTouchUI()){ensureUltBtn();const bU=$('btnU');if(bU.style.display!=='')bU.style.display='';ultBtnPaint(T.ult/100,!T.U)}}catch(e){}}
 
  /* ---------- 그리기 ---------- */
  function A(a){ctx.globalAlpha=clampN(a,0,1)}
@@ -308,7 +309,8 @@
   if(m.sp==='mage'&&m.st==='fade')al*=1-clampN((T.clk-m.st0)/.35,0,1);
   if(m.hp<=0){const q=(T.clk-m.dieT)/.35;al*=1-q;sx*=1+q*.7;sy*=1-q*.7}
   const footY=m.y+sp.r*m.s*.75;
-  if(img){ctx.save();ctx.translate(m.x,footY+bob);ctx.scale(sideFlip?-sx:sx,sy);A(al);ctx.drawImage(img,-COX*us,-COY*us,CW*us,CH*us);
+  const hq=T.clk-m.hitT;let rx=0,ry=0;if(hq<.14&&m.kbA!=null){const k2=(1-hq/.14);rx=Math.cos(m.kbA)*3*k2+rnd(-1,1)*k2;ry=Math.sin(m.kbA)*2*k2;sx*=1+.12*k2;sy*=1-.1*k2}
+  if(img){ctx.save();ctx.translate(m.x+rx,footY+bob+ry);ctx.scale(sideFlip?-sx:sx,sy);A(al);ctx.drawImage(img,-COX*us,-COY*us,CW*us,CH*us);
    if(T.clk-m.hitT<.12){ctx.globalCompositeOperation='lighter';A(.75);ctx.drawImage(img,-COX*us,-COY*us,CW*us,CH*us);ctx.globalCompositeOperation='source-over'}ctx.restore();A(1)}
   else{const im=spr(m.sp,T.pal,m.elite),s=2*m.s;ctx.save();ctx.translate(m.x,m.y+bob);ctx.scale(m.face<0?-sx:sx,sy);A(al);ctx.drawImage(im,-7*s,-6*s,14*s,12*s);ctx.restore();A(1)}
   const top=footY+bob-(FLY[m.sp]?26:24)*us;
@@ -356,13 +358,21 @@
  function draw(now){try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}ctx.imageSmoothingEnabled=false;ctx.save();
   if(T.bossCard){drawBossCard(now);ctx.restore();return}
   if(T.shake>0)ctx.translate(rnd(-1,1)*T.shake*4,rnd(-1,1)*T.shake*4);
+  if(T.punch!=null&&T.clk-T.punch<.12){const z=1+.025*(1-(T.clk-T.punch)/.12);ctx.translate(P.x,P.y);ctx.scale(z,z);ctx.translate(-P.x,-P.y)}
   bg();drawTels();
   const list=T.mobs.map(m=>({y:m.y,fn:()=>drawMob(m)}));list.push({y:P.y,fn:()=>drawHero(now)});list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
   drawSlash();
+  /* v76 타격 이펙트: 빛 갈래 · 고리 · 베인 줄. 처치는 더 크게 */
+  for(const h of (T.hfx||[])){const L=h.kill?.42:.24,q=(T.clk-h.t)/L;if(q>=1)continue;ctx.save();ctx.translate(h.x,h.y);ctx.globalCompositeOperation='lighter';
+   const R=(h.kill?26:h.big?18:12)*(.4+q);A((1-q)*.95);ctx.strokeStyle=h.col;ctx.lineWidth=(h.kill?3:2)*(1-q)+.5;ctx.beginPath();ctx.arc(0,0,R,0,6.28);ctx.stroke();
+   ctx.fillStyle=h.col;const n=h.kill?12:8;for(let i=0;i<n;i++){const a=i/n*6.28+h.t*7,l=R*(1.1+(i%2)*.6);ctx.save();ctx.rotate(a);ctx.fillRect(R*.4,-.7,l-R*.4,1.4);ctx.restore()}
+   if(!h.kill){ctx.rotate(h.a+Math.PI/2);A((1-q));ctx.fillStyle='#ffffff';ctx.fillRect(-22*(1-q*.3),-1.2,44*(1-q*.3),2.4);ctx.fillStyle=h.col;ctx.fillRect(-26,-.5,52,1)}
+   else{A((1-q)*.5);ctx.fillStyle=h.col;ctx.beginPath();ctx.arc(0,0,R*.7,0,6.28);ctx.fill()}
+   ctx.restore();A(1)}T.hfx=(T.hfx||[]).filter(h=>T.clk-h.t<(h.kill?.42:.24));
   for(const s of T.shots)drawShot(s);
   for(const w of (T.waves||[])){if(w.cur==null)continue;const q=(w.cur-w.r)/(w.max-w.r);A(.8*(1-q));ctx.strokeStyle=w.col;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(w.x,w.y,w.cur,w.cur/1.4,0,0,6.28);ctx.stroke();ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(w.x,w.y,w.cur-2,(w.cur-2)/1.4,0,0,6.28);ctx.stroke();A(1)}
   for(const q of T.parts){const k=(T.clk-q.t)/q.l;if(k>=1)continue;q.x+=q.vx/60;q.y+=q.vy/60;q.vy+=3;A(1-k);ctx.fillStyle=q.col;ctx.fillRect(q.x-1,q.y-1,2,2)}T.parts=T.parts.filter(q=>T.clk-q.t<q.l);
-  ctx.font='900 9px sans-serif';ctx.textAlign='center';for(const p of T.pops){const k=(T.clk-p.t)/.9;if(k>=1)continue;A(1-k);ctx.fillStyle='#000';ctx.fillText(p.tx,p.x+1,p.y-k*16+1);ctx.fillStyle=p.col;ctx.fillText(p.tx,p.x,p.y-k*16)}ctx.textAlign='left';T.pops=T.pops.filter(p=>T.clk-p.t<.9);A(1);
+  ctx.textAlign='center';for(const p of T.pops){const k=(T.clk-p.t)/.9;if(k>=1)continue;const sz=(p.big?13:9)*(k<.08?1.6-k*7.5:1);ctx.font='900 '+sz.toFixed(1)+'px sans-serif';A(1-k*k);const yy=p.y-k*16-(k<.15?Math.sin(k/.15*3.14)*4:0);ctx.fillStyle='#000';ctx.fillText(p.tx,p.x+1,yy+1);ctx.fillStyle=p.col;ctx.fillText(p.tx,p.x,yy)}ctx.textAlign='left';T.pops=T.pops.filter(p=>T.clk-p.t<.9);A(1);
   drawUlt(now);
   if(T.flash>0){A(T.flash*.5);ctx.fillStyle='#ff2d55';ctx.fillRect(0,0,W,H);A(1)}
   drawHud(now);
@@ -404,6 +414,23 @@
  if(typeof lvDock==='function'){const f=lvDock;lvDock=function(){const r=f.apply(this,arguments);try{const g=$('lvGoBtn');if(g&&GM.sel===0)g.innerHTML='<small>NOW · TOWER</small>▶ 탑 오르기'}catch(e){}return r}}
  setInterval(()=>{try{const p=document.querySelector('#phPlay');if(p){const b=p.querySelector('b'),s=p.querySelector('small');if(b&&b.textContent!=='▲ 탑 오르기')b.textContent='▲ 탑 오르기';if(s&&s.textContent!=='NOW · TOWER')s.textContent='NOW · TOWER'}
   const e=document.querySelector('#lvSet .lvI[data-i="0"] em');if(e&&e.textContent!==badge())e.textContent=badge()}catch(e){}},700);
+ /* v76: 처음 그려진 로비 메뉴가 옛 글자(이야기)로 남아 있던 것 → 글자가 다르면 다시 그린다 */
+ function relabel(){try{const b=document.querySelector('#lvSet .lvI[data-i="0"] b');if(b&&b.textContent.indexOf('탑 오르기')<0){lvSet();lvDock()}
+  const g=$('lvGoBtn');if(g&&GM.sel===0&&g.textContent.indexOf('탑 오르기')<0)lvDock()}catch(e){}}
+ setTimeout(relabel,0);setInterval(relabel,600);
+ /* v76: 로비 LED 화면 = 탑 그림(밤하늘 · 층마다 불 켜진 탑 · 올라간 만큼 빛) — 예전엔 챕터 배경을 늘여 붙여서 이상하게 보였다 */
+ TW.led=function(c,W,H,t,P){const s=sv(),best=s.best||1,z=Math.min(6,zoneOf(best)),zp=ZPAL[z];
+  const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#04060c');g.addColorStop(1,zp.b);c.fillStyle=g;c.fillRect(0,0,W,H);
+  for(let i=0;i<40;i++){const a=.3+.7*Math.abs(Math.sin(t*1.3+i*1.7));c.fillStyle='rgba(255,255,255,'+(a*.6)+')';c.fillRect((i*61)%W,(i*23)%(H-40),1,1)}
+  c.fillStyle=zp.wall;for(let i=0;i<12;i++){const x=i*22-4,hh=10+(i*37)%18;c.fillRect(x,H-34-hh,18,hh+34)}
+  const tw=34,tx=W/2-tw/2,top=6,base=H-30,fl=14,fh=(base-top)/fl,lit=Math.min(fl,Math.ceil(fl*Math.min(1,best/700))+1);
+  c.fillStyle='#000';c.fillRect(tx-2,top,tw+4,base-top);
+  for(let i=0;i<fl;i++){const y=base-(i+1)*fh,on=i<lit,zc=ZPAL[Math.min(6,Math.floor(i/2))];c.fillStyle=on?zc.wall:'#0c1018';c.fillRect(tx,y+1,tw,fh-1);
+   for(let k=0;k<4;k++){const wx=tx+3+k*8;c.fillStyle=on?((Math.floor(t*2+i+k)%7)?zc.c:'#ffffff'):'#141a24';c.fillRect(wx,y+3,4,Math.max(2,fh-6))}}
+  const tip=base-lit*fh;c.fillStyle=zp.c;c.beginPath();c.moveTo(tx-4,top+2);c.lineTo(W/2,top-6);c.lineTo(tx+tw+4,top+2);c.fill();
+  const gl=c.createRadialGradient(W/2,tip,0,W/2,tip,30);gl.addColorStop(0,zp.c+'88');gl.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=gl;c.fillRect(W/2-30,tip-30,60,60);
+  const py=tip-4+Math.sin(t*4)*1.5;c.fillStyle='#ffe79a';c.fillRect(W/2-1,py-3,3,3);
+  c.fillStyle='#00000088';c.fillRect(0,H-26,W,26)};
 
  /* ---------- v73 탑 화면: 스크롤로 700층 전체 보기 · 원하는 층 골라 오르기 · 처음부터 ---------- */
  const TV={sel:null,zc:[],io:null,raf:0};

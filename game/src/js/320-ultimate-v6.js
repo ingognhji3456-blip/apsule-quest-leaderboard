@@ -6,12 +6,18 @@ function tryUlt(){if(mode!=='boss'||paused||!G||G.state!=='play'||G.cine||G.sp||
 function useSpecialV(now){const hadV=!!G.vuln;if(!hadV){G.vuln={type:'stun',t0:G.beat,t1:G.beat+.01,fake:true}}useSpecial();if(!hadV){G.vuln=null}P.inv=Math.max(P.inv,now+(G.sp?G.sp.dur:1200)+400);bossSay('ult')}
 addEventListener('keydown',e=>{if(e.code==='KeyC'&&!e.repeat&&mode==='boss'){e.preventDefault();tryUlt()}});
 function ensureUltBtn(){if($('btnU'))return;const b=document.createElement('button');b.id='btnU';b.className='tbtn';b.textContent='궁';b.style.cssText='right:30px;bottom:140px;width:70px;height:70px;font-size:18px;background:#ffd16655;border-color:#ffd166;display:none';b.addEventListener('pointerdown',e=>{e.preventDefault();tryUlt()});($('btnA').parentNode||document.body).appendChild(b)}
+/* v76: 폰의 궁 단추는 늘 보이고, 게이지만큼 아래에서부터 금빛이 차오른다. 다 차면 빛나며 흔들림 */
+function ultBtnPaint(k,can){const b=$('btnU');if(!b)return;k=clamp(k||0,0,1);const full=k>=1&&can!==false,pct=Math.round(k*100);
+ if(b._k!==pct||b._f!==full){b._k=pct;b._f=full;b.style.background=full?'radial-gradient(circle,#fff6c8,#ffcf5a 55%,#c88a10)':'linear-gradient(0deg,#ffcf5acc '+pct+'%,#05090bb0 '+pct+'%)';
+  b.style.borderColor=full?'#fff6c8':'#ffd16688';b.style.color=full?'#3a2600':'#ffe79a';b.style.boxShadow=full?'0 0 18px #ffd166,0 0 40px #ffb02088':'none';b.innerHTML=full?'궁':'궁<small style="display:block;font-size:10px;line-height:1">'+pct+'%</small>';
+  b.style.flexDirection='column';b.classList.toggle('ultReady',full)}}
+(function(){const st=document.createElement('style');st.textContent='@keyframes ultPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}#btnU.ultReady{animation:ultPulse .7s ease-in-out infinite}';document.head.appendChild(st)})();
 function drawUltGauge(now){const x=8,y=H-53,w=132,h=5,k=clamp((G.ult||0)/100,0,1),full=k>=1;
  RA(x-2,y-8,w+4,h+11,'#05090b',.7);ctx.font='bold 7px monospace';ctx.textAlign='left';ctx.fillStyle=full?(Math.floor(now/120)%2?'#ffffff':'#ffe79a'):'#ffcf5a';ctx.fillText(full?'궁극기 준비! [C]  '+curWp().sp:'궁극기  '+Math.floor(k*100)+'%',x,y-1);
  R(x-1,y-1,w+2,h+2,'#161c22');R(x,y,w,h,'#2a2410');const fw=w*k;R(x,y,fw,h,full?(Math.floor(now/90)%2?'#fff0a0':'#ffcf5a'):'#ffb020');R(x,y,fw,1,'#fff6cf');if(full)RA(x-2,y-2,w+4,h+4,'#ffe79a',.15+.1*Math.sin(now/100));for(let i=1;i<4;i++)R(x+w*i/4,y,1,h,'#05090b')}
 /* 이전 필살기 HUD 대체: 궁극기 게이지 + 이펙트 + 전투 대사 */
 function drawSpecialHUD(now){drawSpecialFX(now);drawAwakenFX(now);drawTalk(now);if(G.state==='play'||G.state==='count')drawUltGauge(now);
- const t=isTouchUI();if(t){ensureUltBtn();const b=$('btnU'),want=(mode==='boss'&&G.state==='play'&&(G.ult||0)>=100&&!G.sp)?'':'none';if(b.style.display!==want)b.style.display=want}
+ const t=isTouchUI();if(t){ensureUltBtn();const b=$('btnU'),want=(mode==='boss'&&G.state==='play')?'':'none';if(b.style.display!==want)b.style.display=want;ultBtnPaint((G.ult||0)/100,!G.sp)}
  if(G.state==='play'&&!G.cine)talkTriggers(now)}
 /* ---------- 새 보스 패턴 8종 ---------- */
 Object.assign(EST,{crossLaser:9,bulletRain:10,spiralArms:9,checkerQuake:9,meteorFall:10,pincerWall:10,sweepCone:8,tripleWave:10});
