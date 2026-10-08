@@ -159,4 +159,4 @@
 | `99996-v59-victory-lobby.js` | 73 | 승리 연출 3종(`VIC59`: 보스가 쓰러질 때 3초) · 로비 테마 3종(`LOB59`: `LB_THEMES`에 추가, 입어볼 때만 열림) |
 | `99997-v60-skin-deluxe.js` | 71 | 스킨 꾸미기(`DELUXE60`): 스킨마다 다른 칼날 색, 발밑 마법진·빛 고리, 발자국, 대시 잔상, 맞힐 때 스킨 색 폭발 |
 | `99998-v58-payment.js` | 81 | 결제·보유(`PAY58`): 구매하기 → 서버 주문(`/api/shop/order`) → 새 창 토스페이먼츠 결제창(`/pay/checkout`) → 결제 확인 후 보관함 다시 읽기, 보유 상품 장착을 `saveData.cos58`에 저장(다시 켜도 그대로), 보유한 새 검을 장착하면 `WEAPONS[장착 번호]`가 그 검 능력치를 돌려줌 |
-| `99999-v59-app.js` | 47 | 구글 플레이 앱 준비(`APP59`, `window.BB_APP`): 앱으로 열리면(`?source=app`·앱 referrer·전체 화면 표시) 상점 가격·「구매하기」 숨김, 서버(`/play`)에서 열리면 오프라인 저장(`/sw.js`) 등록, 「👤 계정」 창에 「계정 삭제」(`/api/account/delete`) |
+| `99999-v59-app.js` | 47 | 구글 플레이 앱 준비(`APP59`, `window.BB_APP`): 앱으로 열리면(`?source=app`·앱 referrer·전체 화면 표시) 상점 가격·「구매하기」 숨김, 서버(`/play`)에서 열리면 오프라인 저장(`/sw.js`) 등록, 「👤 계정」 창에 「계정 삭제」(`/api/account/delete`). v60: 무료 출시 모드(`window.BB_FREE`, 서버 `SHOP_MODE=free`)면 웹에서도 가격·구매 숨김 |

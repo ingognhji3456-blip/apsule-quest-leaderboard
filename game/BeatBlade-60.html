@@ -19829,11 +19829,11 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   else if(tab==='fx'){list='<div class="ssSec">승리 연출 · 보스를 쓰러뜨리는 순간</div>'+L.filter(x=>x.kind==='vic').map(card).join('')+'<div class="ssSec">로비 테마 · 메인 메뉴 무대</div>'+L.filter(x=>x.kind==='lob').map(card).join('')}
   else list=L.map(card).join('');
   const views=s.kind==='skin'?'<div class="ssViews">'+[['auto','돌려 보기'],['front','정면'],['side','옆'],['back','뒤']].map(([k,n])=>'<button data-v="'+k+'" aria-pressed="'+(viewMode===k)+'">'+n+'</button>').join('')+'</div>':'';
-  const setParts=s.kind==='set'?'<div class="ssSet">'+s.parts.map(([c,id])=>{const it=items().find(x=>x.cat===c&&x.id===id);return it?'<span style="border-color:'+it.col+'66">'+safe(it.name)+' · '+won(it.price)+'</span>':''}).join('')+'</div>':'';
-  const note=s.kind==='skin'&&s.variant?'<div class="ssNote" style="color:#9fb0c8">'+safe(s.name.split(' · ')[0])+'의 변이 모습이에요. 입어보면 지금 캐릭터 위에 이 모습이 입혀져요.</div>':s.kind==='pet'?'<div class="ssNote" style="color:#9fb0c8">'+safe(s.name.split(' · ')[0])+'을(를) 데리고 다닐 때 이 모습으로 바뀌어요.</div>':s.kind==='sword'?'<div class="ssNote" style="color:#9fb0c8">'+(own?'보유 중! 장착하면 공격력도 이 검(피해 ×'+(((window.SWORD59&&SWORD59.byId(s.id))||{}).stat||{dmg:1.9}).dmg.toFixed(2)+')으로 바뀌어요.':(window.BB_APP?'입어보기 동안은 모양·궤적·이펙트만 바뀌어요.':'입어보기 동안은 모양·궤적·이펙트만 바뀌고, 사면 공격력도 이 검으로 바뀌어요.'))+'</div>':'';
+  const setParts=s.kind==='set'?'<div class="ssSet">'+s.parts.map(([c,id])=>{const it=items().find(x=>x.cat===c&&x.id===id);return it?'<span style="border-color:'+it.col+'66">'+safe(it.name)+((window.BB_APP||window.BB_FREE)?'':' · '+won(it.price))+'</span>':''}).join('')+'</div>':'';
+  const note=s.kind==='skin'&&s.variant?'<div class="ssNote" style="color:#9fb0c8">'+safe(s.name.split(' · ')[0])+'의 변이 모습이에요. 입어보면 지금 캐릭터 위에 이 모습이 입혀져요.</div>':s.kind==='pet'?'<div class="ssNote" style="color:#9fb0c8">'+safe(s.name.split(' · ')[0])+'을(를) 데리고 다닐 때 이 모습으로 바뀌어요.</div>':s.kind==='sword'?'<div class="ssNote" style="color:#9fb0c8">'+(own?'보유 중! 장착하면 공격력도 이 검(피해 ×'+(((window.SWORD59&&SWORD59.byId(s.id))||{}).stat||{dmg:1.9}).dmg.toFixed(2)+')으로 바뀌어요.':((window.BB_APP||window.BB_FREE)?'입어보기 동안은 모양·궤적·이펙트만 바뀌어요.':'입어보기 동안은 모양·궤적·이펙트만 바뀌고, 사면 공격력도 이 검으로 바뀌어요.'))+'</div>':'';
   body.innerHTML='<div class="ssGrid"><div class="ssStage"><span class="ssTier" style="background:'+TIER_BG[s.tier]+'">'+TIER_EN[s.tier]+' · '+s.tier+'</span>'+views+'<canvas id="ssCv" width="480" height="360"></canvas><div class="ssInfo"><h3 style="color:'+s.col+'">'+safe(s.name)+'</h3><div class="en">'+safe(s.en)+'</div><p>'+safe(s.desc)+'</p>'+setParts+
-   '<div class="ssTags">'+s.tags.filter(Boolean).map(x=>'<span>'+safe(x)+'</span>').join('')+'</div><div class="ssBuy"><div class="ssPrice">'+(s.full?'<s>'+won(s.full)+'</s>':'')+won(s.price)+'<small>부가세 포함</small></div><button class="ssBtn try" aria-pressed="'+on+'">'+(own?(on?'✓ 장착 중':'장착하기'):(on?'✓ 입어보는 중':'입어보기'))+'</button>'+(own?'<button class="ssBtn buy own" disabled>✓ 보유 중</button>':'<button class="ssBtn buy">구매하기</button>')+'</div><div class="ssNote" id="ssNote"></div>'+note+'</div></div>'+
-   '<div class="ssSide"><div class="ssList">'+list+'</div><div class="ssPromise">'+(window.BB_APP?'• 모든 상품은 겉모습·연출만 바꿔요.<br>• 「입어보기」로 마음껏 써 볼 수 있어요(게임을 다시 켜면 풀려요).<br>• 이미 가지고 있는 상품은 로그인하면 이 앱에서도 장착할 수 있어요.':(test?'<b style="color:#ffb0c8">🧪 테스트 결제 중 — 실제로 돈이 나가지 않아요.</b><br>':'')+'• 결제는 <b>토스페이먼츠</b>로 해요: 카드 · 토스페이 · 카카오페이 · 네이버페이 · 계좌이체 · 휴대폰.<br>• 산 상품은 계정에 남아서, 같은 계정으로 로그인한 모든 기기에서 쓸 수 있어요.<br>• 새 검도 공격력은 상점 최고 검(시간의 검)과 비슷해요. 돈으로 더 세지지 않아요.<br>• 「입어보기」는 미리 써 보기예요(게임을 다시 켜면 풀려요).<br>• <b>만 19세 미만은 보호자(부모님) 동의를 받고 결제해 주세요.</b>')+'</div></div></div>';
+   '<div class="ssTags">'+s.tags.filter(x=>x&&!((window.BB_APP||window.BB_FREE)&&/할인/.test(x))).map(x=>'<span>'+safe(x)+'</span>').join('')+'</div><div class="ssBuy"><div class="ssPrice">'+(s.full?'<s>'+won(s.full)+'</s>':'')+won(s.price)+'<small>부가세 포함</small></div><button class="ssBtn try" aria-pressed="'+on+'">'+(own?(on?'✓ 장착 중':'장착하기'):(on?'✓ 입어보는 중':'입어보기'))+'</button>'+(own?'<button class="ssBtn buy own" disabled>✓ 보유 중</button>':'<button class="ssBtn buy">구매하기</button>')+'</div><div class="ssNote" id="ssNote"></div>'+note+'</div></div>'+
+   '<div class="ssSide"><div class="ssList">'+list+'</div><div class="ssPromise">'+(window.BB_FREE?'• 지금은 <b>무료 버전</b>이에요. 모든 스킨·무기·연출을 「입어보기」로 마음껏 써 보세요!<br>• 모든 상품은 겉모습·연출만 바꿔요(게임을 다시 켜면 풀려요).':window.BB_APP?'• 모든 상품은 겉모습·연출만 바꿔요.<br>• 「입어보기」로 마음껏 써 볼 수 있어요(게임을 다시 켜면 풀려요).<br>• 이미 가지고 있는 상품은 로그인하면 이 앱에서도 장착할 수 있어요.':(test?'<b style="color:#ffb0c8">🧪 테스트 결제 중 — 실제로 돈이 나가지 않아요.</b><br>':'')+'• 결제는 <b>토스페이먼츠</b>로 해요: 카드 · 토스페이 · 카카오페이 · 네이버페이 · 계좌이체 · 휴대폰.<br>• 산 상품은 계정에 남아서, 같은 계정으로 로그인한 모든 기기에서 쓸 수 있어요.<br>• 새 검도 공격력은 상점 최고 검(시간의 검)과 비슷해요. 돈으로 더 세지지 않아요.<br>• 「입어보기」는 미리 써 보기예요(게임을 다시 켜면 풀려요).<br>• <b>만 19세 미만은 보호자(부모님) 동의를 받고 결제해 주세요.</b>')+'</div></div></div>';
   body.querySelectorAll('.ssCard').forEach(c=>c.onclick=()=>{sel[tab]=c.dataset.id;try{gmSfx('move')}catch(_){}build()});
   body.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{viewMode=b.dataset.v;build()});
   body.querySelector('.ssBtn.try').onclick=()=>{const now=toggleSave(s);try{gmSfx('ok')}catch(_){}build();const n=sheet.querySelector('#ssNote');if(n)n.textContent=now?(own?s.name+' 장착! 다음에 켜도 그대로예요.':s.name+' 입어보는 중! 게임 화면에서도 이대로 보여요.'):'원래대로 돌아왔어요.'};
@@ -20523,7 +20523,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    const closed=!p.win||p.win.closed;
    if(closed){p.closedN=(p.closedN||0)+1;if(p.closedN>=3){stopPending();p.cb({cancel:true});return}}
    if(Date.now()-p.t0>20*60*1000){stopPending();p.cb({cancel:true})}}catch(e){}}
- async function buy(pid,cb){cb=cb||(()=>{});if(window.BB_APP){cb({err:'앱에서는 아직 살 수 없어요.'});return}const a=acc();if(!a.token){cb({need:'login'});return}
+ async function buy(pid,cb){cb=cb||(()=>{});if(window.BB_APP||window.BB_FREE){cb({err:window.BB_FREE?'지금은 무료 버전이라 판매하지 않아요.':'앱에서는 아직 살 수 없어요.'});return}const a=acc();if(!a.token){cb({need:'login'});return}
   stopPending();
   /* 팝업 차단을 피하려고 누른 순간 빈 창부터 연다 */
   let w=null;try{w=window.open('','bbpay58','width=480,height=760');if(w)w.document.write('<meta name="viewport" content="width=device-width"><body style="margin:0;background:#07090f;color:#eef2ff;font:16px system-ui;display:grid;place-items:center;min-height:100vh">결제창을 여는 중…</body>')}catch(e){}
@@ -20560,7 +20560,9 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
       전체 화면 표시) 상점의 가격·「구매하기」를 숨긴다. 앱 안에서 디지털 상품을 팔려면 구글 플레이 결제를
       써야 해서, 지금은 앱에서는 입어보기만 된다. 웹에서 산 상품은 로그인하면 앱에서도 그대로 쓸 수 있다.
    ② 오프라인 저장: 서버(/play)로 열렸을 때 /sw.js 를 등록해 다음 실행부터 빨리 켜진다.
-   ③ 계정 삭제: 「👤 계정」 창(로그인 상태)에 「계정 삭제」 단추. 구글 플레이 정책상 앱 안에서 지울 수 있어야 한다. */
+   ③ 계정 삭제: 「👤 계정」 창(로그인 상태)에 「계정 삭제」 단추. 구글 플레이 정책상 앱 안에서 지울 수 있어야 한다.
+   ④ 무료 출시 모드(v60): 서버 /api/shop 의 free_mode(Render 환경변수 SHOP_MODE=free)가 켜져 있으면 웹에서도
+      가격·「구매하기」를 숨긴다(window.BB_FREE). 마지막 값을 기억해 두어 오프라인에서도 바로 적용된다. */
 (()=>{try{
  const web=/^https?:$/.test(location.protocol);
  let app=false;
@@ -20570,8 +20572,9 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(app)sessionStorage.setItem('bb-app59','1');else app=sessionStorage.getItem('bb-app59')==='1'}catch(e){}
  window.BB_APP=app;
  if(app){document.documentElement.classList.add('bbApp');
-  const st=document.createElement('style');
-  st.textContent='html.bbApp #bbShop .ssPrice,html.bbApp #bbShop .ssBtn.buy:not(.own),html.bbApp #bbShop .ssCard .pr:not(.own){display:none!important}';
+}
+ {const st=document.createElement('style');
+  st.textContent=['bbApp','bbFree'].map(k=>'html.'+k+' #bbShop .ssPrice,html.'+k+' #bbShop .ssBtn.buy:not(.own),html.'+k+' #bbShop .ssCard .pr:not(.own)').join(',')+'{display:none!important}';
   document.head.appendChild(st)}
 
  /* ② 오프라인 저장 */
@@ -20600,6 +20603,12 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const mo=new MutationObserver(()=>{try{addDel()}catch(e){}});
  const watch=()=>{const p=document.getElementById('acPanel');if(p)mo.observe(p,{childList:true,subtree:false});else setTimeout(watch,1000)};watch();
 
- window.APP59={app:()=>app};
+ /* ④ 무료 출시 모드 */
+ function setFree(on){window.BB_FREE=!!on;document.documentElement.classList.toggle('bbFree',!!on);try{localStorage.setItem('bb-free60',on?'1':'0')}catch(e){}}
+ try{if(localStorage.getItem('bb-free60')==='1')setFree(true)}catch(e){}
+ setTimeout(async()=>{try{const a=(window.ACCT55&&ACCT55.get())||{},ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),70000);
+  const r=await fetch((a.url||DEF).replace(/\/+$/,'')+'/api/shop',{cache:'no-store',signal:ctl.signal});clearTimeout(tm);const j=await r.json();if(j&&j.ok)setFree(!!j.free_mode)}catch(e){}},1200);
+
+ window.APP59={app:()=>app,free:()=>!!window.BB_FREE};
 }catch(e){console.error('v59 app',e)}})();
 </script></body></html>

@@ -50,7 +50,7 @@
    const closed=!p.win||p.win.closed;
    if(closed){p.closedN=(p.closedN||0)+1;if(p.closedN>=3){stopPending();p.cb({cancel:true});return}}
    if(Date.now()-p.t0>20*60*1000){stopPending();p.cb({cancel:true})}}catch(e){}}
- async function buy(pid,cb){cb=cb||(()=>{});if(window.BB_APP){cb({err:'앱에서는 아직 살 수 없어요.'});return}const a=acc();if(!a.token){cb({need:'login'});return}
+ async function buy(pid,cb){cb=cb||(()=>{});if(window.BB_APP||window.BB_FREE){cb({err:window.BB_FREE?'지금은 무료 버전이라 판매하지 않아요.':'앱에서는 아직 살 수 없어요.'});return}const a=acc();if(!a.token){cb({need:'login'});return}
   stopPending();
   /* 팝업 차단을 피하려고 누른 순간 빈 창부터 연다 */
   let w=null;try{w=window.open('','bbpay58','width=480,height=760');if(w)w.document.write('<meta name="viewport" content="width=device-width"><body style="margin:0;background:#07090f;color:#eef2ff;font:16px system-ui;display:grid;place-items:center;min-height:100vh">결제창을 여는 중…</body>')}catch(e){}
