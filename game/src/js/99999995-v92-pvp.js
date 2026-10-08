@@ -177,7 +177,7 @@
   if(!b){b=document.createElement('button');b.id='gmPvp';b.type='button';b.title='결투 — 1:1 실력 승부';b.innerHTML='<i>⚔</i><span>결투</span>';
    b.onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}if(!acc().token){try{ACCT55.open()}catch(err){}return}DU.open('pvp')};b.addEventListener('pointerdown',e=>e.stopPropagation())}
   if(b.previousElementSibling!==anchor)anchor.after(b)}
- setInterval(()=>{try{chip()}catch(e){}},700);
+ /* v93: 위쪽 줄 단추는 빼고, 결투는 「탑 오르기」 고르기 창에서만 들어감 */
 
  const st=document.createElement('style');st.id='pvp92';st.textContent=`
  #gmPvp{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px 0 8px;border-radius:999px;font:inherit;font-weight:900;font-size:13px;cursor:pointer;color:#fff;
