@@ -51,8 +51,8 @@
  /* ② ③ ④ 주인공을 그리기 전에 발밑 · 발자국 · 잔상 */
  {const base=drawKnight;drawKnight=function(c,x,y,s,fl,wt,idleT){try{const T=theme();if(T&&live(c)&&typeof P!=='undefined'&&s===2&&Math.abs(x-(P.x-12))<20&&Math.abs(y-(P.y-19))<20){const now=performance.now(),fx=x+12,fy=y+19.5;
     /* 발자국: 걸음 프레임이 바뀔 때 */if(P.walkOn){const f=((Math.floor((P.walkT||0)/(Math.PI/2))%4)+4)%4;if(f!==FX.lastF&&f%2===0){FX.steps.push({x:fx+(f===0?-3:3),y:fy,t:now,kind:T.kind,c:T.c,c2:T.c2});if(FX.steps.length>24)FX.steps.shift()}FX.lastF=f}
-    /* 대시 잔상 */if(P.dash){FX.dash.push({x:fx,y:fy-10,t:now});if(FX.dash.length>18)FX.dash.shift()}
-    drawSteps(now);FX.dash=FX.dash.filter(o=>now-o.t<260);FX.dash.forEach((o,i)=>{const q=(now-o.t)/260;RA(o.x-6,o.y-8,12,16,col(T,i),(1-q)*.22);RA(o.x-1,o.y-9,2,18,'#ffffff',(1-q)*.18)});
+    /* 대시 잔상: v70부터 999996(DASH70)이 스킨별로 그린다 */
+    drawSteps(now);
     drawAura(fx,fy,now,T)}}catch(e){}return base.apply(this,arguments)}}
 
  /* ⑤ 맞힐 때 터지는 효과 + ⑥ 공격 기술 빛 색 */
