@@ -105,7 +105,7 @@
 - 구글 플레이 앱(v59): TWA(웹 화면을 감싼 앱). 서버 `app.py`에 `/manifest.webmanifest`(시작 주소 `/play?source=app`), `/sw.js`(게임 파일 저장 후 뒤에서 새로 받기, `/api`·`/pay`는 저장 안 함), `/app/*.png`, `/.well-known/assetlinks.json`(환경변수 `TWA_PACKAGE`·`TWA_SHA256`), `/privacy`, `/delete-account`, `POST /api/account/delete`. 게임은 99999가 앱 모드(`window.BB_APP`)면 구매를 숨긴다. 서비스 워커 캐시 이름(`bb-app-v1`)을 바꾸면 옛 캐시가 지워진다.
 - 무료 출시 모드(v60): Render 환경변수 `SHOP_MODE=free` → `/api/shop`의 `free_mode`가 켜지고 주문·결제창이 403. 게임은 99999가 그 값을 읽어 `window.BB_FREE`로 「✦ 스킨 · 무기 · 연출」 탭 자체를 숨긴다(99991 `mount`, 마지막 값은 `localStorage['bb-free60']`).
 - 입어보기 없음(v60): 유료 상품은 사야만 장착할 수 있다. 상점은 미리보기 무대만 보여 주고, 보유한 상품에만 「장착하기」가 있다. 99998 `apply`가 보유하지 않은 장착을 벗긴다.
-- 테스터(v62): Render 환경변수 `TESTER_USERS`(아이디 쉼표 목록, 대소문자 무시) → 그 계정의 `/api/shop/owned`는 모든 상품 + `tester:true`. 게임은 `PAY58.tester()`면 무료 모드여도 상점 탭을 보여 준다(99999 `APP59.reFree`).
+- 테스터(v62): Render 환경변수 `TESTER_USERS`(아이디 또는 이메일 쉼표 목록, 대소문자 무시. 이메일은 Google 로그인·연결 때 확인한 이메일과 맞으면 `tester_links`에 이메일 해시만 저장) → 그 계정의 `/api/shop/owned`는 모든 상품 + `tester:true`. 게임은 `PAY58.tester()`면 무료 모드여도 상점 탭을 보여 준다(99999 `APP59.reFree`).
 - 현질 세트(v61, 999991 `SET61`): 세트 = 공허(void/voidreaver)·태엽(clock/gearsaber)·네온(neon/beatbreaker). 궁극기는 `G.sp.type='p61'`로 따로 그리고(검이 먼저, 없으면 스킨), 패리는 `__parryPose`(984)·방패·성공 이펙트를 세트별로(스킨이 먼저). 99997 `theme()`는 스킨이 없으면 현질 검의 세트 테마를 쓴다. 현질 검 궁극기 피해는 「시간의 검」 칸으로 계산한다.
 - 보스 체력은 9994가 마지막에 맞춘다(`HP54.WANT(전체 번호)`). 챕터별 체력 공식을 바꿔도 9994의 `CUR` 표를 함께 고쳐야 한다.
 - 1~5장 난이도별 추가 공격은 840·870의 공통 16틀을 9993이 보스 전용 4개로 덮어쓴다(`T5_SET[key]=[[보통],[어려움],[익스트림…]]`).
