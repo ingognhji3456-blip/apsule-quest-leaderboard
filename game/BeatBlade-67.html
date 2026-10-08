@@ -10885,7 +10885,7 @@ function lvCrowd(c,k,wl,wr,now,P){if(!LV.crowd)LV.crowd=lvCrowdInit();const t=no
   /* 머리 윤곽광 */c.fillStyle=P[1];c.globalAlpha=.25+.3*e;c.fillRect(X-6*S,Y-54*S,12*S,2*S);c.globalAlpha=1}}
 /* ---------- 메인 그리기 ---------- */
 function lvDraw(now){const cv=$('lvCv');if(!cv)return;const r=cv.getBoundingClientRect(),dpr=Math.min(1.5,window.devicePixelRatio||1),W0=Math.min(2000,Math.round((r.width||960)*dpr)),H0=Math.round((r.height||540)*dpr*(W0/((r.width||960)*dpr)));if(cv.width!==W0||cv.height!==H0){cv.width=W0;cv.height=H0}
- const c=cv.getContext('2d'),w=cv.width,h=cv.height,dt=lvAudio(now),t=now/1000,P=lvPal(),e=LV.env,port=w<h;/* v66: 폰 세로는 무대를 조금 크게 해서 메뉴 판 바로 위에 붙이고, 폰 가로(넓적한 화면)는 무대를 화면 가운데 쪽으로 넓게 */const wide=!port&&w/h>1.7,kk=port?w/560:h/540;let k=kk,ox=port?w/2-480*k:wide?Math.max(w*.55-480*k,w-960*k-16*k):Math.max(w*.62-480*k,w-960*k-20*k),oy=port?h*.6-540*k:0;if(port){try{const sb=$('lvSet'),cr=cv.getBoundingClientRect();if(sb&&sb.offsetParent){const top=(sb.getBoundingClientRect().top-cr.top)*(h/(cr.height||h));if(top>200){/* 위쪽 단추 줄 아래 ~ 메뉴 판 위의 빈자리를 무대로 채운다 */const tb=document.querySelector('#gmMain .gmTop'),hb=tb?(tb.getBoundingClientRect().bottom-cr.top)*(h/(cr.height||h)):h*.1;k=Math.max(kk,Math.min((top-hb)/500,w/400));ox=w/2-480*k;oy=top+30*k-540*k}}}catch(e){}}
+ const c=cv.getContext('2d'),w=cv.width,h=cv.height,dt=lvAudio(now),t=now/1000,P=lvPal(),e=LV.env,port=w<h;/* v66: 폰 세로는 무대를 조금 크게 해서 메뉴 판 바로 위에 붙이고, 폰 가로(넓적한 화면)는 무대를 화면 가운데 쪽으로 넓게 */const wide=!port&&w/h>1.7,kk=port?w/560:h/540;let k=kk,ox=port?w/2-480*k:wide?Math.max(w*.55-480*k,w-960*k-16*k):Math.max(w*.62-480*k,w-960*k-20*k),oy=port?h*.6-540*k:0;if(!port&&document.documentElement.classList.contains('ph'))ox=w/2-480*k;/* v67 폰 가로: 메뉴가 아래로 내려가서 무대를 가운데에 */if(port){try{const sb=$('lvSet')&&$('lvSet').offsetParent?$('lvSet'):$('lvDock'),cr=cv.getBoundingClientRect();if(sb&&sb.offsetParent){const top=(sb.getBoundingClientRect().top-cr.top)*(h/(cr.height||h));if(top>200){/* 위쪽 단추 줄 아래 ~ 메뉴 판 위의 빈자리를 무대로 채운다 */const tb=document.querySelector('#gmMain .gmTop'),hb=tb?(tb.getBoundingClientRect().bottom-cr.top)*(h/(cr.height||h)):h*.1;k=Math.max(kk,Math.min((top-hb)/500,w/320));ox=w/2-480*k;oy=top+30*k-540*k}}}catch(e){}}
  c.setTransform(1,0,0,1,0,0);c.globalCompositeOperation='source-over';c.globalAlpha=1;c.imageSmoothingEnabled=true;
  /* 배경 */const g0=c.createLinearGradient(0,0,0,h);g0.addColorStop(0,'#020308');g0.addColorStop(.6,'#070a18');g0.addColorStop(1,'#0c0816');c.fillStyle=g0;c.fillRect(0,0,w,h);
  c.save();c.translate(ox,oy);c.scale(k,k);const wl=-ox/k,wr=(w-ox)/k;
@@ -20777,7 +20777,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    '<div class="dots">'+STEPS.map((_,j)=>'<i class="'+(j<i?'on':j===i?'cur':'')+'"></i>').join('')+'</div><span class="ck">✓</span>';
   box.querySelector('.sk').onclick=e=>{e.stopPropagation();finish(true)};shownI=i;shownWait=waiting}
  /* 경기장 왼쪽 빈 곳에 붙임 (보스 체력바 · 보스 · 내 체력 칸을 가리지 않게) */
- function place(){try{const g=document.getElementById('game');if(!g)return;const r=g.getBoundingClientRect();let w=Math.max(250,Math.min(340,r.width*.31));/* v66: 화면 배율(zoom)이 걸려 있으면 위치 값도 함께 나눈다. 세로 화면에서 게임 화면 위가 비어 있으면 그 빈자리에 띄운다 */const z=parseFloat(getComputedStyle(box).zoom)||1;let L=Math.max(6,r.left+r.width*.035),T=Math.max(6,r.top+r.height*.2);if(innerHeight>innerWidth*1.2&&r.top>170){const vw=Math.min(innerWidth-16,440);w=vw/z;L=(innerWidth-vw)/2;T=Math.max(6,r.top-64-(box.offsetHeight||110)*z)}box.style.width=w+'px';box.style.left=L/z+'px';box.style.top=T/z+'px'}catch(e){}}
+ function place(){try{const g=document.getElementById('game');if(!g)return;const r=g.getBoundingClientRect();let w=Math.max(250,Math.min(340,r.width*.31));/* v66: 화면 배율(zoom)이 걸려 있으면 위치 값도 함께 나눈다. 세로 화면에서 게임 화면 위가 비어 있으면 그 빈자리에 띄운다 */const z=parseFloat(getComputedStyle(box).zoom)||1;let L=Math.max(6,r.left+r.width*.035),T=Math.max(6,r.top+r.height*.2);if(innerHeight>innerWidth*1.2&&(r.top>170||innerHeight-r.bottom>200)){const vw=Math.min(innerWidth-16,440);w=vw/z;L=(innerWidth-vw)/2;T=innerHeight-r.bottom>200?r.bottom+12/* v67: 게임 화면 아래 빈자리 */:Math.max(6,r.top-64-(box.offsetHeight||110)*z)}box.style.width=w+'px';box.style.left=L/z+'px';box.style.top=T/z+'px'}catch(e){}}
  function finish(skip){const s=S();s.done=1;s.i=STEPS.length;save();box.style.display='none';
   try{if(!skip){banner('전투 가이드 끝! 이제 마음껏 싸워 봐요');sfx(784,.3,'triangle',.05,1568)}}catch(e){}}
 
@@ -20949,8 +20949,9 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
 (()=>{try{
  const root=document.documentElement;
  function fit(){const w=innerWidth,h=innerHeight,land=w>h;let s=1;
-  if(land&&h<600)s=Math.max(.56,Math.min(1,h/640));
-  else if(!land&&w<560)s=Math.max(.7,Math.min(1,w/520));
+  /* v67: 너무 작게 줄이면 글씨가 안 보여서, 폰 가로는 높이 520 기준 · 최소 0.72배 */
+  if(land&&h<600)s=Math.max(.72,Math.min(1,h/520));
+  else if(!land&&w<560)s=Math.max(.74,Math.min(1,w/520));
   root.style.setProperty('--uis',s.toFixed(3));
   root.classList.toggle('uiFit',s<.995);root.classList.toggle('uiLand',land&&h<600);root.classList.toggle('uiPort',!land&&w<560)}
  addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,250));fit();
@@ -20962,19 +20963,108 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  html.uiFit #shopModal>*{zoom:var(--uis)}
  html.uiFit #acctBox .acPanel{zoom:var(--uis)}
  html.uiFit #tut63{zoom:calc(var(--uis) + .12)}
- /* 가로 로비 */
- html.uiLand #gameMenu .gmTop{zoom:.82}
- html.uiLand #lvSet{bottom:auto!important;max-height:calc(100% - 14px);width:min(250px,29vw)!important;padding:6px!important;
-  background:linear-gradient(180deg,#05080cd9,#05080c99)!important;border:1px solid #ffffff14;border-radius:14px!important;box-shadow:0 10px 30px #0007}
- html.uiLand #lvDock{zoom:.86}
+ /* 로비 · 위쪽 단추 줄은 v67(999995) 폰 전용 배치가 맡는다 */
  /* 가로 스킨 상점: 미리보기 무대를 낮춰서 이름 · 가격 · 「구매하기」까지 한 화면에 */
  html.uiLand #bbShop .ssStage canvas{aspect-ratio:auto;height:calc(40dvh / var(--uis));object-fit:contain}
  html.uiLand #bbShop .ssInfo p{margin:4px 0 6px}
- /* 세로 위쪽 단추 줄이 넘치지 않게 */
- html.uiPort #gameMenu .gmHud{gap:5px!important}
- html.uiPort #gmName>span:not(.v57i),html.uiPort #gmDiffChip .v57pips{display:none!important}
- html.uiPort #gmCoins,html.uiPort #gmDiffChip{padding-left:8px!important;padding-right:8px!important}
  `;document.head.appendChild(st);
  window.FIT66={fit,scale:()=>parseFloat(getComputedStyle(root).getPropertyValue('--uis'))||1};
 }catch(e){console.error('v66 fit',e)}})();
+/* ================= v67 폰 전용 배치 (PH67) =================
+   컴퓨터 화면을 줄여서 보여 주던 방식을 버리고, 폰에서는 배치 자체를 따로 짠다.
+   - 폰 판단: 손가락 화면이거나 화면 짧은 쪽이 500 이하 → <html>에 ph, 가로면 phL, 세로면 phP.
+   - 로비: 왼쪽 글자 목록(#lvSet) 대신 손가락 크기 단추 줄(#phNav)과 큰 「▶ 이야기」 단추(#phPlay).
+       가로 = 아래 왼쪽 단추 5개 + 아래 오른쪽 큰 단추, 세로 = 맨 아래 탭 줄 + 그 위 넓은 단추.
+     라이트 쇼(.lvAlb)는 가로는 왼쪽 위, 세로는 큰 단추 위.
+   - 위쪽 단추 줄: 모두 38~40px 높이로 맞추고, 세로에서는 한 줄을 고르게 나눈다.
+   - 전투(세로): 게임 화면을 위로 올려 아래쪽을 조작 공간으로. */
+(()=>{try{
+ const root=document.documentElement;
+ function mode(){const w=innerWidth,h=innerHeight,coarse=matchMedia('(pointer:coarse)').matches,ph=Math.min(w,h)<=500||(coarse&&Math.min(w,h)<=620);
+  root.classList.toggle('ph',ph);root.classList.toggle('phL',ph&&w>h);root.classList.toggle('phP',ph&&w<=h)}
+ addEventListener('resize',mode);addEventListener('orientationchange',()=>setTimeout(mode,250));mode();
+
+ /* 로비 단추 (GM_ITEMS 순서: 0 이야기 · 1 보스 러시 · 2 상점 · 3 명예의 전당 · 4 설정 · 5 조작법) */
+ const NAV=[[1,'⚔','보스 러시'],[2,'✦','상점'],[3,'♛','전당'],[4,'⚙','설정'],[5,'?','조작법']];
+ function go(i){try{if(window.LV&&LV.enter)return;GM.sel=i;gmMainSel();lvGo()}catch(e){try{GM.sel=i;gmMainGo()}catch(_){}}}
+ function build(){const m=document.getElementById('gmMain');if(!m||document.getElementById('phNav'))return;
+  const nav=document.createElement('div');nav.id='phNav';
+  nav.innerHTML=NAV.map(([i,ic,t])=>'<button data-i="'+i+'" style="--c:'+((window.LB_COL&&LB_COL[i])||'#a6f5c6')+'"><i>'+ic+'</i><b>'+t+'</b><em></em></button>').join('');
+  nav.querySelectorAll('button').forEach(b=>b.onclick=()=>go(+b.dataset.i));
+  const pl=document.createElement('button');pl.id='phPlay';pl.innerHTML='<small>NOW · STORY</small><b>▶ 이야기</b><em></em>';pl.onclick=()=>go(0);
+  m.appendChild(nav);m.appendChild(pl);upd()}
+ /* 단추 위 작은 글자(진행도 · 코인 등)는 원래 목록(#lvSet)의 것을 그대로 옮겨 온다 */
+ function upd(){if(!root.classList.contains('ph'))return;const em=i=>{const e=document.querySelector('#lvSet .lvI[data-i="'+i+'"] em');return e?e.textContent.trim():''};
+  const p=document.querySelector('#phPlay em');if(p){const t=em(0);if(p.textContent!==t)p.textContent=t}
+  document.querySelectorAll('#phNav button').forEach(b=>{const t=em(+b.dataset.i),e=b.querySelector('em');if(e&&e.textContent!==t){e.textContent=t;e.hidden=!t}})}
+ setInterval(()=>{try{build();upd()}catch(e){}},800);
+
+ const st=document.createElement('style');st.id='ph67';st.textContent=`
+ /* ---------- 위쪽 단추 줄 ---------- */
+ html.ph #gameMenu .gmTop{zoom:1!important;flex-wrap:nowrap;align-items:center}
+ html.ph #gameMenu .gmHud>*{height:38px!important;min-width:38px;padding:0 11px!important;font-size:13px!important;border-radius:12px!important;
+  display:inline-flex!important;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;flex:0 0 auto}
+ html.ph #gmDiffChip .v57pips,html.ph #rplBtn .v57t,html.ph #gmName>span:not(.v57i){display:none!important}
+ html.phL #gameMenu .gmTop{height:52px;padding:6px max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left))!important}
+ html.phL #gameMenu .gmLogo{font-size:20px!important}html.phL #gameMenu .gmLogo small{display:none}
+ html.phL #gameMenu .gmHud{gap:7px!important;margin-left:auto}
+ html.phP #gameMenu .gmTop{flex-direction:column;align-items:stretch;padding:max(10px,env(safe-area-inset-top)) 12px 4px!important;gap:8px!important}
+ html.phP #gameMenu .gmLogo{font-size:24px!important}
+ html.phP #gameMenu .gmHud{display:flex!important;gap:6px!important;width:100%;justify-content:space-between}
+ html.phP #gameMenu .gmHud>*{height:40px!important;padding:0 8px!important;flex:1 1 0!important;min-width:0}
+ html.phP #gmCoins{flex:1.6 1 0!important}html.phP #acctChip .v57nm{display:none!important}
+
+ /* 폰 가로: 로비가 아닌 화면(설정 · 조작법 · 이야기 …)은 자기 「뒤로」 단추가 있으니 위쪽 단추 줄을 숨겨 화면을 넓게 */
+ html.phL #gameMenu:has(#gmMain:not(.on)) .gmTop{display:none!important}
+
+ /* ---------- 로비 ---------- */
+ #phNav,#phPlay{display:none}
+ html.ph #gmMain.lvFull #lvSet#lvSet{display:none!important}
+ html.ph #gmMain.lvFull>#phNav#phNav#phNav{display:flex!important}
+ html.ph #gmMain.lvFull>#phPlay#phPlay#phPlay{display:flex!important}
+ html.ph #lvGoBtn,html.ph .lvTip{display:none!important}
+ #phNav{position:absolute;z-index:5;gap:8px}
+ #phNav button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:16px;cursor:pointer;
+  background:linear-gradient(180deg,#141c28ee,#0a1018ee);border:1px solid #ffffff1f;color:#e9f3ff;font:inherit;padding:0;
+  box-shadow:inset 0 1px 0 #ffffff14,0 3px 0 #04070b,0 8px 18px #0008;-webkit-tap-highlight-color:transparent;transition:transform .08s}
+ #phNav button:active{transform:translateY(2px);box-shadow:inset 0 1px 0 #ffffff10,0 1px 0 #04070b}
+ #phNav i{font-style:normal;font-size:21px;line-height:1;color:var(--c);text-shadow:0 0 10px var(--c)}
+ #phNav b{font-size:12px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
+ #phNav em{position:absolute;top:-7px;right:-4px;font-style:normal;font-size:10px;font-weight:900;padding:2px 6px;border-radius:999px;background:#05080c;border:1px solid var(--c);color:var(--c);white-space:nowrap}
+ #phNav em:empty,#phPlay em:empty{display:none}
+ #phPlay{position:absolute;z-index:5;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-radius:18px;cursor:pointer;
+  background:linear-gradient(180deg,#d4ffe6,#74d3b0);color:#04120c;border:1px solid #f0fff6;padding:0;font:inherit;
+  box-shadow:inset 0 1px 0 #ffffffcc,0 4px 0 #2c6a55,0 10px 30px #6ccaa966;-webkit-tap-highlight-color:transparent;animation:lbBtn 1.6s ease-in-out infinite}
+ #phPlay:active{transform:translateY(3px);box-shadow:inset 0 1px 0 #ffffffaa,0 1px 0 #2c6a55}
+ #phPlay small{font-size:9px;letter-spacing:.32em;font-weight:900;opacity:.6}#phPlay b{font-size:24px;font-weight:900;letter-spacing:.04em}
+ #phPlay em{font-style:normal;font-size:11px;font-weight:900;opacity:.75}
+ html.ph #lvDock{zoom:1!important;max-width:none!important}
+ html.ph .lvAlb{padding:4px 6px 4px 10px!important;border-radius:14px;gap:5px!important;background:#05080cc8!important;backdrop-filter:blur(6px)}
+ html.ph .lvAlb>span{font-size:8px!important;letter-spacing:.2em;line-height:1.2;width:42px;white-space:normal}
+ html.ph .lvAlb .lbChip{transform:none!important;width:30px!important;height:30px!important;min-width:30px;padding:0!important;border-radius:9px!important;flex:0 0 auto}
+ /* 가로: 아래 왼쪽 단추 5개 · 아래 오른쪽 큰 단추 · 라이트 쇼는 왼쪽 위 */
+ html.phL #phNav{left:max(14px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom))}
+ html.phL #phNav button{width:72px;height:64px}
+ html.phL #phPlay{right:max(14px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));width:min(230px,28vw);height:64px}
+ html.phL #lvDock{left:max(14px,env(safe-area-inset-left))!important;right:auto!important;top:6px!important;bottom:auto!important}
+ html.phL .lvAlb{max-width:calc(100vw - 40px);overflow-x:auto;scrollbar-width:none}
+ /* 세로: 맨 아래 탭 줄 · 그 위 넓은 단추 · 그 위 라이트 쇼 */
+ html.phP #phNav{left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));gap:6px}
+ html.phP #phNav button{flex:1 1 0;height:64px;min-width:0}
+ html.phP #phNav b{font-size:11.5px}
+ html.phP #phPlay{left:10px;right:10px;bottom:calc(max(10px,env(safe-area-inset-bottom)) + 76px);height:74px}
+ html.phP #phPlay b{font-size:27px}
+ html.phP #lvDock{left:10px!important;right:10px!important;bottom:calc(max(10px,env(safe-area-inset-bottom)) + 162px)!important;top:auto!important;align-items:stretch!important}
+ html.phP .lvAlb{overflow-x:auto;scrollbar-width:none;justify-content:flex-start}
+ html.ph .lvAlb::-webkit-scrollbar{display:none}
+
+ /* ---------- 전투 (세로) : 게임 화면을 위로 ---------- */
+ html.phP #battleView{justify-content:flex-start!important;padding-top:max(6px,env(safe-area-inset-top))!important}
+ html.phP #battleView .bar{order:-1}
+ html.phP #battleView .bar{height:46px!important;flex-wrap:nowrap!important;justify-content:flex-end!important;gap:6px;padding:0 8px!important}
+ html.phP #battleView .bar #bvTitle{display:none!important}
+ html.phP #battleView .bar button{height:36px;padding:0 12px!important;font-size:13px!important;margin:0!important;white-space:nowrap}
+ `;document.head.appendChild(st);
+ window.PH67={mode,phone:()=>root.classList.contains('ph')};
+}catch(e){console.error('v67 phone',e)}})();
 </script></body></html>
