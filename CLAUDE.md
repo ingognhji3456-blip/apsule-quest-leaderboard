@@ -95,7 +95,7 @@
 - 음악: `playSlot(n,delay,S)`가 반 박자마다 불린다(16분음표 2칸). 챕터 5는 `S.s5Mix27`, 챕터 6은 `S.s6Mix`, 챕터 7은 `S.s7Mix`로 자기 곡을 연주한다. 곡을 소리 파일로 뽑아 들어 보려면 `OfflineAudioContext`를 `audio`에 넣고 `playSlot`을 차례로 부른 뒤 렌더링한다.
 - 소환 물체 `ACT`(999): 보스가 공격할 때 물건(거울·체스 말·드론…)을 꺼내 움직이게 한다. `ACT.put({spr,pos(b),t0,t2,s,...})`는 그림만, `ACT.hit({pos,r,t0,t1,t2,dmg})`는 판정만(그림 없음). 그림은 `ACT.pix(줄글,색표)` 또는 `ACT.spr(탄모양,크기)`. 위험물에 `hide:true`를 주면 판정만 남고 그림은 물체가 대신 그린다. 레이저('laser' 모양)는 999가 모든 챕터에서 묵직하게 그린다.
 - 살아 움직이는 보스(9995): 보스 그림을 마지막에 띠로 잘라 부위별로 움직인다. 보스별 설정은 `RIG54[그림 열쇠]`(tail·wings·sway·fringe·pend·br·float). 공격 몸동작은 패턴의 몸 쓰는 곳(`CHAN`: head·hands·field·all)으로 정해진다. 새 보스를 만들면 `RIG54`에 한 줄 넣는다.
-- 로그인 강제 · 이름(v77, 9999): 켜면 로그인 창(`gate`, 닫기 막힘 `locked()`), 서버 연결 실패 때만 「오프라인으로 하기」(`offline`). Google로 만든 `G_…` 계정은 `needName` → 「이름 정하기」 → 서버 `POST /api/account/name`(G_ 계정만, 2~10자, 겹치면 409, `rank_scores.username`도 바꿈). 로그인 이름이 `saveData.name`이 된다(`syncName`). 헤드리스 시험(`navigator.webdriver`)은 로그인 창을 건너뛰고, 시험하려면 `localStorage['bb-gate-test']=1`. 「닫기」 글자 단추는 9999994가 ✕ 단추로 바꾼다(새 창에 닫기 단추를 만들면 글자를 「닫기」로 두면 됨).
+- 로그인 강제 · 이름(v77, 9999): 켜면 로그인 창(`gate`, 닫기 막힘 `locked()`), 서버 연결 실패 때만 「오프라인으로 하기」(`offline`). Google로 만든 `G_…` 계정은 `needName` → 「이름 정하기」 → 서버 `POST /api/account/name`(G_ 계정만, 2~10자, 겹치면 409, `rank_scores.username`도 바꿈). 로그인 이름이 `saveData.name`이 된다(`syncName`). 헤드리스 시험(`navigator.webdriver`)은 로그인 창을 건너뛰고, 시험하려면 `localStorage['bb-gate-test']=1`. 「닫기」 글자 단추는 9999994가 ✕ 단추로 바꾼다(새 창에 닫기 단추를 만들면 글자를 「닫기」로 두면 됨). 크기는 `--cxs`(폰 48px · 줄여 그리는 창은 `--uis`로 나눠 되돌림), 누르는 자리는 `::before`로 넓힘.
 - 로그인(9999): 진행 기록 `saveData`를 서버에 올린다(`ACCT55`). 서버 쪽 기록 번호(rev)가 다르면 덮어쓰지 않고 묻는다. 새 저장 항목을 `saveData`에 넣으면 따로 할 일 없이 함께 올라간다. 서버 기본 주소는 9999의 `DEF_URL`. 서버 시험: `DB_PATH=/임시/t.db python3 app.py` 후 게임 로그인 창의 「서버 주소」를 `http://127.0.0.1:8000`으로.
 - 다른 도구(ChatGPT 등)가 빌드 결과물 HTML만 고쳐 올린 경우: `diff`로 이전 빌드와 비교해 바뀐 줄을 `game/src`에 옮긴 뒤 다시 빌드한다. 결과물만 고치면 다음 빌드에서 사라진다. 결과물 크기가 갑자기 줄었으면(예: 3MB→1MB) 잘린 것이다.
 - Google 로그인·랭킹·상점 서버 코드는 `app.py`(`/api/google/*`, `/google-bridge`, `/api/ranking`, `/api/shop*`, `/play`). 랭킹 점수 상한은 `MAX_RANK_SCORE`.
@@ -117,7 +117,7 @@
 - 모바일 궁극기 단추(v76): `#btnU`는 320 `ensureUltBtn`이 만들고 `ultBtnPaint(비율,쓸수있나)`가 금색 채움 · %를 칠한다. 보스전은 320 `drawSpecialHUD`, 탑은 999997 update 끝에서 늘 보이게.
 - 폰 세로 전투(v76, 999999 `PV76`): `phP` + 전투 중이면 `html.pv76`. 원래 캔버스 `#game`은 그대로 그려지고 안 보일 뿐이며, `frame` 감싸기에서 `#pvView`(확대) · `#pvTop` · `#pvBot` · `#pvMini`로 옮겨 그린다. 화면 크기는 `fitBattle` 감싸기의 `layout()`. 정보 칸 위치(위 0~50, 아래 H-62~H)를 바꾸면 `paint()`의 덮기 범위도 맞춘다.
 - 기기 구분(v76, 9999992 `DV76`): `dvPhone`(=ph) · `dvPad`(손가락만 · 폰보다 큼) · `dvLap`(마우스 · 폭 1600 이하 또는 높이 900 이하) · `dvDesk`. 기기별 CSS는 이 파일에 모은다. 폰 가로 메뉴 한 화면은 9999991.
-- 탑 BGM · 타격감(v76, 999997): 구역마다 `makeSong(z%20)`을 `music()`으로(구역 바뀔 때만 다시), 맞힐 때 `T.stop`(히트스톱) · `perc` 소리 · `T.hfx` 효과 · `m.kbA` 밀림. 로비 LED 0번은 `TW71.led`(탑 그림).
+- 탑 BGM · 타격감(v76, 999997): 구역마다 `makeSong(z%20)`을 `music()`으로(구역 바뀔 때만 다시), 맞힐 때 `T.stop`(히트스톱) · `perc` 소리 · `T.hfx` 효과 · `m.kbA` 밀림. 로비 LED 0번은 `TW71.led`(탑 그림). **층마다 `T.clk`가 0이 되므로, `T.clk`로 시각을 적어 두는 새 값은 `buildFloor`에서 지워야 한다**(v79: `T.punch`가 남아 화면이 크게 확대됐었음).
 - 렉(v76): 820 `ch2Render`는 같은 캐릭터 · 자세 · 1/12초 그림을 `CH2C`에 저장해 다시 쓴다(`CH2.pose`나 휘두르는 중이면 저장 안 함). 실제 그리기는 `ch2Render0`. 스킨 상점 목록 카드는 99991 `loop`에서 보이는 것만 120ms마다.
 - 보스 체력은 9994가 마지막에 맞춘다(`HP54.WANT(전체 번호)`). 챕터별 체력 공식을 바꿔도 9994의 `CUR` 표를 함께 고쳐야 한다.
 - 1~5장 난이도별 추가 공격은 840·870의 공통 16틀을 9993이 보스 전용 4개로 덮어쓴다(`T5_SET[key]=[[보통],[어려움],[익스트림…]]`).

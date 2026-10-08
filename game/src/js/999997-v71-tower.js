@@ -100,6 +100,8 @@
   /* v75: 한꺼번에 나오지 않고 소환진에서 하나씩. 일반을 섞고 정예는 맨 뒤 */
   const norm=list.filter(m=>!m.elite).sort(()=>Math.random()-.5),els=list.filter(m=>m.elite);T.queue=norm.concat(els).map(m=>({sp:m.sp,elite:m.elite,hp:Math.round(SP[m.sp].hp*hpz*(m.elite?3.5:1))}));
   T.cap=Math.min(5,2+Math.floor(k/3)+(z>=3?1:0));T.nextSpawn=.7;T.total=T.queue.length;T.waves=[];
+  /* v79: 층 시계(T.clk)가 0으로 돌아가니 지난 층의 시각 기록도 지운다 — 남아 있으면 「방금 때림」으로 읽혀 화면이 크게 확대됐다 */
+  T.punch=null;P.parryT=null;
   P.x=AX+AW/2;P.y=AY+AH-24;P.face={x:0,y:-1};P.dash=null;P.lungeT=0;P.slowT=0;try{prewarm()}catch(e){}}
  function spawnOne(){const q=T.queue.shift();if(!q)return;let x,y,tries=0;do{x=rnd(AX+30,AX+AW-30);y=rnd(AY+40,AY+AH-30);tries++}while(tries<30&&Math.hypot(x-P.x,y-P.y)<85);
   T.mobs.push({sp:q.sp,elite:q.elite,x,y,vx:0,vy:0,hp:q.hp,max:q.hp,s:q.elite?1.5:1,born:q.elite?1.1:.8,bornMax:q.elite?1.1:.8,st:'idle',st0:0,cd:rnd(.8,1.8),face:1,hitT:-9,stunT:-9,ang:Math.random()*6.28,seed:Math.random()*99});
@@ -122,7 +124,7 @@
  /* 보스 층: 짧은 소개 뒤 보스 전투 */
  function goBoss(f){const g=zoneOf(f),B=bossOf(g);T.f=f;T.z=g;T.pal=palOf(g);T.bossCard={t:0,g,B};mode='tower';hud(true);
   $('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F · BOSS';try{stopMusic()}catch(e){}try{sfx(110,.6,'sawtooth',.05,55)}catch(e){}
-  T.mobs=[];T.shots=[];T.tels=[];T.parts=T.parts||[];T.pops=[];T.slash=[];T.clk=0;T.trans=null;T.clear=false}
+  T.mobs=[];T.shots=[];T.tels=[];T.parts=T.parts||[];T.pops=[];T.slash=[];T.clk=0;T.punch=null;P.parryT=null;T.trans=null;T.clear=false}
  function launchBoss(){const {g}=T.bossCard;T.bossCard=null;const f=T.f;mode='menu';
   try{bossStart(g)}catch(e){console.error('tower boss',e);toLobby();return}
   try{G.tw71={g,f}}catch(e){}}
@@ -344,7 +346,7 @@
   A(.4);ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(P.x,P.y+2,9,3,0,0,6.28);ctx.fill();A(1);
   const [lx,ly]=lungeOffset(now),fl=P.face.x<0;const om=mode;mode='village';/* 앞·옆·뒤 모습 · 스킨 연출이 그대로 나오도록 마을처럼 그림 */
   try{drawSword(P.x-12+lx,P.y-19+ly,2,fl,now);drawKnight(ctx,P.x-12+lx,P.y-19+ly,2,fl,P.walkOn?P.walkT:null,P.walkOn?null:now/430)}catch(e){}finally{mode=om}
-  if(P.parryT!=null&&T.clk-P.parryT<.25){const q=(T.clk-P.parryT)/.25;ctx.strokeStyle='#ffe79a';A(1-q);ctx.lineWidth=2;ctx.beginPath();ctx.arc(P.x,P.y-8,14+q*20,0,6.28);ctx.stroke();ctx.lineWidth=1;A(1)}}
+  if(P.parryT!=null&&T.clk-P.parryT>=0&&T.clk-P.parryT<.25){const q=(T.clk-P.parryT)/.25;ctx.strokeStyle='#ffe79a';A(1-q);ctx.lineWidth=2;ctx.beginPath();ctx.arc(P.x,P.y-8,14+q*20,0,6.28);ctx.stroke();ctx.lineWidth=1;A(1)}}
  function drawSlash(){for(const s of T.slash){const q=(T.clk-s.t)/.18;if(q>=1)continue;ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.a);ctx.strokeStyle=s.good===2?'#ffe79a':s.col;ctx.lineWidth=3*(1-q)+1;A(1-q);
    ctx.beginPath();ctx.arc(0,0,26,-1.1+q*.4,1.1+q*.4);ctx.stroke();ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,22,-.8+q*.4,.8+q*.4);ctx.stroke();ctx.restore()}
   T.slash=T.slash.filter(s=>T.clk-s.t<.18);A(1)}
@@ -358,7 +360,7 @@
  function draw(now){try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}ctx.imageSmoothingEnabled=false;ctx.save();
   if(T.bossCard){drawBossCard(now);ctx.restore();return}
   if(T.shake>0)ctx.translate(rnd(-1,1)*T.shake*4,rnd(-1,1)*T.shake*4);
-  if(T.punch!=null&&T.clk-T.punch<.12){const z=1+.025*(1-(T.clk-T.punch)/.12);ctx.translate(P.x,P.y);ctx.scale(z,z);ctx.translate(-P.x,-P.y)}
+  if(T.punch!=null&&T.clk-T.punch>=0&&T.clk-T.punch<.12){const z=1+.025*(1-(T.clk-T.punch)/.12);ctx.translate(P.x,P.y);ctx.scale(z,z);ctx.translate(-P.x,-P.y)}
   bg();drawTels();
   const list=T.mobs.map(m=>({y:m.y,fn:()=>drawMob(m)}));list.push({y:P.y,fn:()=>drawHero(now)});list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
   drawSlash();

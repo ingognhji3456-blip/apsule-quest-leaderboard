@@ -21329,6 +21329,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   /* v75: 한꺼번에 나오지 않고 소환진에서 하나씩. 일반을 섞고 정예는 맨 뒤 */
   const norm=list.filter(m=>!m.elite).sort(()=>Math.random()-.5),els=list.filter(m=>m.elite);T.queue=norm.concat(els).map(m=>({sp:m.sp,elite:m.elite,hp:Math.round(SP[m.sp].hp*hpz*(m.elite?3.5:1))}));
   T.cap=Math.min(5,2+Math.floor(k/3)+(z>=3?1:0));T.nextSpawn=.7;T.total=T.queue.length;T.waves=[];
+  /* v79: 층 시계(T.clk)가 0으로 돌아가니 지난 층의 시각 기록도 지운다 — 남아 있으면 「방금 때림」으로 읽혀 화면이 크게 확대됐다 */
+  T.punch=null;P.parryT=null;
   P.x=AX+AW/2;P.y=AY+AH-24;P.face={x:0,y:-1};P.dash=null;P.lungeT=0;P.slowT=0;try{prewarm()}catch(e){}}
  function spawnOne(){const q=T.queue.shift();if(!q)return;let x,y,tries=0;do{x=rnd(AX+30,AX+AW-30);y=rnd(AY+40,AY+AH-30);tries++}while(tries<30&&Math.hypot(x-P.x,y-P.y)<85);
   T.mobs.push({sp:q.sp,elite:q.elite,x,y,vx:0,vy:0,hp:q.hp,max:q.hp,s:q.elite?1.5:1,born:q.elite?1.1:.8,bornMax:q.elite?1.1:.8,st:'idle',st0:0,cd:rnd(.8,1.8),face:1,hitT:-9,stunT:-9,ang:Math.random()*6.28,seed:Math.random()*99});
@@ -21351,7 +21353,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* 보스 층: 짧은 소개 뒤 보스 전투 */
  function goBoss(f){const g=zoneOf(f),B=bossOf(g);T.f=f;T.z=g;T.pal=palOf(g);T.bossCard={t:0,g,B};mode='tower';hud(true);
   $('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F · BOSS';try{stopMusic()}catch(e){}try{sfx(110,.6,'sawtooth',.05,55)}catch(e){}
-  T.mobs=[];T.shots=[];T.tels=[];T.parts=T.parts||[];T.pops=[];T.slash=[];T.clk=0;T.trans=null;T.clear=false}
+  T.mobs=[];T.shots=[];T.tels=[];T.parts=T.parts||[];T.pops=[];T.slash=[];T.clk=0;T.punch=null;P.parryT=null;T.trans=null;T.clear=false}
  function launchBoss(){const {g}=T.bossCard;T.bossCard=null;const f=T.f;mode='menu';
   try{bossStart(g)}catch(e){console.error('tower boss',e);toLobby();return}
   try{G.tw71={g,f}}catch(e){}}
@@ -21573,7 +21575,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   A(.4);ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(P.x,P.y+2,9,3,0,0,6.28);ctx.fill();A(1);
   const [lx,ly]=lungeOffset(now),fl=P.face.x<0;const om=mode;mode='village';/* 앞·옆·뒤 모습 · 스킨 연출이 그대로 나오도록 마을처럼 그림 */
   try{drawSword(P.x-12+lx,P.y-19+ly,2,fl,now);drawKnight(ctx,P.x-12+lx,P.y-19+ly,2,fl,P.walkOn?P.walkT:null,P.walkOn?null:now/430)}catch(e){}finally{mode=om}
-  if(P.parryT!=null&&T.clk-P.parryT<.25){const q=(T.clk-P.parryT)/.25;ctx.strokeStyle='#ffe79a';A(1-q);ctx.lineWidth=2;ctx.beginPath();ctx.arc(P.x,P.y-8,14+q*20,0,6.28);ctx.stroke();ctx.lineWidth=1;A(1)}}
+  if(P.parryT!=null&&T.clk-P.parryT>=0&&T.clk-P.parryT<.25){const q=(T.clk-P.parryT)/.25;ctx.strokeStyle='#ffe79a';A(1-q);ctx.lineWidth=2;ctx.beginPath();ctx.arc(P.x,P.y-8,14+q*20,0,6.28);ctx.stroke();ctx.lineWidth=1;A(1)}}
  function drawSlash(){for(const s of T.slash){const q=(T.clk-s.t)/.18;if(q>=1)continue;ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.a);ctx.strokeStyle=s.good===2?'#ffe79a':s.col;ctx.lineWidth=3*(1-q)+1;A(1-q);
    ctx.beginPath();ctx.arc(0,0,26,-1.1+q*.4,1.1+q*.4);ctx.stroke();ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,22,-.8+q*.4,.8+q*.4);ctx.stroke();ctx.restore()}
   T.slash=T.slash.filter(s=>T.clk-s.t<.18);A(1)}
@@ -21587,7 +21589,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  function draw(now){try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}ctx.imageSmoothingEnabled=false;ctx.save();
   if(T.bossCard){drawBossCard(now);ctx.restore();return}
   if(T.shake>0)ctx.translate(rnd(-1,1)*T.shake*4,rnd(-1,1)*T.shake*4);
-  if(T.punch!=null&&T.clk-T.punch<.12){const z=1+.025*(1-(T.clk-T.punch)/.12);ctx.translate(P.x,P.y);ctx.scale(z,z);ctx.translate(-P.x,-P.y)}
+  if(T.punch!=null&&T.clk-T.punch>=0&&T.clk-T.punch<.12){const z=1+.025*(1-(T.clk-T.punch)/.12);ctx.translate(P.x,P.y);ctx.scale(z,z);ctx.translate(-P.x,-P.y)}
   bg();drawTels();
   const list=T.mobs.map(m=>({y:m.y,fn:()=>drawMob(m)}));list.push({y:P.y,fn:()=>drawHero(now)});list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
   drawSlash();
@@ -22156,16 +22158,23 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const RE=/^\s*(✕\s*)?닫기(\s*✕)?\s*$/;
  const st=document.createElement('style');st.id='cx77';st.textContent=`
  html body button.cx77,html body #bbShop .ssX{all:unset;box-sizing:border-box;display:inline-flex!important;align-items:center;justify-content:center;flex:none;
-  width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;padding:0!important;margin:0!important;border-radius:50%!important;cursor:pointer;
+  width:var(--cxs,44px)!important;height:var(--cxs,44px)!important;min-width:var(--cxs,44px)!important;min-height:var(--cxs,44px)!important;pointer-events:auto!important;touch-action:manipulation;padding:0!important;margin:0!important;border-radius:50%!important;cursor:pointer;
   background:radial-gradient(circle at 35% 30%,#ff7a8a,#e0284a 60%,#9a1030)!important;color:#fff!important;font:900 22px/1 system-ui,sans-serif!important;
   border:2px solid #ffffffcc!important;box-shadow:0 0 0 3px #e0284a55,0 6px 16px #000a,0 0 18px #ff3a5a88!important;text-shadow:0 1px 2px #0008;
   transition:transform .12s,box-shadow .12s;-webkit-tap-highlight-color:transparent;z-index:5}
  html body button.cx77:hover,html body #bbShop .ssX:hover{transform:scale(1.1) rotate(90deg);box-shadow:0 0 0 4px #ff3a5a77,0 6px 16px #000a,0 0 26px #ff3a5acc!important}
  html body button.cx77:active,html body #bbShop .ssX:active{transform:scale(.92)}
- /* ✕ 글자는 글꼴마다 크기가 달라서, 굵은 막대 두 개로 직접 그린다 */
+ /* ✕ 글자는 글꼴마다 크기가 달라서, 굵은 막대 두 개(+자를 45도 돌림)로 직접 그린다 */
  html body button.cx77{position:relative;color:transparent!important;text-shadow:none!important}
- html body button.cx77::before,html body button.cx77::after{content:"";position:absolute;left:50%;top:50%;width:20px;height:4px;border-radius:2px;background:#fff;box-shadow:0 1px 2px #0006;transform:translate(-50%,-50%) rotate(45deg)}
- html body button.cx77::after{transform:translate(-50%,-50%) rotate(-45deg)}
+ html body button.cx77::after{content:"";position:absolute;left:50%;top:50%;width:46%;height:46%;pointer-events:none;
+  background:linear-gradient(#fff,#fff) center/100% 18% no-repeat,linear-gradient(#fff,#fff) center/18% 100% no-repeat;filter:drop-shadow(0 1px 1px #0006);transform:translate(-50%,-50%) rotate(45deg)}
+ /* v79: 손가락이 단추 가장자리 밖을 눌러도 닫히게 — 보이지 않는 누르는 자리를 둘레로 넓힌다 */
+ html body button.cx77::before,html body #bbShop .ssX::before{content:"";position:absolute;inset:calc(var(--cxs,44px) * -.35);border-radius:50%}
+ html body #bbShop .ssX{position:relative}
+ /* 폰에서 창 전체를 줄여 그리는 곳(zoom)에서는 ✕가 같이 작아지지 않게 되돌린다 */
+ html.uiFit :is(#shopModal,#acctBox,#bbShop){--cxs:calc(44px / var(--uis,1))}
+ html.ph :is(#shopModal,#acctBox,#bbShop,#gameMenu){--cxs:calc(48px / var(--uis,1))}
+ html.phL #shopModal #shopClose{margin-right:env(safe-area-inset-right,0px)!important}
  html body button.cx77:focus-visible{outline:3px solid #ffe79a;outline-offset:2px}
  #acPanel{position:relative}
  #acPanel>button#acClose.cx77{position:absolute!important;top:10px;right:10px}
@@ -22173,7 +22182,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  `;document.head.appendChild(st);
  function fix(){document.querySelectorAll('button:not(.cx77)').forEach(b=>{if(!RE.test(b.textContent||''))return;
    b.textContent='✕';b.classList.add('cx77');b.setAttribute('aria-label','닫기');b.title='닫기';
-   /* 다른 화면의 단추 글씨 크기 규칙이 더 세서, 크기는 단추에 직접 박는다 */for(const [k,v] of [['font-size','22px'],['width','42px'],['height','42px'],['padding','0'],['line-height','1'],['border-radius','50%']])b.style.setProperty(k,v,'important');
+   /* 다른 화면의 단추 글씨 크기 규칙이 더 세서, 크기는 단추에 직접 박는다 */for(const [k,v] of [['font-size','22px'],['width','var(--cxs,44px)'],['height','var(--cxs,44px)'],['padding','0'],['line-height','1'],['border-radius','50%']])b.style.setProperty(k,v,'important');
    if(b.id==='acClose'){const p=document.getElementById('acPanel'),row=b.parentElement;if(p&&row!==p){p.appendChild(b);if(row&&row.classList.contains('acRow')&&!row.children.length)row.remove()}}})}
  function noNameEdit(){const i=document.getElementById('nameIn');if(!i)return;const row=i.closest('.row');if(row&&!row.hidden){row.hidden=true;row.style.display='none';const p=row.nextElementSibling;if(p&&p.tagName==='P')p.textContent='이름은 로그인할 때 정한 계정 이름으로 나와요. 랭킹에도 이 이름이 올라가요.'}}
  /* 창이 다시 그려지면 바로(다음 화면 그리기 전에) 바꾼다 + 혹시 몰라 1초마다 한 번 */
