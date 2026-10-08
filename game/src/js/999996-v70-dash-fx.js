@@ -113,7 +113,7 @@
   if(D.trail.length||D.parts.length||D.marks.length)drawFx(now);
   if(!P.dash&&D.trail.length&&now-D.trail[D.trail.length-1].t>D.st.life+100)D.trail=[]}
  {const base=drawKnight;drawKnight=function(c,x,y,s,fl,wt,idleT){
-  try{if(live(c)&&mode!=='boss'&&typeof P!=='undefined'&&s===2&&Math.abs(x-(P.x-12))<24&&Math.abs(y-(P.y-19))<24)tick(performance.now())}catch(e){}
+  try{if(!window.__mateDraw&&live(c)&&mode!=='boss'&&typeof P!=='undefined'&&s===2&&Math.abs(x-(P.x-12))<24&&Math.abs(y-(P.y-19))<24)tick(performance.now())}catch(e){}
   return base.apply(this,arguments)}}
  window.DASH70={ST,style,D,tick(now){try{tick(now)}catch(e){}}};
 }catch(e){console.error('v70 dash',e)}})();

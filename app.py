@@ -1177,10 +1177,28 @@ def duo_leave():
     return jsonify(ok=True)
 
 
+_duo_ucache = {}
+
+
+def _duo_user():
+    """듀오 주고받기는 1초에 10번씩 와서, 로그인 확인(DB 조회)을 1분 동안 기억해 둔다"""
+    auth = request.headers.get('Authorization', '')
+    now = time.time()
+    hit = _duo_ucache.get(auth)
+    if hit and hit[1] > now:
+        return hit[0]
+    user = _current_user()
+    if user:
+        if len(_duo_ucache) > 500:
+            _duo_ucache.clear()
+        _duo_ucache[auth] = (user, now + 60)
+    return user
+
+
 @app.route('/api/duo/sync', methods=['POST'])
 def duo_sync():
     """보낼 메시지(msgs)를 올리고, since 다음의 메시지를 받는다. 방장은 state='play'로 시작을 알린다."""
-    user = _current_user()
+    user = _duo_user()
     if not user:
         return _bad('로그인이 필요해요', 401)
     body = request.get_json(silent=True) or {}
@@ -1197,8 +1215,14 @@ def duo_sync():
             return _bad('이 방에 없어요', 403)
         me['seen'] = now
         r['touched'] = now
-        if body.get('start') and r['owner'] == user['user_id'] and len(r['players']) == 2 and r['state'] == 'wait':
-            r['state'] = 'play'
+        start_err = ''
+        if body.get('start') and r['state'] == 'wait':
+            if r['owner'] != user['user_id']:
+                start_err = '방장만 시작할 수 있어요'
+            elif len(r['players']) != 2:
+                start_err = '동료가 방에 없어요'
+            else:
+                r['state'] = 'play'
         if body.get('ch') is not None:
             me['ch'] = clamp_int(body.get('ch'), 0, 999, me['ch'])
         for m in msgs[:20]:
@@ -1208,7 +1232,7 @@ def duo_sync():
         if len(r['msgs']) > _DUO_KEEP:
             r['msgs'] = r['msgs'][-_DUO_KEEP:]
         out = [x for x in r['msgs'] if x['seq'] > since and x['from'] != user['user_id'][:6]]
-        return jsonify(ok=True, room=_duo_view(r, user['user_id']), msgs=out, seq=r['seq'])
+        return jsonify(ok=True, room=_duo_view(r, user['user_id']), msgs=out, seq=r['seq'], start_err=start_err)
 
 
 @app.route('/api/save', methods=['GET'])
