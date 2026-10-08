@@ -140,8 +140,8 @@
   return r}}
  function bossDone(won,tw){if(tw.done)return;tw.done=1;const s=sv(),B=bossOf(tw.g);
   if(won){if(tw.g<70)grant(tw.g);s.bosses=Math.max(s.bosses||0,tw.g+1);s.floor=tw.f+1;s.cp=tw.f+1;s.best=Math.max(s.best||1,tw.f+1);try{saveNow()}catch(e){}
-   const nz=zoneOf(tw.f+1);
-   showOverlay('TOWER · '+tw.f+'F CLEAR','보스 격파!','<b style="color:'+B.c+'">'+B.name+'</b>을(를) 쓰러뜨렸어요.<br>보스 러시에서도 다시 만날 수 있어요.<br><br>다음 구역 <b>'+(tw.f+1)+'F~'+(tw.f+9)+'F</b>: '+TW.zoneMobs(nz).join(' · ')+(tw.f+10<=700?'<br>다음 보스('+(tw.f+10)+'F): <b>'+bossOf(nz).name+'</b>':''),
+   const nz=zoneOf(tw.f+1);let rw='';try{if(window.DIA80)rw=DIA80.floorReward(tw.f).html}catch(e){}/* v80: 층 보상(골드 · 다이아) */
+   showOverlay('TOWER · '+tw.f+'F CLEAR','보스 격파!','<b style="color:'+B.c+'">'+B.name+'</b>을(를) 쓰러뜨렸어요.<br>보스 러시에서도 다시 만날 수 있어요.'+rw+'<br>다음 구역 <b>'+(tw.f+1)+'F~'+(tw.f+9)+'F</b>: '+TW.zoneMobs(nz).join(' · ')+(tw.f+10<=700?'<br>다음 보스('+(tw.f+10)+'F): <b>'+bossOf(nz).name+'</b>':''),
     [['▲ '+(tw.f+1)+'F 오르기',()=>{$('overlay').hidden=true;TW.start(tw.f+1)},true],['로비로',toLobby,false]])}
   else showOverlay('TOWER · '+tw.f+'F','보스에게 졌어요','<b style="color:'+B.c+'">'+B.name+'</b>은(는) 아직 버티고 있어요. 이 층에서 바로 다시 도전할 수 있어요.',
     [['↺ 다시 도전',()=>{$('overlay').hidden=true;TW.start(tw.f)},true],['로비로',toLobby,false]])}

@@ -19863,7 +19863,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   sheet.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;try{gmSfx('move')}catch(_){}build()});
   try{const tb=sheet.querySelector('.ssTabs'),on=tb&&tb.querySelector('[aria-pressed=true]');if(on&&tb.scrollWidth>tb.clientWidth)tb.scrollLeft=on.offsetLeft-tb.clientWidth/2+on.offsetWidth/2}catch(e){}
   const body=sheet.querySelector('#ssBody');if(tab==='owned')ownedTab(body);else listTab(body)}
- function card(x){return '<button class="ssCard" data-tier="'+x.tier+'" data-id="'+x.id+'" data-cat="'+x.cat+'" aria-pressed="'+(sel[tab]===x.id)+'" style="--tc:'+x.col+'"><canvas width="72" height="72" data-k="'+x.kind+'" data-id="'+x.id+'"></canvas><div style="min-width:0"><em style="background:'+TIER_BG[x.tier]+'">'+x.tier+'</em><b>'+safe(x.name)+'</b><div class="sub">'+safe(x.en)+'</div></div><div>'+(owns(x)?'<div class="pr own">✓ 보유</div>':'<div class="pr">'+won(x.price)+'</div>')+(isOn(x)?'<span class="on">'+(owns(x)?'장착 중':'입어보는 중')+'</span>':'')+'</div></button>'}
+ function card(x){return '<button class="ssCard" data-tier="'+x.tier+'" data-id="'+x.id+'" data-cat="'+x.cat+'" aria-pressed="'+(sel[tab]===x.id)+'" style="--tc:'+x.col+'"><canvas width="72" height="72" data-k="'+x.kind+'" data-id="'+x.id+'"></canvas><div style="min-width:0"><em style="background:'+TIER_BG[x.tier]+'">'+x.tier+'</em><b>'+safe(x.name)+'</b><div class="sub">'+safe(x.en)+'</div></div><div>'+(owns(x)?'<div class="pr own">✓ 보유</div>':'<div class="pr">'+won(x.price)+'</div>'+(window.DIA80?'<div class="dpr">💎 '+DIA80.price(x).toLocaleString()+'</div>':''))+(isOn(x)?'<span class="on">'+(owns(x)?'장착 중':'입어보는 중')+'</span>':'')+'</div></button>'}
  function listTab(body){const L=items().filter(x=>x.cat===tab);if(!L.length){body.innerHTML='<div class="ssEmpty">상품을 불러오지 못했어요.</div>';return}
   if(!sel[tab]||!L.find(x=>x.id===sel[tab]))sel[tab]=L[0].id;const s=L.find(x=>x.id===sel[tab]),on=isOn(s),own=owns(s),P=PAY(),test=P&&P.test();
   let list='';if(tab==='skin'){const pr=L.filter(x=>!x.variant),va=L.filter(x=>x.variant);list='<div class="ssSec">프리미엄 스킨</div>'+pr.map(card).join('')+'<div class="ssSec">변이 스킨 · 원래 캐릭터의 변이종</div>'+va.map(card).join('')}
@@ -19873,11 +19873,17 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   const setParts=s.kind==='set'?'<div class="ssSet">'+s.parts.map(([c,id])=>{const it=items().find(x=>x.cat===c&&x.id===id);return it?'<span style="border-color:'+it.col+'66">'+safe(it.name)+((window.BB_APP||window.BB_FREE)?'':' · '+won(it.price))+'</span>':''}).join('')+'</div>':'';
   const note=s.kind==='skin'&&s.variant?'<div class="ssNote" style="color:#9fb0c8">'+safe(s.name.split(' · ')[0])+'의 변이 모습이에요. 사서 장착하면 지금 캐릭터 위에 이 모습이 입혀져요.</div>':s.kind==='pet'?'<div class="ssNote" style="color:#9fb0c8">'+safe(s.name.split(' · ')[0])+'을(를) 데리고 다닐 때 이 모습으로 바뀌어요.</div>':s.kind==='sword'?'<div class="ssNote" style="color:#9fb0c8">'+(own?'보유 중! 장착하면 공격력도 이 검(피해 ×'+(((window.SWORD59&&SWORD59.byId(s.id))||{}).stat||{dmg:1.9}).dmg.toFixed(2)+')으로 바뀌어요.':'장착하면 모양·궤적·이펙트와 공격력이 이 검으로 바뀌어요.')+'</div>':'';
   body.innerHTML='<div class="ssGrid"><div class="ssStage" style="--tc:'+s.col+'" data-tier="'+s.tier+'"><span class="ssTier" style="background:'+TIER_BG[s.tier]+'">'+TIER_EN[s.tier]+' · '+s.tier+'</span>'+views+'<canvas id="ssCv" width="480" height="360"></canvas><div class="ssInfo"><h3 style="color:'+s.col+'">'+safe(s.name)+'</h3><div class="en">'+safe(s.en)+'</div><p>'+safe(s.desc)+'</p>'+setParts+
-   '<div class="ssTags">'+s.tags.filter(x=>x&&!((window.BB_APP||window.BB_FREE)&&/할인/.test(x))).map(x=>'<span>'+safe(x)+'</span>').join('')+'</div><div class="ssBuy"><div class="ssPrice">'+(s.full?'<s>'+won(s.full)+'</s>':'')+won(s.price)+'<small>부가세 포함</small></div>'+(own?'<button class="ssBtn try" aria-pressed="'+on+'">'+(on?'✓ 장착 중':'장착하기')+'</button>':'')+(own?'<button class="ssBtn buy own" disabled>✓ 보유 중</button>':'<button class="ssBtn buy">구매하기</button>')+'</div><div class="ssNote" id="ssNote"></div>'+note+'</div></div>'+
+   '<div class="ssTags">'+s.tags.filter(x=>x&&!((window.BB_APP||window.BB_FREE)&&/할인/.test(x))).map(x=>'<span>'+safe(x)+'</span>').join('')+'</div><div class="ssBuy"><div class="ssPrice">'+(s.full?'<s>'+won(s.full)+'</s>':'')+won(s.price)+'<small>부가세 포함</small></div>'+(own?'<button class="ssBtn try" aria-pressed="'+on+'">'+(on?'✓ 장착 중':'장착하기')+'</button>':'')+(own?'<button class="ssBtn buy own" disabled>✓ 보유 중</button>':'<button class="ssBtn buy">구매하기</button>')+(own||!window.DIA80?'':'<button class="ssBtn dia80">💎 '+DIA80.price(s).toLocaleString()+'<small>다이아로 사기</small></button>')+'</div>'+(own||!window.DIA80?'':'<div class="ssDiaHave">보유 💎 <b>'+DIA80.get().toLocaleString()+'</b> · 다이아는 탑 보스 층을 깨면 얻어요</div>')+'<div class="ssNote" id="ssNote"></div>'+note+'</div></div>'+
    '<div class="ssSide"><div class="ssList">'+list+'</div><div class="ssPromise">'+(window.BB_FREE?'• 지금은 판매하지 않아요.':window.BB_APP?'• 모든 상품은 겉모습·연출만 바꿔요.<br>• 이미 가지고 있는 상품은 로그인하면 이 앱에서도 장착할 수 있어요.':(test?'<b style="color:#ffb0c8">🧪 테스트 결제 중 — 실제로 돈이 나가지 않아요.</b><br>':'')+'• 결제는 <b>토스페이먼츠</b>로 해요: 카드 · 토스페이 · 카카오페이 · 네이버페이 · 계좌이체 · 휴대폰.<br>• 산 상품은 계정에 남아서, 같은 계정으로 로그인한 모든 기기에서 쓸 수 있어요.<br>• 새 검도 공격력은 상점 최고 검(시간의 검)과 비슷해요. 돈으로 더 세지지 않아요.<br>• 왼쪽 무대에서 미리 돌려 볼 수 있고, 사면 「장착하기」로 바로 입어요.<br>• <b>만 19세 미만은 보호자(부모님) 동의를 받고 결제해 주세요.</b>')+'</div></div></div>';
   body.querySelectorAll('.ssCard').forEach(c=>c.onclick=()=>{sel[tab]=c.dataset.id;try{gmSfx('move')}catch(_){}build()});
   body.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{viewMode=b.dataset.v;build()});
   const tb=body.querySelector('.ssBtn.try');if(tb)tb.onclick=()=>{const now=toggleSave(s);try{gmSfx('ok')}catch(_){}build();const n=sheet.querySelector('#ssNote');if(n)n.textContent=now?(own?s.name+' 장착! 다음에 켜도 그대로예요.':s.name+' 입어보는 중! 게임 화면에서도 이대로 보여요.'):'원래대로 돌아왔어요.'};
+  /* v80: 다이아로 사기 — 한 번 누르면 확인, 한 번 더 누르면 산다(돈이 아니라 게임 재화) */
+  const db=body.querySelector('.ssBtn.dia80');if(db)db.onclick=()=>{const say=(t,c)=>{const m=sheet.querySelector('#ssNote');if(m){m.textContent=t;m.style.color=c||''}};const D=window.DIA80,need=D.price(s);
+   if(D.get()<need){try{gmSfx('no')}catch(_){}say('다이아가 '+(need-D.get()).toLocaleString()+'개 모자라요. 탑의 보스 층(10층마다)을 깨면 다이아를 얻어요.','#ffb2a8');return}
+   if(!db.dataset.ok){db.dataset.ok='1';db.classList.add('ask');db.innerHTML='💎 '+need.toLocaleString()+' 쓸까요?<small>한 번 더 누르면 사요</small>';try{gmSfx('move')}catch(_){}setTimeout(()=>{if(db.isConnected&&db.dataset.ok){delete db.dataset.ok;db.classList.remove('ask');db.innerHTML='💎 '+need.toLocaleString()+'<small>다이아로 사기</small>'}},4000);return}
+   const r=D.buy(s);if(!r.ok){say(r.err||'살 수 없어요.','#ffb2a8');return}
+   try{if(!isOn(s))toggle(s);P&&P.sync()}catch(e){}try{gmSfx('ok')}catch(_){}build();say('🎉 '+s.name+' — 💎 '+need.toLocaleString()+'로 샀어요! 바로 장착했어요.','#7dffb0')};
   const bb=body.querySelector('.ssBtn.buy:not(.own)');if(bb)bb.onclick=()=>{const n=sheet.querySelector('#ssNote'),say=(t,c)=>{const m=sheet.querySelector('#ssNote');if(m){m.textContent=t;m.style.color=c||''}};
    if(!P){say('결제 기능을 불러오지 못했어요.');return}
    if(!account().token){try{gmSfx('no')}catch(_){}if(n){n.style.color='';n.innerHTML='산 상품은 계정에 보관돼요. 먼저 로그인해 주세요. <button class="ssBtn buy" id="ssLogin2" style="padding:6px 12px;font-size:12px">로그인</button>'}const lb=sheet.querySelector('#ssLogin2');if(lb)lb.onclick=()=>{sheet.close();window.ACCT55&&ACCT55.open()};return}
@@ -19922,7 +19928,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  sheet.addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===sheet)sheet.close()});
  /* 상점(태엽 공방) 탭 줄에 「✦ 스킨 · 무기」 탭 → 이 창 */
  window.BBShopOpen=open;
- function mount(){if(window.BB_FREE){document.querySelectorAll('#shopModal [data-addon]').forEach(e=>e.remove());return}const tabs=document.querySelector('#shopModal .shopTabs');if(!tabs||tabs.querySelector('[data-addon]'))return;const b=document.createElement('button');b.className='shopTab bbAddonTab';b.dataset.addon='1';b.innerHTML='✦ <span class="bbL">스킨 · 무기 · 연출</span><span class="bbS">스킨</span>';b.title='스킨 · 무기 · 연출 상점';b.onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}open();};tabs.appendChild(b);}
+ function mount(){const tabs=document.querySelector('#shopModal .shopTabs');if(!tabs||tabs.querySelector('[data-addon]'))return;const b=document.createElement('button');b.className='shopTab bbAddonTab';b.dataset.addon='1';b.innerHTML='✦ <span class="bbL">스킨 · 무기 · 연출</span><span class="bbS">스킨</span>';b.title='스킨 · 무기 · 연출 상점';b.onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}open();};tabs.appendChild(b);}
  {const _rs=renderShop;renderShop=function(){const r=_rs.apply(this,arguments);try{mount()}catch(e){}return r}}
 }catch(e){console.error('v59 shop',e)}})();
 /* ================= v58 유료 스킨 3종 (v56 공허 검사 체험판을 새로 그림) =================
@@ -20532,9 +20538,13 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const cacheKey=()=>'bb-owned58:'+(acc().user||'');
  try{const a=acc();if(a.token){const c=JSON.parse(localStorage.getItem(cacheKey())||'null');if(c&&Array.isArray(c.o))owned=new Set(c.o)}}catch(e){}
 
+ /* v80: 다이아로 산 상품(saveData.dia80.own)도 보유로 친다 — 진행 기록과 함께 서버에 저장됨 */
+ const diaOwn=()=>{try{return (saveData.dia80&&saveData.dia80.own)||[]}catch(e){return []}};
+ const has=id=>owned.has(id)||diaOwn().includes(id);
+ const allOwned=()=>{const s=new Set(owned);for(const x of diaOwn())s.add(x);return s};
  /* 상품 하나(상점 카드 항목)를 가지고 있나 — 세트는 안에 든 것을 모두 가지고 있어야 함 */
- function ownsItem(it){if(!it)return false;if(it.kind==='set')return (it.parts||[]).every(([c,id])=>owned.has((c==='fx'?'fx_':c+'_')+id));return owned.has(it.pid||'')}
- const ownsKind=(k,id)=>!!id&&owned.has(PRE[k]+id);
+ function ownsItem(it){if(!it)return false;if(it.kind==='set')return (it.parts||[]).every(([c,id])=>has((c==='fx'?'fx_':c+'_')+id));return has(it.pid||'')}
+ const ownsKind=(k,id)=>!!id&&has(PRE[k]+id);
 
  /* 저장된 장착을 다시 입힘 / 보유하지 않게 된 것(로그아웃 등)은 벗김 */
  function apply(){const A=API(),cos=saveData.cos58||{};
@@ -20547,12 +20557,12 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   try{saveNow()}catch(e){}}
 
  async function refresh(){const a=acc();lastTok=a.token||'';
-  if(!a.token){owned=new Set();tester=false;apply();return owned}
+  if(!a.token){owned=new Set();tester=false;apply();return allOwned()}
   const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),20000);
   try{const r=await fetch(base()+'/api/shop/owned',{headers:{Authorization:'Bearer '+a.token},signal:ctl.signal});
    if(r.status===401){owned=new Set();apply();throw Error('다시 로그인해 주세요.')}
    if(!r.ok)throw Error('보관함을 확인하지 못했어요.');const j=await r.json();owned=new Set(j.owned||[]);testMode=!!j.test_mode;tester=!!j.tester;try{window.APP59&&APP59.reFree&&APP59.reFree()}catch(e){}
-   try{localStorage.setItem(cacheKey(),JSON.stringify({o:[...owned],t:Date.now()}))}catch(e){}apply();return owned}
+   try{localStorage.setItem(cacheKey(),JSON.stringify({o:[...owned],t:Date.now()}))}catch(e){}apply();return allOwned()}
   finally{clearTimeout(tm)}}
 
  /* ---------- 구매 ---------- */
@@ -20585,7 +20595,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const BASE=WEAPONS.slice(),PREM={};
  function prem(id){if(PREM[id])return PREM[id];const s=window.SWORD59&&SWORD59.byId(id);if(!s)return null;const b=BASE[BASE.length-1];
   const st=s.stat||{};return PREM[id]=Object.assign({},b,{name:s.name,type:s.type,dmg:st.dmg||b.dmg,crit:st.crit!=null?st.crit:b.crit,range:st.range!=null?st.range:b.range,grogi:st.grogi||0,col:s.col,trail:(s.trail&&s.trail[0]==='#')?s.trail:s.col,desc:s.desc,price:0})}
- function activeSword(i){const S=window.SWORD59;if(!S)return null;const id=S.get();if(!id||!owned.has('sword_'+id))return null;
+ function activeSword(i){const S=window.SWORD59;if(!S)return null;const id=S.get();if(!id||!has('sword_'+id))return null;
   if(!saveData.eq||saveData.eq.wp!==i)return null;const sm=document.getElementById('shopModal');if(sm&&!sm.hidden)return null;return prem(id)}
  BASE.forEach((w,i)=>{try{Object.defineProperty(WEAPONS,i,{configurable:true,enumerable:true,get(){return activeSword(i)||BASE[i]},set(v){BASE[i]=v}})}catch(e){}});
 
@@ -20593,7 +20603,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  setInterval(()=>{const t=acc().token||'';if(t!==lastTok)refresh().catch(()=>{})},4000);
  setTimeout(()=>{apply();refresh().catch(()=>{})},1500);
 
- window.PAY58={refresh,buy,sync,apply,ownsItem,ownsKind,owned:()=>owned,test:()=>testMode,tester:()=>tester,pending:()=>!!pending,kindOf,
+ window.PAY58={refresh,buy,sync,apply,ownsItem,ownsKind,owned:()=>allOwned(),test:()=>testMode,tester:()=>tester,pending:()=>!!pending,kindOf,
   /* 테스트 도구용: 서버 없이 보유 목록을 넣어 본다 */
   _set(list){owned=new Set(list||[]);apply()}};
 }catch(e){console.error('v58 payment',e)}})();
@@ -20646,7 +20656,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const watch=()=>{const p=document.getElementById('acPanel');if(p)mo.observe(p,{childList:true,subtree:false});else setTimeout(watch,1000)};watch();
 
  /* ④ 무료 출시 모드 */
- let srvFree=false;function setFree(on){srvFree=!!on;/* 테스터(서버 TESTER_USERS)는 무료 모드여도 상점을 본다 */try{if(on&&window.PAY58&&PAY58.tester())on=false}catch(e){}window.BB_FREE=!!on;document.documentElement.classList.toggle('bbFree',!!on);if(on){document.querySelectorAll('#shopModal [data-addon]').forEach(e=>e.remove());const d=document.getElementById('bbShop');if(d&&d.open)d.close()}try{localStorage.setItem('bb-free60',on?'1':'0')}catch(e){}}
+ let srvFree=false;function setFree(on){srvFree=!!on;/* 테스터(서버 TESTER_USERS)는 무료 모드여도 상점을 본다 */try{if(on&&window.PAY58&&PAY58.tester())on=false}catch(e){}window.BB_FREE=!!on;document.documentElement.classList.toggle('bbFree',!!on);/* v80: 무료 모드여도 탭은 남긴다 — 다이아로 사는 것은 돈이 아니라서 된다(₩ 값 · 구매하기만 숨김) */try{localStorage.setItem('bb-free60',on?'1':'0')}catch(e){}}
  try{if(localStorage.getItem('bb-free60')==='1')setFree(true)}catch(e){}
  setTimeout(async()=>{try{const a=(window.ACCT55&&ACCT55.get())||{},ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),70000);
   const r=await fetch((a.url||DEF).replace(/\/+$/,'')+'/api/shop',{cache:'no-store',signal:ctl.signal});clearTimeout(tm);const j=await r.json();if(j&&j.ok)setFree(!!j.free_mode)}catch(e){}},1200);
@@ -21369,8 +21379,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   return r}}
  function bossDone(won,tw){if(tw.done)return;tw.done=1;const s=sv(),B=bossOf(tw.g);
   if(won){if(tw.g<70)grant(tw.g);s.bosses=Math.max(s.bosses||0,tw.g+1);s.floor=tw.f+1;s.cp=tw.f+1;s.best=Math.max(s.best||1,tw.f+1);try{saveNow()}catch(e){}
-   const nz=zoneOf(tw.f+1);
-   showOverlay('TOWER · '+tw.f+'F CLEAR','보스 격파!','<b style="color:'+B.c+'">'+B.name+'</b>을(를) 쓰러뜨렸어요.<br>보스 러시에서도 다시 만날 수 있어요.<br><br>다음 구역 <b>'+(tw.f+1)+'F~'+(tw.f+9)+'F</b>: '+TW.zoneMobs(nz).join(' · ')+(tw.f+10<=700?'<br>다음 보스('+(tw.f+10)+'F): <b>'+bossOf(nz).name+'</b>':''),
+   const nz=zoneOf(tw.f+1);let rw='';try{if(window.DIA80)rw=DIA80.floorReward(tw.f).html}catch(e){}/* v80: 층 보상(골드 · 다이아) */
+   showOverlay('TOWER · '+tw.f+'F CLEAR','보스 격파!','<b style="color:'+B.c+'">'+B.name+'</b>을(를) 쓰러뜨렸어요.<br>보스 러시에서도 다시 만날 수 있어요.'+rw+'<br>다음 구역 <b>'+(tw.f+1)+'F~'+(tw.f+9)+'F</b>: '+TW.zoneMobs(nz).join(' · ')+(tw.f+10<=700?'<br>다음 보스('+(tw.f+10)+'F): <b>'+bossOf(nz).name+'</b>':''),
     [['▲ '+(tw.f+1)+'F 오르기',()=>{$('overlay').hidden=true;TW.start(tw.f+1)},true],['로비로',toLobby,false]])}
   else showOverlay('TOWER · '+tw.f+'F','보스에게 졌어요','<b style="color:'+B.c+'">'+B.name+'</b>은(는) 아직 버티고 있어요. 이 층에서 바로 다시 도전할 수 있어요.',
     [['↺ 다시 도전',()=>{$('overlay').hidden=true;TW.start(tw.f)},true],['로비로',toLobby,false]])}
@@ -22191,4 +22201,50 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  setInterval(run,1000);run();
  window.CX77={fix};
 }catch(e){console.error('v77 close x',e)}})();
+/* ================= v80 다이아 (DIA80) =================
+   재화가 둘: 🪙 골드(원래 코인 — 잡몹 · 보스 · 층마다) · 💎 다이아(탑 보스 층을 깰 때만).
+   - 다이아는 탑 10층마다 있는 보스를 쓰러뜨리면 「층 보상」으로 받는다. 그 층·그 난이도를 처음 깨면 많이, 다시 깨면 조금.
+   - 현질 상품(스킨 · 펫 변이 · 새 검 · 연출 · 세트)을 다이아로도 살 수 있다. 값 = 원화 ÷ 5 (최소 100 · 최대 10,000).
+     다이아로 산 것은 saveData.dia80.own에 남고(진행 기록이라 로그인하면 서버에도 저장), 99998이 보유로 친다.
+   - 로비 위쪽 줄에 💎 개수 칩. */
+(()=>{try{
+ const D=()=>{const s=saveData;s.dia80=s.dia80||{n:0,own:[],fl:{}};const d=s.dia80;d.own=d.own||[];d.fl=d.fl||{};d.n=Math.max(0,Math.floor(d.n||0));return d};
+ const PRE={skin:'skin_',pet:'pet_',sword:'sword_',fx:'fx_',vic:'fx_',lob:'fx_'};
+ function price(it){const w=(it&&it.price)||0;return Math.max(100,Math.min(10000,Math.round(w/5/10)*10))}
+ function add(n){const d=D();d.n+=Math.max(0,Math.round(n));try{saveNow()}catch(e){}chip(true);return d.n}
+ /* 상품을 다이아로 사기. 세트는 안에 든 것을 낱개로 넣는다(서버 결제 때와 같은 이름) */
+ function buy(it){if(!it)return {err:'상품을 찾지 못했어요.'};const d=D(),n=price(it);if(d.n<n)return {err:'다이아가 모자라요.'};
+  const ids=it.kind==='set'?(it.parts||[]).map(([c,id])=>(c==='fx'?'fx_':c+'_')+id):[it.pid||(PRE[it.kind]||'')+it.id];
+  d.n-=n;for(const x of ids)if(!d.own.includes(x))d.own.push(x);
+  (d.log=d.log||[]).push({id:it.pid||it.id,n,t:Date.now()});if(d.log.length>50)d.log.shift();
+  try{saveNow()}catch(e){}try{window.PAY58&&PAY58.apply()}catch(e){}chip(true);return {ok:true,left:d.n}}
+ /* 탑 보스 층 보상: 첫 클리어(층 · 난이도마다 한 번) = 다이아 20+4×보스번호, 다시 깨면 15%. 난이도 배율 · 골드도 함께 */
+ const DM={easy:.6,normal:1,hard:1.5,extreme:2.2};
+ function floorReward(f){const d=D(),g=Math.max(1,Math.floor(f/10)),key=f+'|'+diff,first=!d.fl[key],m=DM[diff]||1;
+  let dia=Math.round((20+4*((g-1)%70+1))*m*(1+Math.floor((g-1)/70)*.5));if(!first)dia=Math.max(3,Math.round(dia*.15));
+  const gold=Math.round((first?150+g*25:50+g*8)*m);d.fl[key]=Date.now();add(dia);try{addCoins(gold)}catch(e){}
+  return {dia,gold,first,html:'<div class="rw80"><b>층 보상'+(first?' · 첫 클리어!':'')+'</b><span class="g">🪙 +'+gold.toLocaleString()+' 골드</span><span class="d">💎 +'+dia.toLocaleString()+' 다이아</span><small>보유 💎 '+d.n.toLocaleString()+'</small></div>'}}
+ /* 로비 위쪽 줄 💎 칩 (골드 칩 바로 뒤) */
+ function chip(pulse){const c=document.getElementById('gmCoins');if(!c||!c.parentNode)return;let b=document.getElementById('gmDia');
+  if(!b){b=document.createElement('button');b.id='gmDia';b.className=c.className;b.title='다이아 — 탑 보스 층을 깨면 얻어요. 현질 상품을 다이아로 살 수 있어요.';b.onclick=e=>{e.stopPropagation();try{gmSfx('ok');openShop();setTimeout(()=>{const t=document.querySelector('#shopModal [data-addon]');t&&t.click()},60)}catch(_){}};c.parentNode.insertBefore(b,c.nextSibling)}
+  const t='💎 '+D().n.toLocaleString();if(b.textContent!==t)b.textContent=t;if(pulse){b.classList.remove('dia80p');void b.offsetWidth;b.classList.add('dia80p')}}
+ setInterval(()=>{try{chip(false)}catch(e){}},700);
+ const st=document.createElement('style');st.id='dia80';st.textContent=`
+ #gmDia{color:#bfefff!important;border-color:#5ad0ff66!important}
+ #gmDia.dia80p{animation:dia80p .7s ease-out}
+ @keyframes dia80p{0%{transform:scale(1.25);box-shadow:0 0 18px #5ad0ff}100%{transform:none}}
+ #bbShop .ssBtn.dia80{display:inline-flex;flex-direction:column;align-items:center;gap:1px;padding:8px 16px;border-radius:12px;border:1px solid #8de4ff;cursor:pointer;
+  background:linear-gradient(180deg,#2a6a9a,#123a5a);color:#e8fbff;font-weight:900;font-size:16px;box-shadow:0 0 14px #5ad0ff55,inset 0 1px 0 #ffffff33}
+ #bbShop .ssBtn.dia80 small{font-size:10px;font-weight:700;opacity:.8}
+ #bbShop .ssBtn.dia80.ask{background:linear-gradient(180deg,#ffd166,#c8901a);color:#2a1a0a;border-color:#fff2c0}
+ #bbShop .ssCard .dpr{font-size:11px;font-weight:900;color:#8de4ff;text-align:right;margin-top:2px;white-space:nowrap}
+ #bbShop .ssDiaHave{font-size:11.5px;color:#9fd8f0;margin-top:6px}
+ #overlay .rw80{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 14px;margin:12px auto 0;padding:10px 14px;border-radius:12px;max-width:420px;
+  background:linear-gradient(90deg,#1a2a3a,#2a1a3a);border:1px solid #8de4ff66;box-shadow:0 0 20px #5ad0ff33}
+ #overlay .rw80 b{width:100%;text-align:center;color:#ffe79a;letter-spacing:.06em}
+ #overlay .rw80 .g{color:#ffd166;font-weight:900}#overlay .rw80 .d{color:#8de4ff;font-weight:900;font-size:1.15em;text-shadow:0 0 10px #5ad0ff}
+ #overlay .rw80 small{width:100%;text-align:center;color:#9fb0c8}
+ `;document.head.appendChild(st);
+ window.DIA80={get:()=>D().n,add,price,buy,floorReward,owns:id=>D().own.includes(id),chip};
+}catch(e){console.error('v80 diamonds',e)}})();
 </script></body></html>

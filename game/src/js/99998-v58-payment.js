@@ -17,9 +17,13 @@
  const cacheKey=()=>'bb-owned58:'+(acc().user||'');
  try{const a=acc();if(a.token){const c=JSON.parse(localStorage.getItem(cacheKey())||'null');if(c&&Array.isArray(c.o))owned=new Set(c.o)}}catch(e){}
 
+ /* v80: 다이아로 산 상품(saveData.dia80.own)도 보유로 친다 — 진행 기록과 함께 서버에 저장됨 */
+ const diaOwn=()=>{try{return (saveData.dia80&&saveData.dia80.own)||[]}catch(e){return []}};
+ const has=id=>owned.has(id)||diaOwn().includes(id);
+ const allOwned=()=>{const s=new Set(owned);for(const x of diaOwn())s.add(x);return s};
  /* 상품 하나(상점 카드 항목)를 가지고 있나 — 세트는 안에 든 것을 모두 가지고 있어야 함 */
- function ownsItem(it){if(!it)return false;if(it.kind==='set')return (it.parts||[]).every(([c,id])=>owned.has((c==='fx'?'fx_':c+'_')+id));return owned.has(it.pid||'')}
- const ownsKind=(k,id)=>!!id&&owned.has(PRE[k]+id);
+ function ownsItem(it){if(!it)return false;if(it.kind==='set')return (it.parts||[]).every(([c,id])=>has((c==='fx'?'fx_':c+'_')+id));return has(it.pid||'')}
+ const ownsKind=(k,id)=>!!id&&has(PRE[k]+id);
 
  /* 저장된 장착을 다시 입힘 / 보유하지 않게 된 것(로그아웃 등)은 벗김 */
  function apply(){const A=API(),cos=saveData.cos58||{};
@@ -32,12 +36,12 @@
   try{saveNow()}catch(e){}}
 
  async function refresh(){const a=acc();lastTok=a.token||'';
-  if(!a.token){owned=new Set();tester=false;apply();return owned}
+  if(!a.token){owned=new Set();tester=false;apply();return allOwned()}
   const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),20000);
   try{const r=await fetch(base()+'/api/shop/owned',{headers:{Authorization:'Bearer '+a.token},signal:ctl.signal});
    if(r.status===401){owned=new Set();apply();throw Error('다시 로그인해 주세요.')}
    if(!r.ok)throw Error('보관함을 확인하지 못했어요.');const j=await r.json();owned=new Set(j.owned||[]);testMode=!!j.test_mode;tester=!!j.tester;try{window.APP59&&APP59.reFree&&APP59.reFree()}catch(e){}
-   try{localStorage.setItem(cacheKey(),JSON.stringify({o:[...owned],t:Date.now()}))}catch(e){}apply();return owned}
+   try{localStorage.setItem(cacheKey(),JSON.stringify({o:[...owned],t:Date.now()}))}catch(e){}apply();return allOwned()}
   finally{clearTimeout(tm)}}
 
  /* ---------- 구매 ---------- */
@@ -70,7 +74,7 @@
  const BASE=WEAPONS.slice(),PREM={};
  function prem(id){if(PREM[id])return PREM[id];const s=window.SWORD59&&SWORD59.byId(id);if(!s)return null;const b=BASE[BASE.length-1];
   const st=s.stat||{};return PREM[id]=Object.assign({},b,{name:s.name,type:s.type,dmg:st.dmg||b.dmg,crit:st.crit!=null?st.crit:b.crit,range:st.range!=null?st.range:b.range,grogi:st.grogi||0,col:s.col,trail:(s.trail&&s.trail[0]==='#')?s.trail:s.col,desc:s.desc,price:0})}
- function activeSword(i){const S=window.SWORD59;if(!S)return null;const id=S.get();if(!id||!owned.has('sword_'+id))return null;
+ function activeSword(i){const S=window.SWORD59;if(!S)return null;const id=S.get();if(!id||!has('sword_'+id))return null;
   if(!saveData.eq||saveData.eq.wp!==i)return null;const sm=document.getElementById('shopModal');if(sm&&!sm.hidden)return null;return prem(id)}
  BASE.forEach((w,i)=>{try{Object.defineProperty(WEAPONS,i,{configurable:true,enumerable:true,get(){return activeSword(i)||BASE[i]},set(v){BASE[i]=v}})}catch(e){}});
 
@@ -78,7 +82,7 @@
  setInterval(()=>{const t=acc().token||'';if(t!==lastTok)refresh().catch(()=>{})},4000);
  setTimeout(()=>{apply();refresh().catch(()=>{})},1500);
 
- window.PAY58={refresh,buy,sync,apply,ownsItem,ownsKind,owned:()=>owned,test:()=>testMode,tester:()=>tester,pending:()=>!!pending,kindOf,
+ window.PAY58={refresh,buy,sync,apply,ownsItem,ownsKind,owned:()=>allOwned(),test:()=>testMode,tester:()=>tester,pending:()=>!!pending,kindOf,
   /* 테스트 도구용: 서버 없이 보유 목록을 넣어 본다 */
   _set(list){owned=new Set(list||[]);apply()}};
 }catch(e){console.error('v58 payment',e)}})();
