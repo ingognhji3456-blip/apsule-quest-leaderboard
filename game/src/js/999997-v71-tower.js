@@ -77,10 +77,16 @@
  function hpMul(){return {easy:.8,normal:1,hard:1.25,extreme:1.5}[diff]||1}
  function dmgMul(){return {easy:.7,normal:1,hard:1.3,extreme:1.6}[diff]||1}
 
+ /* v74: 앞 구역에서 나왔던 잡몹이 뒤 구역에도 다시 섞여 나온다 (구역 1부터 1종, 구역 3부터 2종 · 층마다 바뀜) */
+ function vetsOf(z,k){if(z<=0)return [];const cur=speciesOf(z),pool=[];for(let y=z-1;y>=0&&pool.length<12;y--)for(const q of speciesOf(y))if(!cur.includes(q)&&!pool.includes(q))pool.push(q);
+  if(!pool.length)return [];const want=z>=3?2:1,out=[];let h=(z*31+k*17)>>>0;for(let i=0;i<want&&pool.length;i++){h=(h*1103515245+12345)>>>0;const j=h%pool.length;out.push(pool.splice(j,1)[0])}return out}
+ function vetPool(z){const cur=speciesOf(z),pool=[];for(let y=z-1;y>=0;y--)for(const q of speciesOf(y))if(!cur.includes(q)&&!pool.includes(q))pool.push(q);return pool}
+ TW.vetsOf=vetsOf;TW.vetPool=vetPool;
  function buildFloor(f){const z=zoneOf(f),k=((f-1)%10)+1,tier=Math.floor(z/70),pal=palOf(z),[s1,s2]=speciesOf(z);
-  Object.assign(T,{f,z,k,pal,mobs:[],shots:[],tels:[],parts:[],pops:[],slash:[],clk:0,clear:false,clearT:0,doorK:0,trans:{t:0,txt:f+'F',sub:pal.n+' 구역 · '+TW.zoneMobs(z).join(' · ')},dead:false,spawned:false});
+  Object.assign(T,{f,z,k,pal,mobs:[],shots:[],tels:[],parts:[],pops:[],slash:[],clk:0,clear:false,clearT:0,doorK:0,trans:{t:0,txt:f+'F',sub:pal.n+' 구역 · '+TW.zoneMobs(z).join(' · ')+(vetsOf(z,k).length?'  +  다시 나온 '+vetsOf(z,k).map(q=>SP[q].n).join(' · '):'')},dead:false,spawned:false});
   const n=3+Math.floor(k/3)+Math.min(3,Math.floor(z/8))+tier,hpz=(1+z*.12+tier*.8)*hpMul();
   const list=[];for(let i=0;i<n;i++)list.push({sp:i%3===2?s2:s1,elite:false});
+  const vets=vetsOf(z,k);vets.forEach((q,i)=>{const c=1+((k+i)%2);for(let j=0;j<c;j++)list.push({sp:q,elite:false});if(k===9&&i===0)list.push({sp:q,elite:true})});T.vets=vets;
   if(k===5)list.push({sp:s2,elite:true});if(k===9){list.push({sp:s1,elite:true});list.push({sp:s2,elite:true})}
   list.forEach((m,i)=>{let x,y,tries=0;do{x=rnd(AX+30,AX+AW-30);y=rnd(AY+30,AY+AH-90);tries++}while(tries<20&&Math.hypot(x-(AX+AW/2),y-(AY+AH-30))<90);
    const S=SP[m.sp],hp=Math.round(S.hp*hpz*(m.elite?3.5:1));
@@ -273,7 +279,7 @@
   try{if(!monDraw('m_'+k,bo,{c:pal.c},30*MR,44*MR,pose==='i'?fi*250:pose==='a'?fi*90:fi*120,o,MR))c=null;else{c=document.createElement('canvas');c.width=CW*MR;c.height=CH*MR;const cc=c.getContext('2d');cc.drawImage(big,(30-COX)*MR,(44-COY)*MR,CW*MR,CH*MR,0,0,CW*MR,CH*MR)}}catch(e){c=null}
   MF.set(key,c);return c}
  /* 층에 들어갈 때 이 구역 잡몹 그림을 조금씩 미리 그려 둠 (전투 중 끊김 방지) */
- function prewarm(){const [a,b]=speciesOf(T.z),jobs=[];for(const k of [a,b])for(const el of [false,true])for(const v of ['front','side','back'])for(const ps of ['i','w','a','s'])for(let f=0;f<NF[ps];f++)jobs.push([k,el,v,ps,f]);
+ function prewarm(){const [a,b]=speciesOf(T.z),jobs=[];for(const k of [a,b,...(T.vets||[])])for(const el of [false,true])for(const v of ['front','side','back'])for(const ps of ['i','w','a','s'])for(let f=0;f<NF[ps];f++)jobs.push([k,el,v,ps,f]);
   T.warm=jobs}
  TW.mobFrame=mobFrame;
  const FLY={bat:1,wisp:1,drone:1};
@@ -442,7 +448,8 @@
   $('twHeadInfo').textContent='최고 '+(s.best||1)+'F · 보스 '+(s.bosses||0)+'/70 · 처치 '+(s.kills||0);
   $('twBanTxt').innerHTML='<div class="twZone" style="color:'+p.a+'">'+p.n+' 구역 · '+(z*10+1)+'F ~ '+bf+'F</div><div class="twBig" style="color:'+(boss?B.c:p.c)+'">'+f+'F<small>'+(boss?'BOSS FLOOR':((f-1)%10+1)+' / 10층')+'</small></div><div class="twBossN" style="color:'+B.c+'">'+(boss?'':'▲ '+bf+'F 보스 · ')+B.name+'</div>';
   const mobs=[[a,0],[b,0],[a,1],[b,1]].map(([k,el])=>'<div class="twMob'+(el?' el':'')+'"><img src="'+mobImg(k,p,!!el)+'">'+(el?'★ '+ELN[k]:p.n+' '+SP[k].n)+'</div>').join('');
-  $('twBody').innerHTML='<div class="twCard"><h4>이 구역의 잡몹 · 정예는 5F · 9F</h4><div class="twMobs">'+mobs+'</div></div>'+
+  const vp=vetPool(z),vets=vp.length?'<div class="twCard"><h4>앞 구역에서 다시 나오는 잡몹 · 층마다 '+(z>=3?2:1)+'종씩 섞여요</h4><div class="twMobs" style="grid-template-columns:repeat(6,1fr)">'+vp.slice(0,6).map(q=>'<div class="twMob"><img src="'+mobImg(q,p,false)+'">'+SP[q].n+'</div>').join('')+'</div></div>':'';
+  $('twBody').innerHTML='<div class="twCard"><h4>이 구역의 잡몹 · 정예는 5F · 9F</h4><div class="twMobs">'+mobs+'</div></div>'+vets+
    '<div class="twBtns"><button class="gmBtn go" id="twGo">▲ '+f+'F '+(f===cur?'이어서 오르기':'부터 오르기')+'</button>'+(f!==cur&&reachable(cur)?'<button class="gmBtn" id="twCont">◎ '+cur+'F 이어하기</button>':'')+'<button class="gmBtn" id="twNew">↺ 1F부터 처음부터</button></div>'+
    '<div class="twRow"><span class="twChip">최고 '+(s.best||1)+'F</span><span class="twChip">보스 '+(s.bosses||0)+' / 70</span><span class="twChip">처치 '+(s.kills||0)+'</span><span class="twChip">난이도 '+({easy:'쉬움',normal:'보통',hard:'어려움',extreme:'익스트림'}[diff]||diff)+'</span></div>'+
    '<div class="twNote">왼쪽 탑을 스크롤해서 700층까지 볼 수 있어요. 올라가 본 층(최고 '+(s.best||1)+'F까지)은 눌러서 골라 다시 할 수 있어요.<br>쓰러지면 그 구역의 첫 층부터 다시 · 보스를 쓰러뜨리면 보스 러시에서도 열려요.</div>';
