@@ -174,3 +174,5 @@
 | `9999993-v76-perf.js` | 8 | 렉 줄이기(`PF76`): 상점이 덮고 있으면 로비 무대 `lvDraw` 건너뜀. (캐릭터 그림 저장은 820 `ch2Render`의 `CH2C`, 스킨 상점 목록 그림 줄이기는 99991 `loop`) |
 | `9999994-v77-close-x.js` | 37 | 닫기 단추 → ✕ 단추(`CX77`): 글자가 「닫기」·「✕ 닫기」·「닫기 ✕」인 단추를 빨간 동그라미 ✕로(창 내용이 바뀔 때마다 찾음). 로그인 창 ✕는 오른쪽 위로. 설정의 이름 고치기 칸(`#nameIn` 줄) 숨김 |
 | `9999995-v80-diamonds.js` | 38 | 다이아(`DIA80`): `saveData.dia80={n,own,fl}`. 탑 보스 층 보상 `floorReward(f)`(999997 `bossDone`이 부름), 상품 다이아 값 `price(it)`(원화÷5, 100~10,000), `buy(it)`(세트는 낱개로 `own`에 넣음, 99998이 보유로 침), 로비 💎 칩 `#gmDia` |
+| `9999996-v81-combat.js` | 150 | 전투 확장(`CB81`): 내 상태 이상(중독 `poison` · 탈진 `drain`), 무기 특성 `WT`(화상 · 냉기 · 방패 꿰뚫기 `pierce` · 부수기 `shBreak`), 현질 스킨 능력 `PERK`(13종), 세트 효과 `SETB`(스킨+검), 장비 특성 칸(`poisonRes` · `critAdd` · `dmgAdd` · `pierce` · `shBreak` · `onHit`) 읽기. 탑은 999997이 부르고, 보스전은 `doParry` · `hurtP` · `stamMax` · `stamTick` · `doDash` · `drawScene` 감싸기 + 100 `win`(winMul) · 180 반격식 |
+| `9999997-v81-new-mobs.js` | 60 | 새 잡몹 디자인 `m_toad`(독두꺼비) · `m_wraith`(기력 망령) |

@@ -1,5 +1,5 @@
 /* ================= 보스전: 위험요소/정확도 ================= */
-const win=()=>{const d=D(),ms=G.ms||600;return {p:Math.min(75,ms*.15)*d.win,g:Math.min(140,ms*.28)*d.win}};
+const win=()=>{const d=D(),ms=G.ms||600,k=(window.CB81&&CB81.winMul)?CB81.winMul():1;return {p:Math.min(75,ms*.15)*d.win*k,g:Math.min(140,ms*.28)*d.win*k}};/* v81 네온 세트: PERFECT 범위 넓힘(k) */
 const mkHand=()=>({x:0,y:0,mode:'idle',ang:Math.PI/2,aim:false,charge:0,kick:0,stuck:false,tw:null,drv:null,armed:true});
 function newFight0(bi,st){const B=BOSSES[bi],now=performance.now();song=makeSong(bi);stopMusic();resetP(HOME.x,AY+AH-34);
 const boss={x:HOME.x,y:HOME.y,hands:[mkHand(),mkHand()],slump:0,tw:null,patrol:0,eye:0,open:0,warn:0,dash:false,dorm:true,track:false,aimAng:0,lock:false,flashT:0,dashHit:false,eyeC:null};

@@ -820,6 +820,9 @@ def _too_large(e):
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
+    # v81: 새 가입은 Google로만 받는다(게임 화면에서도 아이디 가입을 뺐음). 예전 아이디 계정의 로그인(/api/login)은 그대로 둔다.
+    if os.environ.get('ALLOW_ID_SIGNUP', '') != '1':
+        return _bad('이제 Google 계정으로만 가입할 수 있어요', 403)
     ip = _client_ip()
     if _too_many('reg:' + ip, 10, 3600):
         return _bad('가입 시도가 너무 많아요. 잠시 뒤에 다시 해 주세요', 429)

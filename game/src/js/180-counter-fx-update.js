@@ -23,7 +23,7 @@ function doAttack(point){if(dlg.active){dlgAdvance();return}if(mode==='case'){ca
  P.lungeT=now;P.lungeA=Math.atan2(c.y-(P.y-8),c.x-P.x);P.lungeDur=c.fin?190:110;
  const w=win(),bf=G.beat,errMs=Math.abs(bf-Math.round(bf))*G.ms,onBeat=errMs<=w.p,nearBeat=errMs<=w.g;if(onBeat||nearBeat)G.onbeat++;
  const timing=onBeat?'perfect':nearBeat?'good':'ok',tMult=onBeat?1.35:nearBeat?1.12:1;
- const base=(diff==='easy'?1.15:(diff==='hard'||diff==='extreme')?.92:1)*(78+Math.min(G.combo,15)*3),crit=RND()<curWp().crit,dmg=Math.round(base*(c.fin?3.2:1)*tMult*((G.vuln&&G.vuln.bonus)||1)*curWp().dmg*(1+(curPet().dmg||0))*(crit?1.8:1));G.hp=Math.max(0,G.hp-dmg);G.score+=dmg*10+(onBeat?60:nearBeat?20:0);G.hurt=.16;G.shake=c.fin?.4:.13;G.hitstop=now+(c.fin?170:45);
+ const base=(diff==='easy'?1.15:(diff==='hard'||diff==='extreme')?.92:1)*(78+Math.min(G.combo,15)*3),CB=window.CB81,crit=RND()<curWp().crit+(CB?CB.critAdd():0)||!!(CB&&CB.forceCrit()),dmg=Math.round(base*(c.fin?3.2:1)*tMult*((G.vuln&&G.vuln.bonus)||1)*curWp().dmg*(1+(curPet().dmg||0))*(crit?1.8:1)*(CB?CB.dmgMul(G.combo):1));G.hp=Math.max(0,G.hp-dmg);try{CB&&CB.onBossHit(dmg,crit,onBeat)}catch(e){}G.score+=dmg*10+(onBeat?60:nearBeat?20:0);G.hurt=.16;G.shake=c.fin?.4:.13;G.hitstop=now+(c.fin?170:45);
  const jd=c.fin?'FINISH':onBeat?'PERFECT':nearBeat?'GOOD':'HIT',jcol=c.fin?'#ffffff':onBeat?'#ffe79a':nearBeat?'#a6f5c6':'#8dcdf5';
  G.shots.push({x0:P.x,y0:P.y-8,x1:c.x,y1:c.y,t:now,jd});G.slashFx.push({x:c.x,y:c.y,a:RND()*Math.PI,t:now,fin:c.fin,col:curWp().trail});
  G.pops.push({x:c.x,y:c.y-18,t:now,tx:(crit?'CRIT! ':'')+(c.fin?'FINISH! -':(onBeat?'PERFECT! -':nearBeat?'GOOD -':'HIT -'))+dmg,col:jcol});spawnPuff(c.x,c.y,c.fin?26:14,jcol);fxRing(c.x,c.y,now,c.fin?600:340,c.fin?90:36,c.fin?'#ffffff':jcol);
