@@ -45,11 +45,11 @@
     if(D.role==='host'&&!(window.PVP92&&PVP92.on()))send(snap())}
    else if(mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo){const d=Math.round(D.bAcc);D.bAcc-=d;send({...ex,t:'b',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,d,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999});if(D.role==='host')send({t:'bh',hp:Math.round(G.hp)})}}
   const msgs=D.out.splice(0,20),code=D.code;
-  const r=await api('/api/duo/sync','POST',{code:D.code,since:D.since,msgs,ch:myCh(),start:D.wantStart&&!D.started?1:0,diff:D.wantDiff||undefined});
+  const r=await api('/api/duo/sync','POST',{code:D.code,since:D.since,msgs,ch:myCh(),start:D.wantStart&&!D.started?1:0,diff:D.wantDiff||undefined,ready:D.wantReady==null?undefined:(D.wantReady?1:0)});
   if(!D.on||D.code!==code)return;/* 기다리는 사이에 방을 나갔으면 늦게 온 답은 버림(안 그러면 나간 판이 다시 시작됨) */
   if(r.s===404||r.s===403){const was=D.started;end('방이 사라졌어요.');if(!was){msgTx='방이 사라졌어요. 다시 만들어 주세요.';openUI('duo');loadRooms()}return}
   if(r.s!==200){D.fail=(D.fail||0)+1;if(D.wantStart&&!D.started&&D.fail>=3){msgTx='서버 응답을 기다리는 중… ('+(r.s?'오류 '+r.s:'연결 안 됨')+') 계속 시도해요';renderRoom()}return}
-  D.fail=0;D.room=r.j.room;if(D.wantDiff&&D.room.diff===D.wantDiff)D.wantDiff=null;
+  D.fail=0;D.room=r.j.room;{const mp=(D.room.players||[]).find(p=>p.me);if(mp&&D.wantReady!=null&&!!mp.ready===!!D.wantReady)D.wantReady=null}if(D.wantDiff&&D.room.diff===D.wantDiff)D.wantDiff=null;
   if(D.wantStart&&!D.started&&D.room.state!=='play'){const n=(D.room.players||[]).length;if(r.j.start_err)msgTx=r.j.start_err;else if(n<2)msgTx='동료가 방에 없어요. 동료를 기다려 주세요.';if(n<2)D.wantStart=false}
   if(D.room.state==='play')D.wantStart=false;
   /* 여러 답이 겹쳐 와도 메시지는 한 번씩만, 방장 화면(s)은 가장 새 것만 */
@@ -125,7 +125,7 @@
   if(P.downDuo)revive();t._doorSent=0;if(f%10===0){TW71.goBoss(f)}else{TW71.buildFloor(f);t.queue=[];try{$('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F · 듀오'}catch(e){}}}
  function begin(){if(D.started)return;D.started=true;closeUI();if(D.room&&D.room.kind==='pvp'&&window.PVP92){PVP92.begin();return}const f=D.room.floor;try{if(D.room.diff&&D.room.diff!==diff){$('diffSel').value=D.room.diff;updDiff()}}catch(e){}
   startTower(f);note('듀오 시작! '+f+'F · 함께 올라가요');try{$('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F · 듀오'}catch(e){}}
- function end(msg){const was=D.started;try{window.PVP92&&PVP92.reset()}catch(e){}D.plX='';if(D.code)api('/api/duo/leave','POST',{code:D.code});Object.assign(D,{on:false,code:null,role:null,room:null,started:false,since:0,out:[],mate:{}});
+ function end(msg){const was=D.started;try{window.PVP92&&PVP92.reset()}catch(e){}D.plX='';if(D.code)api('/api/duo/leave','POST',{code:D.code});Object.assign(D,{on:false,code:null,role:null,room:null,started:false,since:0,out:[],mate:{},wantReady:null});
   const t=T();if(t)t.duo=null;if(typeof G!=='undefined'&&G)G.duo=null;const wasDown=P.downDuo;P.downDuo=false;if(P.inv>performance.now()+1e6)P.inv=0;D.mateOff=0;if(msg&&was)note(msg);closeUI();return wasDown}
  /* v86: 게임 중에 동료가 나가거나 연결이 끊김 → 방을 정리하고 혼자 계속. 내가 쓰러져 있었다면 그대로 쓰러짐 처리 */
  function mateLeft(msg){const wasDown=end(msg);if(!wasDown)return;const t=T(),now=performance.now();
@@ -288,14 +288,15 @@
     '</div></div></div><div class="dMsg">'+esc(msgTx)+'</div></div>'}
   else if(view!=='room'&&window.PVP92){h=PVP92.html(view)||''}
   else if(view==='room'){const r=D.room||{},me=(r.players||[]).find(p=>p.me)||{},full=(r.players||[]).length===2,zp=zpOf(r.floor||1);
-   const slot=i=>{const p=(r.players||[])[i];return p?'<div class="dSlot'+(p.me?' me':'')+'"><div class="dPed"><canvas class="dHero" data-ch="'+(p.me?myLook():(p.ch||0))+'" width="96" height="112"></canvas></div><b>'+(p.owner?'<i class="dCrown">👑</i>':'')+esc(p.name)+(p.me?' <small>(나)</small>':'')+'</b><span class="dSt"><i class="'+(p.online?'on':'off')+'"></i>Lv.'+p.lv+' · '+(p.online?(p.owner?'방장':'준비 완료'):'연결 끊김')+'</span></div>':'<div class="dSlot empty"><div class="dPed"><canvas class="dScn" data-scn="wait" width="96" height="112"></canvas></div><b>'+(r.kind==='pvp'?'상대를':'동료를')+' 기다리는 중<span class="dDots"><i>.</i><i>.</i><i>.</i></span></b><span class="dSt">방 코드를 알려 주세요</span></div>'};
+   const slot=i=>{const p=(r.players||[])[i];return p?'<div class="dSlot'+(p.me?' me':'')+'"><div class="dPed"><canvas class="dHero" data-ch="'+(p.me?myLook():(p.ch||0))+'" width="96" height="112"></canvas></div><b>'+(p.owner?'<i class="dCrown">👑</i>':'')+esc(p.name)+(p.me?' <small>(나)</small>':'')+'</b><span class="dSt"><i class="'+(p.online?'on':'off')+'"></i>Lv.'+p.lv+' · '+(p.online?(p.owner?'방장':(p.ready?'<b class="rdy">✓ 준비 완료</b>':'준비 중…')):'연결 끊김')+'</span></div>':'<div class="dSlot empty"><div class="dPed"><canvas class="dScn" data-scn="wait" width="96" height="112"></canvas></div><b>'+(r.kind==='pvp'?'상대를':'동료를')+' 기다리는 중<span class="dDots"><i>.</i><i>.</i><i>.</i></span></b><span class="dSt">방 코드를 알려 주세요</span></div>'};
    const pv=r.kind==='pvp';
    h='<div class="dP dRm'+(pv?' dPv':'')+'" style="--zc:'+(pv?'#ff5a7a':zp.c)+'">'+(pv?head('⚔','결투 방','친선전 · 골드는 오가지 않아요','<button class="dLeave">방 나가기</button>'):head('🤝','듀오 방',zp.n+' 구역 · '+(r.floor||1)+'F부터','<button class="dLeave">방 나가기</button>'))+
     '<div class="dBig"><small>방 코드</small><div class="dCodeBig">'+String(r.code||'????').split('').map(ch=>'<i>'+esc(ch)+'</i>').join('')+'</div><button class="dCopy">📋 복사</button></div>'+
     (pv?'<div class="dBadges"><span class="dRf">3판 2선승</span><span>내 장비 그대로 · 실력 승부</span></div>':'<div class="dBadges"><span class="dRf">'+(r.floor||1)+'F'+((r.floor||1)%10===0?' · BOSS':'')+'</span>'+dfBadge(r.diff)+'<span>'+(r.floor||1)+'F까지 올라가 본 사람만</span></div>')+
     (!pv&&me.owner&&r.state==='wait'?'<div class="dRmDiff"><h5>난이도 <small>출발 전까지 방장이 바꿀 수 있어요</small></h5>'+dfPick(D.wantDiff||r.diff,'data-rd')+'</div>':'')+
     '<div class="dPl">'+slot(0)+'<div class="dLink"><i>'+(pv?'⚔':'🤝')+'</i></div>'+slot(1)+'</div>'+
-    (me.owner?'<button class="dMain" id="dStart"'+(full?'':' disabled')+'>'+(full?(pv?'⚔ 결투 시작!':'▶ 함께 출발!'):(pv?'상대가 들어오면 시작할 수 있어요':'동료가 들어오면 출발할 수 있어요'))+'</button>':'<div class="dInfo dWait">'+(pv?'방장이 결투 시작을 누르면 바로 시작해요':'방장이 출발을 누르면 바로 시작해요')+'</div>')+'<div class="dMsg">'+esc(msgTx)+'</div></div>'}
+    (me.owner?(()=>{const op=(r.players||[]).find(p=>!p.me),ok=full&&op&&op.ready;return '<button class="dMain" id="dStart"'+(ok?'':' disabled')+'>'+(ok?(pv?'⚔ 결투 시작!':'▶ 함께 출발!'):!full?(pv?'상대가 들어오면 시작할 수 있어요':'동료가 들어오면 출발할 수 있어요'):'상대가 「준비 완료」를 누르면 시작할 수 있어요')+'</button>'})()
+     :(()=>{const rd=D.wantReady!=null?D.wantReady:!!me.ready;return '<button class="dMain dRdy'+(rd?' on':'')+'" id="dReady">'+(rd?'✓ 준비 완료 · 누르면 취소':'준비 완료')+'</button><div class="dInfo dWait">'+(rd?(pv?'방장이 결투 시작을 누르면 바로 시작해요':'방장이 출발을 누르면 바로 시작해요'):'「준비 완료」를 눌러 주세요')+'</div>'})())+'<div class="dMsg">'+esc(msgTx)+'</div></div>'}
   /* 내용이 같으면 다시 그리지 않음(0.1초마다 그리면 단추를 누를 수 없음) · 입력하던 값은 지킴 */
   if(h===lastH)return;lastH=h;const cv=(box.querySelector('#dC')||{}).value,fv=document.activeElement&&document.activeElement.id;box.innerHTML=h;box.prepend(bgc);if(cv&&box.querySelector('#dC'))box.querySelector('#dC').value=cv;wire();if(fv&&box.querySelector('#'+fv))try{box.querySelector('#'+fv).focus()}catch(e){}anim()}
  /* 움직이는 그림: 창이 열려 있는 동안만 1/12초마다 */
@@ -352,6 +353,7 @@
   if(q('.dLeave'))q('.dLeave').onclick=()=>{const pv=D.room&&D.room.kind==='pvp';end();if(pv){openUI('pvp');return}openUI('duo');loadRooms()};
   box.querySelectorAll('[data-pvp]').forEach(b=>b.onclick=()=>{try{gmSfx('ok')}catch(_){}if(!acc().token){closeUI();try{ACCT55.open()}catch(e){}return}openUI('pvp')});
   try{window.PVP92&&PVP92.wire(box)}catch(e){console.error('pvp wire',e)}
+  if(q('#dReady'))q('#dReady').onclick=()=>{const mp=((D.room||{}).players||[]).find(p=>p.me)||{};const cur=D.wantReady!=null?D.wantReady:!!mp.ready;D.wantReady=!cur;try{gmSfx(cur?'back':'ok')}catch(_){}lastH='';draw()};
   if(q('#dStart'))q('#dStart').onclick=()=>{D.wantStart=true;msgTx='출발 준비 중…';draw()};
   }
  async function loadRooms(){const r=await api('/api/duo/rooms');rooms=(r.s===200&&r.j.rooms)||[];if(r.s!==200)msgTx='방 목록을 불러오지 못했어요. (서버 연결 확인)';if(view==='duo')draw()}
@@ -457,6 +459,8 @@
  #duo85 .dSt{display:flex;align-items:center;gap:5px;font-size:11px;color:#9ab8ac;font-weight:700}#duo85 .dSt i{width:8px;height:8px;border-radius:50%}#duo85 .dSt i.on{background:#7dffa8;box-shadow:0 0 6px #7dffa8}#duo85 .dSt i.off{background:#ff5a7a}
  #duo85 .dLink{display:grid;place-items:center}#duo85 .dLink i{font-style:normal;font-size:24px;width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:#0f1c24;border:1px solid #ffffff22;animation:dPulse 1.6s ease-in-out infinite}
  #duo85 .dDots i{font-style:normal;animation:dBlink 1.2s infinite}#duo85 .dDots i:nth-child(2){animation-delay:.2s}#duo85 .dDots i:nth-child(3){animation-delay:.4s}
+ #duo85 .dRdy{background:linear-gradient(180deg,#c8f4ff,#5ab8e8)!important;color:#04121a!important}#duo85 .dRdy.on{background:linear-gradient(180deg,#d4ffe6,#3ad16a)!important;box-shadow:0 0 18px #3ad16a66!important}
+ #duo85 .dSt .rdy{color:#7dffa8}
  #duo85 .dWait{text-align:center;padding:10px;border-radius:12px;background:#0f1c24;border:1px dashed #8de4ff55;color:#cfe8f0}
  #dBg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}#duo85 .dP{z-index:1}
  #duo85 .dPrev{width:100%;aspect-ratio:240/86;image-rendering:pixelated;border-radius:10px;border:1px solid color-mix(in srgb,var(--zc) 40%,#ffffff14)}

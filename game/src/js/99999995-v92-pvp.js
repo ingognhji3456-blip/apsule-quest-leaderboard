@@ -22,18 +22,26 @@
  async function ledger(){if(!acc().token)return null;const r=await api('/api/pvp/ledger','POST',{});if(r.s!==200)return null;let sum=0;
   for(const x of r.j.items||[]){sum+=x.delta;saveData.coins=Math.max(0,(saveData.coins||0)+x.delta)}
   if(sum){try{saveNow()}catch(e){}try{gmHud()}catch(e){}note(sum>0?'⚔ 결투 보상 🪙 +'+num(sum):'⚔ 결투 패배 🪙 '+num(sum))}
-  Q.stats=r.j.stats||Q.stats;return {sum,stats:Q.stats}}
+  Q.stats=r.j.stats||Q.stats;if(r.j.rank)Q.rank=r.j.rank;
+  /* v94 시즌 보상(지난 시즌 최고 등급) */for(const w of r.j.rewards||[]){saveData.coins=(saveData.coins||0)+(w.gold||0);try{window.DIA80&&DIA80.add(w.dia||0)}catch(e){}try{saveNow();gmHud()}catch(e){}
+   try{showOverlay('SEASON '+w.season,'시즌 보상!','<div class="pvRes"><b class="w">'+esc(w.tier)+'</b><small>지난 시즌 최고 등급</small><div class="pvG w">💎 '+num(w.dia)+' · 🪙 '+num(w.gold)+'</div></div>',[['받기',()=>{$('overlay').hidden=true},true]])}catch(e){}}
+  return {sum,stats:Q.stats,rank:Q.rank}}
  setInterval(()=>{try{if(acc().token&&typeof mode!=='undefined'&&mode==='menu'&&!on())ledger()}catch(e){}},90000);
  setTimeout(()=>{try{if(acc().token)ledger()}catch(e){}},6000);
 
  /* ---------- 창: 결투 고르기 · 찾는 중 ---------- */
  const hd=(ic,tt,sub,btn)=>'<div class="dHd"><div class="dTt"><i>'+ic+'</i><div><b>'+tt+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div></div>'+btn+'</div>';
+ const TIERC={bronze:'#d08a5a',silver:'#c8d4e0',gold:'#ffd166',plat:'#7df9ff',dia:'#8db8ff',master:'#ff6ad5'};
+ function rankCard(){const r=Q.rank;if(!r)return '<div class="pvRank"><small>등급 불러오는 중…</small></div>';const t=r.tier||{},c=TIERC[t.key]||'#fff',days=Math.max(0,Math.ceil((r.ends*1000-Date.now())/86400000));
+  const lo=Math.max(t.min||0,t.key==='bronze'?900:0),hi=r.next?r.rating+r.next.need:lo+1,q=r.next?Math.max(0,Math.min(1,(r.rating-lo)/(hi-lo))):1;
+  return '<div class="pvRank" style="--tc:'+c+'"><div class="pvTb"><i>'+({bronze:'🥉',silver:'🥈',gold:'🥇',plat:'💠',dia:'💎',master:'👑'}[t.key]||'⚔')+'</i><b>'+esc(t.name||'')+'</b><em>'+num(r.rating)+'점</em><small>#'+num(r.pos)+'</small></div>'+
+   '<div class="pvBar"><i style="width:'+Math.round(q*100)+'%"></i></div><div class="pvRs"><span>'+(r.next?esc(r.next.name)+'까지 '+num(r.next.need)+'점':'최고 등급!')+'</span><span>시즌 '+esc(r.season)+' · '+days+'일 남음</span></div></div>'}
  function html(v){
   if(v==='pvp'){const s=Q.stats||{};
    return '<div class="dP wide dPv">'+hd('⚔','결투 · PvP','1:1 실력 승부 · 내 장비 그대로 · 3판 2선승','<button class="dBack">◀ 뒤로</button>')+'<div class="dCols">'+
     '<div class="dCol pvQ"><h4>빠른 대전</h4><canvas class="dScn pvArt" data-scn="vs" width="240" height="100"></canvas>'+
      '<ul class="pvRule"><li>기다리는 사람과 바로 짝지어져요</li><li><b>이기면</b> 상대 골드를 가져와요 · <b>지면</b> 내 골드를 잃어요</li><li>판돈 = 두 사람 중 <b>골드가 적은 쪽의 10%</b> (20 ~ 5,000)</li><li>도중에 나가면 기권패</li></ul>'+
-     '<div class="pvRec"><span>전적</span><b class="w">'+(s.wins||0)+'승</b><b class="l">'+(s.losses||0)+'패</b><em>번 골드 🪙 '+num(s.gold_won||0)+'</em></div>'+
+     rankCard()+'<div class="pvRec"><span>전적</span><b class="w">'+(s.wins||0)+'승</b><b class="l">'+(s.losses||0)+'패</b><em>번 골드 🪙 '+num(s.gold_won||0)+'</em></div>'+
      '<button class="dMain pvGo" id="pvQ">⚔ 빠른 대전 찾기</button></div>'+
     '<div class="dCol"><h4>친구 대전</h4><div class="pvFr">친구와 방 코드로 겨뤄요 · <b>골드는 오가지 않아요</b></div><button class="dMain pvMk" id="pvMk">🏟 결투 방 만들기</button>'+
      '<h5>코드로 들어가기</h5><div class="dCode"><div class="dSlots"><input id="pvC" maxlength="4" placeholder="····" autocapitalize="characters" spellcheck="false" autocomplete="off"></div><button id="pvJ">들어가기 ▶</button></div>'+
@@ -164,7 +172,8 @@
  function show(win,why,res,lg){const s=(lg&&lg.stats)||Q.stats||{},sc=M.sc[me()]+' : '+M.sc[1-me()];
   let gold='';if(M.ranked){if(res&&res.void)gold='<div class="pvG v">결과가 서로 달라 골드는 오가지 않았어요</div>';else if(res&&res.settled||lg&&lg.sum)gold='<div class="pvG '+(win?'w':'l')+'">🪙 '+(win?'+':'−')+num(M.stake)+' 골드 '+(win?'(상대에게서 가져옴)':'(상대에게 빼앗김)')+'</div>';else gold='<div class="pvG v">결과 확인 중… 잠시 뒤 로비에서 골드가 반영돼요</div>'}
   else gold='<div class="pvG v">친선전 · 골드는 오가지 않아요</div>';
-  const html='<div class="pvRes"><b class="'+(win?'w':'l')+'">'+sc+'</b>'+(why?'<small>'+esc(why)+'</small>':'')+gold+'<div class="pvRec2">전적 '+(s.wins||0)+'승 '+(s.losses||0)+'패 · 번 골드 🪙 '+num(s.gold_won||0)+'</div></div>';
+  let rk='';if(M.ranked&&res&&res.rating){const [a,b]=res.rating,d=b-a;rk='<div class="pvRkC '+(d>=0?'w':'l')+'">⚔ 등급 점수 '+(d>=0?'+':'')+d+' → <b>'+num(b)+'</b> · '+esc((res.tier||{}).name||'')+'</div>'}
+  const html='<div class="pvRes"><b class="'+(win?'w':'l')+'">'+sc+'</b>'+(why?'<small>'+esc(why)+'</small>':'')+gold+rk+'<div class="pvRec2">전적 '+(s.wins||0)+'승 '+(s.losses||0)+'패 · 번 골드 🪙 '+num(s.gold_won||0)+'</div></div>';
   const btns=M.ranked?[['⚔ 다시 빠른 대전',()=>{$('overlay').hidden=true;DU.end();try{toLobby()}catch(e){}setTimeout(search,300)},true],['로비로',()=>{$('overlay').hidden=true;DU.end();try{toLobby()}catch(e){}},false]]
    :(M.owner&&D.on?[['↺ 다시 결투',()=>{DU.send({t:'rm'});rematch()},true],['방 나가기',()=>{$('overlay').hidden=true;DU.end();try{toLobby()}catch(e){}},false]]
     :[[D.on?'⏳ 방장이 다시 결투를 누르면 시작':'로비로',()=>{if(!D.on){$('overlay').hidden=true;try{toLobby()}catch(e){}}},true],['방 나가기',()=>{$('overlay').hidden=true;DU.end();try{toLobby()}catch(e){}},false]]);
@@ -200,6 +209,11 @@
  @keyframes pvSpin{to{transform:rotate(360deg)}}
  .pvRes{display:flex;flex-direction:column;align-items:center;gap:8px}.pvRes>b{font-size:42px;font-weight:900;letter-spacing:.06em}.pvRes>b.w{color:#ffe79a;text-shadow:0 0 18px #ffd16688}.pvRes>b.l{color:#ff8a9a}
  .pvRes small{opacity:.75}.pvG{padding:8px 14px;border-radius:12px;font-weight:900;font-size:15px}.pvG.w{background:#2a2410;color:#ffe79a;border:1px solid #ffd16688}.pvG.l{background:#2a0e14;color:#ff8a9a;border:1px solid #ff5a7a66}.pvG.v{background:#101a20;color:#cfe0e6;font-weight:700;font-size:13px}
- .pvRec2{font-size:12px;opacity:.75}`;document.head.appendChild(st);
+ .pvRec2{font-size:12px;opacity:.75}
+ .pvRkC{font-weight:900;font-size:14px;padding:6px 12px;border-radius:10px;background:#0b1319}.pvRkC.w{color:#7dffa8}.pvRkC.l{color:#ff8a9a}.pvRkC b{color:#fff}
+ #duo85 .pvRank{padding:9px 11px;border-radius:12px;background:radial-gradient(120% 120% at 0% 0%,color-mix(in srgb,var(--tc) 22%,transparent),#0b1319 70%);border:1px solid color-mix(in srgb,var(--tc) 55%,transparent)}
+ #duo85 .pvTb{display:flex;align-items:center;gap:8px}#duo85 .pvTb i{font-style:normal;font-size:22px}#duo85 .pvTb b{font-size:17px;color:var(--tc);text-shadow:0 0 10px var(--tc)}#duo85 .pvTb em{font-style:normal;font-weight:900;margin-left:auto}#duo85 .pvTb small{color:#9ab8ac}
+ #duo85 .pvBar{height:7px;border-radius:4px;background:#1a2430;margin:6px 0 4px;overflow:hidden}#duo85 .pvBar i{display:block;height:100%;background:linear-gradient(90deg,var(--tc),#fff)}
+ #duo85 .pvRs{display:flex;justify-content:space-between;font-size:10.5px;color:#9ab8ac}`;document.head.appendChild(st);
  window.PVP92={on,html,wire,begin,msg,ko,oppLeft,reset,search,ledger,M,Q};
 }catch(e){console.error('v92 pvp',e)}})();

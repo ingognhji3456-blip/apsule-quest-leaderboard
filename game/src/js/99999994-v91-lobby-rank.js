@@ -9,8 +9,8 @@
  const base=()=>(acc().url||'https://capsule-quest-leaderboard.onrender.com').replace(/\/+$/,'');
  const esc=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const num=v=>Number(v||0).toLocaleString();
- const TABS=[['score','점수','⚡'],['level','레벨','⭐'],['floor','탑 층','🏰'],['gold','골드','🪙']];
- const val=(k,x)=>k==='score'?num(x.score):k==='level'?'Lv.'+(x.level||1):k==='floor'?(x.floor||1)+'F':num(x.gold);
+ const TABS=[['score','점수','⚡'],['level','레벨','⭐'],['floor','탑 층','🏰'],['gold','골드','🪙'],['pvp','결투','⚔']];
+ const val=(k,x)=>k==='pvp'?(x.tier||'')+' '+num(x.rating):k==='score'?num(x.score):k==='level'?'Lv.'+(x.level||1):k==='floor'?(x.floor||1)+'F':num(x.gold);
  let tab=0,pinT=0;const C={};
  async function get(k){if(navigator.webdriver&&/onrender\.com|^$/.test(acc().url||''))return null;/* 자동 시험(서버 주소 없음)에선 바깥 서버에 접속하지 않음 */const c=C[k];if(c&&Date.now()-c.t<60000)return c.j;try{const h={};const a=acc();if(a.token)h.Authorization='Bearer '+a.token;
    const r=await fetch(base()+'/api/ranking?limit=3&by='+k,{headers:h});const j=await r.json();if(j&&j.ok){C[k]={t:Date.now(),j};return j}}catch(e){}return c?c.j:null}
@@ -37,6 +37,8 @@
  let shownAt=0;
  setInterval(()=>{const on=show();if(on&&card.hidden){card.hidden=false;shownAt=Date.now();paint()}else if(!on&&!card.hidden)card.hidden=true;
   card.classList.toggle('rlMini',document.documentElement.classList.contains('ph'));
+  /* v94: 위쪽 줄 단추가 두 줄로 내려와도 가리지 않게, 그 아래에 붙임(컴퓨터) */
+  if(on&&!document.documentElement.classList.contains('ph')){const hd=document.querySelector('#gameMenu .gmHud');if(hd){const b=Math.round(hd.getBoundingClientRect().bottom+8);card.style.top=Math.max(84,b)+'px'}}
   if(on&&Date.now()-pinT>15000&&Date.now()-shownAt>6000&&Math.floor(Date.now()/6000)!==card._tk){card._tk=Math.floor(Date.now()/6000);tab=(tab+1)%TABS.length;paint()}},400);
 
  /* ---------- 위쪽 줄 단추 ---------- */
@@ -57,7 +59,7 @@
  #rkLob .rlTr{font-size:22px;filter:drop-shadow(0 0 8px #ffd166);animation:rlBob 2s ease-in-out infinite}
  #rkLob .rlHd b{font-size:15px;letter-spacing:.18em;background:linear-gradient(180deg,#fff6c8,#ffd166 60%,#d49a1a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
  #rkLob .rlHd small{margin-left:auto;font-size:9.5px;color:#7dffa8;font-weight:800;animation:rlBlink 1.6s infinite}
- #rkLob .rlTabs{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:7px}
+ #rkLob .rlTabs{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-bottom:7px}
  #rkLob .rlTabs button{font:inherit;font-size:10px;font-weight:800;padding:4px 0;border-radius:7px;border:1px solid #ffffff1c;background:#0c1218;color:#b8c8d0;cursor:pointer;white-space:nowrap}
  #rkLob .rlTabs button.on{background:linear-gradient(180deg,#ffe79a,#d49a1a);color:#2a1a04;border-color:#ffe79a}
  #rkLob .rlList{display:flex;flex-direction:column;gap:4px;min-height:96px}
