@@ -14,7 +14,7 @@
 
  /* 로비 단추 (GM_ITEMS 순서: 0 이야기 · 1 보스 러시 · 2 상점 · 3 명예의 전당 · 4 설정 · 5 조작법) */
  const NAV=[[1,'⚔','보스 러시'],[2,'✦','상점'],[3,'♛','전당'],[4,'⚙','설정'],[5,'?','조작법']];
- function go(i){try{if(window.LV&&LV.enter)return;GM.sel=i;gmMainSel();lvGo()}catch(e){try{GM.sel=i;gmMainGo()}catch(_){}}}
+ function go(i){try{if(typeof LV!=='undefined'&&LV.enter)return;GM.sel=i;gmMainSel();lvGo()}catch(e){try{GM.sel=i;gmMainGo()}catch(_){}}}
  function build(){const m=document.getElementById('gmMain');if(!m||document.getElementById('phNav'))return;
   const nav=document.createElement('div');nav.id='phNav';
   nav.innerHTML=NAV.map(([i,ic,t])=>'<button data-i="'+i+'" style="--c:'+((window.LB_COL&&LB_COL[i])||'#a6f5c6')+'"><i>'+ic+'</i><b>'+t+'</b><em></em></button>').join('');

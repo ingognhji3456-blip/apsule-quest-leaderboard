@@ -30,18 +30,22 @@
    if(mode==='tower'&&t&&t.duo){send({t:'p',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,w:!!P.walkOn});
     if(D.role==='host')send(snap())}
    else if(mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo){const d=Math.round(D.bAcc);D.bAcc-=d;send({t:'b',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,d,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999});if(D.role==='host')send({t:'bh',hp:Math.round(G.hp)})}}
-  const msgs=D.out.splice(0,20);
+  const msgs=D.out.splice(0,20),code=D.code;
   const r=await api('/api/duo/sync','POST',{code:D.code,since:D.since,msgs,ch:myCh(),start:D.wantStart&&!D.started?1:0});
+  if(!D.on||D.code!==code)return;/* 기다리는 사이에 방을 나갔으면 늦게 온 답은 버림(안 그러면 나간 판이 다시 시작됨) */
   if(r.s===404||r.s===403){const was=D.started;end('방이 사라졌어요.');if(!was){msgTx='방이 사라졌어요. 다시 만들어 주세요.';openUI('duo');loadRooms()}return}
   if(r.s!==200){D.fail=(D.fail||0)+1;if(D.wantStart&&!D.started&&D.fail>=3){msgTx='서버 응답을 기다리는 중… ('+(r.s?'오류 '+r.s:'연결 안 됨')+') 계속 시도해요';renderRoom()}return}
   D.fail=0;D.room=r.j.room;
   if(D.wantStart&&!D.started&&D.room.state!=='play'){const n=(D.room.players||[]).length;if(r.j.start_err)msgTx=r.j.start_err;else if(n<2)msgTx='동료가 방에 없어요. 동료를 기다려 주세요.';if(n<2)D.wantStart=false}
   if(D.room.state==='play')D.wantStart=false;
   for(const x of r.j.msgs||[]){D.since=Math.max(D.since,x.seq);try{onMsg(x.m)}catch(e){console.error('duo msg',e)}}
+  if(!D.on)return;
   D.since=Math.max(D.since,r.j.seq||0);
   if(!D.started&&D.room.state==='play')begin();
   if(!D.started)renderRoom();
-  if(D.started&&D.room.state==='closed')end('방이 닫혔어요.');
+  if(D.started&&D.room.state==='closed'){mateLeft('방이 닫혔어요. 혼자 계속해요.');return}
+  if(D.started){const mp=(D.room.players||[]).find(p=>!p.me);if(!mp){mateLeft('동료가 나갔어요. 혼자 계속해요.');return}
+   if(mp.online)D.mateOff=0;else if(!D.mateOff)D.mateOff=performance.now();else if(performance.now()-D.mateOff>20000){mateLeft('동료와 연결이 끊겼어요. 혼자 계속해요.');return}}
  }finally{D.busy=false}}
  setInterval(()=>{try{tick()}catch(e){}},100);
 
@@ -49,7 +53,7 @@
  function onMsg(m){const t=T();
   switch(m.t){
    case 'join':renderRoom();try{sfx(880,.12,'triangle',.04,1320)}catch(e){}break;
-   case 'leave':if(D.started){note((m.name||'동료')+'님이 나갔어요. 혼자 계속해요.');D.mate={};if(t&&t.duo){t.duo=null}if(typeof G!=='undefined'&&G)G.duo=null;D.on=false}else renderRoom();break;
+   case 'leave':if(D.started)mateLeft((m.name||'동료')+'님이 나갔어요. 혼자 계속해요.');else renderRoom();break;
    case 'p':D.mate=Object.assign(D.mate||{},m,{at:performance.now()});if(t&&t.duo)t.duo.mate=D.mate;break;
    case 's':if(D.role==='guest')applySnap(m);break;
    case 'h':if(D.role==='host'&&t){const mo=t.mobs.find(q=>q.id===m.id&&q.hp>0);if(mo){if(m.sh)mo.sh=Math.max(0,(mo.sh||0)-m.sh);if(mo.sh<=0&&m.sh&&mo.shMax&&!mo.shRegen){mo.stunT=t.clk+.9;mo.shRegen=t.clk+8}mo.hp-=m.d;mo.hitT=t.clk;if(mo.hp<=0)TW71.kill(mo)}}break;
@@ -96,9 +100,13 @@
  function begin(){if(D.started)return;D.started=true;closeUI();const f=D.room.floor;try{if(D.room.diff&&D.room.diff!==diff){$('diffSel').value=D.room.diff;updDiff()}}catch(e){}
   startTower(f);note('듀오 시작! '+f+'F · 함께 올라가요');try{$('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F · 듀오'}catch(e){}}
  function end(msg){const was=D.started;if(D.code)api('/api/duo/leave','POST',{code:D.code});Object.assign(D,{on:false,code:null,role:null,room:null,started:false,since:0,out:[],mate:{}});
-  const t=T();if(t)t.duo=null;if(typeof G!=='undefined'&&G)G.duo=null;P.downDuo=false;if(msg&&was)note(msg);closeUI()}
+  const t=T();if(t)t.duo=null;if(typeof G!=='undefined'&&G)G.duo=null;const wasDown=P.downDuo;P.downDuo=false;if(P.inv>performance.now()+1e6)P.inv=0;D.mateOff=0;if(msg&&was)note(msg);closeUI();return wasDown}
+ /* v86: 게임 중에 동료가 나가거나 연결이 끊김 → 방을 정리하고 혼자 계속. 내가 쓰러져 있었다면 그대로 쓰러짐 처리 */
+ function mateLeft(msg){const wasDown=end(msg);if(!wasDown)return;const t=T(),now=performance.now();
+  try{if(mode==='tower'&&t){if(t.clear){revive();return}t.dead=false;P.inv=0;P.hp=1;TW71.hurt(99999)}else if(mode==='boss'&&typeof G!=='undefined'&&G&&G.state==='play'){P.inv=0;P.hp=1;hurtP(99999,now)}}catch(e){console.error('duo mateLeft',e)}}
+ {const f=TW71.start;TW71.start=function(){const t=T();if(t)t.duo=null;if(!D.started)P.downDuo=false;return f.apply(this,arguments)}}
  /* 로비로 나가면 방도 나감 */
- {const f=toLobby;toLobby=function(){try{if(D.on)end()}catch(e){}return f.apply(this,arguments)}}
+ {const f=toLobby;toLobby=function(){try{if(D.on||D.started||D.code)end()}catch(e){}return f.apply(this,arguments)}}
 
  /* ---------- 쓰러짐 · 부활 ---------- */
  function mateAlive(){return D.mate&&!D.mate.down&&performance.now()-(D.mate.at||0)<6000}
@@ -138,7 +146,7 @@
   const q=Math.max(0,Math.min(1,(m.hp||0)/(m.mx||1)));c.fillStyle='#05070ae6';c.fillRect(x-12,y-35,24,4);c.fillStyle='#3a0a14';c.fillRect(x-11,y-34,22,2);c.fillStyle='#7dffa8';c.fillRect(x-11,y-34,22*q,2);c.textAlign='left';c.restore()}
  function drawList(list,now){list.push({y:(D.mate&&D.mate.sy)||0,fn:()=>drawMate(now,false)})}
  /* 동료 칸(위 오른쪽): 이름 · 레벨 · 체력 */
- {const f=frame;frame=function(){const r=f.apply(this,arguments);try{if(D.started&&(mode==='tower'||mode==='boss')){const m=D.mate||{},pl=(D.room&&D.room.players.find(p=>!p.me))||{};ctx.save();try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}
+ {const f=frame;frame=function(){const r=f.apply(this,arguments);try{const tt=T();if(D.started&&D.on&&(mode==='tower'&&tt&&tt.duo||mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo)){const m=D.mate||{},pl=(D.room&&D.room.players.find(p=>!p.me))||{};ctx.save();try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}
    const x=W-118,y=AY+4;ctx.globalAlpha=.85;ctx.fillStyle='#05070a';ctx.fillRect(x,y,112,22);ctx.globalAlpha=1;ctx.fillStyle='#8de4ff';ctx.fillRect(x,y,2,22);ctx.font='900 8px sans-serif';ctx.fillStyle='#e8f8ff';ctx.fillText('🤝 '+(pl.name||'동료')+' · Lv.'+(pl.lv||1)+(m.down?' · 쓰러짐':''),x+6,y+9);
    const q=Math.max(0,Math.min(1,(m.hp||0)/(m.mx||1)));ctx.fillStyle='#3a0a14';ctx.fillRect(x+6,y+13,100,4);ctx.fillStyle=m.down?'#6a6a7a':'#7dffa8';ctx.fillRect(x+6,y+13,100*q,4);ctx.restore()}}catch(e){}return r}}
 
