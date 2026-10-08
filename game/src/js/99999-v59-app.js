@@ -33,7 +33,7 @@
   document.getElementById('acDel59').onclick=()=>{const A=(window.ACCT55&&ACCT55.get())||{};if(!A.token)return;
    row.innerHTML='<div class="acNote" style="width:100%">계정을 지우면 <b>아이디 · 서버의 진행 기록 · 랭킹 · 산 상품</b>이 모두 지워지고 되돌릴 수 없어요. (이 기기에 있는 기록은 남아요)<br>지우려면 아이디 <b>'+esc(A.user)+'</b> 를 똑같이 입력해 주세요.</div>'+
     '<input id="acDelIn" autocomplete="off" style="width:100%;padding:10px;border-radius:10px;border:1px solid #ff5a6a88;background:#0b0f18;color:#fff;font:15px inherit">'+
-    '<button class="gmBtn" id="acDelGo" style="background:#5a1a24;color:#ffd0d6">영구 삭제</button><button class="gmBtn" id="acDelNo">취소</button><div class="acNote" id="acDelMsg"></div>';
+    '<button class="gmBtn" id="acDelGo" style="background:#5a1a24!important;color:#ffd0d6">영구 삭제</button><button class="gmBtn" id="acDelNo">취소</button><div class="acNote" id="acDelMsg"></div>';
    document.getElementById('acDelNo').onclick=()=>{try{ACCT55.open()}catch(e){}};
    document.getElementById('acDelGo').onclick=async()=>{const m=document.getElementById('acDelMsg'),v=document.getElementById('acDelIn').value.trim();
     if(v!==A.user){m.textContent='아이디가 달라요.';return}m.textContent='지우는 중…';

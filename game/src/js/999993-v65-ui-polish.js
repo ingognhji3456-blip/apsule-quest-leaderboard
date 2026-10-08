@@ -10,6 +10,9 @@
  /* ---------- ① 공통 단추 ---------- */
  html body .gmBtn{border-radius:12px!important;border:1px solid #ffffff22!important;background:linear-gradient(180deg,#1d2736,#121a26)!important;box-shadow:inset 0 1px 0 #ffffff1a,0 3px 0 #05080c,0 6px 14px #0006!important;
   transition:transform .1s,box-shadow .12s,border-color .15s,filter .15s!important;font-weight:800!important;letter-spacing:.02em}
+ /* v66: 시작 단추(.go)는 밝은 초록 그대로 (위 어두운 바탕이 덮어써 꺼진 것처럼 보이던 문제) */
+ html body .gmBtn.go{background:linear-gradient(180deg,#c6ffdf,#74d3b0)!important;color:#06140e!important;border-color:#e6fff2!important;box-shadow:inset 0 1px 0 #ffffffaa,0 3px 0 #2c6a55,0 6px 20px #6ccaa955!important}
+ html body .gmBtn.sel{border-color:#a6f5c699!important}
  html body .gmBtn:not(:disabled):hover{transform:translateY(-1px);border-color:#a6f5c6aa!important;filter:brightness(1.12)}
  html body .gmBtn:not(:disabled):active{transform:translateY(2px);box-shadow:inset 0 1px 0 #ffffff12,0 1px 0 #05080c!important}
  html body .gmBtn:focus-visible,#bbShop button:focus-visible,#gmSet button:focus-visible{outline:2px solid #ffe58a;outline-offset:2px}

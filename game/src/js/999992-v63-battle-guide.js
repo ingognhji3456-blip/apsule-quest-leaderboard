@@ -54,7 +54,7 @@
    '<div class="dots">'+STEPS.map((_,j)=>'<i class="'+(j<i?'on':j===i?'cur':'')+'"></i>').join('')+'</div><span class="ck">✓</span>';
   box.querySelector('.sk').onclick=e=>{e.stopPropagation();finish(true)};shownI=i;shownWait=waiting}
  /* 경기장 왼쪽 빈 곳에 붙임 (보스 체력바 · 보스 · 내 체력 칸을 가리지 않게) */
- function place(){try{const g=document.getElementById('game');if(!g)return;const r=g.getBoundingClientRect(),w=Math.max(250,Math.min(340,r.width*.31));box.style.width=w+'px';box.style.left=Math.max(6,r.left+r.width*.035)+'px';box.style.top=Math.max(6,r.top+r.height*.2)+'px'}catch(e){}}
+ function place(){try{const g=document.getElementById('game');if(!g)return;const r=g.getBoundingClientRect();let w=Math.max(250,Math.min(340,r.width*.31));/* v66: 화면 배율(zoom)이 걸려 있으면 위치 값도 함께 나눈다. 세로 화면에서 게임 화면 위가 비어 있으면 그 빈자리에 띄운다 */const z=parseFloat(getComputedStyle(box).zoom)||1;let L=Math.max(6,r.left+r.width*.035),T=Math.max(6,r.top+r.height*.2);if(innerHeight>innerWidth*1.2&&(r.top>170||innerHeight-r.bottom>200)){const vw=Math.min(innerWidth-16,440);w=vw/z;L=(innerWidth-vw)/2;T=innerHeight-r.bottom>200?r.bottom+12/* v67: 게임 화면 아래 빈자리 */:Math.max(6,r.top-64-(box.offsetHeight||110)*z)}box.style.width=w+'px';box.style.left=L/z+'px';box.style.top=T/z+'px'}catch(e){}}
  function finish(skip){const s=S();s.done=1;s.i=STEPS.length;save();box.style.display='none';
   try{if(!skip){banner('전투 가이드 끝! 이제 마음껏 싸워 봐요');sfx(784,.3,'triangle',.05,1568)}}catch(e){}}
 
