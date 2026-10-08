@@ -86,6 +86,8 @@
   const sk=lean*dirS,toW=(px,py)=>{let wx=dfl?X+40*kk-(px+6)*kk:X+(px+6)*kk,wy=Y+(py+10)*kk;if(side)wx=fx+(wx-fx)*.86;wx-=sk*(wy-fy);return [wx,wy]};
   /* 팔 각도 a0는 '앞(오른쪽)을 보는' 기준 → 화면에서는 바라보는 쪽으로 */const wAng=a0=>fl?Math.PI-a0:a0;
   /* 가만히 · 걷는 중: 손을 허리 앞에 두고 검을 앞으로 비스듬히 쥠 (걸음에 맞춰 위아래로만 살짝) */
+  /* v61 세트 전용 패리 자세: window.__parryPose(진행 0~1, 막았나, 퍼펙트) → {x,y(그림 좌표의 손 위치), a(앞 기준 각도)} */
+  {const PP=window.__parryPose;if(k<0&&PP&&P.parryT){const win=(typeof parryWin==='function'?parryWin():160)+180,pt=p.now-P.parryT;if(pt>=0&&pt<win){const r=PP(pt/win,!!P.parryUsed,!!P.parryPerf,side);if(r){const [ix,iy]=toW(r.x,r.y);drawWeaponShape(w,ix,iy,wAng(r.a),L,s,p.now,dirS);return}}}}
   if(k<0){const sx=side?12.5:19.5,ra=1.25,R0=6.2,f=P.walkOn?((Math.floor((P.walkT||0)/(Math.PI/2))%4)+4)%4:0,bob=(f%2?-1:0)+Math.sin(p.now/700)*.25,[ix,iy]=toW(sx+Math.cos(ra)*R0,19.5+Math.sin(ra)*R0+bob);
    const ia=pose.shoulder?pose.idle:pose.thrust?-1.45:.95;drawWeaponShape(w,ix,iy,wAng(ia),L,s,p.now,dirS);return}
   const [qx,qy,a]=handQ(k,side),[hx,hy]=toW(qx,qy);

@@ -43,7 +43,7 @@ function doParry(now,beat,dmg){P.parryUsed=true;P.parryCd=now+220;const perf=P.p
  sfx(2200,.1,'square',.05,3000);sfx(900,.25,'triangle',.06,1800);if(perf)sfx(1320,.4,'sine',.05,2640);
  // 가까운 탄은 함께 튕겨 나간다
  const near=[];G.bullets=G.bullets.filter(b=>{if(beat<b.t0)return true;const [x,y]=bpos(b,beat);if(Math.hypot(x-P.x,y-P.y)<34){near.push([x,y]);return false}return true});
- if(typeof ultAdd==='function')ultAdd(perf?16:8);if(typeof brStag==='function')brStag(perf?18:9,px,py-20);
+ if(typeof ultAdd==='function')ultAdd(perf?16:8);if(typeof brStag==='function')brStag(perf?18:9,px,py-20,'패링');
  G.parrySp=G.parrySp||[];const n=1+Math.min(4,near.length)+(perf?2:0),per=G.maxHp*(perf?.022:.011)/n;
  for(let i=0;i<n;i++){const [sx,sy]=near[i]||[px,py];G.parrySp.push({x0:sx,y0:sy,t:now+i*50,dur:420+i*40,side:(i%2?1:-1)*(20+RND()*30),dmg:per,perf})}
  G.parryFX={t:now,perf}}

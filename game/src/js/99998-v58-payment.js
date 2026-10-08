@@ -25,7 +25,7 @@
  function apply(){const A=API(),cos=saveData.cos58||{};
   for(const k in PRE){const api=A[k];if(!api)continue;const want=cos[k],cur=api.get();
    if(want&&ownsKind(k,want)&&!cur)api.equip(want);
-   else if(cur&&cur===want&&!ownsKind(k,want))api.equip(null)}}
+   else if(cur&&!ownsKind(k,cur))api.equip(null)}}  /* v60: 입어보기가 없어져서, 보유하지 않은 상품은 벗김 */
  /* 지금 장착 상태를 저장 (보유한 것만. 입어보기는 저장 안 함) */
  function sync(){const A=API();saveData.cos58=saveData.cos58||{};const cos=saveData.cos58;
   for(const k in PRE){const api=A[k];if(!api)continue;const id=api.get();if(!id)delete cos[k];else if(ownsKind(k,id))cos[k]=id}

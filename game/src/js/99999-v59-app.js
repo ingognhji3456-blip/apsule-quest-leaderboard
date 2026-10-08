@@ -4,8 +4,8 @@
       써야 해서, 지금은 앱에서는 입어보기만 된다. 웹에서 산 상품은 로그인하면 앱에서도 그대로 쓸 수 있다.
    ② 오프라인 저장: 서버(/play)로 열렸을 때 /sw.js 를 등록해 다음 실행부터 빨리 켜진다.
    ③ 계정 삭제: 「👤 계정」 창(로그인 상태)에 「계정 삭제」 단추. 구글 플레이 정책상 앱 안에서 지울 수 있어야 한다.
-   ④ 무료 출시 모드(v60): 서버 /api/shop 의 free_mode(Render 환경변수 SHOP_MODE=free)가 켜져 있으면 웹에서도
-      가격·「구매하기」를 숨긴다(window.BB_FREE). 마지막 값을 기억해 두어 오프라인에서도 바로 적용된다. */
+   ④ 무료 출시 모드(v60): 서버 /api/shop 의 free_mode(Render 환경변수 SHOP_MODE=free)가 켜져 있으면
+      「✦ 스킨 · 무기 · 연출」 탭 자체를 숨긴다(window.BB_FREE, 99991의 mount). 마지막 값을 기억해 두어 오프라인에서도 바로 적용된다. */
 (()=>{try{
  const web=/^https?:$/.test(location.protocol);
  let app=false;
@@ -47,7 +47,7 @@
  const watch=()=>{const p=document.getElementById('acPanel');if(p)mo.observe(p,{childList:true,subtree:false});else setTimeout(watch,1000)};watch();
 
  /* ④ 무료 출시 모드 */
- function setFree(on){window.BB_FREE=!!on;document.documentElement.classList.toggle('bbFree',!!on);try{localStorage.setItem('bb-free60',on?'1':'0')}catch(e){}}
+ function setFree(on){window.BB_FREE=!!on;document.documentElement.classList.toggle('bbFree',!!on);if(on){document.querySelectorAll('#shopModal [data-addon]').forEach(e=>e.remove());const d=document.getElementById('bbShop');if(d&&d.open)d.close()}try{localStorage.setItem('bb-free60',on?'1':'0')}catch(e){}}
  try{if(localStorage.getItem('bb-free60')==='1')setFree(true)}catch(e){}
  setTimeout(async()=>{try{const a=(window.ACCT55&&ACCT55.get())||{},ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),70000);
   const r=await fetch((a.url||DEF).replace(/\/+$/,'')+'/api/shop',{cache:'no-store',signal:ctl.signal});clearTimeout(tm);const j=await r.json();if(j&&j.ok)setFree(!!j.free_mode)}catch(e){}},1200);
