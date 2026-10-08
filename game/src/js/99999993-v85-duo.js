@@ -26,12 +26,12 @@
  D.ev=[];let evN=0;const ES={};
  function evPush(k,o){D.ev.push(Object.assign({e:++evN,k,t:Math.round(performance.now())},o));if(D.ev.length>60)D.ev.shift()}
  function watchMe(){if(!D.started||!(mode==='tower'||mode==='boss'))return;
-  if(P.lungeT&&P.lungeT!==ES.l){ES.l=P.lungeT;evPush('a',{a:r1(P.lungeA||0),d:P.lungeDur||130})}
+  if(P.lungeT&&P.lungeT!==ES.l){ES.l=P.lungeT;evPush('a',Object.assign({a:r1(P.lungeA||0),d:P.lungeDur||130},D.atkX||{}));D.atkX=null}
   if(P.dash&&P.dash.t0!==ES.d){ES.d=P.dash.t0;evPush('d',{vx:Math.sign(P.dash.vx||0),vy:Math.sign(P.dash.vy||0),dur:P.dash.dur||150})}
   if(P.parryT&&P.parryT!==ES.p){ES.p=P.parryT;evPush('p',{g:P.parryPerf?1:0})}
   /* 궁극기: 종류 · 세트 · 위치 · 타격 시각을 통째로 보내서 동료 화면에서 같은 연출을 재생 */
   try{const t=T(),sp=mode==='tower'?(t&&t.U&&t.U.sp):(G&&G.sp);if(sp&&sp.t0!==ES.u){ES.u=sp.t0;const hits=(mode==='tower'?t.U.hits:sp.hits)||[];
-   evPush('U',{sp:{type:sp.type,set:sp.set||null,dur:sp.dur,name:sp.name,col:sp.col,cx:r1(sp.cx),cy:r1(sp.cy),hits}})}}catch(e){}
+   evPush('U',Object.assign({sp:{type:sp.type,set:sp.set||null,dur:sp.dur,name:sp.name,col:sp.col,cx:r1(sp.cx),cy:r1(sp.cy),hits}},D.ultX||{}));D.ultX=null}}catch(e){}
   if(ES.hp!=null&&P.hp<ES.hp&&!P.downDuo)evPush('h',{});ES.hp=P.hp}
 
  /* ---------- 0.1초마다 주고받기 ---------- */
@@ -39,10 +39,10 @@
   const t=T();
   const ev=D.ev.splice(0,30);
   const ex={n:(D.pn=(D.pn||0)+1),ts:Math.round(performance.now()),wp:(()=>{try{return shopInv().eq.wp||0}catch(e){return 0}})(),sk:(()=>{try{return SKIN58.get()||''}catch(e){return ''}})(),
-   ffx:r1((P.face&&P.face.x)||0),ffy:r1((P.face&&P.face.y)||1),ev,pl:(mode==='boss'?'b':'t')+((t&&t.f)||0)};
+   ffx:r1((P.face&&P.face.x)||0),ffy:r1((P.face&&P.face.y)||1),ev,pl:(mode==='boss'?'b':'t')+((t&&t.f)||0)+(D.plX||'')};
   if(D.started&&typeof mode!=='undefined'){
    if(mode==='tower'&&t&&t.duo){send({...ex,t:'p',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,w:!!P.walkOn});
-    if(D.role==='host')send(snap())}
+    if(D.role==='host'&&!(window.PVP92&&PVP92.on()))send(snap())}
    else if(mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo){const d=Math.round(D.bAcc);D.bAcc-=d;send({...ex,t:'b',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,d,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999});if(D.role==='host')send({t:'bh',hp:Math.round(G.hp)})}}
   const msgs=D.out.splice(0,20),code=D.code;
   const r=await api('/api/duo/sync','POST',{code:D.code,since:D.since,msgs,ch:myCh(),start:D.wantStart&&!D.started?1:0,diff:D.wantDiff||undefined});
@@ -69,7 +69,7 @@
  function onMsg(m){const t=T();
   switch(m.t){
    case 'join':renderRoom();try{sfx(880,.12,'triangle',.04,1320)}catch(e){}break;
-   case 'leave':if(D.started)mateLeft((m.name||'동료')+'님이 나갔어요. 혼자 계속해요.');else renderRoom();break;
+   case 'leave':if(D.started&&window.PVP92&&PVP92.on()){PVP92.oppLeft();break}if(D.started)mateLeft((m.name||'동료')+'님이 나갔어요. 혼자 계속해요.');else renderRoom();break;
    case 'p':mateIn(m);if(t&&t.duo)t.duo.mate=D.mate;break;
    case 's':if(D.role==='guest')applySnap(m);break;
    case 'h':if(D.role==='host'&&t){const mo=t.mobs.find(q=>q.id===m.id&&q.hp>0);if(mo){if(m.sh)mo.sh=Math.max(0,(mo.sh||0)-m.sh);if(mo.sh<=0&&m.sh&&mo.shMax&&!mo.shRegen){mo.stunT=t.clk+.9;mo.shRegen=t.clk+8}mo.hp-=m.d;mo.hitT=t.clk;try{if(m.d>0){TW71.addPop(mo.x+(Math.random()-.5)*8,mo.y-16,'-'+m.d,'#8de4ff');TW71.burst(mo.x,mo.y-6,5,'#8de4ff',110)}else if(m.sh)TW71.addPop(mo.x,mo.y-16,'방패 -'+m.sh,'#8dcdf5')}catch(e){}if(mo.hp<=0)TW71.kill(mo)}}break;
@@ -79,6 +79,7 @@
    case 'b':mateIn(m);if(m.d>0&&typeof G!=='undefined'&&G&&G.tw71&&['play','count','wake'].includes(G.state)){G.hp=Math.max(0,G.hp-m.d);G._dp=G.hp;try{G.pops.push({x:G.boss.x+(Math.random()-.5)*30,y:G.boss.y-30,t:performance.now(),tx:'동료 -'+m.d,col:'#8de4ff'});const now=performance.now(),bx=G.boss.x+(Math.random()-.5)*20,by=G.boss.y-14+(Math.random()-.5)*16;fxRing(bx,by,now,240,18+Math.min(16,m.d/40),'#8de4ff');G.slashFx&&G.slashFx.push({x:bx,y:by,a:Math.random()*6.28,t:now,dur:200,col:'#8de4ff',r:16})}catch(e){}if(G.hp<=0)try{startDying(performance.now())}catch(e){}}break;
    case 'bh':if(D.role==='guest'&&typeof G!=='undefined'&&G&&G.duo&&G._duo85&&G.state==='play'&&m.hp<G.hp){G.hp=m.hp;G._dp=G.hp;if(G.hp<=0)try{startDying(performance.now())}catch(e){}}break;
    case 'next':if(D.role==='guest'){$('overlay').hidden=true;startTower(m.f)}break;
+   default:try{window.PVP92&&PVP92.msg(m)}catch(e){console.error('pvp msg',e)}break;
    case 'fail':if(mode==='boss'){if(P.downDuo)bossLose();else{D.mate=Object.assign(D.mate||{},{down:true,hp:0});note('동료가 쓰러졌어요 · 혼자 버텨요!')}}else failBoth();break;
   }}
  function note(tx){try{banner(tx)}catch(e){}}
@@ -122,9 +123,9 @@
  function startTower(f){const t=T();P.downDuo=false;TW71.start(f);const tt=T();tt.duo={role:D.role,mate:D.mate};}
  function goFloor(f){const t=T();if(!t)return;$('overlay').hidden=true;if(mode!=='tower'){startTower(f);return}
   if(P.downDuo)revive();t._doorSent=0;if(f%10===0){TW71.goBoss(f)}else{TW71.buildFloor(f);t.queue=[];try{$('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F · 듀오'}catch(e){}}}
- function begin(){if(D.started)return;D.started=true;closeUI();const f=D.room.floor;try{if(D.room.diff&&D.room.diff!==diff){$('diffSel').value=D.room.diff;updDiff()}}catch(e){}
+ function begin(){if(D.started)return;D.started=true;closeUI();if(D.room&&D.room.kind==='pvp'&&window.PVP92){PVP92.begin();return}const f=D.room.floor;try{if(D.room.diff&&D.room.diff!==diff){$('diffSel').value=D.room.diff;updDiff()}}catch(e){}
   startTower(f);note('듀오 시작! '+f+'F · 함께 올라가요');try{$('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F · 듀오'}catch(e){}}
- function end(msg){const was=D.started;if(D.code)api('/api/duo/leave','POST',{code:D.code});Object.assign(D,{on:false,code:null,role:null,room:null,started:false,since:0,out:[],mate:{}});
+ function end(msg){const was=D.started;try{window.PVP92&&PVP92.reset()}catch(e){}D.plX='';if(D.code)api('/api/duo/leave','POST',{code:D.code});Object.assign(D,{on:false,code:null,role:null,room:null,started:false,since:0,out:[],mate:{}});
   const t=T();if(t)t.duo=null;if(typeof G!=='undefined'&&G)G.duo=null;const wasDown=P.downDuo;P.downDuo=false;if(P.inv>performance.now()+1e6)P.inv=0;D.mateOff=0;if(msg&&was)note(msg);closeUI();return wasDown}
  /* v86: 게임 중에 동료가 나가거나 연결이 끊김 → 방을 정리하고 혼자 계속. 내가 쓰러져 있었다면 그대로 쓰러짐 처리 */
  function mateLeft(msg){const wasDown=end(msg);if(!wasDown)return;const t=T(),now=performance.now();
@@ -135,7 +136,7 @@
 
  /* ---------- 쓰러짐 · 부활 ---------- */
  function mateAlive(){return D.mate&&!D.mate.down&&!(D.mate.hp!=null&&D.mate.hp<=0)&&performance.now()-(D.mate.at||0)<6000}
- function onDie(){const t=T();if(!t.duo)return false;if(mateAlive()){P.downDuo=true;P.hp=0;t.dead=true;send({t:'p',down:true,x:P.x,y:P.y,hp:0,mx:P.maxhp,ch:myCh()});note('쓰러졌어요 · 동료가 이 층을 깨면 다시 일어나요');return true}
+ function onDie(){const t=T();if(!t.duo)return false;if(window.PVP92&&PVP92.on())return PVP92.ko();if(mateAlive()){P.downDuo=true;P.hp=0;t.dead=true;send({t:'p',down:true,x:P.x,y:P.y,hp:0,mx:P.maxhp,ch:myCh()});note('쓰러졌어요 · 동료가 이 층을 깨면 다시 일어나요');return true}
   send({t:'fail'});setTimeout(failBoth,50);return true}
  function revive(){const t=T();P.downDuo=false;P.hp=Math.max(1,Math.round(P.maxhp*.3));if(t)t.dead=false;P.inv=performance.now()+1500;note('다시 일어났어요!')}
  /* v88 보스전에서 둘 다 쓰러짐 → 나도 보통처럼 쓰러져서 결과창(방장: 둘이 다시 도전)으로 */
@@ -209,7 +210,7 @@
   asMate(m,{},()=>{try{drawKnight(o,20,22,2,fl,null,0)}catch(e){}});o.globalCompositeOperation='source-atop';o.fillStyle=col;o.globalAlpha=.75;o.fillRect(0,0,64,64);return GH[k]=cv}
  function drawMate(now,boss){const m=D.mate;if(!m||m.x==null||performance.now()-(m.at||0)>5000)return;const c=ctx,pn=performance.now(),rt=pn-MDLY();
   /* v88: 다른 층에 있는 동료는 그리지 않음(층을 오를 때 순간이동처럼 보이던 것) */
-  {const t=T(),my=(mode==='boss'?'b':'t')+((t&&t.f)||0);if(m.pl&&m.pl!==my)return;if(m.spawnT!=null&&rt<m.spawnT)return}
+  {const t=T(),my=(mode==='boss'?'b':'t')+((t&&t.f)||0)+(D.plX||'');if(m.pl&&m.pl!==my)return;if(m.spawnT!=null&&rt<m.spawnT)return}
   const [gx,gy]=matePos(pn);m.sx=m.sx==null?gx:m.sx+(gx-m.sx)*.6;m.sy=m.sy==null?gy:m.sy+(gy-m.sy)*.6;const x=m.sx,y=m.sy;
   const mv=Math.hypot(gx-(m.px==null?gx:m.px),gy-(m.py==null?gy:m.py));m.wkT=mv>.15?pn:(m.wkT||0);m.px=gx;m.py=gy;const walk=pn-m.wkT<120;
   m.wph=(m.wph||0)+(walk?Math.min(.5,mv*.35):0);
@@ -224,7 +225,8 @@
   if(dash){const k=Math.min(1,(rt-dash.t)/(dash.dur||150)),an=Math.atan2(dash.vy||0,dash.vx||0);c.save();c.translate(x,y-9);c.rotate(an);c.fillStyle=col;for(let i=0;i<7;i++){c.globalAlpha=.55*(1-k);const off=(i-3)*4,len=14+((i*13)%10);c.fillRect(-len-10-((pn/3+i*9)%8),off,len,1)}c.restore()}
   c.save();c.globalAlpha=m.down?.3:.35;c.fillStyle='#000';c.beginPath();c.ellipse(x,y+2,9,3,0,0,6.28);c.fill();c.restore();
   /* 동료 표시: 발밑 하늘색 고리(같은 캐릭터여도 한눈에 구분) */
-  c.save();c.globalAlpha=.75;c.strokeStyle='#8de4ff';c.lineWidth=1.5;c.beginPath();c.ellipse(x,y+2,11,4,0,0,6.28);c.stroke();c.globalAlpha=.25+.15*Math.sin(pn/250);c.fillStyle='#8de4ff';c.beginPath();c.ellipse(x,y+2,11,4,0,0,6.28);c.fill();c.restore();
+  const rc=window.PVP92&&PVP92.on()?'#ff5a7a':'#8de4ff';/* 결투 상대는 빨간 고리 */
+  c.save();c.globalAlpha=.75;c.strokeStyle=rc;c.lineWidth=1.5;c.beginPath();c.ellipse(x,y+2,11,4,0,0,6.28);c.stroke();c.globalAlpha=.25+.15*Math.sin(pn/250);c.fillStyle=rc;c.beginPath();c.ellipse(x,y+2,11,4,0,0,6.28);c.fill();c.restore();
   /* 새 층에 나타날 때: 빛기둥 */
   if(m.spawnT!=null&&rt-m.spawnT<450){const q=(rt-m.spawnT)/450;c.save();c.globalCompositeOperation='lighter';c.globalAlpha=(1-q)*.8;c.fillStyle='#8de4ff';c.fillRect(x-6*(1-q)-2,y-60,12*(1-q)+4,62);c.globalAlpha=(1-q);c.strokeStyle='#ffffff';c.beginPath();c.ellipse(x,y+2,8+q*18,3+q*6,0,0,6.28);c.stroke();c.restore();if(q<.35)return}
   if(m.down)c.globalAlpha=.45;
@@ -250,7 +252,7 @@
   const q=Math.max(0,Math.min(1,(m.hp||0)/(m.mx||1)));c.fillStyle='#05070ae6';c.fillRect(x-12,y-35,24,4);c.fillStyle='#3a0a14';c.fillRect(x-11,y-34,22,2);c.fillStyle='#7dffa8';c.fillRect(x-11,y-34,22*q,2);c.restore()}
  function drawList(list,now){list.push({y:(D.mate&&D.mate.sy)||0,fn:()=>drawMate(now,false)})}
  /* 동료 칸(위 오른쪽): 이름 · 레벨 · 체력 */
- {const f=frame;frame=function(){const r=f.apply(this,arguments);try{const tt=T();if(D.started&&D.on&&(mode==='tower'&&tt&&tt.duo||mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo)){const m=D.mate||{},pl=(D.room&&D.room.players.find(p=>!p.me))||{};ctx.save();try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}
+ {const f=frame;frame=function(){const r=f.apply(this,arguments);try{const tt=T();if(!(window.PVP92&&PVP92.on())&&D.started&&D.on&&(mode==='tower'&&tt&&tt.duo||mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo)){const m=D.mate||{},pl=(D.room&&D.room.players.find(p=>!p.me))||{};ctx.save();try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}
    const x=W-118,y=AY+4;ctx.globalAlpha=.85;ctx.fillStyle='#05070a';ctx.fillRect(x,y,112,22);ctx.globalAlpha=1;ctx.fillStyle='#8de4ff';ctx.fillRect(x,y,2,22);ctx.font='900 8px sans-serif';ctx.fillStyle='#e8f8ff';ctx.fillText('🤝 '+(pl.name||'동료')+' · Lv.'+(pl.lv||1)+(m.down?' · 쓰러짐':''),x+6,y+9);
    const q=Math.max(0,Math.min(1,(m.hp||0)/(m.mx||1)));ctx.fillStyle='#3a0a14';ctx.fillRect(x+6,y+13,100,4);ctx.fillStyle=m.down?'#6a6a7a':'#7dffa8';ctx.fillRect(x+6,y+13,100*q,4);ctx.restore()}}catch(e){}return r}}
 
@@ -272,7 +274,7 @@
   const head=(ic,tt,sub,btn)=>'<div class="dHd"><div class="dTt"><i>'+ic+'</i><div><b>'+tt+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div></div>'+btn+'</div>';
   if(view==='pick')h='<div class="dP dPk">'+head('▲','탑 오르기','최고 '+B+'F · Lv.'+lv+' · 난이도 '+(DN[diff]||diff),'<button class="dX">닫기</button>')+
    '<div class="dPick"><button class="dCard" data-go="solo"><canvas class="dScn" data-scn="solo" width="200" height="120"></canvas><b>솔로</b><small>혼자 오르기 · 지금까지 하던 그대로</small><em>▶ 바로 시작</em></button>'+
-   '<button class="dCard duo" data-go="duo"><canvas class="dScn" data-scn="duo" width="200" height="120"></canvas><b>듀오 <i class="dNew">CO-OP</i></b><small>둘이 함께 오르기 · 방을 만들거나 들어가기</small><em>🤝 방 만들기 · 들어가기</em></button></div></div>';
+   '<button class="dCard duo" data-go="duo"><canvas class="dScn" data-scn="duo" width="200" height="120"></canvas><b>듀오 <i class="dNew">CO-OP</i></b><small>둘이 함께 오르기 · 방을 만들거나 들어가기</small><em>🤝 방 만들기 · 들어가기</em></button>'+(window.PVP92?'<button class="dCard pvp" data-pvp="1"><canvas class="dScn" data-scn="vs" width="200" height="120"></canvas><b>결투 <i class="dNew pv">PvP</i></b><small>1:1 실력 승부 · 3판 2선승</small><em>⚔ 결투하러 가기</em></button>':'')+'</div></div>';
   else if(view==='duo'){const sf=Math.max(1,Math.min(startF||B,B)),zp=zpOf(sf),quick=[1];for(let f=11;f<=B;f+=10)quick.push(f);if(!quick.includes(B))quick.push(B);
    h='<div class="dP wide">'+head('🤝','듀오','방을 만든 사람이 방장 · 방장이 시작 층을 정해요','<button class="dBack">◀ 뒤로</button>')+'<div class="dCols">'+
     '<div class="dCol mk" style="--zc:'+zp.c+'"><h4>방 만들기</h4><canvas class="dScn dPrev" data-scn="prev" data-f="'+sf+'" width="240" height="86"></canvas>'+
@@ -284,14 +286,16 @@
      '<h5>열린 방 <span>'+rooms.length+'</span><i class="dLive">● 실시간</i></h5><div class="dList">'+
     (rooms.length?rooms.map(r=>{const ok=B>=r.floor,q=zpOf(r.floor),o=(r.players||[])[0]||{};return '<div class="dRoom'+(ok?'':' no')+'" style="--qc:'+q.c+'"><canvas class="dAv" data-ch="'+(o.ch||0)+'" width="48" height="48"></canvas><div class="dRi"><b>'+esc(r.owner)+'<small>Lv.'+(o.lv||1)+'</small></b><span><i class="dRf">'+r.floor+'F</i>'+dfBadge(r.diff)+'<small>#'+r.code+'</small></span></div><button data-j="'+r.code+'"'+(ok?'':' disabled title="'+r.floor+'F까지 올라가야 들어갈 수 있어요"')+'>'+(ok?'들어가기':'🔒 '+r.floor+'F')+'</button></div>'}).join(''):'<div class="dEmpty"><canvas class="dScn" data-scn="empty" width="120" height="70"></canvas><b>열린 방이 없어요</b><small>왼쪽에서 방을 만들고 코드를 친구에게 알려 주세요</small></div>')+
     '</div></div></div><div class="dMsg">'+esc(msgTx)+'</div></div>'}
+  else if(view!=='room'&&window.PVP92){h=PVP92.html(view)||''}
   else if(view==='room'){const r=D.room||{},me=(r.players||[]).find(p=>p.me)||{},full=(r.players||[]).length===2,zp=zpOf(r.floor||1);
-   const slot=i=>{const p=(r.players||[])[i];return p?'<div class="dSlot'+(p.me?' me':'')+'"><div class="dPed"><canvas class="dHero" data-ch="'+(p.me?myLook():(p.ch||0))+'" width="96" height="112"></canvas></div><b>'+(p.owner?'<i class="dCrown">👑</i>':'')+esc(p.name)+(p.me?' <small>(나)</small>':'')+'</b><span class="dSt"><i class="'+(p.online?'on':'off')+'"></i>Lv.'+p.lv+' · '+(p.online?(p.owner?'방장':'준비 완료'):'연결 끊김')+'</span></div>':'<div class="dSlot empty"><div class="dPed"><canvas class="dScn" data-scn="wait" width="96" height="112"></canvas></div><b>동료를 기다리는 중<span class="dDots"><i>.</i><i>.</i><i>.</i></span></b><span class="dSt">방 코드를 알려 주세요</span></div>'};
-   h='<div class="dP dRm" style="--zc:'+zp.c+'">'+head('🤝','듀오 방',zp.n+' 구역 · '+(r.floor||1)+'F부터','<button class="dLeave">방 나가기</button>')+
+   const slot=i=>{const p=(r.players||[])[i];return p?'<div class="dSlot'+(p.me?' me':'')+'"><div class="dPed"><canvas class="dHero" data-ch="'+(p.me?myLook():(p.ch||0))+'" width="96" height="112"></canvas></div><b>'+(p.owner?'<i class="dCrown">👑</i>':'')+esc(p.name)+(p.me?' <small>(나)</small>':'')+'</b><span class="dSt"><i class="'+(p.online?'on':'off')+'"></i>Lv.'+p.lv+' · '+(p.online?(p.owner?'방장':'준비 완료'):'연결 끊김')+'</span></div>':'<div class="dSlot empty"><div class="dPed"><canvas class="dScn" data-scn="wait" width="96" height="112"></canvas></div><b>'+(r.kind==='pvp'?'상대를':'동료를')+' 기다리는 중<span class="dDots"><i>.</i><i>.</i><i>.</i></span></b><span class="dSt">방 코드를 알려 주세요</span></div>'};
+   const pv=r.kind==='pvp';
+   h='<div class="dP dRm'+(pv?' dPv':'')+'" style="--zc:'+(pv?'#ff5a7a':zp.c)+'">'+(pv?head('⚔','결투 방','친선전 · 골드는 오가지 않아요','<button class="dLeave">방 나가기</button>'):head('🤝','듀오 방',zp.n+' 구역 · '+(r.floor||1)+'F부터','<button class="dLeave">방 나가기</button>'))+
     '<div class="dBig"><small>방 코드</small><div class="dCodeBig">'+String(r.code||'????').split('').map(ch=>'<i>'+esc(ch)+'</i>').join('')+'</div><button class="dCopy">📋 복사</button></div>'+
-    '<div class="dBadges"><span class="dRf">'+(r.floor||1)+'F'+((r.floor||1)%10===0?' · BOSS':'')+'</span>'+dfBadge(r.diff)+'<span>'+(r.floor||1)+'F까지 올라가 본 사람만</span></div>'+
-    (me.owner&&r.state==='wait'?'<div class="dRmDiff"><h5>난이도 <small>출발 전까지 방장이 바꿀 수 있어요</small></h5>'+dfPick(D.wantDiff||r.diff,'data-rd')+'</div>':'')+
-    '<div class="dPl">'+slot(0)+'<div class="dLink"><i>🤝</i></div>'+slot(1)+'</div>'+
-    (me.owner?'<button class="dMain" id="dStart"'+(full?'':' disabled')+'>'+(full?'▶ 함께 출발!':'동료가 들어오면 출발할 수 있어요')+'</button>':'<div class="dInfo dWait">방장이 출발을 누르면 바로 시작해요</div>')+'<div class="dMsg">'+esc(msgTx)+'</div></div>'}
+    (pv?'<div class="dBadges"><span class="dRf">3판 2선승</span><span>내 장비 그대로 · 실력 승부</span></div>':'<div class="dBadges"><span class="dRf">'+(r.floor||1)+'F'+((r.floor||1)%10===0?' · BOSS':'')+'</span>'+dfBadge(r.diff)+'<span>'+(r.floor||1)+'F까지 올라가 본 사람만</span></div>')+
+    (!pv&&me.owner&&r.state==='wait'?'<div class="dRmDiff"><h5>난이도 <small>출발 전까지 방장이 바꿀 수 있어요</small></h5>'+dfPick(D.wantDiff||r.diff,'data-rd')+'</div>':'')+
+    '<div class="dPl">'+slot(0)+'<div class="dLink"><i>'+(pv?'⚔':'🤝')+'</i></div>'+slot(1)+'</div>'+
+    (me.owner?'<button class="dMain" id="dStart"'+(full?'':' disabled')+'>'+(full?(pv?'⚔ 결투 시작!':'▶ 함께 출발!'):(pv?'상대가 들어오면 시작할 수 있어요':'동료가 들어오면 출발할 수 있어요'))+'</button>':'<div class="dInfo dWait">'+(pv?'방장이 결투 시작을 누르면 바로 시작해요':'방장이 출발을 누르면 바로 시작해요')+'</div>')+'<div class="dMsg">'+esc(msgTx)+'</div></div>'}
   /* 내용이 같으면 다시 그리지 않음(0.1초마다 그리면 단추를 누를 수 없음) · 입력하던 값은 지킴 */
   if(h===lastH)return;lastH=h;const cv=(box.querySelector('#dC')||{}).value,fv=document.activeElement&&document.activeElement.id;box.innerHTML=h;box.prepend(bgc);if(cv&&box.querySelector('#dC'))box.querySelector('#dC').value=cv;wire();if(fv&&box.querySelector('#'+fv))try{box.querySelector('#'+fv).focus()}catch(e){}anim()}
  /* 움직이는 그림: 창이 열려 있는 동안만 1/12초마다 */
@@ -300,6 +304,10 @@
  function scene(cv,t){const o=cv.getContext('2d'),W2=cv.width,H2=cv.height,k=cv.dataset.scn,zp=zpOf(best());o.imageSmoothingEnabled=false;o.clearRect(0,0,W2,H2);
   const g=o.createLinearGradient(0,0,0,H2);g.addColorStop(0,k==='duo'?'#0e2a36':'#1a1c2c');g.addColorStop(1,'#05070a');o.fillStyle=g;o.fillRect(0,0,W2,H2);
   for(let i=0;i<18;i++){const sx=(i*53)%W2,sy=(i*29)%(H2*.55);o.globalAlpha=.3+.7*Math.abs(Math.sin(t*1.3+i));o.fillStyle='#fff';o.fillRect(sx,sy,1,1)}o.globalAlpha=1;
+  if(k==='vs'){const bob=Math.round(Math.sin(t*4)*1.2),idx=myLook(),cx=W2/2;o.fillStyle='#1a0610';o.fillRect(0,H2-16,W2,16);o.fillStyle='#ff5a7a66';o.fillRect(0,H2-16,W2,1);
+   for(const [x,i2,fl] of [[cx-40,idx,false],[cx+40,(idx+5)%10,true]]){o.fillStyle='#00000077';o.beginPath();o.ellipse(x,H2-14,15,4,0,0,6.28);o.fill();hero(o,i2,x,H2-12+(fl?-bob:bob),1.9,t+(fl?.5:0),fl)}
+   const q=(t*1.4)%1;o.save();o.globalCompositeOperation='lighter';o.globalAlpha=1-q;o.fillStyle='#ffe79a';for(let i=0;i<8;i++){const a=i/8*6.28;o.fillRect(cx+Math.cos(a)*q*22-1,H2-46+Math.sin(a)*q*16-1,3,3)}o.restore();
+   o.font='900 22px sans-serif';o.textAlign='center';o.fillStyle='#000';o.fillText('VS',cx+1,32);o.fillStyle='#ff5a7a';o.fillText('VS',cx,31);o.textAlign='left';return}
   if(k==='prev'){const f=+cv.dataset.f||1,zq=zpOf(f),boss=f%10===0;const g2=o.createLinearGradient(0,0,W2,0);g2.addColorStop(0,'#05070a');g2.addColorStop(1,zq.c+'33');o.fillStyle=g2;o.fillRect(0,0,W2,H2);
    for(let y=8;y<H2-14;y+=6)for(let x=(y/6%2)*7;x<W2;x+=14){o.fillStyle=(x*7+y*3)%5?'#121a24':'#18222e';o.fillRect(x,y,13,5)}
    for(const tx of [18,W2-18]){const fl=Math.sin(t*12+tx)*1.2;const gg=o.createRadialGradient(tx,30,0,tx,30,16);gg.addColorStop(0,'#ff9a3a55');gg.addColorStop(1,'rgba(0,0,0,0)');o.fillStyle=gg;o.fillRect(tx-16,14,32,32);o.fillStyle='#ff7a1a';o.fillRect(tx-2,26-fl,4,5+fl);o.fillStyle='#ffd166';o.fillRect(tx-1,28-fl,2,3);o.fillStyle='#3a2a20';o.fillRect(tx-1,31,2,6)}
@@ -341,7 +349,9 @@
   if(q('#dMake'))q('#dMake').onclick=create;
   if(q('#dJoinC'))q('#dJoinC').onclick=()=>join((q('#dC').value||'').trim().toUpperCase());
   box.querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>join(b.dataset.j));
-  if(q('.dLeave'))q('.dLeave').onclick=()=>{end();openUI('duo');loadRooms()};
+  if(q('.dLeave'))q('.dLeave').onclick=()=>{const pv=D.room&&D.room.kind==='pvp';end();if(pv){openUI('pvp');return}openUI('duo');loadRooms()};
+  box.querySelectorAll('[data-pvp]').forEach(b=>b.onclick=()=>{try{gmSfx('ok')}catch(_){}if(!acc().token){closeUI();try{ACCT55.open()}catch(e){}return}openUI('pvp')});
+  try{window.PVP92&&PVP92.wire(box)}catch(e){console.error('pvp wire',e)}
   if(q('#dStart'))q('#dStart').onclick=()=>{D.wantStart=true;msgTx='출발 준비 중…';draw()};
   }
  async function loadRooms(){const r=await api('/api/duo/rooms');rooms=(r.s===200&&r.j.rooms)||[];if(r.s!==200)msgTx='방 목록을 불러오지 못했어요. (서버 연결 확인)';if(view==='duo')draw()}
@@ -399,6 +409,8 @@
  #duo85 .dCard .dScn{width:100%;aspect-ratio:200/120;image-rendering:pixelated;border-radius:10px;border:1px solid #ffffff18;background:#05070a}
  #duo85 .dCard:hover{transform:translateY(-4px);box-shadow:0 14px 30px #000a,0 0 24px #a6f5c633}#duo85 .dCard.duo:hover{box-shadow:0 14px 30px #000a,0 0 24px #8de4ff44;border-color:#8de4ff}
  #duo85 .dCard em{font-style:normal;font-size:12px;font-weight:900;color:#05070a;background:linear-gradient(180deg,#d4ffe6,#74d3b0);padding:5px 12px;border-radius:999px;margin-top:4px}
+ #duo85 .dCard.pvp:hover{box-shadow:0 14px 30px #000a,0 0 24px #ff5a7a55;border-color:#ff5a7a}#duo85 .dCard.pvp em{background:linear-gradient(180deg,#ffc8d4,#ff5a7a);color:#2a0610}#duo85 .dCard .dNew.pv{background:#ff5a7a;color:#fff}
+ #duo85 .dPick{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}#duo85 .dPk{width:min(720px,calc(100vw - 20px))}
  #duo85 .dCard.duo em{background:linear-gradient(180deg,#c8f4ff,#5ab8e8)}
  #duo85 .dCard::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 40%,#ffffff18 50%,transparent 60%);background-size:260% 100%;animation:dShine 3s linear infinite;pointer-events:none}
  #duo85 .dCard .dNew{font-style:normal;font-size:10px;vertical-align:middle;padding:2px 6px;border-radius:6px;background:#8de4ff;color:#04121a;margin-left:4px;letter-spacing:.08em}
@@ -461,5 +473,5 @@
  @keyframes dIn{from{transform:translateY(10px) scale(.98);opacity:0}}@keyframes dShine{0%{background-position:150% 0}100%{background-position:-100% 0}}
  @keyframes dBlink{50%{opacity:.35}}@keyframes dPulse{50%{transform:scale(1.1);box-shadow:0 0 16px #ffe79a55}}
  @media (max-width:640px){#duo85 .dPl{grid-template-columns:1fr 1fr}#duo85 .dLink{display:none}#duo85 .dCodeBig i{width:38px;height:46px;font-size:26px}#duo85 .dFlN b{font-size:32px}#duo85 .dPick{grid-template-columns:1fr 1fr}#duo85 .dCard small{font-size:10.5px}}`;document.head.appendChild(st);
- window.DUO85={state:D,send,hitSent,guestMobs,onDie,drawList,bossButtons,open:openUI,end,_applySnap:applySnap,_snap:snap};
+ window.DUO85={state:D,send,evPush,api,acc,esc,hero,myLook,myCh,myLv,MDLY,draw:()=>{lastH='';draw()},setMsg:t=>{msgTx=t},join,closeUI,isOpen:()=>!box.hidden,view:()=>view,hitSent,guestMobs,onDie,drawList,bossButtons,open:openUI,end,_applySnap:applySnap,_snap:snap};
 }catch(e){console.error('v85 duo',e)}})();
