@@ -1177,10 +1177,28 @@ def duo_leave():
     return jsonify(ok=True)
 
 
+_duo_ucache = {}
+
+
+def _duo_user():
+    """듀오 주고받기는 1초에 10번씩 와서, 로그인 확인(DB 조회)을 1분 동안 기억해 둔다"""
+    auth = request.headers.get('Authorization', '')
+    now = time.time()
+    hit = _duo_ucache.get(auth)
+    if hit and hit[1] > now:
+        return hit[0]
+    user = _current_user()
+    if user:
+        if len(_duo_ucache) > 500:
+            _duo_ucache.clear()
+        _duo_ucache[auth] = (user, now + 60)
+    return user
+
+
 @app.route('/api/duo/sync', methods=['POST'])
 def duo_sync():
     """보낼 메시지(msgs)를 올리고, since 다음의 메시지를 받는다. 방장은 state='play'로 시작을 알린다."""
-    user = _current_user()
+    user = _duo_user()
     if not user:
         return _bad('로그인이 필요해요', 401)
     body = request.get_json(silent=True) or {}
