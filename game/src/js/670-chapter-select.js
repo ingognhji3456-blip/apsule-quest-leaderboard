@@ -38,7 +38,7 @@ function s_csPage(i){const p=$('csPage');if(!p)return;const C=CS_CH[i],inf=csInf
  p.innerHTML='<div class="csBind"></div><div class="csTag">'+C.tag+'</div><h2 class="csTitle">'+title+'</h2><p class="csDesc">'+C.desc+'</p>'+
   '<div class="csSec"><span>'+C.unit+' 기록</span><b>'+nDone+' / '+inf.slots.length+'</b></div><div class="csSlots">'+slots+'</div>'+
   '<div class="csProg"><i style="width:'+Math.round(inf.prog*100)+'%"></i><em>'+Math.round(inf.prog*100)+'%</em></div>'+
-  (lk?'<div class="csLock">🔒 '+(i===3?'명예의 전당 별자리 30개를 완성하면 열려요 ('+hfData().slice(0,30).filter(x=>x.rk).length+' / 30)':'챕터 1을 클리어하면 태엽이 풀려요')+'</div>':'')+
+  (lk?'<div class="csLock">🔒 '+(i===3?'명예의 전당 별자리 30개를 완성하면 열려요 ('+hfData().slice(0,30).filter(x=>x.rk).length+' / 30)':'탑 10층 보스를 쓰러뜨리면 태엽이 풀려요')+'</div>':'')+
   '<div class="csBtns"><button class="gmBtn go" id="csGoBtn"'+(lk?' disabled':'')+'>'+(btn?btn.textContent:'시작')+'</button>'+(i===0&&$('btnNew')&&!$('btnNew').hidden?'<button class="gmBtn" id="csNewBtn">처음부터</button>':'')+(inf.done?'<span class="gmChip csClear">✓ CLEAR</span>':'')+'</div>';
  p.classList.remove('flip');void p.offsetWidth;p.classList.add('flip');p.style.setProperty('--cc',C.col);
  $('csGoBtn').onclick=()=>csGo(i);const nb=$('csNewBtn');if(nb)nb.onclick=()=>{gmSfx('ok');$('btnNew').click()};

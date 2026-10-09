@@ -1,6 +1,6 @@
 /* ===== lobby.js : 로비 정리 + 배경 고르기 + 챕터 2 · 3 무대 새로 그리기 ===== */
 const LBY={t2:0,b2:10,t3:0,k3:0,sw2:-1,sw3:-1,fl2:0,fl3:0};
-const LB_THEMES=[['auto','✨','자동','지금 이야기 진행에 맞춰서'],['c1','🌃','시계골 밤거리','CHAPTER 1 · BEAT MACHINA'],['c2','🌙','분홍 황무지','CHAPTER 2 · THE HUNGER'],['c3','🕰','40년 전 시계골','CHAPTER 3 · ORIGIN']];
+const LB_THEMES=[['auto','✨','자동','탑 진행에 맞춰서'],['c1','🌃','시계골 밤거리','기계 도시 · BEAT MACHINA'],['c2','🌙','분홍 황무지','굶주림의 땅 · THE HUNGER'],['c3','🕰','40년 전 시계골','옛 시계 마을 · ORIGIN']];
 function lbTheme(){let v='auto';try{v=saveData.lobbyBg||'auto'}catch(e){}if(v==='auto'){const s3=(saveData.ch3||{}).ci||0;v=s3>0?'c3':(saveData.chapter||0)>=10?'c2':'c1'}if(v!=='c1'&&!ch1Cleared())v='c1';return v}
 function lbCv(th){return $(th==='c2'?'titleCv2':th==='c3'?'titleCv3':'titleCv')}
 /* ---- 공용: 주인공 연습 + 보스 교대 ---- */
@@ -70,10 +70,10 @@ function lbStage(){const slot=$('gmStageSlot');if(!slot||GM.scr!=='main')return;
  slot.querySelectorAll('canvas').forEach(cv=>{if(cv!==want){const pk=$('gmCvPark')||(()=>{const d=document.createElement('div');d.id='gmCvPark';d.style.display='none';document.body.appendChild(d);return d})();pk.appendChild(cv)}});
  if(want.parentNode!==slot){want.style.cssText='display:block;width:100%;height:auto;image-rendering:pixelated';slot.appendChild(want)}
  let bar=$('lbBar');const fr=document.querySelector('#gmMain .gmFrame');if(!bar&&fr){bar=document.createElement('div');bar.id='lbBar';fr.style.position='relative';fr.appendChild(bar)}
- if(bar){const cur=(saveData.lobbyBg||'auto'),T=LB_THEMES.find(x=>x[0]===th);bar.innerHTML='<span class="lbCap">'+T[1]+' '+T[2]+'<small>'+T[3]+'</small></span><span class="lbChips">'+LB_THEMES.map(x=>{const lk=lbLocked(x[0]);return '<button class="lbChip'+(cur===x[0]?' on':'')+(lk?' lk':'')+'" data-t="'+x[0]+'" title="'+x[2]+(lk?' (챕터 1을 클리어하면 열려요)':'')+'">'+(lk?'🔒':x[1])+'</button>'}).join('')+'</span>';
+ if(bar){const cur=(saveData.lobbyBg||'auto'),T=LB_THEMES.find(x=>x[0]===th);bar.innerHTML='<span class="lbCap">'+T[1]+' '+T[2]+'<small>'+T[3]+'</small></span><span class="lbChips">'+LB_THEMES.map(x=>{const lk=lbLocked(x[0]);return '<button class="lbChip'+(cur===x[0]?' on':'')+(lk?' lk':'')+'" data-t="'+x[0]+'" title="'+x[2]+(lk?' (탑 10층 보스를 쓰러뜨리면 열려요)':'')+'">'+(lk?'🔒':x[1])+'</button>'}).join('')+'</span>';
   bar.querySelectorAll('.lbChip').forEach(b=>b.onclick=e=>{e.stopPropagation();if(b.classList.contains('lk')){gmSfx('no');return}saveData.lobbyBg=b.dataset.t;try{saveNow()}catch(_){}gmSfx('ok');lbStage();lbSetRow()})}}
 function lbSetRow(){const sec=$('cfS2');if(!sec)return;let row=$('lbSetRow');if(!row){row=document.createElement('div');row.id='lbSetRow';row.className='gmRow';sec.querySelector('.cfIn').prepend(row)}const cur=saveData.lobbyBg||'auto';
- row.innerHTML='<label>로비 배경</label><div class="lbSet">'+LB_THEMES.map(x=>{const lk=lbLocked(x[0]);return '<button class="gmBtn lbOpt'+(cur===x[0]?' on':'')+(lk?' lk':'')+'" data-t="'+x[0]+'"><b>'+(lk?'🔒':x[1])+'</b>'+x[2]+'<small>'+(lk?'챕터 1 클리어 후':x[3])+'</small></button>'}).join('')+'</div>';
+ row.innerHTML='<label>로비 배경</label><div class="lbSet">'+LB_THEMES.map(x=>{const lk=lbLocked(x[0]);return '<button class="gmBtn lbOpt'+(cur===x[0]?' on':'')+(lk?' lk':'')+'" data-t="'+x[0]+'"><b>'+(lk?'🔒':x[1])+'</b>'+x[2]+'<small>'+(lk?'탑 10층 보스 처치 후':x[3])+'</small></button>'}).join('')+'</div>';
  row.querySelectorAll('.lbOpt').forEach(b=>b.onclick=()=>{if(b.classList.contains('lk')){gmSfx('no');return}saveData.lobbyBg=b.dataset.t;try{saveNow()}catch(e){}gmSfx('ok');lbSetRow()})}
 /* ---- 훅 ---- */
 {const _gs=gmShow;gmShow=function(scr){const r=_gs.apply(this,arguments);try{if(scr==='main'){lbStage();lbMenu()}if(scr==='set')setTimeout(lbSetRow,80)}catch(e){console.error(e)}return r}}

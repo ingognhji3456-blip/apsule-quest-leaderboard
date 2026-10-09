@@ -33,8 +33,8 @@
   const q=(t*.25)%1;c.globalAlpha=a*Math.sin(q*Math.PI);c.beginPath();c.moveTo(-sz*.14+q*sz*.2,-sz*.3);c.lineTo(-sz*.2+q*sz*.2,sz*.14);c.stroke();c.restore();c.globalAlpha=1}}
  /* 별 설명 문구 */
  {const base=hfPlaque;hfPlaque=function(){const r=base.apply(this,arguments);try{const pl=$('hfPlaque'),x=HF.data&&HF.data[HF.sel];if(!pl||!x||x.ch!==6)return r;const known=!!x.rk;
-  if(x.sealed){const en=pl.querySelector('.hfEn');if(en)en.textContent='챕터 6의 제니스 정상을 지나면 봉인이 풀려요'}
-  const g=pl.querySelector('.hfGoal');if(g&&!known)g.textContent=x.sealed?'챕터 6의 제니스 정상에서 노래를 풀어 주면 일곱 번째 챕터 「거울 속 시계골」이 열려요':'챕터 7 · '+(x.k+1)+'번째 거울의 보스를 쓰러뜨리면 이 별이 켜져요'}catch(e){}return r}}
+  if(x.sealed){const en=pl.querySelector('.hfEn');if(en)en.textContent='탑을 더 높이 오르면 봉인이 풀려요'}
+  const g=pl.querySelector('.hfGoal');if(g&&!known)g.textContent=x.sealed?'탑을 더 높이 오르면 이 별자리의 봉인이 풀려요':'탑 보스 층이나 보스 러시에서 이 수호자를 쓰러뜨리면 별이 켜져요'}catch(e){}return r}}
 
  /* ---------- 3) 내 이미지로 바꾸기: 챕터 7 전투 배경 + 보스 10명 ---------- */
  {const base=modSlots;modSlots=function(){return base().concat([{id:'bg7',name:'전투 배경 · 챕터 7',hint:''}],L7.map((b,k)=>({id:'c7boss'+k,name:'REVERSE '+String(k+1).padStart(2,'0')+' '+b.name,c7:k,hint:'아래쪽 가운데가 발밑이 되게'})))}}

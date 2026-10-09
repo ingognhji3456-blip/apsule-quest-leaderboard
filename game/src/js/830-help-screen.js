@@ -2,7 +2,7 @@
 const H2={tab:0,built:0,kick:{},press:{},pr:{on:0,t0:0,last:-1,pops:[],n:{P:0,G:0,H:0},streak:0,best:0},raf:0};
 const H2_CARDS=[
  {id:'move',t:'이동',ico:'✥',col:'#8ae8ff',acts:['up','left','down','right'],d:'보스의 몸짓과 바닥 예고를 보고 직접 걸어서 피해요.',m:'모바일 · 왼쪽 스틱',a:0},
- {id:'atk',t:'공격',ico:'⚔',col:'#ff9a5a',acts:['atk'],d:'가까이서 베기 · 금빛 조각을 되받아치기 · 대화 넘기기.',m:'모바일 · ATTACK 버튼',a:.15},
+ {id:'atk',t:'공격',ico:'⚔',col:'#ff9a5a',acts:['atk'],d:'가까이서 베기 · 금빛 조각을 되받아치기 · 탑 잡몹 처치.',m:'모바일 · ATTACK 버튼',a:.15},
  {id:'dash',t:'대시',ico:'»',col:'#a6f5c6',acts:['dash'],d:'한 번에 <b>20%</b> 소모. 0%가 되면 천천히 가득 충전돼요.',m:'모바일 · DASH 버튼',a:.4},
  {id:'parry',t:'패링',ico:'◈',col:'#ffd166',acts:['parry'],d:'맞기 직전에 막기. <b>박자에 맞추면 PERFECT</b> — 반사탄이 보스를 때려요.',m:'모바일 · 🛡 버튼',a:.95},
  {id:'counter',t:'반격',ico:'◎',col:'#ffe79a',acts:[],keys:['Q','W','E','R'],d:'반격 시간에 원에 적힌 키를 누르거나 원을 클릭! 가운데 막대가 <b style="color:#ffe79a">노랄 때</b> 치면 PERFECT.',m:'모바일 · 원 터치',a:.75},
@@ -68,7 +68,7 @@ function h2Build(){const scr=h2El('gmHelp');if(!scr)return;h2Css();let w=h2El('h
    if(C.id==='move'){const b=(()=>{try{return kbGet()}catch(e){return {}}})();const g=['up','left','down','right'].map(id=>(b[id]||[])[0]).filter(Boolean),g2=['up','left','down','right'].map(id=>(b[id]||[])[1]).filter(Boolean);keys=g.map(k=>h2Cap(k,C.col)).join('')+(g2.length?'<span class="or">또는</span>'+g2.map(k=>h2Cap(k,C.col)).join(''):'')}
    else keys=ks.map(k=>h2Cap(k,C.col)).join(C.id==='counter'?'':'<span class="or">/</span>');
    return '<div class="h2Card" data-id="'+C.id+'" style="--c:'+C.col+'"><div class="h2Top"><span class="ic">'+C.ico+'</span><span class="nm">'+C.t+'</span></div><canvas width="160" height="90" data-demo="'+C.id+'"></canvas><div class="h2Keys">'+keys+'</div><div class="h2D">'+C.d+'</div><div class="h2M">📱 '+C.m+'</div></div>'}).join('');
- const det=[['note','수첩'],['hint','힌트'],['deduce','추리'],['present','증거 제시']].map(([id,n])=>'<span style="display:inline-flex;gap:4px;align-items:center;">'+h2Keys([id]).slice(0,2).map(k=>h2Cap(k,'#c8a0ff')).join('')+' <small style="color:#cbb8ff">'+n+'</small></span>').join('');
+ const mk=(()=>{const b=(()=>{try{return kbGet()}catch(e){return {}}})(),o=[];for(const a of (typeof KB_ACT!=='undefined'?KB_ACT:[]))for(const k of (b[a.id]||[]))if(/^Mouse\d$/.test(k))o.push(h2Cap(k,'#c8a0ff')+' <small style="color:#cbb8ff">'+a.n+'</small>');return o.length?o.join(' '):'<small style="color:#9a88c8">아직 마우스 버튼을 쓰는 동작이 없어요</small>'})();
  const steps=[['dodge','회피 시간','#ff6b8a','보스가 몸짓을 하고 바닥에 <b>예고</b>가 차올라요. 다 차기 전에 걸어서 · 대시로 빠져나가요.'],
   ['grogi','그로기 채우기','#ffd166','금빛 조각을 <b>박자에 맞춰</b> 되받아치고, 불안정 코어를 차서 공격 속에 넣고, 공격 직전 <b>저스트 대시</b>!'],
   ['open','반격 시간','#8ae8ff','게이지가 차면 보스가 멈추고 약점이 열려요. 위험 요소는 사라지니 <b>원을 마음껏</b> 치세요.'],
@@ -86,7 +86,7 @@ function h2Build(){const scr=h2El('gmHelp');if(!scr)return;h2Css();let w=h2El('h
   ['⚡','66% · 33% 각성','보스는 체력 66%·33%에서 각성해 새 패턴을 꺼내요. 화면이 번쩍이면 대비!'],
   ['🎧','소리가 어긋나면','블루투스 이어폰은 소리가 늦어요. 설정 → 싱크에서 + 로 맞춰 주세요.']].map(([e,t,p])=>'<div class="h2Tip"><span class="e">'+e+'</span><div><b>'+t+'</b><p>'+p+'</p></div></div>').join('');
  w.innerHTML='<div id="h2Tabs"><button data-t="0">🎮 기본 조작</button><button data-t="1">⚔ 전투 흐름 · 박자 연습</button><button data-t="2">📊 난이도 · 팁</button><span class="sp"></span><button class="h2go" id="h2Keyset">⌨ 키 바꾸기</button></div>'
-  +'<div class="h2Pane" data-p="0"><p class="h2Hint">키보드를 눌러 보세요 — <b>누른 키의 카드가 반응</b>해요. 키는 설정에서 바꿀 수 있어요.</p><div class="h2Grid">'+cards+'<div class="h2Card" style="--c:#c8a0ff"><div class="h2Top"><span class="ic">✎</span><span class="nm">탐정 조작</span><span style="flex:1"></span><small style="color:#9a88c8;font-weight:800">CHAPTER 3</small></div><canvas width="160" height="90" data-demo="detect"></canvas><div class="h2Keys" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'+det+'</div><div class="h2D">수첩을 펼쳐 단서를 모으고, 추리해서 증거를 내밀어요.</div></div></div>'
+  +'<div class="h2Pane" data-p="0"><p class="h2Hint">키보드를 눌러 보세요 — <b>누른 키의 카드가 반응</b>해요. 키는 설정에서 바꿀 수 있어요.</p><div class="h2Grid">'+cards+'<div class="h2Card" data-id="mouse" style="--c:#c8a0ff"><div class="h2Top"><span class="ic">🖱</span><span class="nm">마우스 · 키 바꾸기</span></div><canvas width="160" height="90" data-demo="mouse"></canvas><div class="h2Keys">'+mk+'</div><div class="h2D">설정 → 조작 키에서 <b>마우스 버튼</b>(왼쪽 · 오른쪽 · 가운데 · 옆)도 원하는 동작에 붙일 수 있어요.</div><div class="h2M">💻 컴퓨터 · 노트북 전용</div></div></div>'
    +'</div>'
   +'<div class="h2Pane" data-p="1"><p class="h2Hint">한 판은 <b>회피 → 그로기 → 반격 → FINISH</b> 가 음악에 맞춰 되풀이돼요.</p><div class="h2Flow">'+flow+'</div>'
    +'<div class="h2Wide"><div class="h2Card h2Pr" style="--c:#ffe79a"><div class="h2Top"><span class="ic">♪</span><span class="nm">박자 연습</span><span style="flex:1"></span><button class="h2Btn" id="h2PrBtn">▶ 연습 시작</button></div><canvas width="480" height="110" id="h2PrCv"></canvas>'
@@ -97,6 +97,7 @@ function h2Build(){const scr=h2El('gmHelp');if(!scr)return;h2Css();let w=h2El('h
  w.querySelectorAll('#h2Tabs [data-t]').forEach(b=>b.onclick=()=>{h2Tab(+b.dataset.t);try{gmSfx('move')}catch(e){}});
  h2El('h2Keyset').onclick=()=>{try{gmSfx('ok')}catch(e){}gmShow('set')};
  w.querySelectorAll('.h2Card[data-id]').forEach(el=>el.onclick=()=>h2Kick(el.dataset.id,1));
+ {const mc=w.querySelector('.h2Card[data-id="mouse"]');if(mc){mc.style.cursor='pointer';mc.onclick=()=>{try{gmSfx('ok')}catch(e){}gmShow('set')}}}
  h2El('h2PrBtn').onclick=e=>{e.stopPropagation();h2PrToggle()};
  const pc=h2El('h2PrCv');pc.onpointerdown=e=>{e.preventDefault();if(!H2.pr.on)h2PrToggle();else h2PrHit()};
  h2Tab(H2.tab);h2PrStat();H2.built=1}
@@ -208,6 +209,10 @@ const H2_DEMO={
  finish(c,t){h2Bg(c,t,'#ffffff');const ph=t%2.4,hit=1.4;h2Boss(c,116,74,t,{stun:ph<hit,hurt:ph>hit&&ph<hit+.3});h2Chr(c,34,74,{idle:t*3,pose:ph>hit&&ph<hit+.4?{arms:'vee'}:null});
   if(ph<hit){const k=ph/hit;h2Ring(c,116,48,16,'#fff',3);h2Ring(c,116,48,16+(1-k)*30,'#ffe79a',2,.3+k*.7);h2Txt(c,'FINISH',116,51,'#fff',8)}
   else{const s=ph-hit;if(s<.1){c.globalAlpha=.8;c.fillStyle='#fff';c.fillRect(0,0,160,90);c.globalAlpha=1}if(s<.9){h2Ring(c,116,48,16+s*80,'#fff',4,1-s/.9);h2Parts(c,116,48,s,18,'#fff6cf',90);h2Txt(c,'FINISH! -999',100,26-s*8,'#fff',11,1-s/.9)}}},
+ mouse(c,t){h2Bg(c,t,'#c8a0ff');const ph=t%3,btn=Math.floor(ph),x=64,y=22;h2Chr(c,28,74,{idle:t*3,pose:ph%1<.3?{arms:'point'}:null});
+  c.fillStyle='#05070c';c.fillRect(x-2,y-2,36,52);c.fillStyle='#d6dce6';c.fillRect(x,y,32,48);c.fillStyle='#aab4c4';c.fillRect(x,y+20,32,28);c.fillStyle='#05070c';c.fillRect(x+15,y,2,20);c.fillRect(x,y+20,32,2);
+  const on=ph%1<.45,col='#c8a0ff';if(on){c.fillStyle=col;if(btn===0)c.fillRect(x,y,15,20);else if(btn===1)c.fillRect(x+17,y,15,20);else c.fillRect(x+13,y+4,6,10)}c.fillStyle='#5a6070';c.fillRect(x+14,y+5,4,8);
+  const lab=['공격','패링','대시'][btn];if(on){h2Txt(c,lab+'!',124,40,'#fff',10);h2Parts(c,124,36,ph%1,8,col,40)}h2Txt(c,['왼쪽','오른쪽','가운데'][btn],124,60,'#cbb8ff',8)},
  detect(c,t){h2Bg(c,t,'#c8a0ff');const ph=t%4;h2Chr(c,30,74,{idle:t*3,pose:ph>2.6&&ph<3.6?{arms:'point',side:1}:null});
   c.fillStyle='#3a2a18';c.fillRect(56,40,40,30);c.fillStyle='#f4e6c8';c.fillRect(58,42,17,26);c.fillRect(77,42,17,26);c.fillStyle='#8a7a60';for(let i=0;i<5;i++){c.fillRect(60,46+i*4,12,1);if(i<Math.floor(ph*2))c.fillRect(79,46+i*4,12,1)}
   const clues=[[118,30],[138,50],[112,58]];clues.forEach(([x,y],i)=>{const on=ph>i*.6+.3;h2Ring(c,x,y,6,on?'#c8a0ff':'#4a3a60',2);h2Txt(c,'?',x,y+3,on?'#fff':'#6a5a80',8);if(on&&ph<2.6){c.globalAlpha=.3;c.strokeStyle='#c8a0ff';c.beginPath();c.moveTo(x,y);c.lineTo(92,52);c.stroke();c.globalAlpha=1}});

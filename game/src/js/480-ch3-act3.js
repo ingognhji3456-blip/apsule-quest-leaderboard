@@ -532,7 +532,7 @@ gmRushBuild=function(){if(GM.rushCh!==2){_gmRB();document.querySelectorAll('.gmT
  gmRushInfo()};
 const _gmRI=gmRushInfo;
 gmRushInfo=function(){if(GM.rushCh!==2)return _gmRI();const k=GM.rushSel,D=C3CASES[k],b=D.boss,bb=C3BOSS[b.art],lk=c3RushLocked(k),B0=BOSSES[bb.base];
- $('gmPrevName').textContent=lk?'???':b.name;$('gmPrevName').style.color=bb.c;$('gmPrevEpi').textContent=lk?'챕터 1을 클리어하면 만날 수 있어요':'"'+b.epi+'"  ·  '+b.en;
+ $('gmPrevName').textContent=lk?'???':b.name;$('gmPrevName').style.color=bb.c;$('gmPrevEpi').textContent=lk?'탑 10층 보스를 쓰러뜨리면 만날 수 있어요':'"'+b.epi+'"  ·  '+b.en;
  $('gmPrevStat').innerHTML='<span>CASE '+String(k+1).padStart(2,'0')+' · '+(lk?'???':D.title)+'</span><span>♩ '+Math.round((B0.track||{}).bpm||0)+' BPM</span><span>HP '+Math.round((5600+bb.base*380)*(bb.hpMul||1)).toLocaleString()+'</span><span>ORIGIN '+String(k+1).padStart(2,'0')+'</span>';
  const r=saveData.c3rush||{};$('gmPrevRanks').innerHTML=GM_DIFF.map(([kk,n,c])=>{const v=r[k+'|'+kk];return '<div style="'+(kk===diff?'box-shadow:0 0 0 2px '+c:'')+'">'+n+'<b style="color:'+(v?(v==='P'?'#fff6cf':c):'#3a4a50')+'">'+(v?(v==='P'?'★':v):'—')+'</b></div>'}).join('');
  $('gmFight').disabled=lk;GM.prevC3=k};
@@ -588,7 +588,7 @@ function s4TileCv(){const c2=document.createElement('canvas');c2.width=96;c2.hei
  gmRushInfo()}}
 function s4TabPaint(){document.querySelectorAll('.gmTabs [data-ch]').forEach(b=>{const ch=+b.dataset.ch;b.classList.toggle('on',ch===GM.rushCh);if(ch===3){b.style.setProperty('--pc','#c8a0ff');b.textContent=s4SeasonOpen()?'✦ CHAPTER 4':'🔒 CHAPTER 4'}})}
 {const _ri4=gmRushInfo;gmRushInfo=function(){if(GM.rushCh!==3)return _ri4.apply(this,arguments);const k=GM.rushSel,b=s4L()[k],lk=s4RushLocked(k),B0=BOSSES[b.base];
- $('gmPrevName').textContent=lk?'???':b.name;$('gmPrevName').style.color=b.c;$('gmPrevEpi').textContent=lk?(s4SeasonOpen()?'스토리 챕터 4에서 이 별의 수호자를 쓰러뜨리면 열려요':'명예의 전당 별 30개를 모두 밝히면 스토리에 열리는 비밀 챕터예요'):'"'+b.epi+'"  ·  '+b.en;
+ $('gmPrevName').textContent=lk?'???':b.name;$('gmPrevName').style.color=b.c;$('gmPrevEpi').textContent=lk?(s4SeasonOpen()?'스토리 챕터 4에서 이 별의 수호자를 쓰러뜨리면 열려요':'탑을 더 높이 오르면 열리는 비밀 챕터예요'):'"'+b.epi+'"  ·  '+b.en;
  $('gmPrevStat').innerHTML='<span>ECLIPSE '+String(k+1).padStart(2,'0')+' / 10</span><span>♩ '+Math.round((C3MUS[b.art]||{}).bpm||(B0.track||{}).bpm||0)+' BPM</span><span>HP '+(lk?'???':s4Hp(k).toLocaleString())+'</span><span>CHAPTER 4 · ECLIPSE</span>';
  const r=saveData.s4rush||{};$('gmPrevRanks').innerHTML=GM_DIFF.map(([kk,n,c])=>{const v=r[k+'|'+kk];return '<div style="'+(kk===diff?'box-shadow:0 0 0 2px '+c:'')+'">'+n+'<b style="color:'+(v?(v==='P'?'#fff6cf':c):'#3a4a50')+'">'+(v?(v==='P'?'★':v):'—')+'</b></div>'}).join('');
  $('gmFight').disabled=lk}}

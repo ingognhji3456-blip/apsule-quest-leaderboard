@@ -30,7 +30,7 @@ const CF_KB=[[['Escape',1.2],['KeyQ'],['KeyW'],['KeyE'],['KeyR'],['KeyT'],['KeyY
 function cfKeys(){const b=kbGet(),own={};for(const a of KB_ACT)for(const k of b[a.id])(own[k]=own[k]||[]).push(a);
  /* 키보드 지도 */const kb=$('cfKbd');if(kb){let h='<div class="cfMain">';for(const row of CF_KB){h+='<div class="cfRowK">';for(const [code,w] of row){const o=own[code];h+='<div class="cfKey'+(o?' on':'')+'" data-code="'+code+'" style="--w:'+(w||1)+(o?';--kc:'+o[0].col:'')+'" title="'+(o?o.map(a=>a.n).join(', '):'')+'"><span>'+kbLabel(code)+'</span>'+(o?'<i>'+o[0].ico+'</i>':'')+'</div>'}h+='</div>'}h+='</div>';
   h+='<div class="cfArrows"><div></div>'+['ArrowUp'].map(c=>cfKeyHTML(c,own)).join('')+'<div></div>'+['ArrowLeft','ArrowDown','ArrowRight'].map(c=>cfKeyHTML(c,own)).join('')+'</div>';kb.innerHTML=h}
- /* 동작 목록 */const L=$('cfActs');if(L){let h='',g='';for(const a of KB_ACT){if(a.g!==g){g=a.g;h+='<div class="cfGrp">'+g+'</div>'}const ks=b[a.id];
+ /* 동작 목록 */const L=$('cfActs');if(L){let h='',g='';for(const a of KB_ACT){if(a.hide)continue;if(a.g!==g){g=a.g;h+='<div class="cfGrp">'+g+'</div>'}const ks=b[a.id];
   h+='<div class="cfAct" data-id="'+a.id+'" style="--kc:'+a.col+'"><span class="ic">'+a.ico+'</span><span class="nm">'+a.n+'</span><span class="ks">'+ks.map((k,j)=>'<button class="cfChip" data-j="'+j+'" title="눌러서 지우기">'+kbLabel(k)+'<em>✕</em></button>').join('')+(ks.length<3?'<button class="cfAdd" title="키 추가">＋</button>':'')+'</span><button class="cfDef" title="이 동작만 기본값">↺</button></div>'}
   L.innerHTML=h;L.querySelectorAll('.cfAct').forEach(row=>{const id=row.dataset.id;
    row.onmouseenter=()=>cfHi(id);row.onmouseleave=()=>cfHi(null);
