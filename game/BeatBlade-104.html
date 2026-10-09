@@ -19600,7 +19600,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
     고르지 않은 쪽은 이 기기의 localStorage['bb-save-backup']에 남겨 둔다(만일을 위해). 서버 기록으로 바꾸는 건 메뉴 화면에서만(싸우는 중엔 기다림). */
  const prog=d=>{d=d||{};const l=d.lv83||{},t=d.tw71||{},dm=d.dia80||{};return (l.tot||0)+(t.best||0)*400+(t.bosses||0)*3000+clears(d)*2000+(dm.n||0)*5+(d.coins||0)*.05};
  let waitSv=null;
- function autoPick(sv,rev){const lo=localObj(),useSv=prog(sv)>=prog(lo);
+ /* v104: 진행도가 같으면(난이도 · 설정만 바뀐 경우, 저장 응답을 놓친 경우) 이 기기 기록을 그대로 쓴다 — 예전엔 같아도 서버 기록으로 바꾸며 페이지를 다시 열었다 */
+ function autoPick(sv,rev){const lo=localObj(),useSv=prog(sv)>prog(lo)+1;
   try{localStorage.setItem('bb-save-backup',JSON.stringify({at:Date.now(),kept:useSv?'server':'device',data:useSv?lo:sv}))}catch(e){}
   if(useSv){if(inMenu())return useServer(sv,rev);waitSv={sv,rev};return}
   A.rev=rev;keep();return push(true)}
@@ -19766,7 +19767,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* 기록이 바뀌었는지 5초마다 확인 → 바뀌었으면 올림 (연결이 안 되면 30초 뒤 다시) */
  setInterval(()=>{try{if(!A.token)return;if(pend){later();return}if(st==='off'&&Date.now()-lastTry<30000)return;push(false)}catch(e){}},5000);
  /* 창을 닫거나 다른 앱으로 넘어갈 때 한 번 더 */
- document.addEventListener('visibilitychange',()=>{try{if(document.hidden&&A.token&&!busy&&!pend&&!googleWorking){const cur=localStr();if(cur!==A.synced)fetch(A.url.replace(/\/+$/,'')+'/api/save',{method:'PUT',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+A.token},body:JSON.stringify({base_rev:A.rev,data:JSON.parse(cur)})}).then(r=>r.ok&&r.json()).then(j=>{if(j&&j.ok){A.rev=j.rev;A.synced=cur;keep();setSt('ok')}}).catch(()=>{})}}catch(e){}});
+ document.addEventListener('visibilitychange',()=>{try{if(document.hidden&&A.token&&!busy&&!pend&&!googleWorking){const cur=localStr();if(cur!==A.synced){busy=true;/* v104: 이 저장이 끝나기 전에 다른 저장이 같이 가서 엇갈리지 않게 */fetch(A.url.replace(/\/+$/,'')+'/api/save',{method:'PUT',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+A.token},body:JSON.stringify({base_rev:A.rev,data:JSON.parse(cur)})}).then(r=>r.ok&&r.json()).then(j=>{if(j&&j.ok){A.rev=j.rev;A.synced=cur;keep();setSt('ok')}}).catch(()=>{}).finally(()=>{busy=false})}}}catch(e){}});
  window.addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='beatblade-google-auth'||!d.ok)return;/* 다른 창이 가짜 로그인 표를 넣지 못하게: 우리 서버 주소에서 온 메시지만 */try{if(e.origin!==new URL(A.url).origin)return}catch(_){return}if(d.mode==='link'){draw();msg('Google 계정을 연결했어요. 기존 기록을 그대로 사용할 수 있어요.',true);return}if(d.token){A.user=d.username||'Google 사용자';A.token=d.token;A.rev=0;A.synced='';keep();setSt('');msg('Google 로그인했어요! 기록을 맞추는 중…',true);needName=/^G_/.test(A.user);pull(true).then(()=>{checkName()})}});
  async function rankSubmit(score,meta){if(!A.token||!Number.isFinite(Number(score))||Number(score)<=0)return null;const r=await api('/api/ranking','PUT',{score:Math.floor(Number(score)),chapter:meta&&meta.chapter||0,boss:meta&&meta.boss||'',difficulty:meta&&meta.difficulty||''});return r.s===200?r.j:null}
  async function rankGet(limit){const r=await api('/api/ranking?limit='+(limit||20));return r.s===200?r.j:null}
@@ -25538,4 +25539,31 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  @keyframes chIn{from{transform:translateY(10px);opacity:0}}`;document.head.appendChild(st);
  window.CHAT103={open,close,dm,dmNote,C};
 }catch(e){console.error('v103 chat',e)}})();
+/* ================= v104 창이 다시 그려질 때 깜빡임 · 스크롤 튐 없애기 (NF104) =================
+   듀오 · 결투 창(#duo85), 친구 창(#fr94), 채팅 창(#ch103), 랭킹 창(#rk102), 탑 정보 칸(#twBody)은
+   내용이 바뀌면 innerHTML로 통째로 다시 만든다. 그래서
+   (1) 창이 「열리는 효과」(아래에서 올라오며 나타남)가 바뀔 때마다 다시 재생되고,
+   (2) 스크롤이 맨 위로 튀어서 「새로고침된 것처럼」 보였다.
+   - 열리는 효과는 창이 숨김 → 보임으로 바뀐 직후 0.4초에만 허용(html 쪽 .nfOpen 클래스).
+   - innerHTML을 바꿀 때 안쪽의 스크롤 위치(창 자신 + 스크롤된 칸)를 기억했다가 그대로 돌려놓는다. */
+(()=>{try{
+ const IDS=['duo85','fr94','ch103','rk102','twBody','gmTower'];
+ const D=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');if(!D||!D.set)return;
+ /* 스크롤된 칸을 「클래스 이름 + 같은 이름 중 몇 번째」로 기억 */
+ const keyOf=(root,el)=>{const c=el.className&&typeof el.className==='string'?el.className.split(' ').filter(x=>x&&!/^(on|nw|me|sel)$/.test(x)).join('.'):'';
+  const sel=el.tagName.toLowerCase()+(el.id?'#'+el.id:'')+(c?'.'+c:'');let n=0;try{const all=root.querySelectorAll(sel);for(let i=0;i<all.length;i++){if(all[i]===el)break;n++}}catch(e){return null}return [sel,n]};
+ function save(root){const out=[];if(root.scrollTop||root.scrollLeft)out.push([null,0,root.scrollTop,root.scrollLeft]);
+  root.querySelectorAll('*').forEach(el=>{if(el.scrollTop>0||el.scrollLeft>0){const k=keyOf(root,el);if(k)out.push([k[0],k[1],el.scrollTop,el.scrollLeft])}});return out}
+ function restore(root,list){for(const [sel,n,t,l] of list){let el=root;if(sel){try{el=root.querySelectorAll(sel)[n]}catch(e){el=null}}if(el){el.scrollTop=t;el.scrollLeft=l}}}
+ function guard(el){if(!el||el.__nf104)return;el.__nf104=1;
+  Object.defineProperty(el,'innerHTML',{configurable:true,get(){return D.get.call(this)},set(v){let keep=null;try{keep=save(this)}catch(e){}D.set.call(this,v);if(keep&&keep.length)try{restore(this,keep)}catch(e){}}});
+  /* 숨김 → 보임이면 그때만 열리는 효과 */
+  let was=el.hidden||getComputedStyle(el).display==='none';
+  new MutationObserver(()=>{const now=el.hidden||el.style.display==='none';if(was&&!now){el.classList.add('nfOpen');clearTimeout(el.__nfT);el.__nfT=setTimeout(()=>el.classList.remove('nfOpen'),420)}was=now}).observe(el,{attributes:true,attributeFilter:['hidden','style']})}
+ function scan(){for(const id of IDS)guard(document.getElementById(id))}
+ scan();setInterval(scan,1000);
+ const st=document.createElement('style');st.id='nf104s';st.textContent=`
+ #duo85:not(.nfOpen) .dP,#fr94:not(.nfOpen) .frP,#ch103:not(.nfOpen) .chP{animation:none!important}`;document.head.appendChild(st);
+ window.NF104={guard,scan};
+}catch(e){console.error('v104 no-flash',e)}})();
 </script></body></html>
