@@ -24688,18 +24688,9 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
     (t.filter(x=>!x.sk).length?'<div class="abH">특성</div><div class="abT">'+t.filter(x=>!x.sk).map(x=>'<span style="--ac:'+x.col+'">'+x.ico+' '+x.n+'</span>').join('')+'</div>':'');
    const e=$('enh94');(e||btn).parentNode.insertBefore(d,e||btn);
    if(it.myth){const tr=inf.querySelector('.tier');if(tr)tr.textContent='✪ 신화'}}catch(e){console.error('v100 ws',e)}return r}}
- /* 등급 이름표 */
- const TN=['기본','일반 ★','희귀 ★★','영웅 ★★★','전설 ★★★★','♛ 프리미엄','✪ 신화'];
- function heads(){const g=$('shopGrid');if(!g)return;g.querySelectorAll('.tierHd100').forEach(e=>e.remove());const L=WS_LIST(shopTab);let last=-1;
-  for(const el of [...g.querySelectorAll(':scope > .wsItem')]){const it=L[+el.dataset.i];if(!it)continue;const T=wsTier(it);if(T.k!==last){last=T.k;const hd=document.createElement('div');hd.className='tierHd100 k'+T.k;hd.style.setProperty('--tc',T.c);
-    const cnt=[...g.querySelectorAll(':scope > .wsItem')].filter(e2=>{const x=L[+e2.dataset.i];return x&&wsTier(x).k===T.k}).length;hd.innerHTML='<b>'+(TN[T.k]||T.n)+'</b><i></i><small>'+cnt+'개</small>';g.insertBefore(hd,el)}}}
- {const f=renderShop;renderShop=function(){const r=f.apply(this,arguments);try{heads()}catch(e){}return r}}
+ /* v101: 등급 구분 이름표는 뺐다 — 목록은 99999992(TP84)가 등급 순서대로 한 줄로 이어 붙인다 */
 
  const st=document.createElement('style');st.id='myth100s';st.textContent=`
- #shopGrid .tierHd100{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:10px 2px 2px;font-size:12px;color:var(--tc)}
- #shopGrid .tierHd100:first-child{margin-top:0}#shopGrid .tierHd100 b{font-weight:900;letter-spacing:.04em;text-shadow:0 0 8px color-mix(in srgb,var(--tc) 50%,transparent)}
- #shopGrid .tierHd100 i{flex:1;height:1px;background:linear-gradient(90deg,var(--tc),transparent)}#shopGrid .tierHd100 small{color:#8aa0a8;font-size:11px}
- #shopGrid .tierHd100.k6 b{background:linear-gradient(90deg,#ff5a5a,#ffd166,#ff9af0);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:14px}
  #shopGrid .wsItem .ab100{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:3px}
  #shopGrid .wsItem .ab100 span{font-size:9.5px;font-weight:800;line-height:1.2;padding:1px 5px;border-radius:6px;color:var(--ac);background:color-mix(in srgb,var(--ac) 14%,#0a0f14);border:1px solid color-mix(in srgb,var(--ac) 40%,transparent);white-space:nowrap}
  #shopGrid .wsItem .ab100 span.sk{color:#05070a;background:var(--ac);border-color:var(--ac)}
