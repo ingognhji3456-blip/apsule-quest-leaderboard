@@ -531,6 +531,9 @@
   #twGo::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,#ffffffaa 50%,transparent 65%);background-size:260% 100%;animation:twShine 2.2s linear infinite;pointer-events:none}
   #gmTower.twBossSel #twGo{background:linear-gradient(180deg,#ff8aa0,#ff2d55)!important;color:#fff!important}
   .twChip{background:linear-gradient(180deg,#1a2332,#0e141c);border-color:#ffffff22;box-shadow:inset 0 1px 0 #ffffff12}
+  .twDiff{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;border-radius:12px;background:#0b1118cc;border:1px solid #ffffff1a}.twDiff span{font-size:12px;font-weight:900;color:#9ab8ac;margin-right:4px}
+  .twDiff button{font:inherit;font-weight:900;font-size:13px;padding:6px 14px;border-radius:10px;cursor:pointer;color:#cfd8e0;background:#141c26;border:1px solid #ffffff22;transition:transform .1s}
+  .twDiff button.on{color:#05070a;background:var(--dc);border-color:var(--dc);box-shadow:0 0 12px color-mix(in srgb,var(--dc) 55%,transparent)}.twDiff button:active{transform:scale(.96)}
   @keyframes twShine{0%{background-position:150% 0}100%{background-position:-100% 0}}
   @keyframes twGlow{50%{filter:brightness(1.12)}}@keyframes twPulse{50%{outline-color:#ffffff55}}
   html.phP #twWrap{flex-direction:column;height:auto}html.phP #twCol{flex:0 0 auto;height:46vh}
@@ -617,11 +620,14 @@
   let rw='';try{const g=Math.max(1,Math.floor(bf/10)),m={easy:.6,normal:1,hard:1.5,extreme:2.2}[diff]||1,first=!(((saveData.dia80||{}).fl||{})[bf+'|'+diff]);let dia=Math.round((20+4*((g-1)%70+1))*m*(1+Math.floor((g-1)/70)*.5));if(!first)dia=Math.max(3,Math.round(dia*.15));const gold=Math.round((first?150+g*25:50+g*8)*m);
    rw='<div class="twRw"><span class="twRwT">'+bf+'F 보스 보상'+(first?' <em>첫 클리어</em>':'')+'</span><span class="twRwG">🪙 '+gold.toLocaleString()+'</span><span class="twRwD">💎 '+dia.toLocaleString()+'</span></div>'}catch(e){}
   const prog='<div class="twCard twProg"><h4>'+p.n+' 구역 진행 · '+Math.max(0,Math.min(10,(s.best||1)-z*10-1))+' / 10</h4><div class="twSeg" style="--c:'+p.c+'">'+segs+'</div>'+rw+'</div>';
-  $('twBody').innerHTML=prog+'<div class="twCard"><h4>이 구역의 잡몹 · 정예는 5F · 9F</h4><div class="twMobs">'+mobs+'</div></div>'+vets+
+  /* v98: 탑 화면에서 바로 난이도 고르기(보상 · 잡몹 체력/피해가 바로 바뀜) */
+  const dsel='<div class="twDiff"><span>난이도</span>'+GM_DIFF.map(([k,n,c])=>'<button data-df="'+k+'" class="'+(k===diff?'on':'')+'" style="--dc:'+c+'">'+n+'</button>').join('')+'</div>';
+  $('twBody').innerHTML=dsel+prog+'<div class="twCard"><h4>이 구역의 잡몹 · 정예는 5F · 9F</h4><div class="twMobs">'+mobs+'</div></div>'+vets+
    '<div class="twBtns"><button class="gmBtn go" id="twGo">▲ '+f+'F '+(f===cur?'이어서 오르기':'부터 오르기')+'</button>'+(f!==cur&&reachable(cur)?'<button class="gmBtn" id="twCont">◎ '+cur+'F 이어하기</button>':'')+'<button class="gmBtn" id="twNew">↺ 1F부터 처음부터</button></div>'+
-   '<div class="twRow"><span class="twChip">최고 '+(s.best||1)+'F</span><span class="twChip">보스 '+(s.bosses||0)+' / 70</span><span class="twChip">처치 '+(s.kills||0)+'</span><span class="twChip">난이도 '+({easy:'쉬움',normal:'보통',hard:'어려움',extreme:'익스트림'}[diff]||diff)+'</span></div>'+
+   '<div class="twRow"><span class="twChip">최고 '+(s.best||1)+'F</span><span class="twChip">보스 '+(s.bosses||0)+' / 70</span><span class="twChip">처치 '+(s.kills||0)+'</span></div>'+
    '<div class="twNote">왼쪽 탑을 스크롤해서 700층까지 볼 수 있어요. 올라가 본 층(최고 '+(s.best||1)+'F까지)은 눌러서 골라 다시 할 수 있어요.<br>쓰러지면 그 구역의 첫 층부터 다시 · 보스를 쓰러뜨리면 보스 러시에서도 열려요.</div>';
   const go=g=>{gmSfx('ok');const S=sv();S.floor=g;S.cp=Math.floor((g-1)/10)*10+1;try{saveNow()}catch(e){}stopPortrait();TW.start(g)};
+  $('twBody').querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const v=b.dataset.df;if(v===diff)return;try{gmSfx('ok')}catch(e){}try{$('diffSel').value=v;updDiff()}catch(e){}try{gmHud()}catch(e){}info()});
   $('twGo').onclick=()=>go(f);if($('twCont'))$('twCont').onclick=()=>go(cur);
   $('twNew').onclick=()=>{if($('twNew').dataset.ok){go(1);return}$('twNew').dataset.ok=1;$('twNew').textContent='정말 1F부터? 한 번 더 누르기';setTimeout(()=>{const n=$('twNew');if(n){delete n.dataset.ok;n.textContent='↺ 1F부터 처음부터'}},2500)};
   TV.bz=z;TV.mt=0;try{const g=$('gmTower');g.style.setProperty('--tz',p.c);g.style.setProperty('--tb',B.c);g.classList.toggle('twBossSel',boss)}catch(e){}}

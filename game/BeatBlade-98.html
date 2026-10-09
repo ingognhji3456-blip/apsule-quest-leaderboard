@@ -21781,6 +21781,9 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   #twGo::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,#ffffffaa 50%,transparent 65%);background-size:260% 100%;animation:twShine 2.2s linear infinite;pointer-events:none}
   #gmTower.twBossSel #twGo{background:linear-gradient(180deg,#ff8aa0,#ff2d55)!important;color:#fff!important}
   .twChip{background:linear-gradient(180deg,#1a2332,#0e141c);border-color:#ffffff22;box-shadow:inset 0 1px 0 #ffffff12}
+  .twDiff{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;border-radius:12px;background:#0b1118cc;border:1px solid #ffffff1a}.twDiff span{font-size:12px;font-weight:900;color:#9ab8ac;margin-right:4px}
+  .twDiff button{font:inherit;font-weight:900;font-size:13px;padding:6px 14px;border-radius:10px;cursor:pointer;color:#cfd8e0;background:#141c26;border:1px solid #ffffff22;transition:transform .1s}
+  .twDiff button.on{color:#05070a;background:var(--dc);border-color:var(--dc);box-shadow:0 0 12px color-mix(in srgb,var(--dc) 55%,transparent)}.twDiff button:active{transform:scale(.96)}
   @keyframes twShine{0%{background-position:150% 0}100%{background-position:-100% 0}}
   @keyframes twGlow{50%{filter:brightness(1.12)}}@keyframes twPulse{50%{outline-color:#ffffff55}}
   html.phP #twWrap{flex-direction:column;height:auto}html.phP #twCol{flex:0 0 auto;height:46vh}
@@ -21867,11 +21870,14 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   let rw='';try{const g=Math.max(1,Math.floor(bf/10)),m={easy:.6,normal:1,hard:1.5,extreme:2.2}[diff]||1,first=!(((saveData.dia80||{}).fl||{})[bf+'|'+diff]);let dia=Math.round((20+4*((g-1)%70+1))*m*(1+Math.floor((g-1)/70)*.5));if(!first)dia=Math.max(3,Math.round(dia*.15));const gold=Math.round((first?150+g*25:50+g*8)*m);
    rw='<div class="twRw"><span class="twRwT">'+bf+'F 보스 보상'+(first?' <em>첫 클리어</em>':'')+'</span><span class="twRwG">🪙 '+gold.toLocaleString()+'</span><span class="twRwD">💎 '+dia.toLocaleString()+'</span></div>'}catch(e){}
   const prog='<div class="twCard twProg"><h4>'+p.n+' 구역 진행 · '+Math.max(0,Math.min(10,(s.best||1)-z*10-1))+' / 10</h4><div class="twSeg" style="--c:'+p.c+'">'+segs+'</div>'+rw+'</div>';
-  $('twBody').innerHTML=prog+'<div class="twCard"><h4>이 구역의 잡몹 · 정예는 5F · 9F</h4><div class="twMobs">'+mobs+'</div></div>'+vets+
+  /* v98: 탑 화면에서 바로 난이도 고르기(보상 · 잡몹 체력/피해가 바로 바뀜) */
+  const dsel='<div class="twDiff"><span>난이도</span>'+GM_DIFF.map(([k,n,c])=>'<button data-df="'+k+'" class="'+(k===diff?'on':'')+'" style="--dc:'+c+'">'+n+'</button>').join('')+'</div>';
+  $('twBody').innerHTML=dsel+prog+'<div class="twCard"><h4>이 구역의 잡몹 · 정예는 5F · 9F</h4><div class="twMobs">'+mobs+'</div></div>'+vets+
    '<div class="twBtns"><button class="gmBtn go" id="twGo">▲ '+f+'F '+(f===cur?'이어서 오르기':'부터 오르기')+'</button>'+(f!==cur&&reachable(cur)?'<button class="gmBtn" id="twCont">◎ '+cur+'F 이어하기</button>':'')+'<button class="gmBtn" id="twNew">↺ 1F부터 처음부터</button></div>'+
-   '<div class="twRow"><span class="twChip">최고 '+(s.best||1)+'F</span><span class="twChip">보스 '+(s.bosses||0)+' / 70</span><span class="twChip">처치 '+(s.kills||0)+'</span><span class="twChip">난이도 '+({easy:'쉬움',normal:'보통',hard:'어려움',extreme:'익스트림'}[diff]||diff)+'</span></div>'+
+   '<div class="twRow"><span class="twChip">최고 '+(s.best||1)+'F</span><span class="twChip">보스 '+(s.bosses||0)+' / 70</span><span class="twChip">처치 '+(s.kills||0)+'</span></div>'+
    '<div class="twNote">왼쪽 탑을 스크롤해서 700층까지 볼 수 있어요. 올라가 본 층(최고 '+(s.best||1)+'F까지)은 눌러서 골라 다시 할 수 있어요.<br>쓰러지면 그 구역의 첫 층부터 다시 · 보스를 쓰러뜨리면 보스 러시에서도 열려요.</div>';
   const go=g=>{gmSfx('ok');const S=sv();S.floor=g;S.cp=Math.floor((g-1)/10)*10+1;try{saveNow()}catch(e){}stopPortrait();TW.start(g)};
+  $('twBody').querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const v=b.dataset.df;if(v===diff)return;try{gmSfx('ok')}catch(e){}try{$('diffSel').value=v;updDiff()}catch(e){}try{gmHud()}catch(e){}info()});
   $('twGo').onclick=()=>go(f);if($('twCont'))$('twCont').onclick=()=>go(cur);
   $('twNew').onclick=()=>{if($('twNew').dataset.ok){go(1);return}$('twNew').dataset.ok=1;$('twNew').textContent='정말 1F부터? 한 번 더 누르기';setTimeout(()=>{const n=$('twNew');if(n){delete n.dataset.ok;n.textContent='↺ 1F부터 처음부터'}},2500)};
   TV.bz=z;TV.mt=0;try{const g=$('gmTower');g.style.setProperty('--tz',p.c);g.style.setProperty('--tb',B.c);g.classList.toggle('twBossSel',boss)}catch(e){}}
@@ -24293,4 +24299,78 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  @keyframes wtB{50%{transform:scale(1.15)}}`;document.head.appendChild(st);
  window.WATCH95={spec,stop,specOn,objs:()=>[SP.P,SP.M2].filter(Boolean),setWatched,W:WS,SP};
 }catch(e){console.error('v95 watch',e)}})();
+/* ================= v98 로비 정리 (TIDY98) =================
+   위쪽 줄 단추가 너무 많아서(특히 폰) 자주 안 쓰는 것을 「☰ 더보기」 하나로 모은다.
+   - 위쪽 줄에 남는 것: 계정 · 골드 · 다이아 · 친구 · 레벨 · ☰
+   - ☰ 안: 난이도(4개 바로 고르기) · 소리 · 전체 화면 · 영상관 · 랭킹 · 조명 쇼(LIGHT SHOW 줄 보이기)
+   - 원래 단추(gmName · rplBtn · gmDiffChip · gmSound · mbFs · gmRank)는 숨기기만 하고, ☰ 안 항목이 원래 단추를 눌러 준다(기존 기능 그대로).
+   - LIGHT SHOW 줄(#lvDock .lvAlb)은 평소 숨김, ☰에서 켜면 보임(기억: localStorage 'bb-lt98'). */
+(()=>{try{
+ const $=id=>document.getElementById(id),H=document.documentElement;
+ const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){}};
+ if(ls('bb-lt98')==='1')H.classList.add('lt98');
+ const DN={easy:'쉬움',normal:'보통',hard:'어려움',extreme:'익스트림'};
+ const isOn=()=>{try{return !!sound}catch(e){return true}};
+ const fsOn=()=>{try{return !!(document.fullscreenElement||document.webkitFullscreenElement)}catch(e){return false}};
+
+ /* ---------- ☰ 단추 ---------- */
+ function ensure(){const h=document.querySelector('#gameMenu .gmHud');if(!h)return;let b=$('gmMore');
+  if(!b){b=document.createElement('button');b.id='gmMore';b.type='button';b.title='더보기 — 난이도 · 소리 · 전체 화면 · 영상관 · 랭킹 · 조명';b.innerHTML='<i></i><i></i><i></i>';
+   b.onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}panel.hidden?open():close()};b.addEventListener('pointerdown',e=>e.stopPropagation())}
+  if(b.parentNode!==h||h.lastElementChild!==b)h.appendChild(b)}
+ setInterval(()=>{try{ensure()}catch(e){}},700);
+
+ /* ---------- 펼친 창 ---------- */
+ const panel=document.createElement('div');panel.id='more98';panel.hidden=true;document.body.appendChild(panel);
+ panel.addEventListener('pointerdown',e=>e.stopPropagation());
+ document.addEventListener('pointerdown',e=>{if(!panel.hidden&&!panel.contains(e.target)&&e.target!==$('gmMore')&&!(e.target.closest&&e.target.closest('#gmMore')))close()},true);
+ addEventListener('keydown',e=>{if(e.key==='Escape'&&!panel.hidden){close();e.stopPropagation()}},true);
+ function place(){const b=$('gmMore');if(!b)return;const r=b.getBoundingClientRect(),w=Math.min(300,innerWidth-16);panel.style.width=w+'px';
+  panel.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';panel.style.top=Math.round(r.bottom+6)+'px';panel.style.maxHeight=Math.max(160,innerHeight-r.bottom-14)+'px'}
+ function open(){draw();panel.hidden=false;place()}
+ function close(){panel.hidden=true}
+ const click=id=>{const el=$(id);if(el)el.click()};
+ function row(ic,t,sub,act,on){return '<button class="m98" data-a="'+act+'"><i>'+ic+'</i><span><b>'+t+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</span>'+(on==null?'<em>›</em>':'<u class="'+(on?'on':'')+'"></u>')+'</button>'}
+ function draw(){const d=typeof diff!=='undefined'?diff:'normal';
+  panel.innerHTML='<div class="m98d"><span>난이도</span>'+GM_DIFF.map(([k,n,c])=>'<button data-df="'+k+'" class="'+(k===d?'on':'')+'" style="--dc:'+c+'">'+n+'</button>').join('')+'</div>'+
+   row(isOn()?'🔊':'🔇','소리',isOn()?'켜짐':'꺼짐','snd',isOn())+
+   ($('mbFs')?row('⛶','전체 화면',fsOn()?'켜짐':'꺼짐','fs',fsOn()):'')+
+   row('✨','조명 쇼','로비 무대 조명 바꾸기','lt',H.classList.contains('lt98'))+
+   ($('gmRank')?row('🏆','랭킹','점수 · 레벨 · 탑 · 골드 · 결투','rk'):'')+
+   ($('rplBtn')?row('🎬','영상관','보스전 다시 보기','rpl'):'');
+  panel.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const v=b.dataset.df;try{gmSfx('ok')}catch(e){}try{$('diffSel').value=v;updDiff()}catch(e){}try{gmHud()}catch(e){}draw()});
+  panel.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
+   if(a==='snd'){click('gmSound');setTimeout(draw,30);return}
+   if(a==='fs'){click('mbFs');setTimeout(draw,300);return}
+   if(a==='lt'){const on=!H.classList.contains('lt98');H.classList.toggle('lt98',on);ls('bb-lt98',on?'1':'0');try{gmSfx('ok')}catch(e){}draw();return}
+   close();if(a==='rk')click('gmRank');else if(a==='rpl')click('rplBtn')})}
+ addEventListener('resize',()=>{if(!panel.hidden)place()});
+ /* 메뉴 화면을 바꾸면 닫기 */
+ {const f=gmShow;gmShow=function(){close();return f.apply(this,arguments)}}
+
+ const st=document.createElement('style');st.id='tidy98s';st.textContent=`
+ html body #gameMenu .gmHud #gmName,html body #gameMenu .gmHud #rplBtn,html body #gameMenu .gmHud #gmDiffChip,html body #gameMenu .gmHud #gmSound,html body #gameMenu .gmHud #mbFs,html body #gameMenu .gmHud #gmRank{display:none!important}
+ html:not(.lt98) #lvDock .lvAlb{display:none!important}
+ #gmMore{pointer-events:auto;flex:none;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:38px;height:36px;padding:0;border-radius:11px;cursor:pointer;
+  background:linear-gradient(180deg,#1d2a2f,#121b1f);border:1px solid #ffffff2e;box-shadow:inset 0 1px 0 #ffffff18,0 3px 10px #0006}
+ #gmMore i{display:block;width:16px;height:2px;border-radius:2px;background:#e8f2ee}
+ #gmMore:active{transform:scale(.95)}
+ @media (max-height:500px){#gmMore{width:32px;height:30px}#gmMore i{width:14px}}
+ #more98{position:fixed;z-index:9300;overflow:auto;padding:10px;border-radius:16px;background:linear-gradient(180deg,#16212a,#0b1218);border:1px solid #8ad0ff44;box-shadow:0 14px 40px #000c;color:#e8f4ef;display:flex;flex-direction:column;gap:6px;font-family:inherit;animation:m98in .14s ease-out}
+ #more98[hidden]{display:none}
+ @keyframes m98in{from{transform:translateY(-6px);opacity:0}}
+ #more98 .m98d{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:4px 2px 8px;border-bottom:1px solid #ffffff14;margin-bottom:2px}
+ #more98 .m98d span{width:100%;font-size:11px;font-weight:900;color:#8aa0a8;letter-spacing:.06em}
+ #more98 .m98d button{flex:1;font:inherit;font-weight:900;font-size:12px;padding:7px 0;border-radius:9px;cursor:pointer;color:#cfd8e0;background:#141c26;border:1px solid #ffffff22}
+ #more98 .m98d button.on{color:#05070a;background:var(--dc);border-color:var(--dc)}
+ #more98 .m98{display:flex;align-items:center;gap:10px;width:100%;font:inherit;text-align:left;padding:8px 10px;border-radius:11px;cursor:pointer;color:#e8f4ef;background:#ffffff08;border:1px solid #ffffff12}
+ #more98 .m98:hover{background:#ffffff12}
+ #more98 .m98 i{font-style:normal;font-size:18px;width:24px;text-align:center}
+ #more98 .m98 span{flex:1;min-width:0}#more98 .m98 b{display:block;font-size:13px}#more98 .m98 small{font-size:11px;color:#8aa0a8}
+ #more98 .m98 em{font-style:normal;color:#8aa0a8;font-size:18px}
+ #more98 .m98 u{position:relative;width:36px;height:20px;border-radius:999px;background:#3a4650;flex:none}
+ #more98 .m98 u::after{content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
+ #more98 .m98 u.on{background:#7dffa8}#more98 .m98 u.on::after{left:18px}`;document.head.appendChild(st);
+ window.TIDY98={open,close};
+}catch(e){console.error('v98 tidy',e)}})();
 </script></body></html>
