@@ -24205,7 +24205,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  function frameMsg(){const t=T(),now=Math.round(performance.now()),pv=!!(window.PVP92&&PVP92.on());
   const sk=(()=>{try{return SKIN58.get()||''}catch(e){return ''}})(),wp=(()=>{try{return shopInv().eq.wp||0}catch(e){return 0}})();
   const o={t:'w',ts:now,n:++WS.n,mode:pv?'pvp':mode,f:(t&&t.f)||1,x:r1(P.x),y:r1(P.y),hp:Math.round(P.hp),mx:P.maxhp,ch:DU.myCh(),sk,wp,
-   ffx:r1((P.face&&P.face.x)||0),ffy:r1((P.face&&P.face.y)||1),w:!!P.walkOn,down:!!P.downDuo,ev:(D.evW||[]).splice(0,30)};
+   ffx:r1((P.face&&P.face.x)||0),ffy:r1((P.face&&P.face.y)||1),w:!!P.walkOn,down:!!P.downDuo,ev:(D.evW||[]).splice(0,30),pz:(typeof paused!=='undefined'&&paused)?1:0};/* v99: 일시정지 */
   const m=D.started&&D.mate;
   if(m&&m.x!=null){const evs=(m.evs||[]).filter(e=>!WS.mSeen.has(e.e));evs.forEach(e=>WS.mSeen.add(e.e));if(WS.mSeen.size>400)WS.mSeen=new Set([...WS.mSeen].slice(-200));
    const pl=(D.room&&(D.room.players||[]).find(p=>!p.me))||{};
@@ -24214,23 +24214,26 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(mode==='tower'&&t&&!t.bossCard&&WS.n%2===0){try{o.snap=DU._snap()}catch(e){}}/* 잡몹은 0.13초마다(사이는 보는 쪽이 이어 그림) */
   if(pv){const M=PVP92.M;o.pvp={sc:M.sc,me:M.owner?0:1,round:M.round,ph:M.ph}}
   /* v97: 보스전(과 보스 등장 카드)은 화면을 작은 사진(JPEG)으로 찍어 보냄 — 보스 패턴이 복잡해서 그대로 보여 주려면 이게 확실함. 1초에 약 10장 */
-  if((mode==='boss'||t&&t.bossCard&&mode==='tower')&&now-(WS.imgT||0)>=95){WS.imgT=now;try{o.img=shot()}catch(e){}}
+  if((mode==='boss'||t&&t.bossCard&&mode==='tower')&&now-(WS.imgT||0)>=95&&!(window.VID99&&VID99.outLive()>=Math.max(1,WS.viewers))){/* 모두 영상으로 보고 있으면 사진은 안 보냄 */WS.imgT=now;try{o.img=shot()}catch(e){}}
   if(mode==='boss'&&typeof G!=='undefined'&&G){o.boss={name:(G.B&&G.B.name)||(G.bossName)||'보스',hp:Math.round(G.hp||0),mx:Math.round(G.maxHp||1)}}
   try{o.me=ACCT55.get().user||''}catch(e){}
   return o}
  setInterval(()=>{const on=!!acc().token&&Date.now()<WS.until&&inGame();window.__watchPush=on;
-  if(!on){if(D.evW)D.evW.length=0;/* 보던 사람이 있는데 게임을 나가면 「끝났어요」를 한 번 알림 */
+  if(!on){if(D.evW)D.evW.length=0;try{window.VID99&&VID99.closeOut()}catch(e){}/* 보던 사람이 있는데 게임을 나가면 「끝났어요」를 한 번 알림 */
    if(WS.was&&!SP.on&&acc().token&&Date.now()<WS.until){WS.was=false;api('/api/watch/push','POST',{msgs:[{t:'w',mode:'lobby',ts:Math.round(performance.now()),n:++WS.n}]}).catch(()=>{})}return}
   WS.was=true;WS.q=WS.q||[];WS.q.push(frameMsg());if(WS.q.length>20)WS.q.splice(0,WS.q.length-20);/* 답이 늦어도 장면이 빠지지 않게 모아서 한꺼번에 */
   /* v96: 1초에 15장면 · 동시에 2개까지 보냄(하나가 늦어도 다음 것이 감) */
   if((WS.fly|0)>=2||Date.now()-(WS.lastSend||0)<120&&WS.q.length<3)return;WS.fly=(WS.fly|0)+1;WS.lastSend=Date.now();
-  api('/api/watch/push','POST',{msgs:WS.q.splice(0)}).then(r=>{if(r.s===200){WS.viewers=r.j.viewers||0;if(WS.viewers>0)WS.until=Date.now()+10000}}).finally(()=>{WS.fly--})},50);
+  api('/api/watch/push','POST',{msgs:WS.q.splice(0)}).then(r=>{if(r.s===200){try{r.j.sig&&r.j.sig.length&&window.VID99&&VID99.sig(r.j.sig)}catch(e){}WS.viewers=r.j.viewers||0;if(WS.viewers>0)WS.until=Date.now()+10000}}).finally(()=>{WS.fly--})},50);
  /* 게임 중엔 친구 목록(=보는 사람 확인)을 5초마다 */
- setInterval(()=>{try{if(acc().token&&inGame()&&window.FR94)FR94.refresh()}catch(e){}},3000);
+ setInterval(()=>{try{if(acc().token&&inGame()&&window.FR94)FR94.refresh()}catch(e){}},6000);
+ /* v99: 게임 중엔 1초마다 가벼운 확인(빈 push) → 누가 관전을 누르면 1초 안에 보내기 시작 + 연결 쪽지 받기 */
+ setInterval(()=>{try{if(!acc().token||!inGame()||window.__watchPush||WS.ping)return;WS.ping=1;
+  api('/api/watch/push','POST',{msgs:[]}).then(r=>{if(r.s===200){if((r.j.viewers||0)>0){WS.viewers=r.j.viewers;WS.until=Date.now()+10000}try{r.j.sig&&r.j.sig.length&&window.VID99&&VID99.sig(r.j.sig)}catch(e){}}}).finally(()=>{WS.ping=0})}catch(e){WS.ping=0}},1000);
 
  /* ---------- ② 보는 쪽 ---------- */
  function spec(name){if(D.on){note('방에 있을 땐 관전할 수 없어요');return}try{gmSfx('ok')}catch(_){}
-  Object.assign(SP,{on:true,name,since:0,buf:[],off:null,jit:[],pd:400,pdT:400,P:{_spec:1,nm:name,ring:'#ffd166'},M2:{_spec:1,ring:'#ff9aaa'},last:Date.now(),f:null,lastW:null,busy:false,wait:true,start:Date.now()});
+  Object.assign(SP,{on:true,name,since:0,buf:[],off:null,jit:[],pd:200,pdT:200,P:{_spec:1,nm:name,ring:'#ffd166'},M2:{_spec:1,ring:'#ff9aaa'},last:Date.now(),f:null,lastW:null,busy:false,wait:true,start:Date.now()});
   bar.hidden=false;paintBar('연결하는 중…');try{if(window.FR94)FR94.F.open=false;$('fr94').hidden=true}catch(e){}}
  function stop(msg){if(!SP.on)return;SP.on=false;bar.hidden=true;P.inv=0;try{$('overlay').hidden=true;toLobby()}catch(e){}if(msg)setTimeout(()=>note(msg),400)}
  function enterArena(f){if(f%10===0)f=Math.max(1,f-1);/* 보스 층 번호로 열면 보스전이 시작되므로 바로 아래 층 경기장 */
@@ -24244,13 +24247,13 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(w.mate){SP.M2.nm=w.mate.nm||'동료';SP.M2.ring=w.mode==='pvp'?'#ff5a7a':'#8de4ff';Object.assign(SP.M2,{hp:w.mate.hp,mx:w.mate.mx,ch:w.mate.ch,sk:w.mate.sk,wp:w.mate.wp,down:w.mate.down,at:performance.now()})}else SP.M2.x=null;
   if(w.snap&&w.mode!=='boss'&&mode==='tower'){try{DU._applySnap(w.snap)}catch(e){}}}
  setInterval(async()=>{if(!SP.on||SP.busy)return;SP.busy=true;try{const r=await api('/api/watch/pull','POST',{name:SP.name,since:SP.since});if(!SP.on)return;
-   if(r.s===403||r.s===401){stop(r.j.error||'관전할 수 없어요');return}if(r.s!==200)return;
+   if(r.s===403||r.s===401){stop(r.j.error||'관전할 수 없어요');return}if(r.s!==200)return;SP.vw=r.j.viewers||0;try{r.j.sig&&r.j.sig.length&&window.VID99&&VID99.sig(r.j.sig)}catch(e){}
    let ms=r.j.msgs||[];const nw=performance.now();if(!SP.since&&ms.length>8)ms=ms.slice(-8);/* 처음엔 최근 것만 */for(const x of ms){if(x.seq<=SP.since)continue;SP.since=x.seq;const m=x.m;if(!m||m.ts==null)continue;
     /* v96: 바로 그리지 않고 쌓아 둠 → 프레임마다 원래 시간 간격대로 꺼내 재생(늦게 · 몰려 와도 끊기지 않게) */
     const o=nw-m.ts;if(SP.off==null||o<SP.off)SP.off=o;else SP.off+=.15;SP.jit.push(o-SP.off);if(SP.jit.length>90)SP.jit.shift();
     if(m.img){const im=new Image();im.src=m.img;m._im=im;delete m.img}/* 미리 풀어 둠 */
     SP.buf.push(m);SP.last=Date.now();SP.wait=false;try{feed(m)}catch(e){console.error('watch feed',e)}}
-   if(SP.jit.length){const q=SP.jit.slice().sort((a,b)=>a-b)[Math.floor(SP.jit.length*.95)];SP.pdT=Math.max(250,Math.min(2500,q+180))}
+   if(SP.jit.length){const q=SP.jit.slice().sort((a,b)=>a-b)[Math.floor(SP.jit.length*.95)];SP.pdT=Math.max(110,Math.min(1200,q+90))/* v99: 딜레이 줄임(최소 0.11초 · 최대 1.2초) */}
    if(SP.buf.length>200)SP.buf.splice(0,SP.buf.length-200);SP.since=Math.max(SP.since,r.j.seq||0);
    SP.where=r.j.where;const quiet=Date.now()-SP.last;
    if(!ms.length&&quiet>9000){if(!r.j.live&&/로비|^$/.test(r.j.where||'')&&!SP.wait){stop(SP.name+'님이 로비로 돌아갔어요');return}paintBar(SP.wait?'친구 화면을 받는 중… (최대 몇 초)':'연결을 기다리는 중…')}
@@ -24265,7 +24268,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* ---------- 화면: 관전 띠 · 정보 ---------- */
  const bar=document.createElement('div');bar.id='wt95';bar.hidden=true;bar.innerHTML='<i>👁</i><div><b></b><small></small></div><button>관전 그만하기</button>';document.body.appendChild(bar);
  bar.addEventListener('pointerdown',e=>e.stopPropagation());bar.querySelector('button').onclick=()=>stop();
- function paintBar(sub){bar.querySelector('b').textContent=(SP.name||'')+'님 관전 중';bar.querySelector('small').textContent=sub||''}
+ function paintBar(sub){bar.querySelector('b').textContent=(SP.name||'')+'님 관전 중'+(SP.vw>0?' · 👁 '+SP.vw+'명 보는 중':'');bar.querySelector('small').textContent=sub||''}
  function hpBar(o,x,y,w,q,col){o.fillStyle='#05070acc';o.fillRect(x-1,y-1,w+2,7);o.fillStyle='#3a0a14';o.fillRect(x,y,w,5);o.fillStyle=col;o.fillRect(x,y,Math.round(w*Math.max(0,Math.min(1,q))),5)}
  /* 위치 · 사건: 받자마자 「재생 시각」(보낸 시각 + 시계 차 + 재생 지연)으로 시간표에 넣음 → 그리는 쪽은 지금 시각으로 이어 그리기만 하면 됨 */
  function feed(w){if(w.mode==='lobby'||w.mode==='boss')return;SP.P.off=SP.M2.off=SP.off+SP.pd;const pl='f'+w.f+w.mode;
@@ -24275,7 +24278,9 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   const pt=now-SP.off-SP.pd;let k=0;while(SP.on&&SP.buf.length&&SP.buf[0].ts<=pt&&k++<30){const m=SP.buf.shift();try{apply(m)}catch(e){console.error('watch',e)}}}
  {const f=frame;frame=function(){try{play()}catch(e){}const r=f.apply(this,arguments);try{
    if(SP.on&&mode==='tower'){P.inv=1e15;const w=SP.lastW,o=ctx;o.save();try{o.setTransform(SS,0,0,SS,0,0)}catch(e){}
-    if(w){const f2=w.f,where=w.mode==='pvp'?'⚔ 결투':w.mode==='boss'?'👹 보스전':'🏰 '+f2+'F';paintBar(where+(SP.M2.x!=null?' · '+(w.mode==='pvp'?'상대 ':'동료 ')+(SP.M2.nm||''):''));
+    const vf=window.VID99&&VID99.inFrame();/* v99: 실시간 영상이 연결돼 있으면 친구 화면 영상을 그대로 */
+    if(vf){o.drawImage(vf,0,0,W,H);if(w)paintBar('📡 실시간 · '+(w.mode==='pvp'?'⚔ 결투':w.mode==='boss'?'👹 보스전':'🏰 '+w.f+'F'))}
+    else if(w){const f2=w.f,where=w.mode==='pvp'?'⚔ 결투':w.mode==='boss'?'👹 보스전':'🏰 '+f2+'F';paintBar(where+(SP.M2.x!=null?' · '+(w.mode==='pvp'?'상대 ':'동료 ')+(SP.M2.nm||''):''));
      o.globalAlpha=.85;o.fillStyle='#05070a';o.fillRect(W/2-150,AY+3,300,22);o.globalAlpha=1;o.font='900 8px sans-serif';o.textAlign='left';o.fillStyle='#ffd166';o.fillText((SP.P.nm||SP.name),W/2-146,AY+10);
      hpBar(o,W/2-146,AY+14,120,(w.hp||0)/(w.mx||1),'#7dffa8');
      if(w.mate){o.textAlign='right';o.fillStyle=w.mode==='pvp'?'#ff9aaa':'#8de4ff';o.fillText(w.mate.nm||'',W/2+146,AY+10);hpBar(o,W/2+26,AY+14,120,(w.mate.hp||0)/(w.mate.mx||1),w.mode==='pvp'?'#ff5a7a':'#8de4ff')}
@@ -24287,10 +24292,14 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
       o.font='800 9px sans-serif';o.fillStyle='#e8eef6';o.fillText(w.boss.name+' · '+Math.max(0,Math.round(w.boss.hp/(w.boss.mx||1)*100))+'%',W/2,AY+AH/2+2);hpBar(o,W/2-110,AY+AH/2+8,220,w.boss.hp/(w.boss.mx||1),'#ff5a7a');
       o.font='700 7px sans-serif';o.fillStyle='#9ab8ac';o.fillText('보스전은 체력만 보여 줘요 · 탑 층으로 돌아오면 다시 화면이 나와요',W/2,AY+AH/2+26)}}
     else{o.globalAlpha=.7;o.fillStyle='#05070a';o.fillRect(AX,AY,AW,AH);o.globalAlpha=1;o.font='900 12px sans-serif';o.textAlign='center';o.fillStyle='#ffd166';o.fillText('👁 '+SP.name+'님 화면을 기다리는 중…',W/2,AY+AH/2)}
+    /* v99: 친구가 일시정지하면 「게임을 중단했어요」 */
+    if(w&&w.pz){o.globalAlpha=.62;o.fillStyle='#05070a';o.fillRect(0,0,W,H);o.globalAlpha=1;o.textAlign='center';o.fillStyle='#ffd166';o.font='900 16px sans-serif';o.fillText('⏸ 플레이어가 게임을 중단했어요',W/2,H/2-4);
+     o.font='700 8px sans-serif';o.fillStyle='#c8d4e0';o.fillText('다시 시작하면 이어서 보여 드려요',W/2,H/2+12);if(SP.vw>0){o.fillStyle='#9ab8ac';o.fillText('👁 '+SP.vw+'명이 함께 보는 중',W/2,H/2+26)}}
     o.textAlign='left';o.restore();try{if(window.PV76&&PV76.V.on&&PV76.paint)PV76.paint()}catch(e){}}/* 폰 세로 화면에도 옮겨 그림 */
    else if(SP.on&&mode==='menu'&&SP.wait){/* 아직 화면을 못 받았으면 로비 위에 띠만 */}
    /* 보내는 쪽: 관전자 수 */
-   if(!SP.on&&inGame()&&WS.viewers>0&&Date.now()<WS.until){const o=ctx;o.save();try{o.setTransform(SS,0,0,SS,0,0)}catch(e){}o.globalAlpha=.8;o.fillStyle='#05070a';o.fillRect(W-74,H-14,70,11);o.globalAlpha=1;o.font='800 7px sans-serif';o.textAlign='right';o.fillStyle='#ffd166';o.fillText('👁 '+WS.viewers+'명 관전 중',W-8,H-6);o.textAlign='left';o.restore()}
+   if(!SP.on&&inGame()&&WS.viewers>0&&Date.now()<WS.until){const o=ctx;o.save();try{o.setTransform(SS,0,0,SS,0,0)}catch(e){}/* v99: 경기장 왼쪽 위에 눈에 띄게 */const tx='👁 '+WS.viewers+'명 관전 중';o.font='900 8px sans-serif';const tw=o.measureText(tx).width+12,px=AX+5,py=AY+5,pu=.75+.25*Math.sin(performance.now()/300);
+    o.globalAlpha=.85;o.fillStyle='#1a1206';o.fillRect(px,py,tw,13);o.globalAlpha=pu;o.strokeStyle='#ffd166';o.lineWidth=1;o.strokeRect(px+.5,py+.5,tw-1,12);o.globalAlpha=1;o.textAlign='left';o.fillStyle='#ffd166';o.fillText(tx,px+6,py+9.5);o.textAlign='left';o.restore()}
   }catch(e){}return r}}
  const st=document.createElement('style');st.id='wt95s';st.textContent=`
  #wt95{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:9400;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:14px;background:linear-gradient(180deg,#2a2210ee,#120d06ee);border:2px solid #ffd166;color:#fff3c8;box-shadow:0 8px 24px #000a,0 0 16px #ffd16644;font-family:inherit}
@@ -24373,4 +24382,60 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  #more98 .m98 u.on{background:#7dffa8}#more98 .m98 u.on::after{left:18px}`;document.head.appendChild(st);
  window.TIDY98={open,close};
 }catch(e){console.error('v98 tidy',e)}})();
+/* ================= v99 관전 실시간 영상 (VID99) =================
+   관전을 「영상 통화」처럼: 게임 중인 친구의 게임 화면(#game 캔버스)을 WebRTC 영상(1초 30장)으로 보는 사람에게 바로 보낸다.
+   - 연결 쪽지(offer · answer)는 서버 우편함 /api/watch/sig 로 주고받고, 받은 쪽지는 관전 push/pull 응답의 sig로 온다(99999998이 VID99.sig로 넘김).
+   - 영상은 서버를 거치지 않고 두 기기가 바로 주고받는다(STUN만 씀). 통신 환경 때문에 연결이 안 되면 예전 방식(위치 다시 그리기 · 보스전 사진)이 그대로 보인다.
+   - 보는 쪽: 관전을 시작하면 'hello'를 보내고(6초마다, 연결될 때까지), 친구 쪽이 offer를 보내면 answer로 답한다. 영상이 실제로 나오면 inFrame()이 <video>를 돌려주고 99999998이 화면 전체에 그린다.
+   - 보내는 쪽: 'hello'를 받으면 그 사람용 연결을 새로 만든다. 모두 영상으로 보고 있으면(outLive) 보스전 사진은 안 보낸다. 게임을 나가면 모든 연결을 닫는다. */
+(()=>{try{
+ if(!window.WATCH95||!window.DUO85||typeof RTCPeerConnection==='undefined'||!HTMLCanvasElement.prototype.captureStream)return;
+ const api=DUO85.api,ICE=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}];
+ const send=(to,d)=>api('/api/watch/sig','POST',{to,d}).catch(()=>{});
+ const gather=pc=>new Promise(res=>{if(pc.iceGatheringState==='complete')return res();const t=setTimeout(res,1500);
+  pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete'){clearTimeout(t);res()}})});
+
+ /* ---------- 보내는 쪽 ---------- */
+ const OUT=new Map();let stream=null;
+ const getStream=()=>{const tr=stream&&stream.getVideoTracks()[0];if(!tr||tr.readyState==='ended'){stream=cv.captureStream(0);/* 0 = 게임이 한 장 그릴 때마다 직접 한 장씩 넣음(frame 감싸기의 requestFrame) */const t2=stream.getVideoTracks()[0];try{t2.contentHint='detail'}catch(e){}/* 도트 그림이라 해상도를 지키는 쪽(뭉개짐 방지) */}return stream};
+ function closeOut(name){const list=name?[name]:[...OUT.keys()];for(const n of list){const o=OUT.get(n);if(!o)continue;OUT.delete(n);try{o.pc.close()}catch(e){}}}
+ async function offerTo(name){closeOut(name);const pc=new RTCPeerConnection({iceServers:ICE}),o={pc,t:Date.now()};OUT.set(name,o);
+  try{const st=getStream();o.snd=pc.addTrack(st.getVideoTracks()[0],st);
+   pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed'||pc.connectionState==='closed'){if(OUT.get(name)===o)closeOut(name)}};
+   await pc.setLocalDescription(await pc.createOffer());await gather(pc);if(OUT.get(name)!==o)return;send(name,{t:'offer',sdp:pc.localDescription.sdp,id:o.t})}
+  catch(e){console.error('vid99 offer',e);closeOut(name)}}
+ async function onAnswer(name,d){const o=OUT.get(name);if(!o||d.id!==o.t)return;try{await o.pc.setRemoteDescription({type:'answer',sdp:boost(d.sdp)});
+  /* 화질: 최대 약 2.5Mbps · 30장 · 가로 960 안팎 */
+  const p=o.snd.getParameters();if(p.encodings&&p.encodings[0]){Object.assign(p.encodings[0],{maxBitrate:2500000,maxFramerate:30,scaleResolutionDownBy:Math.max(1,cv.width/960)});p.degradationPreference='maintain-resolution';await o.snd.setParameters(p)}}catch(e){console.error('vid99 answer',e)}}
+ /* 처음부터 높은 화질로 시작(낮게 시작해 천천히 올라가는 것 방지): 영상 코덱 줄에 시작 · 최소 비트레이트 */
+ function boost(sdp){try{const pts=[...sdp.matchAll(/a=rtpmap:(\d+) (VP8|VP9|H264|AV1)\//g)].map(m=>m[1]);const add='x-google-start-bitrate=1800;x-google-min-bitrate=700;x-google-max-bitrate=2500';
+  for(const pt of pts){const re=new RegExp('a=fmtp:'+pt+' ([^\r\n]*)');if(re.test(sdp))sdp=sdp.replace(re,(m,a)=>'a=fmtp:'+pt+' '+a+';'+add);else sdp=sdp.replace(new RegExp('(a=rtpmap:'+pt+' [^\r\n]*\r?\n)'),'$1a=fmtp:'+pt+' '+add+'\r\n')}}catch(e){}return sdp}
+ {const f=frame;frame=function(){const r=f.apply(this,arguments);try{if(OUT.size&&stream){const tr=stream.getVideoTracks()[0];if(tr&&tr.requestFrame){const n=performance.now();if(n-(OUT._rf||0)>=30){OUT._rf=n;tr.requestFrame()}}}}catch(e){}return r}}
+ const outLive=()=>{let n=0;for(const o of OUT.values())if(o.pc.connectionState==='connected')n++;return n};
+
+ /* ---------- 보는 쪽 ---------- */
+ const IN={pc:null,name:null,helloT:0,video:null,lastCT:-1,lastCTat:0,live:false};
+ function video(){if(IN.video)return IN.video;const v=document.createElement('video');v.muted=true;v.playsInline=true;v.autoplay=true;v.setAttribute('playsinline','');
+  v.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none';document.body.appendChild(v);IN.video=v;return v}
+ function closeIn(bye){if(IN.pc){try{IN.pc.close()}catch(e){}}if(bye&&IN.name)send(IN.name,{t:'bye'});IN.pc=null;IN.live=false;if(IN.video){try{IN.video.srcObject=null}catch(e){}}IN.name=null;IN.helloT=0}
+ async function onOffer(name,d){const SP=WATCH95.SP;if(!SP.on||SP.name!==name)return;if(IN.pc){try{IN.pc.close()}catch(e){}}
+  const pc=new RTCPeerConnection({iceServers:ICE});IN.pc=pc;IN.name=name;IN.live=false;
+  pc.ontrack=e=>{/* 딜레이 최소: 받는 쪽에서 영상을 모아 두지 않고 오는 즉시 보여 줌 */try{e.receiver.jitterBufferTarget=0}catch(_){}try{e.receiver.playoutDelayHint=0}catch(_){}const v=video();v.srcObject=e.streams[0]||new MediaStream([e.track]);const pl=v.play();if(pl&&pl.catch)pl.catch(()=>{})};
+  pc.onconnectionstatechange=()=>{if(IN.pc===pc&&(pc.connectionState==='failed'||pc.connectionState==='closed')){IN.pc=null;IN.live=false;IN.helloT=0}};
+  try{await pc.setRemoteDescription({type:'offer',sdp:d.sdp});await pc.setLocalDescription(await pc.createAnswer());await gather(pc);if(IN.pc!==pc)return;send(name,{t:'answer',sdp:pc.localDescription.sdp,id:d.id})}
+  catch(e){console.error('vid99 in',e);if(IN.pc===pc)IN.pc=null}}
+ /* 영상이 실제로 흘러나오고 있을 때만 그림(멈추면 예전 방식으로) */
+ function inFrame(){const v=IN.video;if(!IN.pc||!v||IN.pc.connectionState!=='connected'||v.readyState<2||!v.videoWidth)return null;
+  const now=performance.now();if(v.currentTime!==IN.lastCT){IN.lastCT=v.currentTime;IN.lastCTat=now}if(now-IN.lastCTat>1500)return null;IN.live=true;return v}
+ setInterval(()=>{const SP=WATCH95.SP;
+  if(!SP.on){if(IN.name)closeIn(true);return}
+  if(IN.name&&IN.name!==SP.name)closeIn(true);
+  const ok=IN.pc&&(IN.pc.connectionState==='connected'||IN.pc.connectionState==='connecting'||IN.pc.connectionState==='new');
+  if(!ok&&Date.now()-IN.helloT>6000){IN.helloT=Date.now();IN.name=SP.name;send(SP.name,{t:'hello'})}},500);
+
+ /* ---------- 쪽지 받기 ---------- */
+ function sig(list){for(const x of list||[]){const d=x.d||{},n=x.from;
+  if(d.t==='hello')offerTo(n);else if(d.t==='answer')onAnswer(n,d);else if(d.t==='bye')closeOut(n);else if(d.t==='offer')onOffer(n,d)}}
+ window.VID99={sig,inFrame,outLive,closeOut:()=>closeOut(),S:{OUT,IN}};
+}catch(e){console.error('v99 video',e)}})();
 </script></body></html>
