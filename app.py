@@ -1719,11 +1719,11 @@ def watch_push():
     now = time.time()
     with _duo_lock:
         w = _WATCH.setdefault(user['user_id'], {'seq': 0, 'msgs': [], 'viewers': {}, 't': now})
-        for m in msgs[:10]:
+        for m in msgs[:20]:
             if isinstance(m, dict) and len(json.dumps(m)) < 30000:
                 w['seq'] += 1
                 w['msgs'].append({'seq': w['seq'], 'm': m})
-        w['msgs'] = w['msgs'][-40:]
+        w['msgs'] = w['msgs'][-90:]
         w['t'] = now
         w['viewers'] = {k: t for k, t in w['viewers'].items() if now - t < 8}
         return jsonify(ok=True, viewers=len(w['viewers']))
