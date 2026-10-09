@@ -1720,7 +1720,7 @@ def watch_push():
     with _duo_lock:
         w = _WATCH.setdefault(user['user_id'], {'seq': 0, 'msgs': [], 'viewers': {}, 't': now})
         for m in msgs[:20]:
-            if isinstance(m, dict) and len(json.dumps(m)) < 30000:
+            if isinstance(m, dict) and len(json.dumps(m)) < 90000:  # 보스전 화면 사진(JPEG) 포함
                 w['seq'] += 1
                 w['msgs'].append({'seq': w['seq'], 'm': m})
         w['msgs'] = w['msgs'][-90:]

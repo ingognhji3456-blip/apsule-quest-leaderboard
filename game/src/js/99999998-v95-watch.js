@@ -21,6 +21,12 @@
  /* ---------- ② 보내는 쪽 ---------- */
  const WS={until:0,n:0,busy:false,mSeen:new Set(),viewers:0};
  function setWatched(n){if(n>0)WS.until=Math.max(WS.until,Date.now()+15000)}
+ const SH={c:null};
+ function shot(){if(!SH.c){SH.c=document.createElement('canvas');SH.c.width=480;SH.c.height=300;SH.x=SH.c.getContext('2d');SH.x.imageSmoothingEnabled=true}
+  SH.x.drawImage(cv,0,0,cv.width,cv.height,0,0,480,300);
+  /* WebP가 되면 WebP(같은 화질에 약 2/3 크기 · 한 장 10KB 안팎), 안 되는 기기(아이폰 등)는 JPEG */
+  if(SH.webp!==false){const d=SH.c.toDataURL('image/webp',.6);if(d.startsWith('data:image/webp')){SH.webp=true;return d}SH.webp=false}
+  return SH.c.toDataURL('image/jpeg',.6)}
  function frameMsg(){const t=T(),now=Math.round(performance.now()),pv=!!(window.PVP92&&PVP92.on());
   const sk=(()=>{try{return SKIN58.get()||''}catch(e){return ''}})(),wp=(()=>{try{return shopInv().eq.wp||0}catch(e){return 0}})();
   const o={t:'w',ts:now,n:++WS.n,mode:pv?'pvp':mode,f:(t&&t.f)||1,x:r1(P.x),y:r1(P.y),hp:Math.round(P.hp),mx:P.maxhp,ch:DU.myCh(),sk,wp,
@@ -32,6 +38,8 @@
     ev:evs.map(e=>Object.assign({},e,{e:'m'+e.e,t:Math.round(e.t)}))}}
   if(mode==='tower'&&t&&!t.bossCard&&WS.n%2===0){try{o.snap=DU._snap()}catch(e){}}/* 잡몹은 0.13초마다(사이는 보는 쪽이 이어 그림) */
   if(pv){const M=PVP92.M;o.pvp={sc:M.sc,me:M.owner?0:1,round:M.round,ph:M.ph}}
+  /* v97: 보스전(과 보스 등장 카드)은 화면을 작은 사진(JPEG)으로 찍어 보냄 — 보스 패턴이 복잡해서 그대로 보여 주려면 이게 확실함. 1초에 약 10장 */
+  if((mode==='boss'||t&&t.bossCard&&mode==='tower')&&now-(WS.imgT||0)>=95){WS.imgT=now;try{o.img=shot()}catch(e){}}
   if(mode==='boss'&&typeof G!=='undefined'&&G){o.boss={name:(G.B&&G.B.name)||(G.bossName)||'보스',hp:Math.round(G.hp||0),mx:Math.round(G.maxHp||1)}}
   try{o.me=ACCT55.get().user||''}catch(e){}
   return o}
@@ -41,7 +49,7 @@
   WS.was=true;WS.q=WS.q||[];WS.q.push(frameMsg());if(WS.q.length>20)WS.q.splice(0,WS.q.length-20);/* 답이 늦어도 장면이 빠지지 않게 모아서 한꺼번에 */
   /* v96: 1초에 15장면 · 동시에 2개까지 보냄(하나가 늦어도 다음 것이 감) */
   if((WS.fly|0)>=2||Date.now()-(WS.lastSend||0)<120&&WS.q.length<3)return;WS.fly=(WS.fly|0)+1;WS.lastSend=Date.now();
-  api('/api/watch/push','POST',{msgs:WS.q.splice(0)}).then(r=>{if(r.s===200){WS.viewers=r.j.viewers||0;if(WS.viewers>0)WS.until=Date.now()+10000}}).finally(()=>{WS.fly--})},66);
+  api('/api/watch/push','POST',{msgs:WS.q.splice(0)}).then(r=>{if(r.s===200){WS.viewers=r.j.viewers||0;if(WS.viewers>0)WS.until=Date.now()+10000}}).finally(()=>{WS.fly--})},50);
  /* 게임 중엔 친구 목록(=보는 사람 확인)을 5초마다 */
  setInterval(()=>{try{if(acc().token&&inGame()&&window.FR94)FR94.refresh()}catch(e){}},3000);
 
@@ -53,7 +61,7 @@
  function enterArena(f){if(f%10===0)f=Math.max(1,f-1);/* 보스 층 번호로 열면 보스전이 시작되므로 바로 아래 층 경기장 */
   try{TW71.start(f)}catch(e){console.error(e)}const t=T();t.duo={role:'guest',mate:null};t.queue=[];t.mobs=[];t.total=0;t.shots=[];t.tels=[];
   P.inv=1e15;P.x=AX+AW/2;P.y=AY+AH-8;SP.f=f;try{$('bvTitle').textContent='BEAT BLADE · 👁 '+SP.name+' 관전'}catch(e){}}
- function apply(w){if(w.mode==='lobby'){stop(SP.name+'님이 게임을 마쳤어요');return}SP.lastW=w;SP.last=Date.now();SP.wait=false;
+ function apply(w){if(w.mode==='lobby'){stop(SP.name+'님이 게임을 마쳤어요');return}if(w._im)SP.imN=w._im;else if(w.mode==='tower'&&!w.boss)SP.img=SP.imN=null;SP.lastW=w;SP.last=Date.now();SP.wait=false;
   if(w.mode==='tower'||w.mode==='pvp'){const t=T(),want=w.f%10===0?Math.max(1,w.f-1):w.f;if(mode!=='tower'||!t||t.f!==want){enterArena(w.f);if(w.mode==='pvp')try{T().trans=null}catch(e){}}}/* 결투엔 층 이름 안 띄움 */
   else if(w.mode==='boss'){if(mode!=='tower')enterArena(w.f)}
   SP.P.nm=w.me||SP.name;/* 위치 · 사건은 feed가 미리 넣어 둠. 여기선 체력 · 장비만 재생 시각에 맞춰 */
@@ -62,9 +70,10 @@
   if(w.snap&&w.mode!=='boss'&&mode==='tower'){try{DU._applySnap(w.snap)}catch(e){}}}
  setInterval(async()=>{if(!SP.on||SP.busy)return;SP.busy=true;try{const r=await api('/api/watch/pull','POST',{name:SP.name,since:SP.since});if(!SP.on)return;
    if(r.s===403||r.s===401){stop(r.j.error||'관전할 수 없어요');return}if(r.s!==200)return;
-   const ms=r.j.msgs||[],nw=performance.now();for(const x of ms){if(x.seq<=SP.since)continue;SP.since=x.seq;const m=x.m;if(!m||m.ts==null)continue;
+   let ms=r.j.msgs||[];const nw=performance.now();if(!SP.since&&ms.length>8)ms=ms.slice(-8);/* 처음엔 최근 것만 */for(const x of ms){if(x.seq<=SP.since)continue;SP.since=x.seq;const m=x.m;if(!m||m.ts==null)continue;
     /* v96: 바로 그리지 않고 쌓아 둠 → 프레임마다 원래 시간 간격대로 꺼내 재생(늦게 · 몰려 와도 끊기지 않게) */
     const o=nw-m.ts;if(SP.off==null||o<SP.off)SP.off=o;else SP.off+=.15;SP.jit.push(o-SP.off);if(SP.jit.length>90)SP.jit.shift();
+    if(m.img){const im=new Image();im.src=m.img;m._im=im;delete m.img}/* 미리 풀어 둠 */
     SP.buf.push(m);SP.last=Date.now();SP.wait=false;try{feed(m)}catch(e){console.error('watch feed',e)}}
    if(SP.jit.length){const q=SP.jit.slice().sort((a,b)=>a-b)[Math.floor(SP.jit.length*.95)];SP.pdT=Math.max(250,Math.min(2500,q+180))}
    if(SP.buf.length>200)SP.buf.splice(0,SP.buf.length-200);SP.since=Math.max(SP.since,r.j.seq||0);
@@ -97,11 +106,13 @@
      if(w.mate){o.textAlign='right';o.fillStyle=w.mode==='pvp'?'#ff9aaa':'#8de4ff';o.fillText(w.mate.nm||'',W/2+146,AY+10);hpBar(o,W/2+26,AY+14,120,(w.mate.hp||0)/(w.mate.mx||1),w.mode==='pvp'?'#ff5a7a':'#8de4ff')}
      o.textAlign='center';o.fillStyle='#fff';o.font='900 9px sans-serif';o.fillText(w.mode==='pvp'&&w.pvp?(w.pvp.sc[w.pvp.me]+' : '+w.pvp.sc[1-w.pvp.me]):where,W/2,AY+12);
      if(w.mode==='pvp'&&w.pvp){o.font='800 6px sans-serif';o.fillStyle='#9ab8ac';o.fillText('ROUND '+w.pvp.round,W/2,AY+21)}
-     if(w.mode==='boss'&&w.boss){o.globalAlpha=.78;o.fillStyle='#05070a';o.fillRect(AX,AY+28,AW,AH-28);o.globalAlpha=1;o.font='900 16px sans-serif';o.fillStyle='#ff6a8a';o.fillText('👹 보스전 중',W/2,AY+AH/2-14);
+     if(SP.imN&&SP.imN.complete&&SP.imN.naturalWidth)SP.img=SP.imN;
+     if(SP.img&&(w.mode==='boss'||w._im||SP.imN)){o.drawImage(SP.img,0,0,W,H)}/* 보스전: 친구 화면 사진 그대로 */
+     else if(w.mode==='boss'&&w.boss){o.globalAlpha=.78;o.fillStyle='#05070a';o.fillRect(AX,AY+28,AW,AH-28);o.globalAlpha=1;o.font='900 16px sans-serif';o.fillStyle='#ff6a8a';o.fillText('👹 보스전 중',W/2,AY+AH/2-14);
       o.font='800 9px sans-serif';o.fillStyle='#e8eef6';o.fillText(w.boss.name+' · '+Math.max(0,Math.round(w.boss.hp/(w.boss.mx||1)*100))+'%',W/2,AY+AH/2+2);hpBar(o,W/2-110,AY+AH/2+8,220,w.boss.hp/(w.boss.mx||1),'#ff5a7a');
       o.font='700 7px sans-serif';o.fillStyle='#9ab8ac';o.fillText('보스전은 체력만 보여 줘요 · 탑 층으로 돌아오면 다시 화면이 나와요',W/2,AY+AH/2+26)}}
     else{o.globalAlpha=.7;o.fillStyle='#05070a';o.fillRect(AX,AY,AW,AH);o.globalAlpha=1;o.font='900 12px sans-serif';o.textAlign='center';o.fillStyle='#ffd166';o.fillText('👁 '+SP.name+'님 화면을 기다리는 중…',W/2,AY+AH/2)}
-    o.textAlign='left';o.restore()}
+    o.textAlign='left';o.restore();try{if(window.PV76&&PV76.V.on&&PV76.paint)PV76.paint()}catch(e){}}/* 폰 세로 화면에도 옮겨 그림 */
    else if(SP.on&&mode==='menu'&&SP.wait){/* 아직 화면을 못 받았으면 로비 위에 띠만 */}
    /* 보내는 쪽: 관전자 수 */
    if(!SP.on&&inGame()&&WS.viewers>0&&Date.now()<WS.until){const o=ctx;o.save();try{o.setTransform(SS,0,0,SS,0,0)}catch(e){}o.globalAlpha=.8;o.fillStyle='#05070a';o.fillRect(W-74,H-14,70,11);o.globalAlpha=1;o.font='800 7px sans-serif';o.textAlign='right';o.fillStyle='#ffd166';o.fillText('👁 '+WS.viewers+'명 관전 중',W-8,H-6);o.textAlign='left';o.restore()}
