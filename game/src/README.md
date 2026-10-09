@@ -187,3 +187,4 @@
 | `99999997-v94-friends.js` | 120 | 친구(`FR94`): 위쪽 줄 👥 단추 · 친구 창(신청 · 수락 · 삭제 · 접속 표시), 결투 신청 · 듀오 초대, 방 화면 「친구 초대」, 받은 초대 알림 카드. 서버 `/api/friends*` |
 | `99999998-v95-watch.js` | 103 | 소리 켜기(첫 터치 · 키 · 앱 복귀) + 친구 관전(`WATCH95`): 보내는 쪽은 보는 사람이 있을 때만 `/api/watch/push`, 보는 쪽은 `/api/watch/pull`로 받아 같은 층 경기장에 듀오 상대 그리기(`mateIn` · `drawMate`)로 재생 |
 | `99999999-v98-lobby-tidy.js` | 70 | 로비 정리(`TIDY98`): 위쪽 줄 ☰ 더보기(난이도 · 소리 · 전체 화면 · 조명 쇼 · 랭킹 · 영상관), 원래 단추(gmName · rplBtn · gmDiffChip · gmSound · mbFs · gmRank)는 숨기고 대신 눌러 줌, LIGHT SHOW 줄은 `html.lt98`일 때만 |
+| `999999991-v99-watch-video.js` | 60 | 관전 실시간 영상(`VID99`): 보는 쪽 hello → 게임 쪽 offer → answer(쪽지는 `/api/watch/sig`, 관전 push/pull 응답의 `sig`). 게임 쪽은 `#game` 캔버스를 `captureStream(0)`으로 프레임마다 보냄(960 · 2.5Mbps · 해상도 우선), 보는 쪽은 `inFrame()`의 `<video>`를 99999998이 화면 전체에 그림. 연결 안 되면 예전 방식 |

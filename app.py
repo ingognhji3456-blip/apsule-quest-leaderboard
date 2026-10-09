@@ -1718,15 +1718,16 @@ def watch_push():
     msgs = msgs if isinstance(msgs, list) else []
     now = time.time()
     with _duo_lock:
-        w = _WATCH.setdefault(user['user_id'], {'seq': 0, 'msgs': [], 'viewers': {}, 't': now})
+        w = _WATCH.setdefault(user['user_id'], {'seq': 0, 'msgs': [], 'viewers': {}, 't': 0})
+        if msgs:  # 빈 push는 「보는 사람 있나?」 확인용(v99) — 화면을 보낸 시각은 바꾸지 않음
+            w['t'] = now
         for m in msgs[:20]:
             if isinstance(m, dict) and len(json.dumps(m)) < 90000:  # 보스전 화면 사진(JPEG) 포함
                 w['seq'] += 1
                 w['msgs'].append({'seq': w['seq'], 'm': m})
         w['msgs'] = w['msgs'][-90:]
-        w['t'] = now
         w['viewers'] = {k: t for k, t in w['viewers'].items() if now - t < 8}
-        return jsonify(ok=True, viewers=len(w['viewers']))
+        return jsonify(ok=True, viewers=len(w['viewers']), sig=_sig_take(user['user_id']))
 
 
 @app.route('/api/watch/pull', methods=['POST'])
@@ -1747,7 +1748,38 @@ def watch_pull():
         out = [x for x in w['msgs'] if x['seq'] > since]
         seen = _SEEN.get(fid)
         return jsonify(ok=True, name=fname, msgs=out, seq=w['seq'], live=now - w['t'] < 4,
-                       where=seen[1] if seen and now - seen[0] < 40 else '')
+                       where=seen[1] if seen and now - seen[0] < 40 else '', sig=_sig_take(user['user_id']),
+                       viewers=len([1 for t in w['viewers'].values() if now - t < 8]))
+
+
+# v99 관전 영상(WebRTC) 연결 쪽지: 친구끼리 연결 정보(offer · answer)를 주고받는 우편함. 받는 사람이 push/pull 할 때 가져감. 메모리.
+_SIG = {}
+
+
+def _sig_take(uid):
+    now = time.time()
+    lst = [x for x in _SIG.pop(uid, []) if now - x['t'] < 30]
+    return [{'from': x['from'], 'd': x['d']} for x in lst]
+
+
+@app.route('/api/watch/sig', methods=['POST'])
+def watch_sig():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    d = body.get('d')
+    if not isinstance(d, dict) or len(json.dumps(d)) > 20000:
+        return _bad('잘못된 쪽지예요', 400)
+    db = get_db()
+    fid, fname = _uid_by_name(db, body.get('to'))
+    if not fid or not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (user['user_id'], fid, 'accepted')).fetchone():
+        return _bad('친구에게만 보낼 수 있어요', 403)
+    with _duo_lock:
+        lst = _SIG.setdefault(fid, [])
+        lst.append({'from': user['username'], 'd': d, 't': time.time()})
+        _SIG[fid] = lst[-20:]
+    return jsonify(ok=True)
 
 
 @app.route('/api/friends/invite/dismiss', methods=['POST'])
