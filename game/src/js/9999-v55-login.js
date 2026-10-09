@@ -61,7 +61,8 @@
     고르지 않은 쪽은 이 기기의 localStorage['bb-save-backup']에 남겨 둔다(만일을 위해). 서버 기록으로 바꾸는 건 메뉴 화면에서만(싸우는 중엔 기다림). */
  const prog=d=>{d=d||{};const l=d.lv83||{},t=d.tw71||{},dm=d.dia80||{};return (l.tot||0)+(t.best||0)*400+(t.bosses||0)*3000+clears(d)*2000+(dm.n||0)*5+(d.coins||0)*.05};
  let waitSv=null;
- function autoPick(sv,rev){const lo=localObj(),useSv=prog(sv)>=prog(lo);
+ /* v104: 진행도가 같으면(난이도 · 설정만 바뀐 경우, 저장 응답을 놓친 경우) 이 기기 기록을 그대로 쓴다 — 예전엔 같아도 서버 기록으로 바꾸며 페이지를 다시 열었다 */
+ function autoPick(sv,rev){const lo=localObj(),useSv=prog(sv)>prog(lo)+1;
   try{localStorage.setItem('bb-save-backup',JSON.stringify({at:Date.now(),kept:useSv?'server':'device',data:useSv?lo:sv}))}catch(e){}
   if(useSv){if(inMenu())return useServer(sv,rev);waitSv={sv,rev};return}
   A.rev=rev;keep();return push(true)}
@@ -227,7 +228,7 @@
  /* 기록이 바뀌었는지 5초마다 확인 → 바뀌었으면 올림 (연결이 안 되면 30초 뒤 다시) */
  setInterval(()=>{try{if(!A.token)return;if(pend){later();return}if(st==='off'&&Date.now()-lastTry<30000)return;push(false)}catch(e){}},5000);
  /* 창을 닫거나 다른 앱으로 넘어갈 때 한 번 더 */
- document.addEventListener('visibilitychange',()=>{try{if(document.hidden&&A.token&&!busy&&!pend&&!googleWorking){const cur=localStr();if(cur!==A.synced)fetch(A.url.replace(/\/+$/,'')+'/api/save',{method:'PUT',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+A.token},body:JSON.stringify({base_rev:A.rev,data:JSON.parse(cur)})}).then(r=>r.ok&&r.json()).then(j=>{if(j&&j.ok){A.rev=j.rev;A.synced=cur;keep();setSt('ok')}}).catch(()=>{})}}catch(e){}});
+ document.addEventListener('visibilitychange',()=>{try{if(document.hidden&&A.token&&!busy&&!pend&&!googleWorking){const cur=localStr();if(cur!==A.synced){busy=true;/* v104: 이 저장이 끝나기 전에 다른 저장이 같이 가서 엇갈리지 않게 */fetch(A.url.replace(/\/+$/,'')+'/api/save',{method:'PUT',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+A.token},body:JSON.stringify({base_rev:A.rev,data:JSON.parse(cur)})}).then(r=>r.ok&&r.json()).then(j=>{if(j&&j.ok){A.rev=j.rev;A.synced=cur;keep();setSt('ok')}}).catch(()=>{}).finally(()=>{busy=false})}}}catch(e){}});
  window.addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='beatblade-google-auth'||!d.ok)return;/* 다른 창이 가짜 로그인 표를 넣지 못하게: 우리 서버 주소에서 온 메시지만 */try{if(e.origin!==new URL(A.url).origin)return}catch(_){return}if(d.mode==='link'){draw();msg('Google 계정을 연결했어요. 기존 기록을 그대로 사용할 수 있어요.',true);return}if(d.token){A.user=d.username||'Google 사용자';A.token=d.token;A.rev=0;A.synced='';keep();setSt('');msg('Google 로그인했어요! 기록을 맞추는 중…',true);needName=/^G_/.test(A.user);pull(true).then(()=>{checkName()})}});
  async function rankSubmit(score,meta){if(!A.token||!Number.isFinite(Number(score))||Number(score)<=0)return null;const r=await api('/api/ranking','PUT',{score:Math.floor(Number(score)),chapter:meta&&meta.chapter||0,boss:meta&&meta.boss||'',difficulty:meta&&meta.difficulty||''});return r.s===200?r.j:null}
  async function rankGet(limit){const r=await api('/api/ranking?limit='+(limit||20));return r.s===200?r.j:null}
