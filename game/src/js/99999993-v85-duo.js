@@ -182,19 +182,19 @@
  /* ---------- 동료 그리기 ---------- */
  /* v86 동료 위치: 보낸 시각(ts)을 내 시계로 옮겨 시간표에 쌓고, 0.16초 늦게 두 점 사이를 이어 그린다 */
  function mateIn(m,MM){const now=performance.now(),M=MM||D.mate||(D.mate={});/* v95: MM을 주면 그 대상(관전)에 쌓음 */
-  if(m.ts!=null){const o=now-m.ts;D.mOff=D.mOff==null||o<D.mOff?o:D.mOff+.5;D.mDly=lagOf(D.mJ||(D.mJ=[]),o-D.mOff,1)}
+  if(m.ts!=null&&!M._spec){const o=now-m.ts;D.mOff=D.mOff==null||o<D.mOff?o:D.mOff+.5;D.mDly=lagOf(D.mJ||(D.mJ=[]),o-D.mOff,1)}
   if(m.n!=null&&M.n!=null&&m.n<=M.n&&!m.d){if(m.ev&&m.ev.length)mateEv(M,m.ev);return}/* 순서가 뒤바뀌어 온 옛 위치는 버림(사건은 살림) */
-  const lt=m.ts!=null?m.ts+D.mOff:now;
+  const lt=m.ts!=null?m.ts+(M._spec?M.off:D.mOff):now;/* v96: 관전 대상은 관전 쪽이 정한 시계(M.off) */
 
-  if(m.ev)mateEv(M,m.ev);if(m.pl&&m.pl!==M.pl){M.pl=m.pl;M.hs=[];M.sx=null;M.sy=null;M.tr=[];M.spawnT=lt}
-  const hs=M.hs||[];hs.push({t:lt,x:m.x,y:m.y,fx:m.ffx,fy:m.ffy});while(hs.length>24)hs.shift();
+  if(m.ev)mateEv(M,m.ev);const cap=M._spec?90:24;if(m.pl&&m.pl!==M.pl){M.pl=m.pl;M.hs=[];M.sx=null;M.sy=null;M.tr=[];M.spawnT=lt}
+  const hs=M.hs||[];hs.push({t:lt,x:m.x,y:m.y,fx:m.ffx,fy:m.ffy});while(hs.length>cap)hs.shift();
   const ev0=m.ev;delete m.ev;Object.assign(M,m,{at:now,hs});m.ev=ev0}
  /* 늦게 도착하는 정도(가장 빨리 온 것 대비)를 모아 90%가 도착하는 만큼만 늦게 그림: 매끄럽게 + 너무 늦지 않게 */
  function lagOf(a,v,ms){a.push(v);if(a.length>40)a.shift();const q=a.slice().sort((x,y)=>x-y)[Math.floor(a.length*.9)];return ms?Math.max(110,Math.min(700,q+70)):Math.max(.11,Math.min(.7,q+.07))}
- const MDLY=()=>D.mDly||160;
+ const MDLY=M=>M&&M._spec?0:(D.mDly||160);/* 관전은 시간표에 이미 재생 지연이 들어 있음 */
  function mateEv(M,list){for(const e of list){if((M.seen||(M.seen=new Set())).has(e.e))continue;M.seen.add(e.e);if(M.seen.size>200)M.seen=new Set([...M.seen].slice(-100));
-   (M.evs||(M.evs=[])).push(Object.assign({},e,{t:e.t+(D.mOff||0)}));if(M.evs.length>40)M.evs.shift();if(e.k==='U'&&e.sp)setTimeout(()=>note('동료 필살기! '+(e.sp.name||'')),MDLY())}}
- function matePos(now,MM){const M=MM||D.mate,hs=M.hs;if(!hs||!hs.length)return [M.x,M.y];const rt=now-MDLY();
+   (M.evs||(M.evs=[])).push(Object.assign({},e,{t:e.t+((M._spec?M.off:D.mOff)||0)}));if(M.evs.length>40)M.evs.shift();if(e.k==='U'&&e.sp&&!M._spec)setTimeout(()=>note('동료 필살기! '+(e.sp.name||'')),MDLY())}}
+ function matePos(now,MM){const M=MM||D.mate,hs=M.hs;if(!hs||!hs.length)return [M.x,M.y];const rt=now-MDLY(M);
   if(rt<=hs[0].t)return [hs[0].x,hs[0].y];
   for(let i=hs.length-1;i>0;i--){const a=hs[i-1],b=hs[i];if(rt>=a.t&&rt<=b.t){const k=b.t>a.t?(rt-a.t)/(b.t-a.t):1;M.cf=k<.5?a:b;return [a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k]}}
   const b=hs[hs.length-1],a=hs[hs.length-2];M.cf=b;if(a&&b.t>a.t){const k=Math.min(rt-b.t,120)/(b.t-a.t);return [b.x+(b.x-a.x)*k,b.y+(b.y-a.y)*k]}return [b.x,b.y]}
@@ -209,7 +209,7 @@
  const GH={};
  function ghostOf(m,fl,col){const k=(m.ch||0)+'|'+(m.sk||'')+'|'+fl+'|'+col;if(GH[k])return GH[k];const cv=document.createElement('canvas');cv.width=64;cv.height=64;const o=cv.getContext('2d');o.imageSmoothingEnabled=false;
   asMate(m,{},()=>{try{drawKnight(o,20,22,2,fl,null,0)}catch(e){}});o.globalCompositeOperation='source-atop';o.fillStyle=col;o.globalAlpha=.75;o.fillRect(0,0,64,64);return GH[k]=cv}
- function drawMate(now,boss,MM){const m=MM||D.mate;if(!m||m.x==null||performance.now()-(m.at||0)>5000)return;const c=ctx,pn=performance.now(),rt=pn-MDLY();
+ function drawMate(now,boss,MM){const m=MM||D.mate;if(!m||m.x==null||performance.now()-(m.at||0)>5000)return;const c=ctx,pn=performance.now(),rt=pn-MDLY(m);
   /* v88: 다른 층에 있는 동료는 그리지 않음(층을 오를 때 순간이동처럼 보이던 것) */
   {const t=T(),my=(mode==='boss'?'b':'t')+((t&&t.f)||0)+(D.plX||'');if(!m._spec&&m.pl&&m.pl!==my)return;if(m.spawnT!=null&&rt<m.spawnT)return}
   const [gx,gy]=matePos(pn,m);m.sx=m.sx==null?gx:m.sx+(gx-m.sx)*.6;m.sy=m.sy==null?gy:m.sy+(gy-m.sy)*.6;const x=m.sx,y=m.sy;

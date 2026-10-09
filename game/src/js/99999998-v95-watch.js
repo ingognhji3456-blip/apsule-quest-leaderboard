@@ -26,11 +26,11 @@
   const o={t:'w',ts:now,n:++WS.n,mode:pv?'pvp':mode,f:(t&&t.f)||1,x:r1(P.x),y:r1(P.y),hp:Math.round(P.hp),mx:P.maxhp,ch:DU.myCh(),sk,wp,
    ffx:r1((P.face&&P.face.x)||0),ffy:r1((P.face&&P.face.y)||1),w:!!P.walkOn,down:!!P.downDuo,ev:(D.evW||[]).splice(0,30)};
   const m=D.started&&D.mate;
-  if(m&&m.x!=null){const evs=(m.evs||[]).filter(e=>!WS.mSeen.has(e.e));evs.forEach(e=>WS.mSeen.add(e.e));if(WS.mSeen.size>400)WS.mSeen=new Set([...W.mSeen].slice(-200));
+  if(m&&m.x!=null){const evs=(m.evs||[]).filter(e=>!WS.mSeen.has(e.e));evs.forEach(e=>WS.mSeen.add(e.e));if(WS.mSeen.size>400)WS.mSeen=new Set([...WS.mSeen].slice(-200));
    const pl=(D.room&&(D.room.players||[]).find(p=>!p.me))||{};
    o.mate={ts:now-Math.round(DU.MDLY()),x:r1(m.sx!=null?m.sx:m.x),y:r1(m.sy!=null?m.sy:m.y),hp:m.hp,mx:m.mx,ch:m.ch,sk:m.sk,wp:m.wp,ffx:(m.cf||{}).fx,ffy:(m.cf||{}).fy,w:!!m.wk,down:!!m.down,nm:pl.name||'',
     ev:evs.map(e=>Object.assign({},e,{e:'m'+e.e,t:Math.round(e.t)}))}}
-  if(mode==='tower'&&t&&!t.bossCard){try{o.snap=DU._snap()}catch(e){}}
+  if(mode==='tower'&&t&&!t.bossCard&&WS.n%2===0){try{o.snap=DU._snap()}catch(e){}}/* 잡몹은 0.13초마다(사이는 보는 쪽이 이어 그림) */
   if(pv){const M=PVP92.M;o.pvp={sc:M.sc,me:M.owner?0:1,round:M.round,ph:M.ph}}
   if(mode==='boss'&&typeof G!=='undefined'&&G){o.boss={name:(G.B&&G.B.name)||(G.bossName)||'보스',hp:Math.round(G.hp||0),mx:Math.round(G.maxHp||1)}}
   try{o.me=ACCT55.get().user||''}catch(e){}
@@ -38,30 +38,36 @@
  setInterval(()=>{const on=!!acc().token&&Date.now()<WS.until&&inGame();window.__watchPush=on;
   if(!on){if(D.evW)D.evW.length=0;/* 보던 사람이 있는데 게임을 나가면 「끝났어요」를 한 번 알림 */
    if(WS.was&&!SP.on&&acc().token&&Date.now()<WS.until){WS.was=false;api('/api/watch/push','POST',{msgs:[{t:'w',mode:'lobby',ts:Math.round(performance.now()),n:++WS.n}]}).catch(()=>{})}return}
-  WS.was=true;WS.q=WS.q||[];WS.q.push(frameMsg());if(WS.q.length>8)WS.q.splice(0,WS.q.length-8);/* 답이 늦어도 장면이 빠지지 않게 모아서 한꺼번에 */
-  if(WS.busy)return;WS.busy=true;
-  api('/api/watch/push','POST',{msgs:WS.q.splice(0)}).then(r=>{if(r.s===200){WS.viewers=r.j.viewers||0;if(WS.viewers>0)WS.until=Date.now()+10000}}).finally(()=>{WS.busy=false})},150);
+  WS.was=true;WS.q=WS.q||[];WS.q.push(frameMsg());if(WS.q.length>20)WS.q.splice(0,WS.q.length-20);/* 답이 늦어도 장면이 빠지지 않게 모아서 한꺼번에 */
+  /* v96: 1초에 15장면 · 동시에 2개까지 보냄(하나가 늦어도 다음 것이 감) */
+  if((WS.fly|0)>=2||Date.now()-(WS.lastSend||0)<120&&WS.q.length<3)return;WS.fly=(WS.fly|0)+1;WS.lastSend=Date.now();
+  api('/api/watch/push','POST',{msgs:WS.q.splice(0)}).then(r=>{if(r.s===200){WS.viewers=r.j.viewers||0;if(WS.viewers>0)WS.until=Date.now()+10000}}).finally(()=>{WS.fly--})},66);
  /* 게임 중엔 친구 목록(=보는 사람 확인)을 5초마다 */
- setInterval(()=>{try{if(acc().token&&inGame()&&window.FR94)FR94.refresh()}catch(e){}},5000);
+ setInterval(()=>{try{if(acc().token&&inGame()&&window.FR94)FR94.refresh()}catch(e){}},3000);
 
  /* ---------- ② 보는 쪽 ---------- */
  function spec(name){if(D.on){note('방에 있을 땐 관전할 수 없어요');return}try{gmSfx('ok')}catch(_){}
-  Object.assign(SP,{on:true,name,since:0,P:{_spec:1,nm:name,ring:'#ffd166'},M2:{_spec:1,ring:'#ff9aaa'},last:Date.now(),f:null,lastW:null,busy:false,wait:true,start:Date.now()});
+  Object.assign(SP,{on:true,name,since:0,buf:[],off:null,jit:[],pd:400,pdT:400,P:{_spec:1,nm:name,ring:'#ffd166'},M2:{_spec:1,ring:'#ff9aaa'},last:Date.now(),f:null,lastW:null,busy:false,wait:true,start:Date.now()});
   bar.hidden=false;paintBar('연결하는 중…');try{if(window.FR94)FR94.F.open=false;$('fr94').hidden=true}catch(e){}}
  function stop(msg){if(!SP.on)return;SP.on=false;bar.hidden=true;P.inv=0;try{$('overlay').hidden=true;toLobby()}catch(e){}if(msg)setTimeout(()=>note(msg),400)}
  function enterArena(f){if(f%10===0)f=Math.max(1,f-1);/* 보스 층 번호로 열면 보스전이 시작되므로 바로 아래 층 경기장 */
   try{TW71.start(f)}catch(e){console.error(e)}const t=T();t.duo={role:'guest',mate:null};t.queue=[];t.mobs=[];t.total=0;t.shots=[];t.tels=[];
   P.inv=1e15;P.x=AX+AW/2;P.y=AY+AH-8;SP.f=f;try{$('bvTitle').textContent='BEAT BLADE · 👁 '+SP.name+' 관전'}catch(e){}}
  function apply(w){if(w.mode==='lobby'){stop(SP.name+'님이 게임을 마쳤어요');return}SP.lastW=w;SP.last=Date.now();SP.wait=false;
-  if(w.mode==='tower'||w.mode==='pvp'){const t=T(),want=w.f%10===0?Math.max(1,w.f-1):w.f;if(mode!=='tower'||!t||t.f!==want)enterArena(w.f)}
+  if(w.mode==='tower'||w.mode==='pvp'){const t=T(),want=w.f%10===0?Math.max(1,w.f-1):w.f;if(mode!=='tower'||!t||t.f!==want){enterArena(w.f);if(w.mode==='pvp')try{T().trans=null}catch(e){}}}/* 결투엔 층 이름 안 띄움 */
   else if(w.mode==='boss'){if(mode!=='tower')enterArena(w.f)}
-  SP.P.nm=w.me||SP.name;
-  DU.mateIn({t:'p',ts:w.ts,n:w.n,x:w.x,y:w.y,hp:w.hp,mx:w.mx,ch:w.ch,sk:w.sk,wp:w.wp,ffx:w.ffx,ffy:w.ffy,w:w.w,down:w.down,ev:w.ev,pl:'f'+w.f+w.mode},SP.P);
-  if(w.mate){SP.M2.nm=w.mate.nm||'동료';SP.M2.ring=w.mode==='pvp'?'#ff5a7a':'#8de4ff';DU.mateIn(Object.assign({t:'p',n:w.n,pl:'f'+w.f+w.mode},w.mate),SP.M2)}else SP.M2.x=null;
+  SP.P.nm=w.me||SP.name;/* 위치 · 사건은 feed가 미리 넣어 둠. 여기선 체력 · 장비만 재생 시각에 맞춰 */
+  Object.assign(SP.P,{hp:w.hp,mx:w.mx,ch:w.ch,sk:w.sk,wp:w.wp,down:w.down,at:performance.now()});
+  if(w.mate){SP.M2.nm=w.mate.nm||'동료';SP.M2.ring=w.mode==='pvp'?'#ff5a7a':'#8de4ff';Object.assign(SP.M2,{hp:w.mate.hp,mx:w.mate.mx,ch:w.mate.ch,sk:w.mate.sk,wp:w.mate.wp,down:w.mate.down,at:performance.now()})}else SP.M2.x=null;
   if(w.snap&&w.mode!=='boss'&&mode==='tower'){try{DU._applySnap(w.snap)}catch(e){}}}
  setInterval(async()=>{if(!SP.on||SP.busy)return;SP.busy=true;try{const r=await api('/api/watch/pull','POST',{name:SP.name,since:SP.since});if(!SP.on)return;
    if(r.s===403||r.s===401){stop(r.j.error||'관전할 수 없어요');return}if(r.s!==200)return;
-   const ms=r.j.msgs||[];for(const x of ms){if(!SP.on)break;SP.since=Math.max(SP.since,x.seq);try{apply(x.m)}catch(e){console.error('watch',e)}}SP.since=Math.max(SP.since,r.j.seq||0);
+   const ms=r.j.msgs||[],nw=performance.now();for(const x of ms){if(x.seq<=SP.since)continue;SP.since=x.seq;const m=x.m;if(!m||m.ts==null)continue;
+    /* v96: 바로 그리지 않고 쌓아 둠 → 프레임마다 원래 시간 간격대로 꺼내 재생(늦게 · 몰려 와도 끊기지 않게) */
+    const o=nw-m.ts;if(SP.off==null||o<SP.off)SP.off=o;else SP.off+=.15;SP.jit.push(o-SP.off);if(SP.jit.length>90)SP.jit.shift();
+    SP.buf.push(m);SP.last=Date.now();SP.wait=false;try{feed(m)}catch(e){console.error('watch feed',e)}}
+   if(SP.jit.length){const q=SP.jit.slice().sort((a,b)=>a-b)[Math.floor(SP.jit.length*.95)];SP.pdT=Math.max(250,Math.min(2500,q+180))}
+   if(SP.buf.length>200)SP.buf.splice(0,SP.buf.length-200);SP.since=Math.max(SP.since,r.j.seq||0);
    SP.where=r.j.where;const quiet=Date.now()-SP.last;
    if(!ms.length&&quiet>9000){if(!r.j.live&&/로비|^$/.test(r.j.where||'')&&!SP.wait){stop(SP.name+'님이 로비로 돌아갔어요');return}paintBar(SP.wait?'친구 화면을 받는 중… (최대 몇 초)':'연결을 기다리는 중…')}
    if(SP.wait&&Date.now()-SP.start>25000){stop(SP.name+'님 화면을 받지 못했어요');return}
@@ -77,7 +83,13 @@
  bar.addEventListener('pointerdown',e=>e.stopPropagation());bar.querySelector('button').onclick=()=>stop();
  function paintBar(sub){bar.querySelector('b').textContent=(SP.name||'')+'님 관전 중';bar.querySelector('small').textContent=sub||''}
  function hpBar(o,x,y,w,q,col){o.fillStyle='#05070acc';o.fillRect(x-1,y-1,w+2,7);o.fillStyle='#3a0a14';o.fillRect(x,y,w,5);o.fillStyle=col;o.fillRect(x,y,Math.round(w*Math.max(0,Math.min(1,q))),5)}
- {const f=frame;frame=function(){const r=f.apply(this,arguments);try{
+ /* 위치 · 사건: 받자마자 「재생 시각」(보낸 시각 + 시계 차 + 재생 지연)으로 시간표에 넣음 → 그리는 쪽은 지금 시각으로 이어 그리기만 하면 됨 */
+ function feed(w){if(w.mode==='lobby'||w.mode==='boss')return;SP.P.off=SP.M2.off=SP.off+SP.pd;const pl='f'+w.f+w.mode;
+  DU.mateIn({t:'p',ts:w.ts,n:w.n,x:w.x,y:w.y,ffx:w.ffx,ffy:w.ffy,w:w.w,ev:w.ev,pl},SP.P);
+  if(w.mate)DU.mateIn({t:'p',n:w.n,ts:w.mate.ts,x:w.mate.x,y:w.mate.y,ffx:w.mate.ffx,ffy:w.mate.ffy,w:w.mate.w,ev:w.mate.ev,pl},SP.M2)}
+ function play(){if(!SP.on||SP.off==null)return;const now=performance.now();SP.pd+=(SP.pdT-SP.pd)*(SP.pdT>SP.pd?.08:.01);/* 늘릴 땐 빨리, 줄일 땐 천천히 */
+  const pt=now-SP.off-SP.pd;let k=0;while(SP.on&&SP.buf.length&&SP.buf[0].ts<=pt&&k++<30){const m=SP.buf.shift();try{apply(m)}catch(e){console.error('watch',e)}}}
+ {const f=frame;frame=function(){try{play()}catch(e){}const r=f.apply(this,arguments);try{
    if(SP.on&&mode==='tower'){P.inv=1e15;const w=SP.lastW,o=ctx;o.save();try{o.setTransform(SS,0,0,SS,0,0)}catch(e){}
     if(w){const f2=w.f,where=w.mode==='pvp'?'⚔ 결투':w.mode==='boss'?'👹 보스전':'🏰 '+f2+'F';paintBar(where+(SP.M2.x!=null?' · '+(w.mode==='pvp'?'상대 ':'동료 ')+(SP.M2.nm||''):''));
      o.globalAlpha=.85;o.fillStyle='#05070a';o.fillRect(W/2-150,AY+3,300,22);o.globalAlpha=1;o.font='900 8px sans-serif';o.textAlign='left';o.fillStyle='#ffd166';o.fillText((SP.P.nm||SP.name),W/2-146,AY+10);
