@@ -286,6 +286,25 @@ def init_db():
             updated_at  DOUBLE PRECISION NOT NULL
         )
     ''')
+    # v103 마지막 접속 시각(친구 목록 「n분 전 접속」 · 친구 추천에 씀)
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS user_seen (
+            user_id     TEXT PRIMARY KEY,
+            seen_at     DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    # v103 채팅: room = 'world'(서버 전체) 또는 'dm:<아이디1>|<아이디2>'(친구끼리, 아이디 글자순)
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS chat_msgs (
+            id          BIGINT PRIMARY KEY,
+            room        TEXT NOT NULL,
+            user_id     TEXT NOT NULL,
+            username    TEXT NOT NULL,
+            text        TEXT NOT NULL,
+            created_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    db.execute('CREATE INDEX IF NOT EXISTS chat_room_id ON chat_msgs (room, id)')
     db.commit()
     db.close()
 
@@ -1654,6 +1673,44 @@ def _friend_rows(db, uid):
                       'LEFT JOIN player_stats s ON s.user_id=f.friend_id WHERE f.user_id=?', (uid,)).fetchall()
 
 
+_SEEN_SAVED = {}
+
+
+def _seen_save(db, uid, now):
+    """마지막 접속 시각을 DB에 적는다(1분에 한 번만)"""
+    if now - _SEEN_SAVED.get(uid, 0) < 60:
+        return
+    _SEEN_SAVED[uid] = now
+    if len(_SEEN_SAVED) > 5000:
+        _SEEN_SAVED.clear()
+    if db.execute('SELECT 1 FROM user_seen WHERE user_id=?', (uid,)).fetchone():
+        db.execute('UPDATE user_seen SET seen_at=? WHERE user_id=?', (now, uid))
+    else:
+        db.execute('INSERT INTO user_seen (user_id, seen_at) VALUES (?, ?)', (uid, now))
+    db.commit()
+
+
+def _seen_many(db, ids):
+    if not ids:
+        return {}
+    q = ','.join('?' * len(ids))
+    return {r['user_id']: r['seen_at'] for r in db.execute('SELECT user_id, seen_at FROM user_seen WHERE user_id IN (%s)' % q, tuple(ids)).fetchall()}
+
+
+def _dm_room(a, b):
+    return 'dm:' + '|'.join(sorted([a, b]))
+
+
+def _dm_last(db, uid, ids):
+    """친구별 마지막 대화 번호와 보낸 사람(안 읽은 대화 표시용)"""
+    out = {}
+    for fid in ids:
+        r = db.execute('SELECT id, user_id FROM chat_msgs WHERE room=? ORDER BY id DESC LIMIT 1', (_dm_room(uid, fid),)).fetchone()
+        if r:
+            out[fid] = [int(r['id']), 'me' if r['user_id'] == uid else 'them']
+    return out
+
+
 @app.route('/api/friends', methods=['POST'])
 def friends_list():
     """친구 목록 · 받은 신청 · 받은 초대. where(지금 하는 일)를 보내면 접속 표시가 갱신된다"""
@@ -1665,12 +1722,19 @@ def friends_list():
     now = time.time()
     _SEEN[uid] = (now, clamp_text(body.get('where'), 30) or '로비')
     db = get_db()
+    _seen_save(db, uid, now)
     out, sent = [], []
-    for x in _friend_rows(db, uid):
+    rows = _friend_rows(db, uid)
+    lasts = _seen_many(db, [x['friend_id'] for x in rows if x['status'] == 'accepted'])
+    dms = _dm_last(db, uid, [x['friend_id'] for x in rows if x['status'] == 'accepted'])
+    for x in rows:
         if x['status'] == 'accepted':
             seen = _SEEN.get(x['friend_id'])
+            on = bool(seen and now - seen[0] < 40)
             out.append({'name': x['username'], 'lv': x['level'] or 1, 'floor': x['floor'] or 1,
-                        'online': bool(seen and now - seen[0] < 40), 'where': seen[1] if seen and now - seen[0] < 40 else ''})
+                        'online': on, 'where': seen[1] if on else '',
+                        'last': now if on else (seen[0] if seen else lasts.get(x['friend_id'], 0)),
+                        'dm': dms.get(x['friend_id'], [0, ''])[0], 'dmFrom': dms.get(x['friend_id'], [0, ''])[1]})
         else:
             sent.append(x['username'])
     inc = [r['username'] for r in db.execute('SELECT u.username FROM friends f JOIN users u ON u.user_id=f.user_id '
@@ -2217,7 +2281,7 @@ def api_account_delete():
         return _bad('확인용 아이디가 맞지 않아요', 400)
     db = get_db()
     uid = user['user_id']
-    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'player_stats', 'pvp_ledger', 'pvp_stats', 'pvp_rank', 'pvp_rewards', 'friends', 'shop_entitlements', 'tester_links', 'users'):
+    for table in ('sessions', 'saves', 'google_accounts', 'google_challenges', 'rank_scores', 'player_stats', 'pvp_ledger', 'pvp_stats', 'pvp_rank', 'pvp_rewards', 'friends', 'shop_entitlements', 'tester_links', 'player_look', 'user_seen', 'chat_msgs', 'users'):
         db.execute('DELETE FROM %s WHERE user_id = ?' % table, (uid,))
     db.execute('DELETE FROM friends WHERE friend_id = ?', (uid,))
     db.commit()
@@ -2226,6 +2290,124 @@ def api_account_delete():
 
 init_db()
 
+# ---------------- v103 친구 추천 · 서버 채팅 · 친구 대화 ----------------
+CHAT_MAX = 120          # 한 마디 최대 글자
+CHAT_KEEP = 300         # 방마다 남겨 두는 대화 수
+CHAT_GAP = 1.2          # 같은 사람이 다시 말하려면 기다리는 초
+_CHAT_T = {}
+_CHAT_ID = [0]
+_chat_lock = threading.Lock()
+
+
+def _chat_clean(text):
+    t = ''.join(ch for ch in str(text or '') if ch == ' ' or ch.isprintable())
+    return ' '.join(t.split())[:CHAT_MAX]
+
+
+@app.route('/api/friends/suggest', methods=['POST'])
+def friends_suggest():
+    """친구 추천: 최근 7일 안에 접속한 사람 중 아직 친구 · 신청 관계가 아닌 사람(지금 접속 중 · 비슷한 레벨이 먼저)"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    db = get_db()
+    now = time.time()
+    me = db.execute('SELECT level FROM player_stats WHERE user_id=?', (uid,)).fetchone()
+    mylv = (me['level'] if me else 1) or 1
+    skip = {uid} | {r['friend_id'] for r in db.execute('SELECT friend_id FROM friends WHERE user_id=?', (uid,)).fetchall()} \
+        | {r['user_id'] for r in db.execute('SELECT user_id FROM friends WHERE friend_id=?', (uid,)).fetchall()}
+    rows = db.execute('SELECT s.user_id, s.seen_at, u.username, p.level, p.floor FROM user_seen s JOIN users u ON u.user_id=s.user_id '
+                      'LEFT JOIN player_stats p ON p.user_id=s.user_id WHERE s.seen_at>? ORDER BY s.seen_at DESC LIMIT 200',
+                      (now - 7 * 86400,)).fetchall()
+    out = []
+    for r in rows:
+        if r['user_id'] in skip:
+            continue
+        seen = _SEEN.get(r['user_id'])
+        on = bool(seen and now - seen[0] < 40)
+        lv = r['level'] or 1
+        why = '지금 접속 중' if on else ('비슷한 레벨' if abs(lv - mylv) <= 5 else '최근 접속')
+        out.append({'name': r['username'], 'lv': lv, 'floor': r['floor'] or 1, 'online': on,
+                    'last': now if on else max(r['seen_at'], seen[0] if seen else 0), 'why': why,
+                    '_k': (not on, abs(lv - mylv) > 5, -r['seen_at'])})
+    out.sort(key=lambda x: x['_k'])
+    for x in out:
+        x.pop('_k')
+    return jsonify(ok=True, list=out[:12])
+
+
+@app.route('/api/chat/send', methods=['POST'])
+def chat_send():
+    """채팅 보내기: to가 없으면 서버 전체, 있으면 그 친구에게(친구끼리만)"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    text = _chat_clean(body.get('text'))
+    if not text:
+        return _bad('보낼 말을 적어 주세요', 400)
+    now = time.time()
+    db = get_db()
+    room = 'world'
+    if body.get('to'):
+        fid, _ = _uid_by_name(db, body.get('to'))
+        if not fid or not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (uid, fid, 'accepted')).fetchone():
+            return _bad('친구에게만 대화를 보낼 수 있어요', 403)
+        room = _dm_room(uid, fid)
+    with _chat_lock:
+        if now - _CHAT_T.get(uid, 0) < CHAT_GAP:
+            return _bad('조금 천천히 보내 주세요', 429)
+        _CHAT_T[uid] = now
+        if len(_CHAT_T) > 5000:
+            _CHAT_T.clear()
+        if not _CHAT_ID[0]:
+            r = db.execute('SELECT MAX(id) AS m FROM chat_msgs').fetchone()
+            _CHAT_ID[0] = int(r['m'] or 0)
+        mid = max(int(now * 1000), _CHAT_ID[0] + 1)
+        _CHAT_ID[0] = mid
+        db.execute('INSERT INTO chat_msgs (id, room, user_id, username, text, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                   (mid, room, uid, user['username'], text, now))
+        n = db.execute('SELECT COUNT(*) AS c FROM chat_msgs WHERE room=?', (room,)).fetchone()['c']
+        if n > CHAT_KEEP + 50:
+            cut = db.execute('SELECT id FROM chat_msgs WHERE room=? ORDER BY id DESC LIMIT 1 OFFSET ?', (room, CHAT_KEEP)).fetchone()
+            if cut:
+                db.execute('DELETE FROM chat_msgs WHERE room=? AND id<=?', (room, cut['id']))
+        db.commit()
+    return jsonify(ok=True, id=mid)
+
+
+@app.route('/api/chat/pull', methods=['POST'])
+def chat_pull():
+    """채팅 받기: since(마지막으로 받은 번호) 뒤의 말. with가 있으면 그 친구와의 대화"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    db = get_db()
+    room = 'world'
+    if body.get('with'):
+        fid, _ = _uid_by_name(db, body.get('with'))
+        if not fid or not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (uid, fid, 'accepted')).fetchone():
+            return _bad('친구와만 대화할 수 있어요', 403)
+        room = _dm_room(uid, fid)
+    try:
+        since = int(body.get('since') or 0)
+    except (TypeError, ValueError):
+        since = 0
+    if since:
+        rows = db.execute('SELECT id, user_id, username, text, created_at FROM chat_msgs WHERE room=? AND id>? ORDER BY id LIMIT 80', (room, since)).fetchall()
+    else:
+        rows = list(reversed(db.execute('SELECT id, user_id, username, text, created_at FROM chat_msgs WHERE room=? ORDER BY id DESC LIMIT 60', (room,)).fetchall()))
+    now = time.time()
+    online = sum(1 for t in _SEEN.values() if now - t[0] < 40)
+    return jsonify(ok=True, online=online, msgs=[{'id': int(r['id']), 'name': r['username'], 'me': r['user_id'] == uid,
+                                                  'text': r['text'], 't': r['created_at']} for r in rows])
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port)
+
