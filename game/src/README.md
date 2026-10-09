@@ -188,3 +188,6 @@
 | `99999998-v95-watch.js` | 103 | 소리 켜기(첫 터치 · 키 · 앱 복귀) + 친구 관전(`WATCH95`): 보내는 쪽은 보는 사람이 있을 때만 `/api/watch/push`, 보는 쪽은 `/api/watch/pull`로 받아 같은 층 경기장에 듀오 상대 그리기(`mateIn` · `drawMate`)로 재생 |
 | `99999999-v98-lobby-tidy.js` | 70 | 로비 정리(`TIDY98`): 위쪽 줄 ☰ 더보기(난이도 · 소리 · 전체 화면 · 조명 쇼 · 랭킹 · 영상관), 원래 단추(gmName · rplBtn · gmDiffChip · gmSound · mbFs · gmRank)는 숨기고 대신 눌러 줌, LIGHT SHOW 줄은 `html.lt98`일 때만 |
 | `999999991-v99-watch-video.js` | 60 | 관전 실시간 영상(`VID99`): 보는 쪽 hello → 게임 쪽 offer → answer(쪽지는 `/api/watch/sig`, 관전 push/pull 응답의 `sig`). 게임 쪽은 `#game` 캔버스를 `captureStream(0)`으로 프레임마다 보냄(960 · 2.5Mbps · 해상도 우선), 보는 쪽은 `inFrame()`의 `<video>`를 99999998이 화면 전체에 그림. 연결 안 되면 예전 방식 |
+| `999999992-v100-mythic-gear.js` | 266 | 신화 등급(`MYTH100`): 캐릭터 · 무기 · 펫 15씩(`myth:1`, `abl` 스킬), 스킬 엔진(CB81 onHit · onBossHit · onHurt · onDash · onKill · onParry · dmgMul 감싸기 + frame 감싸기의 재생 · 분신 · 별 탄환 · 회전 칼날, 스킬 이름표 · HUD 칸), 새 칸 강화 · 현질 검 덮기, 공방 등급 이름표 · 능력 칩 · 스킬 상자 |
+| `999999993-v100-mythic-art.js` | 170 | 신화 무기 15 넓은 도트(WSPR.m_*) + 무기별 빛 효과(drawWeaponShape 감싸기), 신화 펫 15 손그림(drawPet 감싸기) |
+| `999999994-v100-mouse-keys.js` | 80 | 마우스 버튼을 키 설정에(`Mouse0`~`Mouse4`, 게임 중 그 동작 키로 바꿔 보냄), 키보드 지도 옆 마우스 그림, 컴퓨터 전투 시작 때 조작 안내 막대(`#kh100`) · 키 바꿀 때 알림(`#kt100`) |

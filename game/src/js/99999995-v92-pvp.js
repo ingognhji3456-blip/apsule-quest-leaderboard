@@ -35,7 +35,11 @@
  function rankCard(){const r=Q.rank;if(!r)return '<div class="pvRank"><small>등급 불러오는 중…</small></div>';const t=r.tier||{},c=TIERC[t.key]||'#fff',days=Math.max(0,Math.ceil((r.ends*1000-Date.now())/86400000));
   const lo=Math.max(t.min||0,t.key==='bronze'?900:0),hi=r.next?r.rating+r.next.need:lo+1,q=r.next?Math.max(0,Math.min(1,(r.rating-lo)/(hi-lo))):1;
   return '<div class="pvRank" style="--tc:'+c+'"><div class="pvTb"><i>'+({bronze:'🥉',silver:'🥈',gold:'🥇',plat:'💠',dia:'💎',master:'👑'}[t.key]||'⚔')+'</i><b>'+esc(t.name||'')+'</b><em>'+num(r.rating)+'점</em><small>#'+num(r.pos)+'</small></div>'+
-   '<div class="pvBar"><i style="width:'+Math.round(q*100)+'%"></i></div><div class="pvRs"><span>'+(r.next?esc(r.next.name)+'까지 '+num(r.next.need)+'점':'최고 등급!')+'</span><span>시즌 '+esc(r.season)+' · '+days+'일 남음</span></div></div>'}
+   '<div class="pvBar"><i style="width:'+Math.round(q*100)+'%"></i></div><div class="pvRs"><span>'+(r.next?esc(r.next.name)+'까지 '+num(r.next.need)+'점':'최고 등급!')+'</span><span>시즌 '+esc(r.season)+' · '+days+'일 남음</span></div>'+ladder(t.key)+'</div>'}
+ /* v100: 등급 사다리 — 전체 몇 단계인지 · 내 위치 · 각 등급 점수 · 시즌 보상 */
+ const LAD=[['bronze','브론즈',0,'🥉',[20,500]],['silver','실버',1100,'🥈',[50,1000]],['gold','골드',1250,'🥇',[100,2000]],['plat','플래티넘',1400,'💠',[180,3500]],['dia','다이아',1550,'💎',[300,6000]],['master','마스터',1700,'👑',[500,10000]]];
+ function ladder(key){const mi=Math.max(0,LAD.findIndex(x=>x[0]===key));
+  return '<div class="pvLad"><div class="pvLadH">결투 등급 <b>'+LAD.length+'단계</b> · 지금 <b>'+(mi+1)+'단계</b> · 최고 <b>👑 마스터</b></div><div class="pvLadR">'+LAD.map((x,i)=>'<div class="st'+(i<mi?' done':'')+(i===mi?' me':'')+'" style="--lc:'+(TIERC[x[0]]||'#fff')+'" title="시즌 보상 💎 '+x[4][0]+' · 🪙 '+num(x[4][1])+'">'+(i===mi?'<u>나</u>':'')+'<i>'+x[3]+'</i><b>'+x[1]+'</b><small>'+(x[2]?num(x[2])+'+':'시작')+'</small><em>💎'+x[4][0]+'</em></div>').join('')+'</div><div class="pvLadF">시즌이 끝나면 그 시즌 최고 등급만큼 💎 · 🪙 보상(5판 이상)</div></div>'}
  function html(v){
   if(v==='pvp'){const s=Q.stats||{};
    return '<div class="dP wide dPv">'+hd('⚔','결투 · PvP','1:1 실력 승부 · 내 장비 그대로 · 3판 2선승','<button class="dBack">◀ 뒤로</button>')+'<div class="dCols">'+
@@ -219,6 +223,14 @@
  .pvRes small{opacity:.75}.pvG{padding:8px 14px;border-radius:12px;font-weight:900;font-size:15px}.pvG.w{background:#2a2410;color:#ffe79a;border:1px solid #ffd16688}.pvG.l{background:#2a0e14;color:#ff8a9a;border:1px solid #ff5a7a66}.pvG.v{background:#101a20;color:#cfe0e6;font-weight:700;font-size:13px}
  .pvRec2{font-size:12px;opacity:.75}
  .pvRkC{font-weight:900;font-size:14px;padding:6px 12px;border-radius:10px;background:#0b1319}.pvRkC.w{color:#7dffa8}.pvRkC.l{color:#ff8a9a}.pvRkC b{color:#fff}
+ #duo85 .pvLad{margin-top:8px;padding-top:7px;border-top:1px dashed #ffffff22}#duo85 .pvLadH{font-size:11px;color:#9ab8ac;margin-bottom:6px}#duo85 .pvLadH b{color:#fff}
+ #duo85 .pvLadR{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;position:relative;margin-top:12px}
+ #duo85 .pvLadR .st{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px 4px;border-radius:9px;background:#0b1319;border:1px solid #ffffff14;opacity:.55;filter:grayscale(.5)}
+ #duo85 .pvLadR .st.done{opacity:.9;filter:none;border-color:color-mix(in srgb,var(--lc) 40%,transparent)}
+ #duo85 .pvLadR .st.me{opacity:1;filter:none;background:color-mix(in srgb,var(--lc) 22%,#0b1319);border:1.5px solid var(--lc);box-shadow:0 0 12px color-mix(in srgb,var(--lc) 50%,transparent);transform:translateY(-2px)}
+ #duo85 .pvLadR .st i{font-style:normal;font-size:16px}#duo85 .pvLadR .st b{font-size:10.5px;color:var(--lc)}#duo85 .pvLadR .st small{font-size:9px;color:#8aa0a8}#duo85 .pvLadR .st em{font-style:normal;font-size:9px;color:#bfe8ff}
+ #duo85 .pvLadR .st u{position:absolute;top:-9px;text-decoration:none;font-size:9px;font-weight:900;color:#05070a;background:var(--lc);border-radius:6px;padding:0 5px}
+ #duo85 .pvLadF{font-size:10px;color:#7a8a90;margin-top:5px}
  #duo85 .pvRank{padding:9px 11px;border-radius:12px;background:radial-gradient(120% 120% at 0% 0%,color-mix(in srgb,var(--tc) 22%,transparent),#0b1319 70%);border:1px solid color-mix(in srgb,var(--tc) 55%,transparent)}
  #duo85 .pvTb{display:flex;align-items:center;gap:8px}#duo85 .pvTb i{font-style:normal;font-size:22px}#duo85 .pvTb b{font-size:17px;color:var(--tc);text-shadow:0 0 10px var(--tc)}#duo85 .pvTb em{font-style:normal;font-weight:900;margin-left:auto}#duo85 .pvTb small{color:#9ab8ac}
  #duo85 .pvBar{height:7px;border-radius:4px;background:#1a2430;margin:6px 0 4px;overflow:hidden}#duo85 .pvBar i{display:block;height:100%;background:linear-gradient(90deg,var(--tc),#fff)}
