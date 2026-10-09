@@ -186,3 +186,4 @@
 | `99999996-v94-enhance.js` | 60 | 장비 강화(`ENH94`): 공방에서 +1~+10(골드, +7부터 실패 시 하락 · 💎 보호), 무기 공격력 +6% · 캐릭터 체력 +5% · 펫 공격 +2%p / 단계. `WEAPONS` · `PETS` 칸 읽기와 `charStats`를 감싸 적용, 저장 `saveData.enh94` |
 | `99999997-v94-friends.js` | 120 | 친구(`FR94`): 위쪽 줄 👥 단추 · 친구 창(신청 · 수락 · 삭제 · 접속 표시), 결투 신청 · 듀오 초대, 방 화면 「친구 초대」, 받은 초대 알림 카드. 서버 `/api/friends*` |
 | `99999998-v95-watch.js` | 103 | 소리 켜기(첫 터치 · 키 · 앱 복귀) + 친구 관전(`WATCH95`): 보내는 쪽은 보는 사람이 있을 때만 `/api/watch/push`, 보는 쪽은 `/api/watch/pull`로 받아 같은 층 경기장에 듀오 상대 그리기(`mateIn` · `drawMate`)로 재생 |
+| `99999999-v98-lobby-tidy.js` | 70 | 로비 정리(`TIDY98`): 위쪽 줄 ☰ 더보기(난이도 · 소리 · 전체 화면 · 조명 쇼 · 랭킹 · 영상관), 원래 단추(gmName · rplBtn · gmDiffChip · gmSound · mbFs · gmRank)는 숨기고 대신 눌러 줌, LIGHT SHOW 줄은 `html.lt98`일 때만 |

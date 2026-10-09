@@ -59,5 +59,5 @@
 
  /* 큰 화면을 누르면 게임 좌표로 바꿔서 원래처럼 */
  view.addEventListener('pointerdown',e=>{if(!V.on||(mode!=='boss'&&mode!=='cave')||dlg.active)return;e.preventDefault();const r=view.getBoundingClientRect(),gx=V.cx-V.sw/2+(e.clientX-r.left)/r.width*V.sw,gy=V.sy+(e.clientY-r.top)/r.height*V.sh;try{doAttack({x:gx,y:gy})}catch(_){}});
- window.PV76={V,layout,active};
+ window.PV76={V,layout,active,paint};
 }catch(e){console.error('v76 portrait',e)}})();

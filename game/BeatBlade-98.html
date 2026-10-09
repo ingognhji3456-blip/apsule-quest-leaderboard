@@ -21781,6 +21781,9 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   #twGo::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,#ffffffaa 50%,transparent 65%);background-size:260% 100%;animation:twShine 2.2s linear infinite;pointer-events:none}
   #gmTower.twBossSel #twGo{background:linear-gradient(180deg,#ff8aa0,#ff2d55)!important;color:#fff!important}
   .twChip{background:linear-gradient(180deg,#1a2332,#0e141c);border-color:#ffffff22;box-shadow:inset 0 1px 0 #ffffff12}
+  .twDiff{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;border-radius:12px;background:#0b1118cc;border:1px solid #ffffff1a}.twDiff span{font-size:12px;font-weight:900;color:#9ab8ac;margin-right:4px}
+  .twDiff button{font:inherit;font-weight:900;font-size:13px;padding:6px 14px;border-radius:10px;cursor:pointer;color:#cfd8e0;background:#141c26;border:1px solid #ffffff22;transition:transform .1s}
+  .twDiff button.on{color:#05070a;background:var(--dc);border-color:var(--dc);box-shadow:0 0 12px color-mix(in srgb,var(--dc) 55%,transparent)}.twDiff button:active{transform:scale(.96)}
   @keyframes twShine{0%{background-position:150% 0}100%{background-position:-100% 0}}
   @keyframes twGlow{50%{filter:brightness(1.12)}}@keyframes twPulse{50%{outline-color:#ffffff55}}
   html.phP #twWrap{flex-direction:column;height:auto}html.phP #twCol{flex:0 0 auto;height:46vh}
@@ -21867,11 +21870,14 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   let rw='';try{const g=Math.max(1,Math.floor(bf/10)),m={easy:.6,normal:1,hard:1.5,extreme:2.2}[diff]||1,first=!(((saveData.dia80||{}).fl||{})[bf+'|'+diff]);let dia=Math.round((20+4*((g-1)%70+1))*m*(1+Math.floor((g-1)/70)*.5));if(!first)dia=Math.max(3,Math.round(dia*.15));const gold=Math.round((first?150+g*25:50+g*8)*m);
    rw='<div class="twRw"><span class="twRwT">'+bf+'F 보스 보상'+(first?' <em>첫 클리어</em>':'')+'</span><span class="twRwG">🪙 '+gold.toLocaleString()+'</span><span class="twRwD">💎 '+dia.toLocaleString()+'</span></div>'}catch(e){}
   const prog='<div class="twCard twProg"><h4>'+p.n+' 구역 진행 · '+Math.max(0,Math.min(10,(s.best||1)-z*10-1))+' / 10</h4><div class="twSeg" style="--c:'+p.c+'">'+segs+'</div>'+rw+'</div>';
-  $('twBody').innerHTML=prog+'<div class="twCard"><h4>이 구역의 잡몹 · 정예는 5F · 9F</h4><div class="twMobs">'+mobs+'</div></div>'+vets+
+  /* v98: 탑 화면에서 바로 난이도 고르기(보상 · 잡몹 체력/피해가 바로 바뀜) */
+  const dsel='<div class="twDiff"><span>난이도</span>'+GM_DIFF.map(([k,n,c])=>'<button data-df="'+k+'" class="'+(k===diff?'on':'')+'" style="--dc:'+c+'">'+n+'</button>').join('')+'</div>';
+  $('twBody').innerHTML=dsel+prog+'<div class="twCard"><h4>이 구역의 잡몹 · 정예는 5F · 9F</h4><div class="twMobs">'+mobs+'</div></div>'+vets+
    '<div class="twBtns"><button class="gmBtn go" id="twGo">▲ '+f+'F '+(f===cur?'이어서 오르기':'부터 오르기')+'</button>'+(f!==cur&&reachable(cur)?'<button class="gmBtn" id="twCont">◎ '+cur+'F 이어하기</button>':'')+'<button class="gmBtn" id="twNew">↺ 1F부터 처음부터</button></div>'+
-   '<div class="twRow"><span class="twChip">최고 '+(s.best||1)+'F</span><span class="twChip">보스 '+(s.bosses||0)+' / 70</span><span class="twChip">처치 '+(s.kills||0)+'</span><span class="twChip">난이도 '+({easy:'쉬움',normal:'보통',hard:'어려움',extreme:'익스트림'}[diff]||diff)+'</span></div>'+
+   '<div class="twRow"><span class="twChip">최고 '+(s.best||1)+'F</span><span class="twChip">보스 '+(s.bosses||0)+' / 70</span><span class="twChip">처치 '+(s.kills||0)+'</span></div>'+
    '<div class="twNote">왼쪽 탑을 스크롤해서 700층까지 볼 수 있어요. 올라가 본 층(최고 '+(s.best||1)+'F까지)은 눌러서 골라 다시 할 수 있어요.<br>쓰러지면 그 구역의 첫 층부터 다시 · 보스를 쓰러뜨리면 보스 러시에서도 열려요.</div>';
   const go=g=>{gmSfx('ok');const S=sv();S.floor=g;S.cp=Math.floor((g-1)/10)*10+1;try{saveNow()}catch(e){}stopPortrait();TW.start(g)};
+  $('twBody').querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const v=b.dataset.df;if(v===diff)return;try{gmSfx('ok')}catch(e){}try{$('diffSel').value=v;updDiff()}catch(e){}try{gmHud()}catch(e){}info()});
   $('twGo').onclick=()=>go(f);if($('twCont'))$('twCont').onclick=()=>go(cur);
   $('twNew').onclick=()=>{if($('twNew').dataset.ok){go(1);return}$('twNew').dataset.ok=1;$('twNew').textContent='정말 1F부터? 한 번 더 누르기';setTimeout(()=>{const n=$('twNew');if(n){delete n.dataset.ok;n.textContent='↺ 1F부터 처음부터'}},2500)};
   TV.bz=z;TV.mt=0;try{const g=$('gmTower');g.style.setProperty('--tz',p.c);g.style.setProperty('--tb',B.c);g.classList.toggle('twBossSel',boss)}catch(e){}}
@@ -22186,7 +22192,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
 
  /* 큰 화면을 누르면 게임 좌표로 바꿔서 원래처럼 */
  view.addEventListener('pointerdown',e=>{if(!V.on||(mode!=='boss'&&mode!=='cave')||dlg.active)return;e.preventDefault();const r=view.getBoundingClientRect(),gx=V.cx-V.sw/2+(e.clientX-r.left)/r.width*V.sw,gy=V.sy+(e.clientY-r.top)/r.height*V.sh;try{doAttack({x:gx,y:gy})}catch(_){}});
- window.PV76={V,layout,active};
+ window.PV76={V,layout,active,paint};
 }catch(e){console.error('v76 portrait',e)}})();
 /* ================= v76 폰 가로 메뉴 한 화면 맞춤 (PL76) =================
    폰 가로(html.phL)에서 메뉴 화면을 아래로 내려 보지 않고 한 화면에 다 들어오게 배치를 바꾼다.
@@ -24190,6 +24196,12 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* ---------- ② 보내는 쪽 ---------- */
  const WS={until:0,n:0,busy:false,mSeen:new Set(),viewers:0};
  function setWatched(n){if(n>0)WS.until=Math.max(WS.until,Date.now()+15000)}
+ const SH={c:null};
+ function shot(){if(!SH.c){SH.c=document.createElement('canvas');SH.c.width=480;SH.c.height=300;SH.x=SH.c.getContext('2d');SH.x.imageSmoothingEnabled=true}
+  SH.x.drawImage(cv,0,0,cv.width,cv.height,0,0,480,300);
+  /* WebP가 되면 WebP(같은 화질에 약 2/3 크기 · 한 장 10KB 안팎), 안 되는 기기(아이폰 등)는 JPEG */
+  if(SH.webp!==false){const d=SH.c.toDataURL('image/webp',.6);if(d.startsWith('data:image/webp')){SH.webp=true;return d}SH.webp=false}
+  return SH.c.toDataURL('image/jpeg',.6)}
  function frameMsg(){const t=T(),now=Math.round(performance.now()),pv=!!(window.PVP92&&PVP92.on());
   const sk=(()=>{try{return SKIN58.get()||''}catch(e){return ''}})(),wp=(()=>{try{return shopInv().eq.wp||0}catch(e){return 0}})();
   const o={t:'w',ts:now,n:++WS.n,mode:pv?'pvp':mode,f:(t&&t.f)||1,x:r1(P.x),y:r1(P.y),hp:Math.round(P.hp),mx:P.maxhp,ch:DU.myCh(),sk,wp,
@@ -24201,6 +24213,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
     ev:evs.map(e=>Object.assign({},e,{e:'m'+e.e,t:Math.round(e.t)}))}}
   if(mode==='tower'&&t&&!t.bossCard&&WS.n%2===0){try{o.snap=DU._snap()}catch(e){}}/* 잡몹은 0.13초마다(사이는 보는 쪽이 이어 그림) */
   if(pv){const M=PVP92.M;o.pvp={sc:M.sc,me:M.owner?0:1,round:M.round,ph:M.ph}}
+  /* v97: 보스전(과 보스 등장 카드)은 화면을 작은 사진(JPEG)으로 찍어 보냄 — 보스 패턴이 복잡해서 그대로 보여 주려면 이게 확실함. 1초에 약 10장 */
+  if((mode==='boss'||t&&t.bossCard&&mode==='tower')&&now-(WS.imgT||0)>=95){WS.imgT=now;try{o.img=shot()}catch(e){}}
   if(mode==='boss'&&typeof G!=='undefined'&&G){o.boss={name:(G.B&&G.B.name)||(G.bossName)||'보스',hp:Math.round(G.hp||0),mx:Math.round(G.maxHp||1)}}
   try{o.me=ACCT55.get().user||''}catch(e){}
   return o}
@@ -24210,7 +24224,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   WS.was=true;WS.q=WS.q||[];WS.q.push(frameMsg());if(WS.q.length>20)WS.q.splice(0,WS.q.length-20);/* 답이 늦어도 장면이 빠지지 않게 모아서 한꺼번에 */
   /* v96: 1초에 15장면 · 동시에 2개까지 보냄(하나가 늦어도 다음 것이 감) */
   if((WS.fly|0)>=2||Date.now()-(WS.lastSend||0)<120&&WS.q.length<3)return;WS.fly=(WS.fly|0)+1;WS.lastSend=Date.now();
-  api('/api/watch/push','POST',{msgs:WS.q.splice(0)}).then(r=>{if(r.s===200){WS.viewers=r.j.viewers||0;if(WS.viewers>0)WS.until=Date.now()+10000}}).finally(()=>{WS.fly--})},66);
+  api('/api/watch/push','POST',{msgs:WS.q.splice(0)}).then(r=>{if(r.s===200){WS.viewers=r.j.viewers||0;if(WS.viewers>0)WS.until=Date.now()+10000}}).finally(()=>{WS.fly--})},50);
  /* 게임 중엔 친구 목록(=보는 사람 확인)을 5초마다 */
  setInterval(()=>{try{if(acc().token&&inGame()&&window.FR94)FR94.refresh()}catch(e){}},3000);
 
@@ -24222,7 +24236,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  function enterArena(f){if(f%10===0)f=Math.max(1,f-1);/* 보스 층 번호로 열면 보스전이 시작되므로 바로 아래 층 경기장 */
   try{TW71.start(f)}catch(e){console.error(e)}const t=T();t.duo={role:'guest',mate:null};t.queue=[];t.mobs=[];t.total=0;t.shots=[];t.tels=[];
   P.inv=1e15;P.x=AX+AW/2;P.y=AY+AH-8;SP.f=f;try{$('bvTitle').textContent='BEAT BLADE · 👁 '+SP.name+' 관전'}catch(e){}}
- function apply(w){if(w.mode==='lobby'){stop(SP.name+'님이 게임을 마쳤어요');return}SP.lastW=w;SP.last=Date.now();SP.wait=false;
+ function apply(w){if(w.mode==='lobby'){stop(SP.name+'님이 게임을 마쳤어요');return}if(w._im)SP.imN=w._im;else if(w.mode==='tower'&&!w.boss)SP.img=SP.imN=null;SP.lastW=w;SP.last=Date.now();SP.wait=false;
   if(w.mode==='tower'||w.mode==='pvp'){const t=T(),want=w.f%10===0?Math.max(1,w.f-1):w.f;if(mode!=='tower'||!t||t.f!==want){enterArena(w.f);if(w.mode==='pvp')try{T().trans=null}catch(e){}}}/* 결투엔 층 이름 안 띄움 */
   else if(w.mode==='boss'){if(mode!=='tower')enterArena(w.f)}
   SP.P.nm=w.me||SP.name;/* 위치 · 사건은 feed가 미리 넣어 둠. 여기선 체력 · 장비만 재생 시각에 맞춰 */
@@ -24231,9 +24245,10 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(w.snap&&w.mode!=='boss'&&mode==='tower'){try{DU._applySnap(w.snap)}catch(e){}}}
  setInterval(async()=>{if(!SP.on||SP.busy)return;SP.busy=true;try{const r=await api('/api/watch/pull','POST',{name:SP.name,since:SP.since});if(!SP.on)return;
    if(r.s===403||r.s===401){stop(r.j.error||'관전할 수 없어요');return}if(r.s!==200)return;
-   const ms=r.j.msgs||[],nw=performance.now();for(const x of ms){if(x.seq<=SP.since)continue;SP.since=x.seq;const m=x.m;if(!m||m.ts==null)continue;
+   let ms=r.j.msgs||[];const nw=performance.now();if(!SP.since&&ms.length>8)ms=ms.slice(-8);/* 처음엔 최근 것만 */for(const x of ms){if(x.seq<=SP.since)continue;SP.since=x.seq;const m=x.m;if(!m||m.ts==null)continue;
     /* v96: 바로 그리지 않고 쌓아 둠 → 프레임마다 원래 시간 간격대로 꺼내 재생(늦게 · 몰려 와도 끊기지 않게) */
     const o=nw-m.ts;if(SP.off==null||o<SP.off)SP.off=o;else SP.off+=.15;SP.jit.push(o-SP.off);if(SP.jit.length>90)SP.jit.shift();
+    if(m.img){const im=new Image();im.src=m.img;m._im=im;delete m.img}/* 미리 풀어 둠 */
     SP.buf.push(m);SP.last=Date.now();SP.wait=false;try{feed(m)}catch(e){console.error('watch feed',e)}}
    if(SP.jit.length){const q=SP.jit.slice().sort((a,b)=>a-b)[Math.floor(SP.jit.length*.95)];SP.pdT=Math.max(250,Math.min(2500,q+180))}
    if(SP.buf.length>200)SP.buf.splice(0,SP.buf.length-200);SP.since=Math.max(SP.since,r.j.seq||0);
@@ -24266,11 +24281,13 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
      if(w.mate){o.textAlign='right';o.fillStyle=w.mode==='pvp'?'#ff9aaa':'#8de4ff';o.fillText(w.mate.nm||'',W/2+146,AY+10);hpBar(o,W/2+26,AY+14,120,(w.mate.hp||0)/(w.mate.mx||1),w.mode==='pvp'?'#ff5a7a':'#8de4ff')}
      o.textAlign='center';o.fillStyle='#fff';o.font='900 9px sans-serif';o.fillText(w.mode==='pvp'&&w.pvp?(w.pvp.sc[w.pvp.me]+' : '+w.pvp.sc[1-w.pvp.me]):where,W/2,AY+12);
      if(w.mode==='pvp'&&w.pvp){o.font='800 6px sans-serif';o.fillStyle='#9ab8ac';o.fillText('ROUND '+w.pvp.round,W/2,AY+21)}
-     if(w.mode==='boss'&&w.boss){o.globalAlpha=.78;o.fillStyle='#05070a';o.fillRect(AX,AY+28,AW,AH-28);o.globalAlpha=1;o.font='900 16px sans-serif';o.fillStyle='#ff6a8a';o.fillText('👹 보스전 중',W/2,AY+AH/2-14);
+     if(SP.imN&&SP.imN.complete&&SP.imN.naturalWidth)SP.img=SP.imN;
+     if(SP.img&&(w.mode==='boss'||w._im||SP.imN)){o.drawImage(SP.img,0,0,W,H)}/* 보스전: 친구 화면 사진 그대로 */
+     else if(w.mode==='boss'&&w.boss){o.globalAlpha=.78;o.fillStyle='#05070a';o.fillRect(AX,AY+28,AW,AH-28);o.globalAlpha=1;o.font='900 16px sans-serif';o.fillStyle='#ff6a8a';o.fillText('👹 보스전 중',W/2,AY+AH/2-14);
       o.font='800 9px sans-serif';o.fillStyle='#e8eef6';o.fillText(w.boss.name+' · '+Math.max(0,Math.round(w.boss.hp/(w.boss.mx||1)*100))+'%',W/2,AY+AH/2+2);hpBar(o,W/2-110,AY+AH/2+8,220,w.boss.hp/(w.boss.mx||1),'#ff5a7a');
       o.font='700 7px sans-serif';o.fillStyle='#9ab8ac';o.fillText('보스전은 체력만 보여 줘요 · 탑 층으로 돌아오면 다시 화면이 나와요',W/2,AY+AH/2+26)}}
     else{o.globalAlpha=.7;o.fillStyle='#05070a';o.fillRect(AX,AY,AW,AH);o.globalAlpha=1;o.font='900 12px sans-serif';o.textAlign='center';o.fillStyle='#ffd166';o.fillText('👁 '+SP.name+'님 화면을 기다리는 중…',W/2,AY+AH/2)}
-    o.textAlign='left';o.restore()}
+    o.textAlign='left';o.restore();try{if(window.PV76&&PV76.V.on&&PV76.paint)PV76.paint()}catch(e){}}/* 폰 세로 화면에도 옮겨 그림 */
    else if(SP.on&&mode==='menu'&&SP.wait){/* 아직 화면을 못 받았으면 로비 위에 띠만 */}
    /* 보내는 쪽: 관전자 수 */
    if(!SP.on&&inGame()&&WS.viewers>0&&Date.now()<WS.until){const o=ctx;o.save();try{o.setTransform(SS,0,0,SS,0,0)}catch(e){}o.globalAlpha=.8;o.fillStyle='#05070a';o.fillRect(W-74,H-14,70,11);o.globalAlpha=1;o.font='800 7px sans-serif';o.textAlign='right';o.fillStyle='#ffd166';o.fillText('👁 '+WS.viewers+'명 관전 중',W-8,H-6);o.textAlign='left';o.restore()}
@@ -24282,4 +24299,78 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  @keyframes wtB{50%{transform:scale(1.15)}}`;document.head.appendChild(st);
  window.WATCH95={spec,stop,specOn,objs:()=>[SP.P,SP.M2].filter(Boolean),setWatched,W:WS,SP};
 }catch(e){console.error('v95 watch',e)}})();
+/* ================= v98 로비 정리 (TIDY98) =================
+   위쪽 줄 단추가 너무 많아서(특히 폰) 자주 안 쓰는 것을 「☰ 더보기」 하나로 모은다.
+   - 위쪽 줄에 남는 것: 계정 · 골드 · 다이아 · 친구 · 레벨 · ☰
+   - ☰ 안: 난이도(4개 바로 고르기) · 소리 · 전체 화면 · 영상관 · 랭킹 · 조명 쇼(LIGHT SHOW 줄 보이기)
+   - 원래 단추(gmName · rplBtn · gmDiffChip · gmSound · mbFs · gmRank)는 숨기기만 하고, ☰ 안 항목이 원래 단추를 눌러 준다(기존 기능 그대로).
+   - LIGHT SHOW 줄(#lvDock .lvAlb)은 평소 숨김, ☰에서 켜면 보임(기억: localStorage 'bb-lt98'). */
+(()=>{try{
+ const $=id=>document.getElementById(id),H=document.documentElement;
+ const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){}};
+ if(ls('bb-lt98')==='1')H.classList.add('lt98');
+ const DN={easy:'쉬움',normal:'보통',hard:'어려움',extreme:'익스트림'};
+ const isOn=()=>{try{return !!sound}catch(e){return true}};
+ const fsOn=()=>{try{return !!(document.fullscreenElement||document.webkitFullscreenElement)}catch(e){return false}};
+
+ /* ---------- ☰ 단추 ---------- */
+ function ensure(){const h=document.querySelector('#gameMenu .gmHud');if(!h)return;let b=$('gmMore');
+  if(!b){b=document.createElement('button');b.id='gmMore';b.type='button';b.title='더보기 — 난이도 · 소리 · 전체 화면 · 영상관 · 랭킹 · 조명';b.innerHTML='<i></i><i></i><i></i>';
+   b.onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}panel.hidden?open():close()};b.addEventListener('pointerdown',e=>e.stopPropagation())}
+  if(b.parentNode!==h||h.lastElementChild!==b)h.appendChild(b)}
+ setInterval(()=>{try{ensure()}catch(e){}},700);
+
+ /* ---------- 펼친 창 ---------- */
+ const panel=document.createElement('div');panel.id='more98';panel.hidden=true;document.body.appendChild(panel);
+ panel.addEventListener('pointerdown',e=>e.stopPropagation());
+ document.addEventListener('pointerdown',e=>{if(!panel.hidden&&!panel.contains(e.target)&&e.target!==$('gmMore')&&!(e.target.closest&&e.target.closest('#gmMore')))close()},true);
+ addEventListener('keydown',e=>{if(e.key==='Escape'&&!panel.hidden){close();e.stopPropagation()}},true);
+ function place(){const b=$('gmMore');if(!b)return;const r=b.getBoundingClientRect(),w=Math.min(300,innerWidth-16);panel.style.width=w+'px';
+  panel.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';panel.style.top=Math.round(r.bottom+6)+'px';panel.style.maxHeight=Math.max(160,innerHeight-r.bottom-14)+'px'}
+ function open(){draw();panel.hidden=false;place()}
+ function close(){panel.hidden=true}
+ const click=id=>{const el=$(id);if(el)el.click()};
+ function row(ic,t,sub,act,on){return '<button class="m98" data-a="'+act+'"><i>'+ic+'</i><span><b>'+t+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</span>'+(on==null?'<em>›</em>':'<u class="'+(on?'on':'')+'"></u>')+'</button>'}
+ function draw(){const d=typeof diff!=='undefined'?diff:'normal';
+  panel.innerHTML='<div class="m98d"><span>난이도</span>'+GM_DIFF.map(([k,n,c])=>'<button data-df="'+k+'" class="'+(k===d?'on':'')+'" style="--dc:'+c+'">'+n+'</button>').join('')+'</div>'+
+   row(isOn()?'🔊':'🔇','소리',isOn()?'켜짐':'꺼짐','snd',isOn())+
+   ($('mbFs')?row('⛶','전체 화면',fsOn()?'켜짐':'꺼짐','fs',fsOn()):'')+
+   row('✨','조명 쇼','로비 무대 조명 바꾸기','lt',H.classList.contains('lt98'))+
+   ($('gmRank')?row('🏆','랭킹','점수 · 레벨 · 탑 · 골드 · 결투','rk'):'')+
+   ($('rplBtn')?row('🎬','영상관','보스전 다시 보기','rpl'):'');
+  panel.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const v=b.dataset.df;try{gmSfx('ok')}catch(e){}try{$('diffSel').value=v;updDiff()}catch(e){}try{gmHud()}catch(e){}draw()});
+  panel.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
+   if(a==='snd'){click('gmSound');setTimeout(draw,30);return}
+   if(a==='fs'){click('mbFs');setTimeout(draw,300);return}
+   if(a==='lt'){const on=!H.classList.contains('lt98');H.classList.toggle('lt98',on);ls('bb-lt98',on?'1':'0');try{gmSfx('ok')}catch(e){}draw();return}
+   close();if(a==='rk')click('gmRank');else if(a==='rpl')click('rplBtn')})}
+ addEventListener('resize',()=>{if(!panel.hidden)place()});
+ /* 메뉴 화면을 바꾸면 닫기 */
+ {const f=gmShow;gmShow=function(){close();return f.apply(this,arguments)}}
+
+ const st=document.createElement('style');st.id='tidy98s';st.textContent=`
+ html body #gameMenu .gmHud #gmName,html body #gameMenu .gmHud #rplBtn,html body #gameMenu .gmHud #gmDiffChip,html body #gameMenu .gmHud #gmSound,html body #gameMenu .gmHud #mbFs,html body #gameMenu .gmHud #gmRank{display:none!important}
+ html:not(.lt98) #lvDock .lvAlb{display:none!important}
+ #gmMore{pointer-events:auto;flex:none;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:38px;height:36px;padding:0;border-radius:11px;cursor:pointer;
+  background:linear-gradient(180deg,#1d2a2f,#121b1f);border:1px solid #ffffff2e;box-shadow:inset 0 1px 0 #ffffff18,0 3px 10px #0006}
+ #gmMore i{display:block;width:16px;height:2px;border-radius:2px;background:#e8f2ee}
+ #gmMore:active{transform:scale(.95)}
+ @media (max-height:500px){#gmMore{width:32px;height:30px}#gmMore i{width:14px}}
+ #more98{position:fixed;z-index:9300;overflow:auto;padding:10px;border-radius:16px;background:linear-gradient(180deg,#16212a,#0b1218);border:1px solid #8ad0ff44;box-shadow:0 14px 40px #000c;color:#e8f4ef;display:flex;flex-direction:column;gap:6px;font-family:inherit;animation:m98in .14s ease-out}
+ #more98[hidden]{display:none}
+ @keyframes m98in{from{transform:translateY(-6px);opacity:0}}
+ #more98 .m98d{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:4px 2px 8px;border-bottom:1px solid #ffffff14;margin-bottom:2px}
+ #more98 .m98d span{width:100%;font-size:11px;font-weight:900;color:#8aa0a8;letter-spacing:.06em}
+ #more98 .m98d button{flex:1;font:inherit;font-weight:900;font-size:12px;padding:7px 0;border-radius:9px;cursor:pointer;color:#cfd8e0;background:#141c26;border:1px solid #ffffff22}
+ #more98 .m98d button.on{color:#05070a;background:var(--dc);border-color:var(--dc)}
+ #more98 .m98{display:flex;align-items:center;gap:10px;width:100%;font:inherit;text-align:left;padding:8px 10px;border-radius:11px;cursor:pointer;color:#e8f4ef;background:#ffffff08;border:1px solid #ffffff12}
+ #more98 .m98:hover{background:#ffffff12}
+ #more98 .m98 i{font-style:normal;font-size:18px;width:24px;text-align:center}
+ #more98 .m98 span{flex:1;min-width:0}#more98 .m98 b{display:block;font-size:13px}#more98 .m98 small{font-size:11px;color:#8aa0a8}
+ #more98 .m98 em{font-style:normal;color:#8aa0a8;font-size:18px}
+ #more98 .m98 u{position:relative;width:36px;height:20px;border-radius:999px;background:#3a4650;flex:none}
+ #more98 .m98 u::after{content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
+ #more98 .m98 u.on{background:#7dffa8}#more98 .m98 u.on::after{left:18px}`;document.head.appendChild(st);
+ window.TIDY98={open,close};
+}catch(e){console.error('v98 tidy',e)}})();
 </script></body></html>
