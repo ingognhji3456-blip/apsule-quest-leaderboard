@@ -14,6 +14,7 @@
  async function refresh(){if(!acc().token||F.busy)return;F.busy=true;try{const r=await api('/api/friends','POST',{where:where()});if(r.s!==200)return;
    F.list=r.j.friends||[];F.inc=r.j.incoming||[];F.sent=r.j.sent||[];F.inv=r.j.invites||[];
    for(const i of F.inv)if(!F.seenInv.has(i.id)){F.seenInv.add(i.id);toast(i)}
+   try{window.WATCH95&&WATCH95.setWatched(r.j.watched||0)}catch(e){}
    badge();if(F.open)draw()}finally{F.busy=false}}
  setInterval(refresh,12000);setTimeout(refresh,4000);
 
@@ -31,12 +32,14 @@
  function open(){F.open=true;box.hidden=false;F.msg='';draw();refresh()}
  function close(){F.open=false;box.hidden=true}
  let lastH='';
+ /* v95: 탑 · 듀오 · 결투 · 보스전 중이면 「게임 중」 + 관전 단추 */
+ const inGame=f=>/탑|듀오|결투|보스/.test(f.where||'');
  function draw(){if(box.hidden)return;const on=F.list.filter(f=>f.online).length;
   const h='<div class="frP"><div class="frHd"><i>👥</i><div><b>친구</b><small>'+F.list.length+'명 · 접속 중 '+on+'명</small></div><button class="frX">닫기</button></div>'+
    '<div class="frAdd"><input id="frN" maxlength="20" placeholder="친구 이름 입력" autocomplete="off" spellcheck="false"><button id="frGo">＋ 친구 신청</button></div><div class="frMsg">'+esc(F.msg)+'</div>'+
    (F.inc.length?'<h5>받은 친구 신청 <span>'+F.inc.length+'</span></h5>'+F.inc.map(n=>'<div class="frRow req"><b>'+esc(n)+'</b><span class="frBtns"><button data-ok="'+esc(n)+'">수락</button><button class="no" data-no="'+esc(n)+'">거절</button></span></div>').join(''):'')+
    '<h5>친구 목록</h5><div class="frList">'+(F.list.length?F.list.map(f=>'<div class="frRow'+(f.online?' on':'')+'"><i class="dot"></i><div class="frI"><b>'+esc(f.name)+'</b><small>Lv.'+f.lv+' · 최고 '+f.floor+'F'+(f.online?' · <em>'+esc(f.where||'접속 중')+'</em>':' · 오프라인')+'</small></div>'+
-     '<span class="frBtns">'+(f.online?'<button class="pv" data-pv="'+esc(f.name)+'">⚔ 결투</button><button class="du" data-du="'+esc(f.name)+'">🤝 듀오</button>':'')+'<button class="rm" data-rm="'+esc(f.name)+'" title="친구 삭제">✕</button></span></div>').join(''):'<div class="frEmpty">아직 친구가 없어요.<br><small>위에 친구 이름을 넣고 신청해 보세요!</small></div>')+'</div>'+
+     (f.online&&inGame(f)?'<span class="frG">🎮 게임 중</span>':'')+'<span class="frBtns">'+(f.online?(inGame(f)?'<button class="wt" data-wt="'+esc(f.name)+'">👁 관전</button>':'<button class="pv" data-pv="'+esc(f.name)+'">⚔ 결투</button><button class="du" data-du="'+esc(f.name)+'">🤝 듀오</button>'):'')+'<button class="rm" data-rm="'+esc(f.name)+'" title="친구 삭제">✕</button></span></div>').join(''):'<div class="frEmpty">아직 친구가 없어요.<br><small>위에 친구 이름을 넣고 신청해 보세요!</small></div>')+'</div>'+
    (F.sent.length?'<div class="frSent">보낸 신청: '+F.sent.map(esc).join(', ')+'</div>':'')+'</div>';
   if(h===lastH)return;lastH=h;const v=($('frN')||{}).value;box.innerHTML=h;if(v)$('frN').value=v;wire()}
  function wire(){const q=s=>box.querySelector(s);q('.frX').onclick=close;
@@ -46,6 +49,7 @@
   box.querySelectorAll('[data-ok],[data-no]').forEach(b=>b.onclick=async()=>{const n=b.dataset.ok||b.dataset.no;await api('/api/friends/respond','POST',{name:n,accept:!!b.dataset.ok});F.msg=b.dataset.ok?'✓ '+n+'님과 친구가 됐어요!':'';lastH='';refresh()});
   box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{if(!b.dataset.sure){b.dataset.sure=1;b.textContent='정말?';setTimeout(()=>{b.textContent='✕';delete b.dataset.sure},2500);return}await api('/api/friends/remove','POST',{name:b.dataset.rm});lastH='';refresh()});
   box.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>duel(b.dataset.pv));
+  box.querySelectorAll('[data-wt]').forEach(b=>b.onclick=()=>{if(!window.WATCH95)return;close();try{WATCH95.spec(b.dataset.wt)}catch(e){console.error('watch',e)}});
   box.querySelectorAll('[data-du]').forEach(b=>b.onclick=()=>duo(b.dataset.du))}
  async function invite(name){if(!D.code){F.msg='방이 없어요';draw();return false}const r=await api('/api/friends/invite','POST',{name,code:D.code});F.msg=r.s===200?'✓ '+name+'님에게 초대를 보냈어요':(r.j.error||'초대하지 못했어요');lastH='';draw();try{note(F.msg)}catch(e){}return r.s===200}
  /* 결투 신청: 친선 결투 방을 만들고 바로 초대 */
@@ -101,6 +105,9 @@
  #fr94 .frBtns{display:flex;gap:4px;margin-left:auto}#fr94 .frBtns button{padding:6px 9px;border-radius:9px;border:1px solid #ffffff22;background:#13202a;color:#e8f4ef;font-weight:800;font-size:12px}
  #fr94 .frBtns .pv{background:linear-gradient(180deg,#ffc8d4,#ff5a7a);color:#2a0610;border:0}#fr94 .frBtns .du{background:linear-gradient(180deg,#d4ffe6,#74d3b0);color:#04120c;border:0}
  #fr94 .frBtns [data-ok]{background:linear-gradient(180deg,#d4ffe6,#74d3b0);color:#04120c;border:0}#fr94 .frBtns .rm{color:#ff8a9a}
+ #fr94 .frBtns .wt{background:linear-gradient(180deg,#e2f2ff,#7ab8ff);color:#04101e;border:0}
+ #fr94 .frG{flex:none;font-size:11px;font-weight:900;color:#ffd166;background:#2a2008;border:1px solid #ffd16655;border-radius:8px;padding:2px 7px;animation:frGp 1.6s ease-in-out infinite}
+ @keyframes frGp{50%{box-shadow:0 0 8px #ffd16666}}
  #fr94 .frEmpty{padding:18px;text-align:center;color:#9ab8ac}#fr94 .frSent{margin-top:8px;font-size:11px;color:#8aa0a8}
  #duo85 .frInvB{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 8px;padding:8px 10px;border-radius:12px;background:#0b1319;border:1px dashed #8de4ff55}
  #duo85 .frInvB b{font-size:12px;color:#8de4ff;margin-right:4px}#duo85 .frInvB button{padding:5px 10px;border-radius:9px;border:1px solid #8de4ff66;background:#102028;color:#e8f4ef;font-weight:800;font-size:12px}

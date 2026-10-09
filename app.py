@@ -1605,7 +1605,9 @@ def friends_list():
     with _duo_lock:
         inv = [i for i in _INV.get(uid, []) if now - i['t'] < 120 and i['code'] in _DUO and _DUO[i['code']]['state'] == 'wait']
         _INV[uid] = inv
-    return jsonify(ok=True, friends=out, incoming=inc, sent=sent,
+    w = _WATCH.get(uid)
+    watched = sum(1 for t in (w['viewers'].values() if w else []) if now - t < 8)
+    return jsonify(ok=True, friends=out, incoming=inc, sent=sent, watched=watched,
                    invites=[{'id': i['id'], 'from': i['from'], 'kind': i['kind'], 'code': i['code']} for i in inv])
 
 
@@ -1701,6 +1703,51 @@ def friends_invite():
         lst.append({'id': secrets.token_hex(4), 'from': user['username'], 'from_uid': uid, 'kind': r.get('kind', 'coop'), 'code': code, 't': time.time()})
         _INV[fid] = lst[-5:]
     return jsonify(ok=True, name=fname)
+
+
+# v95 관전: 게임 중인 사람이 화면 상태를 올리고(push, 보는 사람이 있을 때만), 친구가 받아 간다(pull). 메모리.
+_WATCH = {}
+
+
+@app.route('/api/watch/push', methods=['POST'])
+def watch_push():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    msgs = (request.get_json(silent=True) or {}).get('msgs')
+    msgs = msgs if isinstance(msgs, list) else []
+    now = time.time()
+    with _duo_lock:
+        w = _WATCH.setdefault(user['user_id'], {'seq': 0, 'msgs': [], 'viewers': {}, 't': now})
+        for m in msgs[:10]:
+            if isinstance(m, dict) and len(json.dumps(m)) < 30000:
+                w['seq'] += 1
+                w['msgs'].append({'seq': w['seq'], 'm': m})
+        w['msgs'] = w['msgs'][-40:]
+        w['t'] = now
+        w['viewers'] = {k: t for k, t in w['viewers'].items() if now - t < 8}
+        return jsonify(ok=True, viewers=len(w['viewers']))
+
+
+@app.route('/api/watch/pull', methods=['POST'])
+def watch_pull():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    db = get_db()
+    fid, fname = _uid_by_name(db, body.get('name'))
+    if not fid or not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (user['user_id'], fid, 'accepted')).fetchone():
+        return _bad('친구만 관전할 수 있어요', 403)
+    since = clamp_int(body.get('since'), 0, 2 ** 62, 0)
+    now = time.time()
+    with _duo_lock:
+        w = _WATCH.setdefault(fid, {'seq': 0, 'msgs': [], 'viewers': {}, 't': 0})
+        w['viewers'][user['user_id']] = now
+        out = [x for x in w['msgs'] if x['seq'] > since]
+        seen = _SEEN.get(fid)
+        return jsonify(ok=True, name=fname, msgs=out, seq=w['seq'], live=now - w['t'] < 4,
+                       where=seen[1] if seen and now - seen[0] < 40 else '')
 
 
 @app.route('/api/friends/invite/dismiss', methods=['POST'])
