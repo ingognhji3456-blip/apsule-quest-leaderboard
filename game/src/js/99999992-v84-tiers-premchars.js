@@ -12,7 +12,7 @@
  const TIER=[{n:'기본',c:'#a8b8c0',k:0},{n:'일반',c:'#8ff0b0',k:1},{n:'희귀',c:'#6ab8ff',k:2},{n:'영웅',c:'#c88aff',k:3},{n:'전설',c:'#ffd166',k:4},{n:'프리미엄',c:'#ff9af0',k:5}];
  {const f=wsTier;wsTier=function(it){if(it&&it.prem)return TIER[5];return f.apply(this,arguments)}}
  /* ---------- 프리미엄 캐릭터 ---------- */
- const PC=[{id:'void',hp:85,dash:9,sub:'공허의 검사'},{id:'clock',hp:100,dash:9,sub:'태엽 성기사'},{id:'neon',hp:90,dash:10,sub:'네온 비트'}];
+ const PC=[{id:'void',hp:120,dash:9,sub:'공허의 검사'},{id:'clock',hp:122,dash:9,sub:'태엽 성기사'},{id:'neon',hp:124,dash:10,sub:'네온 비트'}];
  const PI={};
  for(const p of PC){const s=SKIN58.byId(p.id);if(!s)continue;const idx=CHARS.length;
   CHARS.push({name:s.name,sub:p.sub,price:0,prem:p.id,hp:p.hp,dash:p.dash,desc:(s.desc||'')+' ◆ 능력: '+(((window.CB81&&CB81.PERK[p.id])||{}).d||''),scarf:null,v84:1});

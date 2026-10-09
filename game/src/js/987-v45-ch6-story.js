@@ -183,7 +183,7 @@
    try{const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.drawImage(s6SkyArena(k),120,60,240,180,0,0,96,72);if(!lk)c3ArtOn(c,b0.art,48,68,0,1.3,{still:true});else{c.fillStyle='rgba(5,8,10,.75)';c.fillRect(0,0,96,72)}}catch(e){}}
   gmRushInfo();try{if(typeof rfLabels==='function')rfLabels()}catch(e){}}}
  {const _ri=gmRushInfo;gmRushInfo=function(){if(GM.rushCh!==RC)return _ri.apply(this,arguments);const k=GM.rushSel,b=L6[k],lk=rushLk(k);
-  $('gmPrevName').textContent=lk?'???':b.name;$('gmPrevName').style.color=b.c;$('gmPrevEpi').textContent=lk?(unlocked()?'스토리 챕터 6에서 이 바람길의 보스를 쓰러뜨리면 열려요':'챕터 5의 마지막 수문을 해방하면 열리는 하늘이에요'):'"'+S6STORY[k].title+'"  ·  '+b.en;
+  $('gmPrevName').textContent=lk?'???':b.name;$('gmPrevName').style.color=b.c;$('gmPrevEpi').textContent=lk?(unlocked()?'탑 보스 층에서 이 보스를 쓰러뜨리면 열려요':'챕터 5의 마지막 수문을 해방하면 열리는 하늘이에요'):'"'+S6STORY[k].title+'"  ·  '+b.en;
   $('gmPrevStat').innerHTML='<span>ZENITH '+String(k+1).padStart(2,'0')+' / 10</span><span>♩ '+bpmOf(k)+' BPM</span><span>HP '+(lk?'???':s6Hp(k).toLocaleString())+'</span><span>CHAPTER 6 · ZENITH</span>';
   const r=saveData.s6rush||{};$('gmPrevRanks').innerHTML=GM_DIFF.map(([kk,n,c])=>{const v=r[k+'|'+kk];return '<div style="'+(kk===diff?'box-shadow:0 0 0 2px '+c:'')+'">'+n+'<b style="color:'+(v?(v==='P'?'#fff6cf':c):'#3a4a50')+'">'+(v?(v==='P'?'★':v):'—')+'</b></div>'}).join('');
   $('gmFight').disabled=lk;try{rpDetail()}catch(e){}}}

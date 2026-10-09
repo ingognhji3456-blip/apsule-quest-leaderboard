@@ -213,6 +213,14 @@ def init_db():
             paid_at     DOUBLE PRECISION
         )
     ''')
+    # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS player_look (
+            user_id     TEXT PRIMARY KEY,
+            look        TEXT NOT NULL,
+            updated_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
     # v83: 레벨 · 골드 · 탑 층 (랭킹 탭용). 계정마다 한 줄
     db.execute('''
         CREATE TABLE IF NOT EXISTS player_stats (
@@ -447,6 +455,22 @@ for _id, _nm, _th in _V82_CH:
 for _i, (_id, _nm) in enumerate(_V82_PET):
     SHOP_PRODUCTS.append({'id': 'pet_p_' + _id, 'kind': 'pet', 'name': _nm + ' · ' + _V82_TH[(_i + 5) % 15], 'tier': '변이',
                           'description': _nm + '의 변이 모습.', 'status': 'on_sale', 'price': 1000, 'currency': 'KRW'})
+
+# v102: 유물 · 신화 · 초월 캐릭터 15 · 펫 15의 스킨(전용 장비가 따로 그려짐). 게임 999999996의 NCS · NPS와 같은 번호
+_V102_CH = [('arteon', '아르테온', '흑기사'), ('lunaria', '루나리아', '태양 무희'), ('kaiser', '카이저', '빙결 군주'), ('selene', '셀레네', '숲의 사냥꾼'),
+            ('bahamut', '바하무트', '백룡'), ('erebos', '에레보스', '핏빛 망령'), ('auroras', '아우로라', '타락 성녀'), ('chronos', '크로노스', '증기 기관사'),
+            ('ignis', '이그니스', '청염 황제'), ('sylph', '실피드', '벚꽃 요정'), ('nidhogg', '니드호그', '황금 비룡'), ('odin', '오딘', '서리 거인왕'),
+            ('mist', '미스트', '붉은 그림자'), ('gaia', '가이아', '화산 거신'), ('astra', '아스트라', '태양 마녀')]
+_V102_PET = [('phx', '불사조', '얼음 불사조'), ('gdragon', '은하 용', '태양 용'), ('owlking', '시간 부엉이왕', '흑요석 부엉이왕'), ('swolf', '그림자 늑대', '설원 늑대'),
+             ('qilin', '천둥 기린', '진홍 기린'), ('cturtle', '수정 거북왕', '황금 거북왕'), ('sfox', '별빛 여우', '달빛 구미호'), ('lgolem', '용암 골렘', '이끼 골렘'),
+             ('frost', '서리 정령', '불꽃 정령'), ('gold', '황금 드래곤', '흑룡'), ('crow', '암흑 까마귀', '흰 까마귀'), ('rwhale', '무지개 고래', '심해 고래'),
+             ('griffin', '바람 그리핀', '폭풍 그리핀'), ('slime', '혼돈 슬라임', '황금 슬라임'), ('angel', '여신의 천사', '타락 천사')]
+for _id, _nm, _th in _V102_CH:
+    SHOP_PRODUCTS.append({'id': 'skin_v_' + _id, 'kind': 'skin', 'name': _nm + ' · ' + _th, 'tier': '변이',
+                          'description': _nm + '의 「' + _th + '」 스킨. 전용 장비가 따로 있어요.', 'status': 'on_sale', 'price': 2500, 'currency': 'KRW'})
+for _id, _nm, _th in _V102_PET:
+    SHOP_PRODUCTS.append({'id': 'pet_p_' + _id, 'kind': 'pet', 'name': _nm + ' · ' + _th, 'tier': '변이',
+                          'description': _nm + '의 「' + _th + '」 스킨. 전용 장식이 붙어요.', 'status': 'on_sale', 'price': 1800, 'currency': 'KRW'})
 
 PRODUCTS_BY_ID = {p['id']: p for p in SHOP_PRODUCTS}
 
@@ -1017,6 +1041,48 @@ def api_account_name():
 MAX_RANK_SCORE = 10_000_000
 
 
+def _rank_extra(db, rows):
+    """v102: 순위표 줄마다 장착 모습(look), 1~3위는 지금 게임 중인지(관전 가능) 붙이고 user_id는 지운다"""
+    ids = [d['user_id'] for d in rows if d.get('user_id')]
+    looks = {}
+    if ids:
+        q = 'SELECT user_id, look FROM player_look WHERE user_id IN (' + ','.join('?' * len(ids)) + ')'
+        for r in db.execute(q, ids).fetchall():
+            try:
+                looks[r['user_id']] = json.loads(r['look'])
+            except Exception:
+                pass
+    now = time.time()
+    for d in rows:
+        uid = d.pop('user_id', None)
+        d['look'] = looks.get(uid)
+        if d.get('rank', 99) <= 3 and uid:
+            seen = _SEEN.get(uid)
+            where = seen[1] if seen and now - seen[0] < 40 else ''
+            d['where'] = where
+            d['live'] = bool(where) and any(k in where for k in ('탑', '듀오', '결투', '보스'))
+
+
+_TOP3 = {'t': 0, 'ids': set()}
+
+
+def _top3_ids(db):
+    """v102: 어느 순위표든 1~3위인 계정(친구가 아니어도 관전 가능). 30초 동안 기억"""
+    now = time.time()
+    if now - _TOP3['t'] < 30:
+        return _TOP3['ids']
+    ids = set()
+    for sql in ('SELECT user_id FROM rank_scores ORDER BY score DESC, updated_at ASC LIMIT 3',
+                'SELECT user_id FROM player_stats ORDER BY level DESC, xp DESC, updated_at ASC LIMIT 3',
+                'SELECT user_id FROM player_stats ORDER BY floor DESC, updated_at ASC LIMIT 3',
+                'SELECT user_id FROM player_stats ORDER BY gold DESC, updated_at ASC LIMIT 3'):
+        ids.update(r['user_id'] for r in db.execute(sql).fetchall())
+    ids.update(r['user_id'] for r in db.execute('SELECT user_id FROM pvp_rank WHERE season=? AND wins + losses > 0 ORDER BY rating DESC, updated_at ASC LIMIT 3', (_pvp_season(),)).fetchall())
+    _TOP3['t'] = now
+    _TOP3['ids'] = ids
+    return ids
+
+
 @app.route('/api/ranking', methods=['GET'])
 def api_ranking_get():
     """랭킹. by=score(최고 점수) | level(레벨 · 경험치) | floor(탑 최고 층) | gold(골드). 이름은 계정 이름(users)을 쓴다."""
@@ -1037,8 +1103,8 @@ def api_ranking_get():
             d['rank'] = i + 1
             d['tier'] = _pvp_tier(d['rating'])['name']
             d['me'] = bool(user and d['user_id'] == user['user_id'])
-            d.pop('user_id', None)
             out.append(d)
+        _rank_extra(db, out)
         mine = None
         if user:
             v = _pvp_rank_view(db, user['user_id'])
@@ -1060,9 +1126,9 @@ def api_ranking_get():
     for i, row in enumerate(rows):
         d = dict(row)
         d['rank'] = i + 1
-        d['me'] = bool(user and d.pop('user_id', None) == user['user_id'])
-        d.pop('user_id', None)
+        d['me'] = bool(user and d.get('user_id') == user['user_id'])
         result.append(d)
+    _rank_extra(db, result)
     mine = None
     if user:
         st = db.execute('SELECT level, xp, floor, gold FROM player_stats WHERE user_id=?', (user['user_id'],)).fetchone()
@@ -1100,6 +1166,14 @@ def api_stats_put():
     floor = clamp_int(body.get('floor'), 1, 1_000_000, 1)
     db = get_db()
     now = time.time()
+    look = body.get('look')
+    if isinstance(look, dict):  # v102 장착 모습(작은 JSON만)
+        lk = {k: (clamp_int(v, 0, 9999, 0) if isinstance(v, (int, float)) else clamp_text(v, 40)) for k, v in list(look.items())[:16] if isinstance(k, str) and len(k) <= 8}
+        txt = json.dumps(lk, ensure_ascii=False)
+        if db.execute('SELECT 1 FROM player_look WHERE user_id=?', (user['user_id'],)).fetchone():
+            db.execute('UPDATE player_look SET look=?, updated_at=? WHERE user_id=?', (txt, now, user['user_id']))
+        else:
+            db.execute('INSERT INTO player_look (user_id, look, updated_at) VALUES (?, ?, ?)', (user['user_id'], txt, now))
     if db.execute('SELECT 1 FROM player_stats WHERE user_id=?', (user['user_id'],)).fetchone():
         db.execute('UPDATE player_stats SET level=?, xp=?, gold=?, floor=?, updated_at=? WHERE user_id=?',
                    (level, xp, gold, floor, now, user['user_id']))
@@ -1738,8 +1812,9 @@ def watch_pull():
     body = request.get_json(silent=True) or {}
     db = get_db()
     fid, fname = _uid_by_name(db, body.get('name'))
-    if not fid or not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (user['user_id'], fid, 'accepted')).fetchone():
-        return _bad('친구만 관전할 수 있어요', 403)
+    if not fid or (not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (user['user_id'], fid, 'accepted')).fetchone()
+                   and fid not in _top3_ids(db)):
+        return _bad('친구나 순위 1~3위만 관전할 수 있어요', 403)
     since = clamp_int(body.get('since'), 0, 2 ** 62, 0)
     now = time.time()
     with _duo_lock:
@@ -1773,7 +1848,8 @@ def watch_sig():
         return _bad('잘못된 쪽지예요', 400)
     db = get_db()
     fid, fname = _uid_by_name(db, body.get('to'))
-    if not fid or not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (user['user_id'], fid, 'accepted')).fetchone():
+    if not fid or (not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (user['user_id'], fid, 'accepted')).fetchone()
+                   and fid not in _top3_ids(db) and user['user_id'] not in _top3_ids(db)):
         return _bad('친구에게만 보낼 수 있어요', 403)
     with _duo_lock:
         lst = _SIG.setdefault(fid, [])

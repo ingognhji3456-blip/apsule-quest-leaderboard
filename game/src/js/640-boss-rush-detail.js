@@ -8,7 +8,7 @@ function rpLocked(){if(GM.rushCh===3)return typeof s4RushLocked==='function'?s4R
 function rpRec(key,d){return ((saveData.rrec||{})[key+'|'+(d||diff)])||null}
 const rpFmt=s=>Math.floor(s/60)+':'+String(Math.round(s)%60).padStart(2,'0');
 function rpDetail(){const oldPlayer=$('rpMusicCard');if(oldPlayer)oldPlayer.remove();let el=$('gmRushDet');if(!el){el=document.createElement('div');el.id='gmRushDet';el.className='rpDet';const gr=$('gmGrid');let lc=$('rpLeft');if(!lc){lc=document.createElement('div');lc.id='rpLeft';lc.style.cssText='display:flex;flex-direction:column;gap:12px;min-width:0';gr.parentNode.insertBefore(lc,gr);lc.appendChild(gr)}lc.appendChild(el)}
- if(rpLocked()){el.innerHTML='<div class="rpNote">🔒 '+(GM.rushCh===3?(typeof s4SeasonOpen==='function'&&s4SeasonOpen()?'스토리 챕터 4에서 쓰러뜨린 수호자만 공격 정보와 기록이 열려요.':'명예의 전당 별 30개를 모두 밝히면 스토리에 열리는 비밀 챕터예요.'):'챕터 1을 클리어하면 공격 정보와 기록이 열려요.')+'</div>';rpBtns();return}
+ if(rpLocked()){el.innerHTML='<div class="rpNote">🔒 '+(GM.rushCh===3?(typeof s4SeasonOpen==='function'&&s4SeasonOpen()?'스토리 챕터 4에서 쓰러뜨린 수호자만 공격 정보와 기록이 열려요.':'탑을 더 높이 오르면 열리는 비밀 챕터예요.'):'탑 10층 보스를 쓰러뜨리면 공격 정보와 기록이 열려요.')+'</div>';rpBtns();return}
  const deck=rpDeck(),rec=rpRec(rpKey()),mid=rpMusId(),C=(typeof CL_BOSS!=='undefined'&&CL_BOSS[mid])?CL_BOSS[mid]:null,NT=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
  const chips=deck.map(m=>{const n=m[0],kr=ATK_NAME[n]||SIGNAME[n]||n,tip=(typeof ATK_TIP!=='undefined'&&ATK_TIP[n])||'',ph=m[2]||0;return '<span class="rpChip'+(m[3]==='S'?' sig':'')+'" title="'+tip.replace(/"/g,'')+'">'+(m[3]==='S'?'★ ':'')+kr+(ph?'<i>'+(ph+1)+'P</i>':'')+'</span>'}).join('');
  const sel=deck.find(m=>m[3]==='S')||deck[0],tip=sel&&typeof ATK_TIP!=='undefined'?(ATK_TIP[sel[0]]||''):'';
@@ -121,7 +121,7 @@ function rqPreview(now){if(GM.scr!=='rush')return;const cv=$('gmPrevCv');if(!cv)
  c.restore();/* 스캔라인 · 비네트 */c.globalAlpha=.08;c.fillStyle='#000';for(let y=0;y<290;y+=3)c.fillRect(0,y,480,1);c.globalAlpha=1;const vg=c.createRadialGradient(240,160,110,240,150,300);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.7)');c.fillStyle=vg;c.fillRect(0,0,480,290);
  /* 이름판 */c.font='900 11px '+FONT_STACK;c.textAlign='left';const nt=(GM.rushCh===5?'ZENITH ':GM.rushCh===4?'ABYSS ':GM.rushCh===3?'ECLIPSE ':GM.rushCh===2?'ORIGIN ':'GUARDIAN ')+String(k+1+(GM.rushCh===1?10:0)).padStart(2,'0')+'  ·  '+o.en,nw=c.measureText(nt).width;c.fillStyle='#05080acc';c.fillRect(10,10,nw+18,22);c.fillStyle=o.c;c.fillRect(10,10,3,22);c.fillStyle='#fff';c.fillText(nt,18,25);
  c.textAlign='right';c.fillStyle='#ffd166';c.fillText('♩ '+Math.round(o.bpm),470,25);c.fillStyle=Math.floor(beat)%2?'#ffd166':'#5a4a20';c.fillRect(478-4,34,4,4);c.textAlign='left';
- if(locked){c.fillStyle='rgba(5,8,10,.88)';c.fillRect(0,0,480,290);c.fillStyle='#eaf6ef';c.font='900 40px '+FONT_STACK;c.textAlign='center';c.fillText('🔒',240,150);c.font='700 13px '+FONT_STACK;c.fillText('챕터 1을 클리어하면 열려요',240,180);c.textAlign='left'}}
+ if(locked){c.fillStyle='rgba(5,8,10,.88)';c.fillRect(0,0,480,290);c.fillStyle='#eaf6ef';c.font='900 40px '+FONT_STACK;c.textAlign='center';c.fillText('🔒',240,150);c.font='700 13px '+FONT_STACK;c.fillText('탑 10층 보스를 쓰러뜨리면 열려요',240,180);c.textAlign='left'}}
 gmPrevDraw=function(now){try{rqPreview(now)}catch(e){}};
 /* 살아 움직이는 타일 */
 function rqTiles(now){if(GM.scr!=='rush'||now-RQ.tileT<50)return;RQ.tileT=now;const tiles=document.querySelectorAll('#gmGrid .gmTile');const t=now/1000;

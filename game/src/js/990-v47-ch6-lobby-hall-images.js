@@ -35,8 +35,8 @@
   c.restore();c.globalAlpha=1}}
  /* 별 설명 문구 */
  {const base=hfPlaque;hfPlaque=function(){const r=base.apply(this,arguments);try{const pl=$('hfPlaque'),x=HF.data&&HF.data[HF.sel];if(!pl||!x||x.ch!==5)return r;const known=!!x.rk;
-  if(x.sealed){const en=pl.querySelector('.hfEn');if(en)en.textContent='챕터 5의 마지막 수문을 해방하면 봉인이 풀려요'}
-  const g=pl.querySelector('.hfGoal');if(g&&!known)g.textContent=x.sealed?'챕터 5의 마지막 수문을 해방하면 여섯 번째 챕터 「바람이 머무는 곳」이 열려요':'챕터 6 · '+(x.k+1)+'번째 바람길의 보스를 쓰러뜨리면 이 별이 켜져요'}catch(e){}return r}}
+  if(x.sealed){const en=pl.querySelector('.hfEn');if(en)en.textContent='탑을 더 높이 오르면 봉인이 풀려요'}
+  const g=pl.querySelector('.hfGoal');if(g&&!known)g.textContent=x.sealed?'탑을 더 높이 오르면 이 별자리의 봉인이 풀려요':'탑 보스 층이나 보스 러시에서 이 수호자를 쓰러뜨리면 별이 켜져요'}catch(e){}return r}}
 
  /* ---------- 3) 내 이미지로 바꾸기: 챕터 6 전투 배경 + 보스 10명 ---------- */
  {const base=modSlots;modSlots=function(){return base().concat([{id:'bg6',name:'전투 배경 · 챕터 6',hint:''}],L6.map((b,k)=>({id:'c6boss'+k,name:'ZENITH '+String(k+1).padStart(2,'0')+' '+b.name,c6:k,hint:'아래쪽 가운데가 발밑이 되게'})))}}

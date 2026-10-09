@@ -4,15 +4,15 @@ const KB_ACT=[
  {id:'down',g:'이동',n:'아래로',c:'ArrowDown',d:['ArrowDown','KeyS'],col:'#8ae8ff',ico:'▼'},
  {id:'left',g:'이동',n:'왼쪽',c:'ArrowLeft',d:['ArrowLeft','KeyA'],col:'#8ae8ff',ico:'◀'},
  {id:'right',g:'이동',n:'오른쪽',c:'ArrowRight',d:['ArrowRight','KeyD'],col:'#8ae8ff',ico:'▶'},
- {id:'atk',g:'전투',n:'공격 · 대화 넘기기',c:'KeyJ',d:['KeyJ','Space','KeyZ'],col:'#ff9a5a',ico:'⚔'},
+ {id:'atk',g:'전투',n:'공격',c:'KeyJ',d:['KeyJ','Space','KeyZ'],col:'#ff9a5a',ico:'⚔'},
  {id:'dash',g:'전투',n:'대시',c:'KeyK',d:['KeyK','ShiftLeft','KeyX'],col:'#a6f5c6',ico:'»'},
  {id:'parry',g:'전투',n:'패링 (막기)',c:'KeyF',d:['KeyF','KeyL'],col:'#ffd166',ico:'◈'},
  {id:'ult',g:'전투',n:'필살기',c:'KeyC',d:['KeyC'],col:'#ff7ad9',ico:'✦'},
  {id:'pause',g:'시스템',n:'일시정지',c:'KeyP',d:['KeyP','Escape'],col:'#c8c8d8',ico:'Ⅱ'},
- {id:'note',g:'챕터 3 탐정',n:'수첩 열기',c:'KeyN',d:['KeyN','Tab'],col:'#c8a0ff',ico:'✎'},
- {id:'hint',g:'챕터 3 탐정',n:'힌트',c:'KeyH',d:['KeyH'],col:'#c8a0ff',ico:'?'},
- {id:'deduce',g:'챕터 3 탐정',n:'추리하기',c:'KeyR',d:['KeyR'],col:'#c8a0ff',ico:'!'},
- {id:'present',g:'챕터 3 탐정',n:'증거 제시',c:'KeyE',d:['KeyE','KeyQ'],col:'#c8a0ff',ico:'⎘'}];
+ {id:'note',g:'챕터 3 탐정',hide:1,n:'수첩 열기',c:'KeyN',d:['KeyN','Tab'],col:'#c8a0ff',ico:'✎'},
+ {id:'hint',g:'챕터 3 탐정',hide:1,n:'힌트',c:'KeyH',d:['KeyH'],col:'#c8a0ff',ico:'?'},
+ {id:'deduce',g:'챕터 3 탐정',hide:1,n:'추리하기',c:'KeyR',d:['KeyR'],col:'#c8a0ff',ico:'!'},
+ {id:'present',g:'챕터 3 탐정',hide:1,n:'증거 제시',c:'KeyE',d:['KeyE','KeyQ'],col:'#c8a0ff',ico:'⎘'}];
 const KB={cap:null,map:null,block:null,ver:0,pre:[]};
 function kbPre(e){for(const f of KB.pre){try{if(f(e)){e.preventDefault();e.stopImmediatePropagation();return true}}catch(_){}}return false}
 function kbGet(){let s=null;try{s=saveData.keys}catch(e){}const o={};for(const a of KB_ACT)o[a.id]=(s&&Array.isArray(s[a.id]))?s[a.id].slice(0,3):a.d.slice();return o}

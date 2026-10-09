@@ -30,7 +30,10 @@
  const acc=()=>(window.ACCT55&&ACCT55.get())||{};
  const base=()=>(acc().url||'https://capsule-quest-leaderboard.onrender.com').replace(/\/+$/,'');
  let lastSent='',lastT=0;
- async function sync(force){const a=acc();if(!a.token)return;const o=L(),tw=saveData.tw71||{},body={level:o.lv,xp:o.tot,gold:saveData.coins||0,floor:tw.best||1},k=JSON.stringify(body);
+ /* v102: 랭킹 1~3위 자리에 보여 줄 내 장착 모습(번호 + 이름) */
+ function look(){try{const e=shopInv().eq,ch=CHARS[e.ch]||CHARS[0],wp=WEAPONS[e.wp]||WEAPONS[0],pt=PETS[e.pt]||PETS[0],sk=(window.SKIN58&&SKIN58.get())||'',pv=(window.PET59&&PET59.get&&PET59.get())||'';
+  return {ch:e.ch|0,wp:e.wp|0,pt:e.pt|0,sk,pv,cn:ch.name,wn:wp.name,pn:pt.name,cg:(wsTier(ch)||{}).n||'',wg:(wsTier(wp)||{}).n||'',pg:(wsTier(pt)||{}).n||''}}catch(e){return {}}}
+ async function sync(force){const a=acc();if(!a.token)return;const o=L(),tw=saveData.tw71||{},body={level:o.lv,xp:o.tot,gold:saveData.coins||0,floor:tw.best||1,look:look()},k=JSON.stringify(body);
   if(!force&&(k===lastSent||Date.now()-lastT<30000))return;lastT=Date.now();
   try{const r=await fetch(base()+'/api/stats',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+a.token},body:k});if(r.ok)lastSent=k}catch(e){}}
  setInterval(()=>{sync(false)},10000);setTimeout(()=>sync(true),6000);

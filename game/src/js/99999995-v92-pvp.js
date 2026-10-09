@@ -34,10 +34,18 @@
  const TIERC={bronze:'#d08a5a',silver:'#c8d4e0',gold:'#ffd166',plat:'#7df9ff',dia:'#8db8ff',master:'#ff6ad5'};
  function rankCard(){const r=Q.rank;if(!r)return '<div class="pvRank"><small>등급 불러오는 중…</small></div>';const t=r.tier||{},c=TIERC[t.key]||'#fff',days=Math.max(0,Math.ceil((r.ends*1000-Date.now())/86400000));
   const lo=Math.max(t.min||0,t.key==='bronze'?900:0),hi=r.next?r.rating+r.next.need:lo+1,q=r.next?Math.max(0,Math.min(1,(r.rating-lo)/(hi-lo))):1;
-  return '<div class="pvRank" style="--tc:'+c+'"><div class="pvTb"><i>'+({bronze:'🥉',silver:'🥈',gold:'🥇',plat:'💠',dia:'💎',master:'👑'}[t.key]||'⚔')+'</i><b>'+esc(t.name||'')+'</b><em>'+num(r.rating)+'점</em><small>#'+num(r.pos)+'</small></div>'+
-   '<div class="pvBar"><i style="width:'+Math.round(q*100)+'%"></i></div><div class="pvRs"><span>'+(r.next?esc(r.next.name)+'까지 '+num(r.next.need)+'점':'최고 등급!')+'</span><span>시즌 '+esc(r.season)+' · '+days+'일 남음</span></div>'+ladder(t.key)+'</div>'}
+  return '<div class="pvRank" style="--tc:'+c+'"><div class="pvTb" data-lad="1" title="눌러서 전체 등급 보기"><i>'+({bronze:'🥉',silver:'🥈',gold:'🥇',plat:'💠',dia:'💎',master:'👑'}[t.key]||'⚔')+'</i><b>'+esc(t.name||'')+'</b><em>'+num(r.rating)+'점</em><small>#'+num(r.pos)+'</small></div>'+
+   '<div class="pvBar"><i style="width:'+Math.round(q*100)+'%"></i></div><div class="pvRs"><span>'+(r.next?esc(r.next.name)+'까지 '+num(r.next.need)+'점':'최고 등급!')+'</span><span>시즌 '+esc(r.season)+' · '+days+'일 남음</span></div>'+'<button class="pvLadB" data-lad="1">'+(({bronze:'🥉',silver:'🥈',gold:'🥇',plat:'💠',dia:'💎',master:'👑'})[t.key]||'⚔')+' 전체 등급 보기 <i>6단계</i> ›</button></div>'}
  /* v100: 등급 사다리 — 전체 몇 단계인지 · 내 위치 · 각 등급 점수 · 시즌 보상 */
  const LAD=[['bronze','브론즈',0,'🥉',[20,500]],['silver','실버',1100,'🥈',[50,1000]],['gold','골드',1250,'🥇',[100,2000]],['plat','플래티넘',1400,'💠',[180,3500]],['dia','다이아',1550,'💎',[300,6000]],['master','마스터',1700,'👑',[500,10000]]];
+ /* v102: 등급 카드를 누르면 뜨는 세로 등급 창 — 마스터가 맨 위, 내 등급에 빛 · 다음 등급까지 막대 */
+ function ladPop(){let el=document.getElementById('pvLad102');if(!el){el=document.createElement('div');el.id='pvLad102';document.body.appendChild(el);el.addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===el)el.hidden=true})}
+  const r=Q.rank||{},key=(r.tier||{}).key||'bronze',mi=Math.max(0,LAD.findIndex(x=>x[0]===key)),rt=r.rating||1000;
+  const rows=LAD.map((x,i)=>{const nx=LAD[i+1],lo=x[2],hi=nx?nx[2]:null,me=i===mi,done=i<mi,q=me&&hi?Math.max(0,Math.min(1,(rt-Math.max(lo,900))/(hi-Math.max(lo,900)))):me?1:0;
+   return '<div class="lr'+(me?' me':'')+(done?' done':'')+(i>mi?' up':'')+'" style="--lc:'+(TIERC[x[0]]||'#fff')+';--d:'+((LAD.length-i)*.06)+'s"><div class="em"><i>'+x[3]+'</i></div><div class="tx"><b>'+x[1]+'</b><small>'+(hi?num(lo||0)+' ~ '+num(hi-1)+'점':num(lo)+'점 이상')+'</small>'+
+    (me?'<div class="pb"><i style="width:'+Math.round(q*100)+'%"></i></div><em>'+(hi?'다음 등급까지 '+num(Math.max(0,hi-rt))+'점':'최고 등급!')+'</em>':'')+'</div><div class="rw"><span>시즌 보상</span><b>💎 '+x[4][0]+'</b><b>🪙 '+num(x[4][1])+'</b></div>'+(me?'<u>나 · '+num(rt)+'점</u>':done?'<u class="ok">✓</u>':'')+'</div>'}).reverse().join('');
+  el.innerHTML='<div class="lp"><div class="lh"><b>⚔ 결투 등급</b><small>전체 '+LAD.length+'단계 · 시즌 '+esc(r.season||'')+'</small><button>닫기</button></div><div class="ll">'+rows+'</div><div class="lf">빠른 대전에서 이기면 점수가 오르고 지면 내려가요. 시즌(한 달)이 끝나면 그 시즌 최고 등급만큼 보상(5판 이상)!</div></div>';
+  el.querySelector('.lh button').onclick=()=>{el.hidden=true};el.hidden=false}
  function ladder(key){const mi=Math.max(0,LAD.findIndex(x=>x[0]===key));
   return '<div class="pvLad"><div class="pvLadH">결투 등급 <b>'+LAD.length+'단계</b> · 지금 <b>'+(mi+1)+'단계</b> · 최고 <b>👑 마스터</b></div><div class="pvLadR">'+LAD.map((x,i)=>'<div class="st'+(i<mi?' done':'')+(i===mi?' me':'')+'" style="--lc:'+(TIERC[x[0]]||'#fff')+'" title="시즌 보상 💎 '+x[4][0]+' · 🪙 '+num(x[4][1])+'">'+(i===mi?'<u>나</u>':'')+'<i>'+x[3]+'</i><b>'+x[1]+'</b><small>'+(x[2]?num(x[2])+'+':'시작')+'</small><em>💎'+x[4][0]+'</em></div>').join('')+'</div><div class="pvLadF">시즌이 끝나면 그 시즌 최고 등급만큼 💎 · 🪙 보상(5판 이상)</div></div>'}
  function html(v){
@@ -45,7 +53,7 @@
    return '<div class="dP wide dPv">'+hd('⚔','결투 · PvP','1:1 실력 승부 · 내 장비 그대로 · 3판 2선승','<button class="dBack">◀ 뒤로</button>')+'<div class="dCols">'+
     '<div class="dCol pvQ"><h4>빠른 대전</h4><canvas class="dScn pvArt" data-scn="vs" width="240" height="100"></canvas>'+
      '<ul class="pvRule"><li>기다리는 사람과 바로 짝지어져요</li><li><b>이기면</b> 상대 골드를 가져와요 · <b>지면</b> 내 골드를 잃어요</li><li>판돈 = 두 사람 중 <b>골드가 적은 쪽의 10%</b> (20 ~ 5,000)</li><li>도중에 나가면 기권패</li></ul>'+
-     rankCard()+'<div class="pvRec"><span>전적</span><b class="w">'+(s.wins||0)+'승</b><b class="l">'+(s.losses||0)+'패</b><em>번 골드 🪙 '+num(s.gold_won||0)+'</em></div>'+
+     rankCard()+'<button class="pvTop" id="pvTop">🏆 결투 랭킹 TOP 100 <small>1~3위는 장비까지 · 게임 중이면 관전</small></button><div class="pvRec"><span>전적</span><b class="w">'+(s.wins||0)+'승</b><b class="l">'+(s.losses||0)+'패</b><em>번 골드 🪙 '+num(s.gold_won||0)+'</em></div>'+
      '<button class="dMain pvGo" id="pvQ">⚔ 빠른 대전 찾기</button></div>'+
     '<div class="dCol"><h4>친구 대전</h4><div class="pvFr">친구와 방 코드로 겨뤄요 · <b>골드는 오가지 않아요</b></div><button class="dMain pvMk" id="pvMk">🏟 결투 방 만들기</button>'+
      '<h5>코드로 들어가기</h5><div class="dCode"><div class="dSlots"><input id="pvC" maxlength="4" placeholder="····" autocapitalize="characters" spellcheck="false" autocomplete="off"></div><button id="pvJ">들어가기 ▶</button></div>'+
@@ -56,6 +64,8 @@
     '<button class="dMain pvCancel" id="pvX">취소</button><div class="dMsg">'+esc(Q.msg)+'</div></div>';
   return null}
  function wire(box){const q=s=>box.querySelector(s);
+  box.querySelectorAll('[data-lad]').forEach(b=>b.onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}ladPop()});
+  if(q('#pvTop'))q('#pvTop').onclick=()=>{try{gmSfx('ok')}catch(_){}try{RANK83.open('pvp',{only:true})}catch(e){}};
   if(q('#pvQ'))q('#pvQ').onclick=search;
   if(q('#pvMk'))q('#pvMk').onclick=createFriend;
   if(q('#pvJ'))q('#pvJ').onclick=()=>{const c=(q('#pvC').value||'').trim().toUpperCase();Q.msg='';DU.join(c)};
@@ -223,6 +233,25 @@
  .pvRes small{opacity:.75}.pvG{padding:8px 14px;border-radius:12px;font-weight:900;font-size:15px}.pvG.w{background:#2a2410;color:#ffe79a;border:1px solid #ffd16688}.pvG.l{background:#2a0e14;color:#ff8a9a;border:1px solid #ff5a7a66}.pvG.v{background:#101a20;color:#cfe0e6;font-weight:700;font-size:13px}
  .pvRec2{font-size:12px;opacity:.75}
  .pvRkC{font-weight:900;font-size:14px;padding:6px 12px;border-radius:10px;background:#0b1319}.pvRkC.w{color:#7dffa8}.pvRkC.l{color:#ff8a9a}.pvRkC b{color:#fff}
+ #duo85 .pvTb[data-lad]{cursor:pointer}#duo85 .pvLadB{margin-top:8px;width:100%;font:inherit;font-weight:800;font-size:12px;padding:7px 10px;border-radius:10px;cursor:pointer;color:var(--tc);background:color-mix(in srgb,var(--tc) 12%,#0b1319);border:1px solid color-mix(in srgb,var(--tc) 45%,transparent);text-align:left}
+ #duo85 .pvLadB i{font-style:normal;font-size:10.5px;color:#9ab8ac;margin-left:4px}
+ #duo85 .pvTop{width:100%;font:inherit;font-weight:900;font-size:13px;padding:9px 12px;border-radius:12px;cursor:pointer;color:#1a1206;background:linear-gradient(180deg,#ffe79a,#ffb020);border:0;box-shadow:0 0 12px #ffb02044;display:flex;align-items:center;gap:8px}#duo85 .pvTop small{font-weight:700;font-size:10.5px;opacity:.75}
+ #pvLad102{position:fixed;inset:0;z-index:9300;display:grid;place-items:center;background:#000b;backdrop-filter:blur(3px)}#pvLad102[hidden]{display:none}
+ #pvLad102 .lp{width:min(520px,94vw);max-height:92vh;display:flex;flex-direction:column;border-radius:18px;background:radial-gradient(120% 80% at 50% 0%,#2a1e3a,#0a0c14 70%);border:1px solid #ffffff22;box-shadow:0 20px 60px #000c;color:#e8f4ef;overflow:hidden;animation:lpIn .25s ease-out}
+ #pvLad102 .lh{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #ffffff14}#pvLad102 .lh b{font-size:19px;color:#ffe79a;letter-spacing:.06em}#pvLad102 .lh small{color:#9ab8ac}#pvLad102 .lh button{margin-left:auto;font:inherit;font-weight:800;padding:6px 12px;border-radius:10px;border:1px solid #ffffff2a;background:#1a2430;color:#e8f4ef;cursor:pointer}
+ #pvLad102 .ll{overflow:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+ #pvLad102 .lr{position:relative;display:grid;grid-template-columns:58px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:linear-gradient(90deg,color-mix(in srgb,var(--lc) 14%,#0c1018),#0c1018);border:1px solid color-mix(in srgb,var(--lc) 35%,transparent);animation:lrIn .4s both;animation-delay:var(--d)}
+ #pvLad102 .lr.up{filter:saturate(.55) brightness(.8)}#pvLad102 .lr.done{opacity:.85}
+ #pvLad102 .lr.me{background:linear-gradient(90deg,color-mix(in srgb,var(--lc) 32%,#0c1018),#0c1018);border:2px solid var(--lc);box-shadow:0 0 22px color-mix(in srgb,var(--lc) 45%,transparent);transform:scale(1.03)}
+ #pvLad102 .em{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--lc) 70%,#fff),color-mix(in srgb,var(--lc) 40%,#05070a));box-shadow:0 0 0 2px #05070a,0 0 0 3.5px var(--lc),0 0 16px color-mix(in srgb,var(--lc) 60%,transparent)}
+ #pvLad102 .lr.me .em{animation:emP 1.6s ease-in-out infinite}#pvLad102 .em i{font-style:normal;font-size:26px;filter:drop-shadow(0 2px 2px #0008)}
+ #pvLad102 .tx b{display:block;font-size:17px;color:var(--lc);text-shadow:0 0 10px color-mix(in srgb,var(--lc) 50%,transparent)}#pvLad102 .tx small{font-size:11.5px;color:#9ab8ac}
+ #pvLad102 .pb{margin-top:5px;height:7px;border-radius:4px;background:#05070a;box-shadow:inset 0 0 0 1px #ffffff22;overflow:hidden}#pvLad102 .pb i{display:block;height:100%;background:linear-gradient(90deg,var(--lc),#fff)}
+ #pvLad102 .tx em{font-style:normal;font-size:11px;color:#e8f4ef}
+ #pvLad102 .rw{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:11px}#pvLad102 .rw span{color:#7a8a90;font-size:10px}#pvLad102 .rw b{color:#e8f4ef}
+ #pvLad102 .lr u{position:absolute;top:-9px;left:14px;text-decoration:none;font-size:10.5px;font-weight:900;color:#05070a;background:var(--lc);border-radius:7px;padding:1px 8px}#pvLad102 .lr u.ok{left:auto;right:12px;background:#7dffa8}
+ #pvLad102 .lf{padding:10px 16px;font-size:11.5px;color:#9ab8ac;border-top:1px solid #ffffff14}
+ @keyframes lpIn{from{transform:scale(.94);opacity:0}}@keyframes lrIn{from{transform:translateX(-14px);opacity:0}}@keyframes emP{50%{box-shadow:0 0 0 2px #05070a,0 0 0 3.5px var(--lc),0 0 28px var(--lc)}}
  #duo85 .pvLad{margin-top:8px;padding-top:7px;border-top:1px dashed #ffffff22}#duo85 .pvLadH{font-size:11px;color:#9ab8ac;margin-bottom:6px}#duo85 .pvLadH b{color:#fff}
  #duo85 .pvLadR{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;position:relative;margin-top:12px}
  #duo85 .pvLadR .st{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px 4px;border-radius:9px;background:#0b1319;border:1px solid #ffffff14;opacity:.55;filter:grayscale(.5)}

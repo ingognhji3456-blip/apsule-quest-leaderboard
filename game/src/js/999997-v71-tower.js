@@ -503,7 +503,9 @@
   .twMobs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.twMob{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;font-weight:800;text-align:center}
   .twMob img{width:100%;max-width:84px;aspect-ratio:40/40;image-rendering:pixelated;background:radial-gradient(#ffffff10,#05070a 70%);border-radius:12px;border:1px solid #ffffff14}
   .twMob.el img{border-color:#ffd16688;box-shadow:0 0 14px #ffd16633}.twMob.el{color:#ffd166}
-  .twBtns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}#twGo{font-size:22px!important;padding:16px 28px!important}
+  .twBtns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .twMobT{font:inherit;font-weight:800;font-size:13px;padding:9px 14px;border-radius:12px;cursor:pointer;color:#e8f4ef;background:linear-gradient(180deg,#1a2430,#0e141c);border:1px solid color-mix(in srgb,var(--tz,#5affd8) 40%,transparent);text-align:left}
+  .twMobT:hover{border-color:var(--tz,#5affd8)}.twMobBox[hidden]{display:none}.twMobBox{display:flex;flex-direction:column;gap:10px}#twGo{font-size:22px!important;padding:16px 28px!important}
   .twNote{font-size:12px;opacity:.65;line-height:1.6}
   /* v89 진짜 게임 느낌 */
   #gmTower{background:radial-gradient(90% 70% at 70% 20%,color-mix(in srgb,var(--tb,#ff2d55) 14%,transparent),transparent 70%),radial-gradient(70% 60% at 10% 90%,color-mix(in srgb,var(--tz,#5affd8) 10%,transparent),transparent 70%)}
@@ -556,6 +558,22 @@
  function torch(o,x,y,t,col){o.fillStyle='#2a2018';o.fillRect(x-1,y,2,5);o.fillStyle='#4a3a28';o.fillRect(x-2,y-1,4,2);
   const fl=Math.sin(t*13+x)*.5+Math.sin(t*7.3+y)*.5,h=4+fl*1.2;const g=o.createRadialGradient(x,y-3,0,x,y-3,13);g.addColorStop(0,col+'66');g.addColorStop(1,'rgba(0,0,0,0)');o.fillStyle=g;o.fillRect(x-13,y-16,26,26);
   o.fillStyle='#ff7a1a';o.fillRect(x-2,y-h,4,h);o.fillStyle='#ffd166';o.fillRect(x-1,y-h+1+(fl>0?1:0),2,h-1);o.fillStyle='#fff6d0';o.fillRect(x-.5,y-2,1,2)}
+ /* v102: 일반 층 꾸밈 — 돌기둥 · 처마 · 깃발 · 구역별 장식(덩굴 · 수정 · 톱니 · 등불) · 정예 층(5F · 9F) 금테 · 잠긴 층 쇠사슬과 어둠 속 눈 */
+ function deco102(o,x,y,w,f,k,ok,lk,isCur,p,t,z,done){const R=(xx,yy,ww,hh,c,a)=>{if(a!=null)o.globalAlpha=a;o.fillStyle=c;o.fillRect(Math.round(xx),Math.round(yy),Math.max(1,Math.round(ww)),Math.max(1,Math.round(hh)));o.globalAlpha=1};
+  const elite=k===4||k===8,step=(w-80)/4,wall=lk?'#161c24':p.wall;
+  /* 층 아래위 그늘(입체감) */const g=o.createLinearGradient(0,y,0,y+RH);g.addColorStop(0,'#ffffff10');g.addColorStop(.6,'rgba(0,0,0,0)');g.addColorStop(1,'#00000055');o.fillStyle=g;o.fillRect(x,y,w,RH);
+  /* 창 사이 돌기둥 + 기둥머리 */for(let i=0;i<4;i++){const px=x+56+i*step+step/2;R(px-2.5,y+3,5,RH-6,'#05070a',.55);R(px-2,y+3,4,RH-6,wall);R(px-2,y+3,1,RH-6,'#ffffff',.12);R(px-3.5,y+2,7,2,lk?'#232a34':p.a,lk?1:.55);R(px-3,y+RH-5,6,2,'#05070a',.5)}
+  /* 처마 돌띠 */R(x-10,y+RH-4,w+20,1,'#ffffff',lk?.04:.16);for(let i=0;i<Math.floor((w+20)/10);i++)R(x-10+i*10,y+RH-2,6,2,'#05070a',.35);
+  if(lk){/* 잠긴 층: 쇠사슬 X + 어둠 속 빛나는 눈 */for(let i=0;i<5;i++){const wx=x+56+i*step;if((f*7+i)%3===0){const bl=Math.floor(t*1.3+i+f)%9===0;if(!bl){R(wx-2,y+11,1,1,'#ff4d6d',.75);R(wx+1,y+11,1,1,'#ff4d6d',.75)}}}
+   for(let j=0;j<16;j++){const q=j/15;R(x+20+q*(w-40),y+4+q*(RH-8),2,1,'#3a4250',.7);R(x+w-20-q*(w-40),y+4+q*(RH-8),2,1,'#3a4250',.7)}return}
+  /* 구역 장식(구역 번호마다 다르게) */const kind=z%4;
+  if(kind===0){for(const vx of [x+30,x+w-34]){for(let j=0;j<RH-4;j++){const sw=Math.sin(j*.6+t*1.2+vx)*1.4;R(vx+sw,y+2+j,1.4,1,'#3a8a4a',.85);if(j%5===2)R(vx+sw+(j%2?1.5:-2),y+2+j,2,1.6,'#5ad07a',.9)}}}
+  else if(kind===1){for(const vx of [x+30,x+w-34]){const tw=.6+.4*Math.sin(t*3+vx);o.globalAlpha=.9;o.fillStyle=p.a;o.beginPath();o.moveTo(vx,y+RH-4);o.lineTo(vx+2,y+RH-13);o.lineTo(vx+4,y+RH-4);o.fill();o.globalAlpha=tw*.6;o.fillStyle='#ffffff';o.fillRect(vx+1.5,y+RH-11,1,4);o.globalAlpha=1}}
+  else if(kind===2){for(const vx of [x+30,x+w-30]){o.save();o.translate(vx,y+RH/2);o.rotate(t*(vx<x+w/2?1:-1)+f);o.fillStyle=lk?'#2a3240':'#c8a040';for(let i=0;i<6;i++){o.rotate(Math.PI/3);o.fillRect(-1,-5,2,2)}o.beginPath();o.arc(0,0,3.4,0,TAU);o.fill();o.fillStyle='#05070a';o.beginPath();o.arc(0,0,1.2,0,TAU);o.fill();o.restore()}}
+  else{for(const vx of [x+30,x+w-30]){const sw=Math.sin(t*2+vx)*1;R(vx,y+2,1,4,'#5a4a30');R(vx-2+sw,y+6,5,7,'#3a2a1a');R(vx-1.5+sw,y+7,4,5,'#ffb040',.7+.3*Math.sin(t*6+f));const gl=o.createRadialGradient(vx+sw,y+10,0,vx+sw,y+10,9);gl.addColorStop(0,'#ffb04044');gl.addColorStop(1,'rgba(0,0,0,0)');o.fillStyle=gl;o.fillRect(vx-9,y+1,18,18)}}
+  /* 매달린 깃발 (구역 색) */for(const bx of [x+44,x+w-50]){const sw=Math.sin(t*2+bx+f)*.8;R(bx,y+2,6,1,'#3a2a20');o.fillStyle=f%2?p.c:p.a;o.globalAlpha=.85;o.beginPath();o.moveTo(bx,y+3);o.lineTo(bx+6,y+3);o.lineTo(bx+6+sw,y+12);o.lineTo(bx+3+sw,y+10);o.lineTo(bx+sw,y+12);o.closePath();o.fill();o.globalAlpha=1;R(bx+2+sw*.5,y+5,2,2,'#ffffff',.5)}
+  /* 정예 층: 금테 + 별 */if(elite){const a=.55+.35*Math.sin(t*3+f);o.strokeStyle='rgba(255,209,102,'+a+')';o.lineWidth=1;o.strokeRect(x-9.5,y+.5,w+19,RH-3);R(x+w/2-14,y+1,28,7,'#05070a',.8);o.fillStyle='#ffd166';o.font='900 6px sans-serif';o.textAlign='center';o.fillText('★ 정예',x+w/2,y+6.5);o.textAlign='left'}
+  /* 깬 층: 금빛 먼지 */if(done){for(let i=0;i<2;i++){const q=(t*.4+i/2+f*.13)%1;R(x+20+((f*37+i*71)%(w-40)),y+RH-4-q*16,1,1,'#ffd166',(1-q)*.7)}}}
  function drawZone(z,tt){const c=TV.zc[z];if(!c)return;c._drawn=true;const t=(tt||performance.now())/1000;const o=c.getContext('2d');o.setTransform(2,0,0,2,0,0);o.imageSmoothingEnabled=false;const s=sv(),best=s.best||1,cur=s.floor||1,p=palOf(z),B=bossOf(z),zf=z*10,seen=zf+1<=best,near=zf+1<=best+10;
   o.clearRect(0,0,ZW,ZH);
   /* 하늘 · 별 · 구름 */
@@ -584,6 +602,7 @@
     o.fillStyle=wc;o.globalAlpha=lit?(isCur?.75+.25*Math.sin(t*4):.9):1;o.fillRect(wx-3,wy+2,6,9);o.fillRect(wx-2,wy+1,4,1);o.globalAlpha=1;
     o.fillStyle=lk?'#2a3240':'#05070a99';o.fillRect(wx-.5,wy+1,1,11);o.fillRect(wx-3,wy+6,6,1);
     if(lk){o.fillStyle='#3a4250';for(const bx of [-2,1])o.fillRect(wx+bx,wy+2,1,9)}}
+   if(!boss)try{deco102(o,x,y,w,f,k,ok,lk,isCur,p,t,z,f<best)}catch(e){}
    /* 횃불 */if(ok){torch(o,x+5,y+15,t+f,'#ff9a3a');torch(o,x+w-5,y+15,t+f*1.3,'#ff9a3a')}
    /* 보스 층: 성벽 · 깃발 · 보스 얼굴 */
    if(boss){const rc=lk&&!near?'#3a1a20':'#ff2d55';
@@ -622,10 +641,13 @@
   const prog='<div class="twCard twProg"><h4>'+p.n+' 구역 진행 · '+Math.max(0,Math.min(10,(s.best||1)-z*10-1))+' / 10</h4><div class="twSeg" style="--c:'+p.c+'">'+segs+'</div>'+rw+'</div>';
   /* v98: 탑 화면에서 바로 난이도 고르기(보상 · 잡몹 체력/피해가 바로 바뀜) */
   const dsel='<div class="twDiff"><span>난이도</span>'+GM_DIFF.map(([k,n,c])=>'<button data-df="'+k+'" class="'+(k===diff?'on':'')+'" style="--dc:'+c+'">'+n+'</button>').join('')+'</div>';
-  $('twBody').innerHTML=dsel+prog+'<div class="twCard"><h4>이 구역의 잡몹 · 정예는 5F · 9F</h4><div class="twMobs">'+mobs+'</div></div>'+vets+
-   '<div class="twBtns"><button class="gmBtn go" id="twGo">▲ '+f+'F '+(f===cur?'이어서 오르기':'부터 오르기')+'</button>'+(f!==cur&&reachable(cur)?'<button class="gmBtn" id="twCont">◎ '+cur+'F 이어하기</button>':'')+'<button class="gmBtn" id="twNew">↺ 1F부터 처음부터</button></div>'+
-   '<div class="twRow"><span class="twChip">최고 '+(s.best||1)+'F</span><span class="twChip">보스 '+(s.bosses||0)+' / 70</span><span class="twChip">처치 '+(s.kills||0)+'</span></div>'+
+  /* v102: 시작 단추를 맨 위로(스크롤 없이), 몬스터 정보는 눌러야 펼쳐짐 */
+  const btns='<div class="twBtns"><button class="gmBtn go" id="twGo">▲ '+f+'F '+(f===cur?'이어서 오르기':'부터 오르기')+'</button>'+(f!==cur&&reachable(cur)?'<button class="gmBtn" id="twCont">◎ '+cur+'F 이어하기</button>':'')+'<button class="gmBtn" id="twNew">↺ 1F부터 처음부터</button></div>';
+  const chips='<div class="twRow"><span class="twChip">최고 '+(s.best||1)+'F</span><span class="twChip">보스 '+(s.bosses||0)+' / 70</span><span class="twChip">처치 '+(s.kills||0)+'</span></div>';
+  const mob='<button class="twMobT" id="twMobT">👾 이 구역 몬스터 정보 '+(TV.mobOpen?'접기 ▴':'보기 ▾')+'</button><div class="twMobBox"'+(TV.mobOpen?'':' hidden')+'><div class="twCard"><h4>이 구역의 잡몹 · 정예는 5F · 9F</h4><div class="twMobs">'+mobs+'</div></div>'+vets+'</div>';
+  $('twBody').innerHTML=btns+dsel+prog+chips+mob+
    '<div class="twNote">왼쪽 탑을 스크롤해서 700층까지 볼 수 있어요. 올라가 본 층(최고 '+(s.best||1)+'F까지)은 눌러서 골라 다시 할 수 있어요.<br>쓰러지면 그 구역의 첫 층부터 다시 · 보스를 쓰러뜨리면 보스 러시에서도 열려요.</div>';
+  $('twMobT').onclick=()=>{TV.mobOpen=!TV.mobOpen;try{gmSfx('move')}catch(e){}info()};
   const go=g=>{gmSfx('ok');const S=sv();S.floor=g;S.cp=Math.floor((g-1)/10)*10+1;try{saveNow()}catch(e){}stopPortrait();TW.start(g)};
   $('twBody').querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const v=b.dataset.df;if(v===diff)return;try{gmSfx('ok')}catch(e){}try{$('diffSel').value=v;updDiff()}catch(e){}try{gmHud()}catch(e){}info()});
   $('twGo').onclick=()=>go(f);if($('twCont'))$('twCont').onclick=()=>go(cur);
