@@ -268,7 +268,7 @@
   if(m.y<AY+18+r){m.y=AY+18+r;if(m.by)m.by=Math.abs(m.by)}if(m.y>AY+AH-r){m.y=AY+AH-r;if(m.by)m.by=-Math.abs(m.by)}
   /* 몸 박치기 */const touch=!T._proxy&&Math.hypot(m.x-P.x,m.y-(P.y-6))<r+6;if(touch&&!stun&&!['archer','mage','drone','wisp','wraith'].includes(m.sp))hurt(m.sp==='boar'&&m.st==='run'?12:m.sp==='golem'?10:m.sp==='gear'?9:6)}
 
- function update(now,dt){T.clk+=dt;if(T.warm&&T.warm.length){const t0=performance.now();while(T.warm.length&&performance.now()-t0<(T.trans?14:5)){const j=T.warm.shift();mobFrame(j[0],mpal(j[0]),j[1],j[2],j[3],j[4])}}if(T.stop&&now<T.stop)return;
+ function update(now,dt){T.clk+=dt;try{sched(now)}catch(e){}/* v95: 탑 브금 — 골라 둔 곡을 박자에 맞춰 실제로 연주(전에는 빠져 있어서 소리가 안 났음) */if(T.warm&&T.warm.length){const t0=performance.now();while(T.warm.length&&performance.now()-t0<(T.trans?14:5)){const j=T.warm.shift();mobFrame(j[0],mpal(j[0]),j[1],j[2],j[3],j[4])}}if(T.stop&&now<T.stop)return;
   if(T.U){ultTick();T.shake=Math.max(0,(T.shake||0)-dt*2.2);if(!T.dead){stepPlayer(dt,now,(dx,dy)=>{P.x=clampN(P.x+dx,AX+8,AX+AW-8);P.y=clampN(P.y+dy,AY+22,AY+AH-3)},40)}T.mobs=T.mobs.filter(m=>m.hp>0||T.clk-(m.dieT||0)<.35);return}
   if(T.bossCard){T.bossCard.t+=dt;if(T.bossCard.t>2.9)launchBoss();return}
   if(T.trans){T.trans.t+=dt;if(T.trans.t>1.3)T.trans=null}
@@ -308,7 +308,7 @@
   if(cv&&cv.width){ctx.drawImage(cv,0,0,cv.width,cv.height,0,0,W,H);A(.18);ctx.fillStyle='#000';ctx.fillRect(AX,AY,AW,AH);A(1)}
   else{for(let y=AY;y<AY+AH;y+=16)for(let x=AX;x<AX+AW;x+=16){ctx.fillStyle=((x-AX)/16+(y-AY)/16)%2?p.fl:p.fl2;ctx.fillRect(x,y,16,16)}}
   /* 박자에 맞춰 테두리가 빛남 (보스전과 같은 느낌) */try{const ms=mus.ms||600,fr=(((performance.now()-mus.T0)/ms)%1+1)%1,on=fr>.88||fr<.06;ctx.fillStyle=p.c;A(on?.45:.1);ctx.fillRect(AX,AY,AW,2);ctx.fillRect(AX,AY+AH-2,AW,2);ctx.fillRect(AX,AY,2,AH);ctx.fillRect(AX+AW-2,AY,2,AH);A(Math.pow(1-fr,2)*.05);ctx.fillRect(AX,AY,AW,AH);A(1)}catch(e){}
-  /* 층 번호 */if(!(window.PVP92&&PVP92.on())){ctx.save();A(.08);ctx.fillStyle='#ffffff';ctx.font='900 72px '+(typeof FONT_STACK!=='undefined'?FONT_STACK:'sans-serif');ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(T.f+'F',AX+AW/2,AY+AH/2+10);ctx.restore();A(1)}
+  /* 층 번호 */if(!(window.PVP92&&PVP92.on())&&!(window.WATCH95&&WATCH95.specOn()&&(WATCH95.SP.lastW||{}).mode==='pvp')){ctx.save();A(.08);ctx.fillStyle='#ffffff';ctx.font='900 72px '+(typeof FONT_STACK!=='undefined'?FONT_STACK:'sans-serif');ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(T.f+'F',AX+AW/2,AY+AH/2+10);ctx.restore();A(1)}
   /* 계단문 */const dx=AX+AW/2,k=T.doorK||0;ctx.fillStyle='#05070a';ctx.fillRect(dx-20,AY,40,22);ctx.fillStyle=p.b;ctx.fillRect(dx-22,AY,44,3);ctx.fillRect(dx-22,AY,3,24);ctx.fillRect(dx+19,AY,3,24);ctx.fillStyle=p.c;A(.6);ctx.fillRect(dx-22,AY+3,44,1);A(1);
   if(k>0){for(let i=0;i<5;i++){ctx.fillStyle=i%2?p.c:p.cl||p.c;A(k*(.5+i*.1));ctx.fillRect(dx-16+i*2,AY+19-i*4,32-i*4,3)}
    const g=ctx.createRadialGradient(dx,AY+12,0,dx,AY+12,34);g.addColorStop(0,p.c);g.addColorStop(1,'rgba(0,0,0,0)');ctx.globalCompositeOperation='lighter';A(k*(.35+.2*Math.sin(T.clk*6)));ctx.fillStyle=g;ctx.fillRect(dx-34,AY-22,68,68);ctx.globalCompositeOperation='source-over';
@@ -379,7 +379,7 @@
     else if(z.k==='c'&&z.splash){ctx.strokeStyle=SPC.slime[0];ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(z.x,z.y,z.r*(.6+q*.6),z.r*.45*(.6+q*.6),0,0,6.28);ctx.stroke();ctx.lineWidth=1}
     else if(z.k==='c'){ctx.fillStyle=z.boom?'#ffb35a':'#ffffff';ctx.beginPath();ctx.ellipse(z.x,z.y,z.r*(.8+q*.3),z.r*.6*(.8+q*.3),0,0,6.28);ctx.fill()}
     else{ctx.save();ctx.translate(z.x,z.y);ctx.rotate(z.a);ctx.fillStyle=T.pal.c;ctx.fillRect(0,-z.w/2,z.len,z.w);ctx.fillStyle='#ffffff';ctx.fillRect(0,-z.w/5,z.len,z.w/2.5);ctx.restore()}}}A(1)}
- function drawHero(now){if(T.dead&&Math.floor(now/90)%2)return;try{if(window.DASH70)DASH70.tick(now)}catch(e){}
+ function drawHero(now){if(window.WATCH95&&WATCH95.specOn())return;/* v95 관전 중엔 내 캐릭터 숨김 */if(T.dead&&Math.floor(now/90)%2)return;try{if(window.DASH70)DASH70.tick(now)}catch(e){}
   const blink=now<P.inv&&Math.floor(now/70)%2===0;if(blink)return;
   A(.4);ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(P.x,P.y+2,9,3,0,0,6.28);ctx.fill();A(1);
   const [lx,ly]=lungeOffset(now),fl=P.face.x<0;const om=mode;mode='village';/* 앞·옆·뒤 모습 · 스킨 연출이 그대로 나오도록 마을처럼 그림 */
@@ -389,7 +389,7 @@
    ctx.beginPath();ctx.arc(0,0,26,-1.1+q*.4,1.1+q*.4);ctx.stroke();ctx.strokeStyle='#ffffff';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,22,-.8+q*.4,.8+q*.4);ctx.stroke();ctx.restore()}
   T.slash=T.slash.filter(s=>T.clk-s.t<.18);A(1)}
  /* v73: 체력 · 대시 · 궁극기는 보스전과 같은 HUD(250 drawPlayerHUD · 320 drawUltGauge)를 그대로 쓴다 */
- function drawHud(now){const p=T.pal,pv=window.PVP92&&PVP92.on();/* v92 결투: 층 카드 숨김 */
+ function drawHud(now){if(window.WATCH95&&WATCH95.specOn())return;const p=T.pal,pv=window.PVP92&&PVP92.on();/* v92 결투: 층 카드 숨김 */
   if(!pv){ctx.fillStyle='#05070acc';ctx.fillRect(AX,4,190,24);ctx.fillStyle=p.c;ctx.fillRect(AX,4,3,24);ctx.font='900 13px sans-serif';ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.fillText(T.f+'F',AX+8,16);
   ctx.font='700 8px sans-serif';ctx.fillStyle=p.a;ctx.fillText(p.n+' 구역 · '+((T.f-1)%10+1)+'/10층',AX+42,12);ctx.fillStyle='#c8d4e0';ctx.fillText(T.clear?'계단이 열렸어요 ▲':'남은 적 '+(T.mobs.filter(m=>m.hp>0).length+((T.queue||[]).length))+' / '+(T.total||0),AX+42,22);ctx.textBaseline='alphabetic'}
   const og=(typeof G!=='undefined')?G:null;try{G=Object.assign(Object.create(og||{}),{ult:T.ult,state:'play',sp:null,spUsed:false});drawPlayerHUD(now);drawUltGauge(now)}catch(e){}finally{G=og}
@@ -653,5 +653,5 @@
  /* v81: 다른 파일(CB81)이 잡몹을 때리고 이펙트를 쓰도록 */
  TW.hitMob=(m,d,col,tx)=>{if(!m||m.hp<=0||m.born>0)return;d=Math.max(1,Math.round(d));m.hp-=d;if(T.duo&&T.duo.role==='guest')try{DUO85.hitSent(m,d,0)}catch(e){}m.hitT=T.clk;addPop(m.x+rnd(-5,5),m.y-14-rnd(0,6),(tx||'')+d,col||'#ffffff');if(m.hp<=0)kill(m)};
  TW.addPop=addPop;TW.burst=burst;TW.kill=kill;TW.nextFloor=nextFloor;TW.goBoss=goBoss;TW.buildFloor=buildFloor;TW.hurt=(d)=>hurt(d);TW.pool=pool;TW.nearest=nearest;TW.SP=SP;
- TW.T=T;TW.ult=()=>{T.ult=100;ult()};TW.beatGood=beatGood;TW.sv=sv;TW.bossOf=bossOf;TW.zoneOf=zoneOf;TW.speciesOf=speciesOf;
+ TW.T=T;TW.ult=()=>{T.ult=100;ult()};TW.beatGood=beatGood;TW.music=music;TW.sv=sv;TW.bossOf=bossOf;TW.zoneOf=zoneOf;TW.speciesOf=speciesOf;
 }catch(e){console.error('v71 tower',e)}})();

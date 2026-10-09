@@ -94,27 +94,34 @@
  function pop(x,y,tx,col){try{TW71.addPop(x,y,tx,col)}catch(e){}}
  function takeHit(dm,a,e,kind){const now=performance.now(),t=T();
   try{if(window.CB81&&CB81.onHurt){dm=CB81.onHurt(dm)}}catch(_){}dm=Math.max(0,Math.round(dm));if(dm<=0){DU.send({t:'mi',e:e.e});return}
-  P.hp=Math.max(0,P.hp-dm);P.inv=now+(kind==='U'?120:240);
+  P.hp=Math.max(0,P.hp-dm);{const hi=now+(kind==='U'?120:240);P._hitInv=hi;P.inv=Math.max(P.inv||0,hi)}
   if(a!=null){P.x=Math.max(AX+10,Math.min(AX+AW-10,P.x+Math.cos(a)*12));P.y=Math.max(AY+24,Math.min(AY+AH-8,P.y+Math.sin(a)*8))}
   if(t){t.flash=.35;t.shake=Math.max(t.shake||0,.3);t.ult=Math.min(100,(t.ult||0)+4);t.combo=0}
   pop(P.x,P.y-28,'-'+dm+(e.cr?' 치명!':''),'#ff5a6a');try{sfx(150,.14,'square',.06,60)}catch(_){}
   DU.send({t:'hit',e:e.e,d:dm,c:e.cr?1:0,k:kind});if(P.hp<=0)ko()}
+ /* v95 지연 보정: 내 위치 · 무적 · 패링을 1.5초 동안 적어 두고, 「공격한 사람이 화면에서 보던 그 순간의 나」로 판정한다.
+    (공격자 화면의 나는 지연(dl)만큼 늦게 그려지므로, 지금 위치로만 보면 움직이는 중에 맞은 게 빗나가 보였음) */
+ const HIS=[];
+ const invNow=now=>now<P.inv&&P.inv>(P._hitInv||0)+1;/* 무적 끝이 「맞은 직후 방지」보다 길면(대시 · 패링) 회피로 침 *//* 맞은 직후의 연속 피격 방지 무적은 「회피」로 치지 않음 */
+ function hisRec(now){const t=T();HIS.push({t:now,x:P.x,y:P.y,inv:invNow(now),par:!!(t&&P.parryT!=null&&t.clk-P.parryT>=0&&t.clk-P.parryT<.26)});while(HIS.length&&now-HIS[0].t>2500)HIS.shift()}
+ function seenWin(e,off){const lag=Math.min(900,(D.rtt||200)+60),tau=e.t+(off||0)-(e.dl||DU.MDLY())-lag;return HIS.filter(h=>h.t>=tau-220&&h.t<=tau+140)}/* lag ≈ 내 → 서버 → 공격자 한 바퀴 */
+ function inSwing(ox,oy,a,x,y){const dx=x-ox,dy=y-oy,d=Math.hypot(dx,dy);if(d>46)return false;const da=Math.abs(((Math.atan2(dy,dx)-a+9.42)%6.28)-3.14);return d<=16||da<=1.35}
  function resolve(){const m=D.mate;if(!m||!m.evs)return;const now=performance.now(),rt=now-DU.MDLY(),t=T();
   for(const e of m.evs){if(e.res)continue;
    if(e.k==='a'&&e.dm){if(rt<e.t+60)continue;e.res=1;if(M.ph!=='fight'||e.t<M.rStart-200)continue;
-    const [ox,oy]=posAt(e.t),a=e.a||0,dx=P.x-ox,dy=P.y-oy,d=Math.hypot(dx,dy);if(d>42)continue;
-    const da=Math.abs(((Math.atan2(dy,dx)-a+9.42)%6.28)-3.14);if(d>14&&da>1.3)continue;
-    if(now<P.inv){pop(P.x,P.y-30,'회피!','#9fe8ff');DU.send({t:'mi',e:e.e});continue}
-    if(t&&P.parryT!=null&&t.clk-P.parryT>=0&&t.clk-P.parryT<.26){DU.send({t:'pr',e:e.e});pop(P.x,P.y-30,'PARRY!','#ffe79a');t.ult=Math.min(100,(t.ult||0)+12);P.inv=now+350;
+    const [ox,oy]=e.ax!=null?[e.ax,e.ay]:posAt(e.t),a=e.a||0,/* 공격자가 보낸 정확한 자기 위치 */win=seenWin(e).concat([{t:now,x:P.x,y:P.y,inv:invNow(now),par:false}]);
+    const hits=win.filter(h=>inSwing(ox,oy,a,h.x,h.y));if(!hits.length)continue;
+    if(win.some(h=>h.par)||(t&&P.parryT!=null&&t.clk-P.parryT>=0&&t.clk-P.parryT<.26)){DU.send({t:'pr',e:e.e});pop(P.x,P.y-30,'PARRY!','#ffe79a');t.ult=Math.min(100,(t.ult||0)+12);P.inv=now+350;
      M.fx.push({k:'par',x:P.x,y:P.y-10,t:now});try{sfx(1300,.14,'square',.05,2000);perc('crash',audio.currentTime,.3)}catch(_){}continue}
+    if(hits.every(h=>h.inv)){pop(P.x,P.y-30,'회피!','#9fe8ff');DU.send({t:'mi',e:e.e});continue}
     takeHit(e.dm,a,e,'a')}
    else if(e.k==='U'&&e.sp){const hs=(e.sp.hits&&e.sp.hits.length)?e.sp.hits:[400];e.hk=e.hk||0;
-    while(e.hk<hs.length&&rt>=e.t+hs[e.hk]){e.hk++;if(M.ph!=='fight'||e.t<M.rStart-200)continue;
-     if(Math.hypot(P.x-e.sp.cx,P.y-8-e.sp.cy)>100)continue;if(now<P.inv){pop(P.x,P.y-30,'회피!','#9fe8ff');continue}
+    while(e.hk<hs.length&&rt>=e.t+hs[e.hk]){const k=e.hk++;if(M.ph!=='fight'||e.t<M.rStart-200)continue;
+     const win=seenWin(e,hs[k]).concat([{t:now,x:P.x,y:P.y,inv:invNow(now)}]),near=win.filter(h=>Math.hypot(h.x-e.sp.cx,h.y-8-e.sp.cy)<=100);
+     if(!near.length)continue;if(near.every(h=>h.inv)){pop(P.x,P.y-30,'회피!','#9fe8ff');continue}
      takeHit((e.dm||30)/hs.length,null,e,'U')}
     if(e.hk>=hs.length)e.res=1}
    else e.res=1}}
-
  /* ---------- 받은 메시지 ---------- */
  function msg(m){if(!on())return;const now=performance.now(),t=T(),mt=D.mate||{};
   switch(m.t){
@@ -133,16 +140,17 @@
  function aim(){const m=D.mate;if(!m||m.sx==null)return;const dx=m.sx-P.x,dy=(m.sy-6)-(P.y-6),d=Math.hypot(dx,dy);if(d<56&&d>0)P.face={x:dx/d,y:dy/d}}
  {const f=doAttack;doAttack=function(){if(on()){if(M.ph!=='fight'||performance.now()<(P.atkCd||0))return;aim();
    const w=curWp()||{},pet=(curPet()||{}).dmg||0,bg=TW71.beatGood?TW71.beatGood():0,mult=bg===2?1.5:bg===1?1.2:1,CB=window.CB81;
-   const cr=Math.random()<((w.crit||0)+(CB&&CB.critAdd?CB.critAdd():0));D.atkX={dm:Math.round(34*(w.dmg||1)*(1+pet)*mult*(cr?1.8:1)*.25),cr:cr?1:0}}
+   const cr=Math.random()<((w.crit||0)+(CB&&CB.critAdd?CB.critAdd():0));D.atkX={dm:Math.round(34*(w.dmg||1)*(1+pet)*mult*(cr?1.8:1)*.25),cr:cr?1:0,dl:Math.round(DU.MDLY()),ax:Math.round(P.x),ay:Math.round(P.y)}}
   return f.apply(this,arguments)}}
  if(typeof tryUlt==='function'){const f=tryUlt;tryUlt=function(){if(on()&&M.ph!=='fight')return;const r=f.apply(this,arguments);
   try{if(on()){const t=T();if(t&&t.U&&!t.U._pv){t.U._pv=1;const m=D.mate;if(m&&m.sx!=null){t.U.sp.cx=m.sx;t.U.sp.cy=m.sy-8}
-   const w=curWp()||{};D.ultX={dm:Math.round(34*Math.min(2.2,w.dmg||1)*(1+((curPet()||{}).dmg||0))*.25*3.2)}}}}catch(e){}return r}}
+   const w=curWp()||{};D.ultX={dm:Math.round(34*Math.min(2.2,w.dmg||1)*(1+((curPet()||{}).dmg||0))*.25*3.2),dl:Math.round(DU.MDLY())}}}}catch(e){}return r}}
  {const f=doDash;doDash=function(){if(on()&&(M.ph==='end'||M.ph==='ko'))return;return f.apply(this,arguments)}}
 
  /* ---------- 매 프레임: 단계 · 판정 · 화면 ---------- */
  function step(now){if(!on())return;const t=T();
   if(M.ph==='intro'&&now-M.phT>1700){M.ph='fight';M.phT=now;M.rStart=now;P.inv=now+300;try{sfx(523,.12,'square',.05,1046);perc('crash',audio.currentTime,.5)}catch(e){}}
+  hisRec(now);
   if(M.ph==='fight'){resolve();if(M.owner&&now-M.rStart>ROUND_MS){const a=P.hp/(P.maxhp||1),b=(D.mate.hp||0)/(D.mate.mx||1);roundEnd(a>=b?0:1,'time')}
    if(P.hp<=0&&!M.koSent)ko()}
   if(M.ph==='ko'&&now-M.phT>2600){if(M.over)finish(M.sc[me()]>=WIN);else{M.round++;roundReset()}}
@@ -178,7 +186,7 @@
    :(M.owner&&D.on?[['↺ 다시 결투',()=>{DU.send({t:'rm'});rematch()},true],['방 나가기',()=>{$('overlay').hidden=true;DU.end();try{toLobby()}catch(e){}},false]]
     :[[D.on?'⏳ 방장이 다시 결투를 누르면 시작':'로비로',()=>{if(!D.on){$('overlay').hidden=true;try{toLobby()}catch(e){}}},true],['방 나가기',()=>{$('overlay').hidden=true;DU.end();try{toLobby()}catch(e){}},false]]);
   try{showOverlay(win?'VICTORY':'DEFEAT',win?'승리!':'패배',html,btns)}catch(e){}}
- function rematch(){$('overlay').hidden=true;M.sc=[0,0];M.round=1;M.over=false;try{const t=T();t.dead=false}catch(e){}roundReset()}
+ function rematch(){$('overlay').hidden=true;try{TW71.music&&TW71.music()}catch(e){}M.sc=[0,0];M.round=1;M.over=false;try{const t=T();t.dead=false}catch(e){}roundReset()}
  function reset(){M.on=false;M.ph='';Q.on=false}
 
  /* ---------- 로비 위쪽 줄: ⚔ 결투 단추 ---------- */

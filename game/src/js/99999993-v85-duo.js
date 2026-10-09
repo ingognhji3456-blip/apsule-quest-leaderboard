@@ -24,8 +24,8 @@
  function send(m){if(D.on)D.out.push(m)}
  /* v88: 내 화면에서 일어난 일을 그 순간의 시각과 함께 적어 두었다가 위치와 같이 보냄 → 동료 화면에서 같은 순간에 재생 */
  D.ev=[];let evN=0;const ES={};
- function evPush(k,o){D.ev.push(Object.assign({e:++evN,k,t:Math.round(performance.now())},o));if(D.ev.length>60)D.ev.shift()}
- function watchMe(){if(!D.started||!(mode==='tower'||mode==='boss'))return;
+ function evPush(k,o){const e=Object.assign({e:++evN,k,t:Math.round(performance.now())},o);D.ev.push(e);if(D.ev.length>60)D.ev.shift();if(window.__watchPush){(D.evW||(D.evW=[])).push(e);if(D.evW.length>60)D.evW.shift()}}
+ function watchMe(){if(!(D.started||window.__watchPush)||!(mode==='tower'||mode==='boss'))return;
   if(P.lungeT&&P.lungeT!==ES.l){ES.l=P.lungeT;evPush('a',Object.assign({a:r1(P.lungeA||0),d:P.lungeDur||130},D.atkX||{}));D.atkX=null}
   if(P.dash&&P.dash.t0!==ES.d){ES.d=P.dash.t0;evPush('d',{vx:Math.sign(P.dash.vx||0),vy:Math.sign(P.dash.vy||0),dur:P.dash.dur||150})}
   if(P.parryT&&P.parryT!==ES.p){ES.p=P.parryT;evPush('p',{g:P.parryPerf?1:0})}
@@ -45,11 +45,12 @@
     if(D.role==='host'&&!(window.PVP92&&PVP92.on()))send(snap())}
    else if(mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo){const d=Math.round(D.bAcc);D.bAcc-=d;send({...ex,t:'b',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,d,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999});if(D.role==='host')send({t:'bh',hp:Math.round(G.hp)})}}
   const msgs=D.out.splice(0,20),code=D.code;
+  const rt0=performance.now();
   const r=await api('/api/duo/sync','POST',{code:D.code,since:D.since,msgs,ch:myCh(),start:D.wantStart&&!D.started?1:0,diff:D.wantDiff||undefined,ready:D.wantReady==null?undefined:(D.wantReady?1:0)});
   if(!D.on||D.code!==code)return;/* 기다리는 사이에 방을 나갔으면 늦게 온 답은 버림(안 그러면 나간 판이 다시 시작됨) */
   if(r.s===404||r.s===403){const was=D.started;end('방이 사라졌어요.');if(!was){msgTx='방이 사라졌어요. 다시 만들어 주세요.';openUI('duo');loadRooms()}return}
   if(r.s!==200){D.fail=(D.fail||0)+1;if(D.wantStart&&!D.started&&D.fail>=3){msgTx='서버 응답을 기다리는 중… ('+(r.s?'오류 '+r.s:'연결 안 됨')+') 계속 시도해요';renderRoom()}return}
-  D.fail=0;D.room=r.j.room;{const mp=(D.room.players||[]).find(p=>p.me);if(mp&&D.wantReady!=null&&!!mp.ready===!!D.wantReady)D.wantReady=null}if(D.wantDiff&&D.room.diff===D.wantDiff)D.wantDiff=null;
+  D.fail=0;{const rt=performance.now()-rt0;D.rtt=D.rtt==null?rt:D.rtt*.85+rt*.15}/* v95 왕복 시간(결투 지연 보정용) */D.room=r.j.room;{const mp=(D.room.players||[]).find(p=>p.me);if(mp&&D.wantReady!=null&&!!mp.ready===!!D.wantReady)D.wantReady=null}if(D.wantDiff&&D.room.diff===D.wantDiff)D.wantDiff=null;
   if(D.wantStart&&!D.started&&D.room.state!=='play'){const n=(D.room.players||[]).length;if(r.j.start_err)msgTx=r.j.start_err;else if(n<2)msgTx='동료가 방에 없어요. 동료를 기다려 주세요.';if(n<2)D.wantStart=false}
   if(D.room.state==='play')D.wantStart=false;
   /* 여러 답이 겹쳐 와도 메시지는 한 번씩만, 방장 화면(s)은 가장 새 것만 */
@@ -180,7 +181,7 @@
 
  /* ---------- 동료 그리기 ---------- */
  /* v86 동료 위치: 보낸 시각(ts)을 내 시계로 옮겨 시간표에 쌓고, 0.16초 늦게 두 점 사이를 이어 그린다 */
- function mateIn(m){const now=performance.now(),M=D.mate||(D.mate={});
+ function mateIn(m,MM){const now=performance.now(),M=MM||D.mate||(D.mate={});/* v95: MM을 주면 그 대상(관전)에 쌓음 */
   if(m.ts!=null){const o=now-m.ts;D.mOff=D.mOff==null||o<D.mOff?o:D.mOff+.5;D.mDly=lagOf(D.mJ||(D.mJ=[]),o-D.mOff,1)}
   if(m.n!=null&&M.n!=null&&m.n<=M.n&&!m.d){if(m.ev&&m.ev.length)mateEv(M,m.ev);return}/* 순서가 뒤바뀌어 온 옛 위치는 버림(사건은 살림) */
   const lt=m.ts!=null?m.ts+D.mOff:now;
@@ -193,7 +194,7 @@
  const MDLY=()=>D.mDly||160;
  function mateEv(M,list){for(const e of list){if((M.seen||(M.seen=new Set())).has(e.e))continue;M.seen.add(e.e);if(M.seen.size>200)M.seen=new Set([...M.seen].slice(-100));
    (M.evs||(M.evs=[])).push(Object.assign({},e,{t:e.t+(D.mOff||0)}));if(M.evs.length>40)M.evs.shift();if(e.k==='U'&&e.sp)setTimeout(()=>note('동료 필살기! '+(e.sp.name||'')),MDLY())}}
- function matePos(now){const M=D.mate,hs=M.hs;if(!hs||!hs.length)return [M.x,M.y];const rt=now-MDLY();
+ function matePos(now,MM){const M=MM||D.mate,hs=M.hs;if(!hs||!hs.length)return [M.x,M.y];const rt=now-MDLY();
   if(rt<=hs[0].t)return [hs[0].x,hs[0].y];
   for(let i=hs.length-1;i>0;i--){const a=hs[i-1],b=hs[i];if(rt>=a.t&&rt<=b.t){const k=b.t>a.t?(rt-a.t)/(b.t-a.t):1;M.cf=k<.5?a:b;return [a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k]}}
   const b=hs[hs.length-1],a=hs[hs.length-2];M.cf=b;if(a&&b.t>a.t){const k=Math.min(rt-b.t,120)/(b.t-a.t);return [b.x+(b.x-a.x)*k,b.y+(b.y-a.y)*k]}return [b.x,b.y]}
@@ -208,10 +209,10 @@
  const GH={};
  function ghostOf(m,fl,col){const k=(m.ch||0)+'|'+(m.sk||'')+'|'+fl+'|'+col;if(GH[k])return GH[k];const cv=document.createElement('canvas');cv.width=64;cv.height=64;const o=cv.getContext('2d');o.imageSmoothingEnabled=false;
   asMate(m,{},()=>{try{drawKnight(o,20,22,2,fl,null,0)}catch(e){}});o.globalCompositeOperation='source-atop';o.fillStyle=col;o.globalAlpha=.75;o.fillRect(0,0,64,64);return GH[k]=cv}
- function drawMate(now,boss){const m=D.mate;if(!m||m.x==null||performance.now()-(m.at||0)>5000)return;const c=ctx,pn=performance.now(),rt=pn-MDLY();
+ function drawMate(now,boss,MM){const m=MM||D.mate;if(!m||m.x==null||performance.now()-(m.at||0)>5000)return;const c=ctx,pn=performance.now(),rt=pn-MDLY();
   /* v88: 다른 층에 있는 동료는 그리지 않음(층을 오를 때 순간이동처럼 보이던 것) */
-  {const t=T(),my=(mode==='boss'?'b':'t')+((t&&t.f)||0)+(D.plX||'');if(m.pl&&m.pl!==my)return;if(m.spawnT!=null&&rt<m.spawnT)return}
-  const [gx,gy]=matePos(pn);m.sx=m.sx==null?gx:m.sx+(gx-m.sx)*.6;m.sy=m.sy==null?gy:m.sy+(gy-m.sy)*.6;const x=m.sx,y=m.sy;
+  {const t=T(),my=(mode==='boss'?'b':'t')+((t&&t.f)||0)+(D.plX||'');if(!m._spec&&m.pl&&m.pl!==my)return;if(m.spawnT!=null&&rt<m.spawnT)return}
+  const [gx,gy]=matePos(pn,m);m.sx=m.sx==null?gx:m.sx+(gx-m.sx)*.6;m.sy=m.sy==null?gy:m.sy+(gy-m.sy)*.6;const x=m.sx,y=m.sy;
   const mv=Math.hypot(gx-(m.px==null?gx:m.px),gy-(m.py==null?gy:m.py));m.wkT=mv>.15?pn:(m.wkT||0);m.px=gx;m.py=gy;const walk=pn-m.wkT<120;
   m.wph=(m.wph||0)+(walk?Math.min(.5,mv*.35):0);
   const cf=m.cf||{},fx=cf.fx!=null?cf.fx:(m.fx<0?-1:1),fy=cf.fy!=null?cf.fy:0;const fl=fx<0;
@@ -225,7 +226,7 @@
   if(dash){const k=Math.min(1,(rt-dash.t)/(dash.dur||150)),an=Math.atan2(dash.vy||0,dash.vx||0);c.save();c.translate(x,y-9);c.rotate(an);c.fillStyle=col;for(let i=0;i<7;i++){c.globalAlpha=.55*(1-k);const off=(i-3)*4,len=14+((i*13)%10);c.fillRect(-len-10-((pn/3+i*9)%8),off,len,1)}c.restore()}
   c.save();c.globalAlpha=m.down?.3:.35;c.fillStyle='#000';c.beginPath();c.ellipse(x,y+2,9,3,0,0,6.28);c.fill();c.restore();
   /* 동료 표시: 발밑 하늘색 고리(같은 캐릭터여도 한눈에 구분) */
-  const rc=window.PVP92&&PVP92.on()?'#ff5a7a':'#8de4ff';/* 결투 상대는 빨간 고리 */
+  const rc=m.ring||(window.PVP92&&PVP92.on()?'#ff5a7a':'#8de4ff');/* 결투 상대는 빨간 고리 */
   c.save();c.globalAlpha=.75;c.strokeStyle=rc;c.lineWidth=1.5;c.beginPath();c.ellipse(x,y+2,11,4,0,0,6.28);c.stroke();c.globalAlpha=.25+.15*Math.sin(pn/250);c.fillStyle=rc;c.beginPath();c.ellipse(x,y+2,11,4,0,0,6.28);c.fill();c.restore();
   /* 새 층에 나타날 때: 빛기둥 */
   if(m.spawnT!=null&&rt-m.spawnT<450){const q=(rt-m.spawnT)/450;c.save();c.globalCompositeOperation='lighter';c.globalAlpha=(1-q)*.8;c.fillStyle='#8de4ff';c.fillRect(x-6*(1-q)-2,y-60,12*(1-q)+4,62);c.globalAlpha=(1-q);c.strokeStyle='#ffffff';c.beginPath();c.ellipse(x,y+2,8+q*18,3+q*6,0,0,6.28);c.stroke();c.restore();if(q<.35)return}
@@ -248,9 +249,9 @@
     catch(e){}finally{G=og}})}
   /* 맞음: 빨간 번쩍 */
   if(hurt){c.save();c.globalAlpha=.55*(1-(rt-hurt.t)/160);c.fillStyle='#ff3a4a';c.beginPath();c.ellipse(x,y-10,12,15,0,0,6.28);c.fill();c.restore()}
-  c.globalAlpha=1;const nm=(D.room&&(D.room.players.find(p=>!p.me)||{}).name)||'동료';c.save();c.font='900 7px sans-serif';c.textAlign='center';c.fillStyle='#000';c.fillText(nm,x+.5,y-37.5);c.fillStyle=m.down?'#ff8a9a':'#8de4ff';c.fillText(m.down?nm+' (쓰러짐)':nm,x,y-38);
+  c.globalAlpha=1;const nm=m.nm||(D.room&&(D.room.players.find(p=>!p.me)||{}).name)||'동료';c.save();c.font='900 7px sans-serif';c.textAlign='center';c.fillStyle='#000';c.fillText(nm,x+.5,y-37.5);c.fillStyle=m.down?'#ff8a9a':'#8de4ff';c.fillText(m.down?nm+' (쓰러짐)':nm,x,y-38);
   const q=Math.max(0,Math.min(1,(m.hp||0)/(m.mx||1)));c.fillStyle='#05070ae6';c.fillRect(x-12,y-35,24,4);c.fillStyle='#3a0a14';c.fillRect(x-11,y-34,22,2);c.fillStyle='#7dffa8';c.fillRect(x-11,y-34,22*q,2);c.restore()}
- function drawList(list,now){list.push({y:(D.mate&&D.mate.sy)||0,fn:()=>drawMate(now,false)})}
+ function drawList(list,now){if(window.WATCH95&&WATCH95.specOn()){for(const M of WATCH95.objs())if(M.x!=null)list.push({y:M.sy||M.y||0,fn:()=>drawMate(now,false,M)});return}list.push({y:(D.mate&&D.mate.sy)||0,fn:()=>drawMate(now,false)})}
  /* 동료 칸(위 오른쪽): 이름 · 레벨 · 체력 */
  {const f=frame;frame=function(){const r=f.apply(this,arguments);try{const tt=T();if(!(window.PVP92&&PVP92.on())&&D.started&&D.on&&(mode==='tower'&&tt&&tt.duo||mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo)){const m=D.mate||{},pl=(D.room&&D.room.players.find(p=>!p.me))||{};ctx.save();try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}
    const x=W-118,y=AY+4;ctx.globalAlpha=.85;ctx.fillStyle='#05070a';ctx.fillRect(x,y,112,22);ctx.globalAlpha=1;ctx.fillStyle='#8de4ff';ctx.fillRect(x,y,2,22);ctx.font='900 8px sans-serif';ctx.fillStyle='#e8f8ff';ctx.fillText('🤝 '+(pl.name||'동료')+' · Lv.'+(pl.lv||1)+(m.down?' · 쓰러짐':''),x+6,y+9);
@@ -477,5 +478,5 @@
  @keyframes dIn{from{transform:translateY(10px) scale(.98);opacity:0}}@keyframes dShine{0%{background-position:150% 0}100%{background-position:-100% 0}}
  @keyframes dBlink{50%{opacity:.35}}@keyframes dPulse{50%{transform:scale(1.1);box-shadow:0 0 16px #ffe79a55}}
  @media (max-width:640px){#duo85 .dPl{grid-template-columns:1fr 1fr}#duo85 .dLink{display:none}#duo85 .dCodeBig i{width:38px;height:46px;font-size:26px}#duo85 .dFlN b{font-size:32px}#duo85 .dPick{grid-template-columns:1fr 1fr}#duo85 .dCard small{font-size:10.5px}}`;document.head.appendChild(st);
- window.DUO85={state:D,send,evPush,api,acc,esc,hero,myLook,myCh,myLv,MDLY,draw:()=>{lastH='';draw()},setMsg:t=>{msgTx=t},join,closeUI,isOpen:()=>!box.hidden,view:()=>view,hitSent,guestMobs,onDie,drawList,bossButtons,open:openUI,end,_applySnap:applySnap,_snap:snap};
+ window.DUO85={mateIn,drawMate,matePos,state:D,send,evPush,api,acc,esc,hero,myLook,myCh,myLv,MDLY,draw:()=>{lastH='';draw()},setMsg:t=>{msgTx=t},join,closeUI,isOpen:()=>!box.hidden,view:()=>view,hitSent,guestMobs,onDie,drawList,bossButtons,open:openUI,end,_applySnap:applySnap,_snap:snap};
 }catch(e){console.error('v85 duo',e)}})();
