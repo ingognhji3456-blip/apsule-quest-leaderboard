@@ -165,6 +165,6 @@
    const o=h;El(0,-8.6+Math.sin(t*2)*.4,3.4,.9,'#ffd84a',.9);El(0,-8.6+Math.sin(t*2)*.4,2.4,.45,'#fff6d0',.9)}];
  function c_line(h,x,y,a){h.Pg([[x,y],[x+Math.cos(a)*1.8,y+Math.sin(a)*1.8],[x+Math.cos(a)*1.8+.3,y+Math.sin(a)*1.8+.3]],'#2a1a08')}
  const P0=M.P0;
- {const base=drawPet;drawPet=function(c,id,x,y,now,k){const i=id-P0;if(i>=0&&i<PD.length){try{c.save();PD[i](H(c,x,y,now,(k||1)*1.12,id));c.restore();c.globalAlpha=1;return}catch(e){c.globalAlpha=1;console.error('pet100',e)}}return base.apply(this,arguments)}}
+ {const base=drawPet;drawPet=function(c,id,x,y,now,k){const i=id-P0;if(i>=0&&i<PD.length){if(window.PET105&&PET105.draw(c,id,x,y,now,k))return;/* v105 새 그림 */try{c.save();PD[i](H(c,x,y,now,(k||1)*1.12,id));c.restore();c.globalAlpha=1;return}catch(e){c.globalAlpha=1;console.error('pet100',e)}}return base.apply(this,arguments)}}
  window.MART100={PD,S,FXW};
 }catch(e){console.error('v100 art',e)}})();

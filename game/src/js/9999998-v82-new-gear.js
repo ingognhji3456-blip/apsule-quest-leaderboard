@@ -171,7 +171,7 @@
  const P0=PETS.length;
  NP.forEach((p,i)=>{const id=P0+i;PET_SPR[id]=p.spr;const it=Object.assign({},p);delete it.spr;it.v82=1;PETS.push(it)});
  /* 300의 drawPet은 펫마다 손으로 그린 그림이라 새 번호를 모른다 → 새 펫은 9×9 도트를 크게 그린다(살짝 둥실 · 빛 · 방향 뒤집기) */
- function drawNewPet(c,id,x,y,now,k){const sp=PET_SPR[id];if(!sp)return false;k=k||1;const s=1.9*k,rows=sp.r,w=rows[0].length,bob=Math.round(Math.sin(now/260+id)*1.4*k),fl=(typeof P!=='undefined'&&P&&P.face&&P.face.x<0);
+ function drawNewPet(c,id,x,y,now,k){if(window.PET105&&PET105.draw(c,id,x,y,now,k))return true;/* v105 새 그림 */const sp=PET_SPR[id];if(!sp)return false;k=k||1;const s=1.9*k,rows=sp.r,w=rows[0].length,bob=Math.round(Math.sin(now/260+id)*1.4*k),fl=(typeof P!=='undefined'&&P&&P.face&&P.face.x<0);
   c.save();c.globalAlpha=.25;c.fillStyle='#000';c.beginPath();c.ellipse(x,y+9*k,5*k,1.3*k,0,0,6.28);c.fill();c.restore();
   if(sp.glow){c.save();c.globalAlpha=.22+.12*Math.sin(now/180);c.fillStyle=sp.glow;c.beginPath();c.arc(x,y+bob,8*k,0,6.28);c.fill();c.restore()}
   const pal=sp.p;for(let j=0;j<rows.length;j++)for(let i=0;i<w;i++){const ch=rows[j][i];if(ch==='.')continue;const col=pal[ch]||(ch==='o'?'#161c22':null);if(!col)continue;c.fillStyle=col;const ii=fl?w-1-i:i;c.fillRect(Math.round(x+(ii-w/2)*s),Math.round(y+(j-rows.length/2)*s+bob),Math.ceil(s),Math.ceil(s))}

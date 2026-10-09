@@ -105,7 +105,7 @@
    eye(3.4,-2.2,'#ffe36b',1);Px(5,-1.2,1,.5,'#1a3a6a');const ph=(t*1.4)%1;Ci(6+ph*3,-1.4-ph*2,.8+ph,'#c8f0ff',1-ph)}];
  function sw0(t){return Math.sin(t*2)*.4}
  const NEWP=window.NG82;
- {const base=drawPet;drawPet=function(c,id,x,y,now,k){const i=id-P0;if(i>=0&&i<PD.length){try{const H=petHelpers(c,x,y,now,k||1,id);c.save();PD[i](H);c.restore();c.globalAlpha=1;return}catch(e){c.globalAlpha=1}}return base.apply(this,arguments)}}
+ {const base=drawPet;drawPet=function(c,id,x,y,now,k){const i=id-P0;if(i>=0&&i<PD.length){if(window.PET105&&PET105.draw(c,id,x,y,now,k))return;/* v105 새 그림 */try{const H=petHelpers(c,x,y,now,k||1,id);c.save();PD[i](H);c.restore();c.globalAlpha=1;return}catch(e){c.globalAlpha=1}}return base.apply(this,arguments)}}
  /* 변이: 새 그림으로 다시 그리도록 9999998의 PET59.draw를 한 번 더 감쌈 */
  if(window.PET59){const RC=window.RECOLOR59,off=document.createElement('canvas'),od=PET59.draw;
   PET59.draw=(c,id,x,y,now,k)=>{const v=(PET59.list||[]).find(q=>q.id===id);if(v&&v.base>=P0&&v.base<P0+PD.length){k=k||1;const S=Math.ceil(50*k);if(off.width!==S){off.width=S;off.height=S}const o=off.getContext('2d');o.setTransform(1,0,0,1,0,0);o.clearRect(0,0,S,S);o.imageSmoothingEnabled=false;

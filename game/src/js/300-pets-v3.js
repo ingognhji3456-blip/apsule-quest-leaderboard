@@ -1,5 +1,5 @@
 /* ================= 펫 v3 (손으로 그린 절차 픽셀 · 똑딱 수준 디테일) + 자연스러운 무기 자세 ================= */
-function drawPet(c,id,x,y,now,k){k=k||1;if(!id){drawTick(c,x,y,now,k);return}
+function drawPet(c,id,x,y,now,k){k=k||1;if(window.PET105&&PET105.draw(c,id,x,y,now,k))return;/* v105 새 그림 */if(!id){drawTick(c,x,y,now,k);return}
  const t=now/1000,fl=!!(P&&P.face&&P.face.x<0),d=fl?-1:1,bob=Math.sin(now/260+id)*1.2;y+=bob*k;
  const Px=(xx,yy,w,h,col,al)=>{if(al!=null)c.globalAlpha=al;c.fillStyle=col;c.fillRect(Math.round(x+(d<0?-(xx+w):xx)*k),Math.round(y+yy*k),Math.max(1,Math.round(w*k)),Math.max(1,Math.round(h*k)));if(al!=null)c.globalAlpha=1};
  const Ci=(xx,yy,r,col,al)=>pcirc(x+d*xx*k,y+yy*k,r*k,col,al==null?1:al,c);
