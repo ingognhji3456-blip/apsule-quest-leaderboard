@@ -10367,7 +10367,7 @@ function wsBuild(){const m=$('shopModal');if(!m||$('wsMain'))return;m.classList.
  const bar=m.querySelector('.rushBar span');if(bar&&!$('wsTitle'))bar.insertAdjacentHTML('afterbegin','<b id="wsTitle">⚙ 태엽 공방</b> ');
  const pick=i=>{if(WS.sel[shopTab]===i)return;WS.sel[shopTab]=i;try{sfx(700,.05,'triangle',.03,900)}catch(_){}if(shopTab==='wp')WS.swing=performance.now();wsRefresh()};
  $('shopGrid').addEventListener('click',e=>{const d=e.target.closest('.wsItem');if(!d)return;const i=+d.dataset.i;if(WS.sel[shopTab]===i&&e.detail>=2){wsAct();return}pick(i)});
- $('shopGrid').addEventListener('mouseover',e=>{const d=e.target.closest('.wsItem');if(d&&matchMedia('(hover:hover)').matches)pick(+d.dataset.i)});
+ /* v122: 마우스를 올리기만 해서는 고르지 않음 — 눌러야 고름 */
  addEventListener('keydown',e=>{const mm=$('shopModal');if(!mm||mm.hidden)return;const k=e.code,L=WS_LIST(shopTab).length,s=wsSelOf(shopTab);let n=null;
   if(k==='ArrowRight'||k==='KeyD')n=(s+1)%L;else if(k==='ArrowLeft'||k==='KeyA')n=(s+L-1)%L;else if(k==='ArrowDown'||k==='KeyS')n=Math.min(L-1,s+wsCols());else if(k==='ArrowUp'||k==='KeyW')n=Math.max(0,s-wsCols());
   else if(k==='Enter'||k==='Space'){wsAct();e.preventDefault();e.stopPropagation();return}else if(k==='Escape'){closeShop();e.preventDefault();e.stopPropagation();return}
@@ -10459,7 +10459,7 @@ function wsShelf(now){const t=now/1000,inv=shopInv();document.querySelectorAll('
   if(T.k>=2){for(let n=0;n<T.k+1;n++){const q=((t*.6)+n/(T.k+1))%1;c.globalAlpha=Math.sin(q*Math.PI);c.fillStyle='#ffffff';const x=14+((n*53+Math.floor(t*.6+n/(T.k+1))*29)%68),y=16+((n*37)%50);c.fillRect(x,y,1,1);if(q>.3&&q<.7){c.fillRect(x-1,y,3,1);c.fillRect(x,y-1,1,3)}}c.globalAlpha=1}})}
 /* ---- 훅 ---- */
 {const _rs=renderShop;renderShop=function(){_rs.apply(this,arguments);try{wsBuild();const k=shopTab,L=WS_LIST(k),gr=$('shopGrid');const anim=WS.lastTab!==k;gr.innerHTML=L.map((_,i)=>wsItemHTML(k,i)).join('');gr.classList.toggle('pop',anim);
- const h=$('shopHint');if(h)h.textContent=k==='ch'?'🧥 옷 진열대 · 올려두면 입어보고, 두 번 누르거나 Enter로 구매·장착':k==='wp'?'🗡 무기 진열대 · 올려두면 휘둘러보고, 두 번 누르거나 Enter로 구매·장착':'🐾 펫 진열대 · 올려두면 데려와 보고, 두 번 누르거나 Enter로 구매·장착';
+ const h=$('shopHint');if(h)h.textContent=k==='ch'?'🧥 옷 진열대 · 눌러서 입어보고, 두 번 누르거나 Enter로 구매·장착':k==='wp'?'🗡 무기 진열대 · 눌러서 휘둘러보고, 두 번 누르거나 Enter로 구매·장착':'🐾 펫 진열대 · 눌러서 데려와 보고, 두 번 누르거나 Enter로 구매·장착';
  if(anim){WS.lastTab=k;wsSay({ch:'새 옷 입어볼래? 전부 내가 직접 기웠어.',wp:'날이 잘 선 녀석들만 모아뒀지.',pt:'다들 순한 아이들이야. 하나 데려가!'}[k])}wsRefresh()}catch(e){console.error(e)}}}
 {const _os=openShop;openShop=function(tab){WS.sel={ch:null,wp:null,pt:null};WS.lastTab=null;WS.coinShow=null;const r=_os.apply(this,arguments);wsSay('어서 와! 태엽 공방에 온 걸 환영해.');return r}}
 {const _dp=drawShopPreviews;drawShopPreviews=function(now){if(!shopOpen)return;if(!$('wsMain'))return _dp.apply(this,arguments);try{wsShelf(now);wsStage(now);wsCoins()}catch(e){}}}
