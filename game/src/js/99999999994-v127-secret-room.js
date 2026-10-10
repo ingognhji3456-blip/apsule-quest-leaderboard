@@ -176,7 +176,7 @@
    if(F.hp<=0){F.st='dead';F.t=now;snd(220,.6,'triangle',.08,60)}
    else if(!F.ph2&&F.hp<F.mx*.5){F.ph2=true;dpop(F.x,F.y-46,'클라비스가 진심이 되었다!','#ffd84a');spark(F.x,F.y-20,'#ffd84a',20)}}}
  function myDash(){const now=performance.now(),me=SQ.me;if(now<(P.dashCd||0)||now<(P._stun127||0)||P.hp<=0)return;let [mx,my]=moveInput();if(Math.hypot(mx,my)<.1){mx=P.face.x||1;my=P.face.y||0}const l=Math.hypot(mx,my)||1;
-  me.dash={vx:mx/l,vy:my/l,t:now};P.dashCd=now+520;me.inv=now+200;snd(300,.08,'triangle',.04,800)}
+  me.dash={vx:mx/l,vy:my/l,t:now};P.dash={t0:now,dur:150,vx:mx/l*290,vy:my/l*290};if(Math.abs(mx)>.2)P.face={x:Math.sign(mx),y:0};P.dashCd=now+520;me.inv=now+300;snd(330,.09,'sawtooth',.03,200);try{window.CB81&&CB81.onDash()}catch(e){}}
  function myParry(){const now=performance.now();if(now<(P.parryCd||0)||now<(P._stun127||0)||P.hp<=0)return;SQ.me.parryT=now;P.parryT=now;P.parryCd=now+600}
  {const f=doAttack;doAttack=function(){if(mode==='sec127'){if(SQ&&SQ.ph==='duel')myAtk();return}return f.apply(this,arguments)}}
  {const f=doDash;doDash=function(){if(mode==='sec127'){if(SQ&&SQ.ph==='duel')myDash();return}return f.apply(this,arguments)}}
@@ -330,7 +330,7 @@
   try{G=Object.assign(Object.create(og||{}),{ult:0,state:'play',sp:null,spUsed:false});drawPlayerHUD(now)}catch(e){}finally{G=og}}
  function duel(now,dt,t){const me=SQ.me,f=F,stun=now<(P._stun127||0);
   /* 나 */if(P.hp>0&&f.st!=='dead'&&f.st!=='intro'&&!SQ.done&&!stun){let [mx,my]=moveInput();if(SQ.tgt){const ddx=SQ.tgt.x-P.x,ddy=SQ.tgt.y-P.y,dd=Math.hypot(ddx,ddy);if(dd<3)SQ.tgt=null;else{mx=ddx/dd;my=ddy/dd}}
-   if(me.dash){const q=(now-me.dash.t)/150;if(q>=1)me.dash=null;else{P.x+=me.dash.vx*300*dt;P.y+=me.dash.vy*300*dt;if(Math.random()<.8)FX.push({k:'sp',x:P.x,y:P.y-10,vx:0,vy:0,col:'#8de4ff',t:now})}}
+   if(me.dash){const q=(now-me.dash.t)/150;if(q>=1){me.dash=null;P.dash=null}else{P.x+=me.dash.vx*290*dt;P.y+=me.dash.vy*290*dt;P.walkOn=false}}
    else{const l=Math.hypot(mx,my);if(l>.1){P.x+=mx/l*80*dt;P.y+=my/l*80*dt;P.walkOn=true;P.walkT=(P.walkT||0)+dt*8;if(Math.abs(mx)>.2)P.face={x:Math.sign(mx),y:0}}else P.walkOn=false}clampB(P)}else P.walkOn=false;
   if(!SQ.done)foeAI(now,dt);
   const sh=SQ.shake&&now-SQ.shake<160?(Math.random()-.5)*3:0;ctx.save();ctx.translate(sh,0);
