@@ -171,7 +171,7 @@
    if(F.st==='evade'||F.st==='blink'){dpop(F.x,F.y-34,'빗나감','#9fe8ff');return}
    /* 클라비스의 패링 */if(F.st==='parry'){F.blockT=now;F.x+=Math.cos(a)*3;F.y+=Math.sin(a)*3;clampB(F);spark((P.x+F.x)/2,(P.y+F.y)/2-12,'#ffe79a',16);dpop(F.x,F.y-36,'패링!','#ffe79a');snd(1600,.12,'square',.06,1200);P._stun127=now+700;F.st='wind';F.t=now;F.wd=260;F.cnt=1;F.cd=0;return}
    let pet=0;try{pet=(PETS[shopInv().eq.pt]||{}).dmg||0}catch(e){}const crit=Math.random()<(w.crit||0)+.05;let dmg=Math.round(34*(w.dmg||1)*(1+pet)*(crit?1.8:1)*(F.st==='stun'?1.5:1));
-   F.hp=Math.max(0,F.hp-dmg);F.hitF=now;F.x+=Math.cos(a)*5;F.y+=Math.sin(a)*5;clampB(F);dpop(F.x,F.y-34,(crit?'치명! ':'')+dmg,crit?'#ffd84a':'#ffffff');spark(F.x,F.y-12,w.trail||'#ffffff',6);snd(crit?900:700,.06,'sawtooth',.05,200);
+   F.hp=Math.max(0,F.hp-dmg);F.hitF=now;try{window.SK130&&SK130.gain(crit?6:4)}catch(e){}F.x+=Math.cos(a)*5;F.y+=Math.sin(a)*5;clampB(F);dpop(F.x,F.y-34,(crit?'치명! ':'')+dmg,crit?'#ffd84a':'#ffffff');spark(F.x,F.y-12,w.trail||'#ffffff',6);snd(crit?900:700,.06,'sawtooth',.05,200);
    if(F.st==='wind'&&!F.cnt&&Math.random()<.35){F.st='idle';F.cd=300}
    if(F.hp<=0){F.st='dead';F.t=now;snd(220,.6,'triangle',.08,60)}
    else if(!F.ph2&&F.hp<F.mx*.5){F.ph2=true;dpop(F.x,F.y-46,'클라비스가 진심이 되었다!','#ffd84a');spark(F.x,F.y-20,'#ffd84a',20)}}}
@@ -201,7 +201,7 @@
   if(f.st==='wind'){f.face={x:Math.sign(dx)||f.face.x,y:0};f.aa=Math.atan2(dy,dx);if(now-f.t>(f.wd||420)){f.st='slash';f.t=now;f.lungeT=now;f.lungeA=f.aa;f.x+=Math.cos(f.aa)*6;f.y+=Math.sin(f.aa)*6;clampB(f);slashFx(f.x+Math.cos(f.aa)*6,f.y-9+Math.sin(f.aa)*6,f.aa,'#ffd84a');snd(440,.07,'sawtooth',.05,180);
     const hx=P.x-f.x,hy=P.y-f.y,hd=Math.hypot(hx,hy);
     if(hd<38&&ang(Math.atan2(hy,hx),f.aa)<1.35){
-     if(now-me.parryT<200){f.st='stun';f.t=now;f.cnt=0;dpop(P.x,P.y-36,'PARRY!','#ffe79a');spark((P.x+f.x)/2,P.y-14,'#ffe79a',18);snd(1600,.12,'square',.06,1200);return}
+     if(now-me.parryT<200){try{window.SK130&&SK130.gain(10)}catch(e){}f.st='stun';f.t=now;f.cnt=0;dpop(P.x,P.y-36,'PARRY!','#ffe79a');spark((P.x+f.x)/2,P.y-14,'#ffe79a',18);snd(1600,.12,'square',.06,1200);return}
      if(now<me.inv||now<(P._hit127||0)){dpop(P.x,P.y-34,'회피','#9fe8ff')}
      else{const dmg=Math.round(14*m*(f.ph2?1.2:1)*(f.cnt?1.3:1));P.hp=Math.max(0,P.hp-dmg);P._hit127=now+600;P.x+=Math.cos(f.aa)*9;P.y+=Math.sin(f.aa)*9;clampB(P);dpop(P.x,P.y-34,'-'+dmg,'#ff5a7a');spark(P.x,P.y-12,'#ff5a7a',8);snd(160,.12,'square',.07,80);SQ.shake=now}}f.cnt=0}
    return}
