@@ -403,7 +403,7 @@
   /* v81 독 웅덩이 · 불길 같은 바닥 효과 */for(const q of (T.pools||[])){const life=T.clk-q.t0,al=Math.min(1,life*4)*Math.min(1,(q.t1-T.clk)*1.5);ctx.save();ctx.translate(q.x,q.y);ctx.scale(1,.42);const g=ctx.createRadialGradient(0,0,0,0,0,q.r);g.addColorStop(0,'#8aff5acc');g.addColorStop(.7,'#3aa02a88');g.addColorStop(1,'rgba(0,0,0,0)');A(al*.8);ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,q.r,0,6.28);ctx.fill();
    A(al);ctx.fillStyle='#d8ffb0';for(let i=0;i<4;i++){const ph=(T.clk*1.6+i*.27)%1;ctx.globalAlpha=al*(1-ph);ctx.beginPath();ctx.arc(Math.cos(i*1.7)*q.r*.5,Math.sin(i*2.3)*q.r*.5-ph*10,1.5+ph*1.5,0,6.28);ctx.fill()}ctx.restore();A(1)}
   try{window.CB81&&CB81.drawWorld()}catch(e){}
-  const list=T.mobs.map(m=>({y:m.y,fn:()=>drawMob(m)}));list.push({y:P.y,fn:()=>drawHero(now)});try{T.duo&&window.DUO85&&DUO85.drawList(list,now)}catch(e){}list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
+  const list=T.mobs.map(m=>({y:m.y,fn:()=>drawMob(m)}));list.push({y:P.y,fn:()=>drawHero(now)});try{T.duo&&window.DUO85&&DUO85.drawList(list,now)}catch(e){}try{window.TPET106&&TPET106.list(list,now)}catch(e){}/* v106 펫 */list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
   drawSlash();try{window.CB81&&CB81.drawPlayer()}catch(e){}
   /* v76 타격 이펙트: 빛 갈래 · 고리 · 베인 줄. 처치는 더 크게 */
   for(const h of (T.hfx||[])){const L=h.kill?.42:.24,q=(T.clk-h.t)/L;if(q>=1)continue;ctx.save();ctx.translate(h.x,h.y);ctx.globalCompositeOperation='lighter';
