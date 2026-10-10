@@ -194,6 +194,7 @@
   for(const q of ['cd','blinkCd','parCd','dashCd','evCd'])f[q]-=dt*1000;
   if(['dashin','evade','blink'].includes(f.st)&&(!f.tr.length||now-f.tr[f.tr.length-1].t>30))f.tr.push({x:f.x,y:f.y,t:now,fl:f.face.x<0});f.tr=f.tr.filter(q=>now-q.t<280);
   if(f.st==='intro'){if(now-f.t>1400){f.st='idle'}return}
+  /* v136: 늦게 들어온 피해로 체력이 0이 되어도 쓰러지게 */if(f.hp<=0&&f.st!=='dead'){f.st='dead';f.t=now;snd(220,.6,'triangle',.08,60)}
   if(f.st==='dead'||P.hp<=0)return;
   if(f.st==='stun'){if(now-f.t>1200){f.st='idle';f.cd=400}return}
   /* v134: 장비 · 스킬로 걸린 기절 · 냉기 */if(window.SK130&&SK130.stunned(f)){f.walk=false;return}if(window.SK130&&SK130.chilled(f))dt*=.55;

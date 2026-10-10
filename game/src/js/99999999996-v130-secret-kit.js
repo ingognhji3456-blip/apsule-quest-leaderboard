@@ -103,5 +103,9 @@
      ctx.setTransform(SS,0,0,SS,0,0);tickUlt(now);drawUlt(now);shield(now);gauge(now);comboHud(now);try{if(window.PV76&&PV76.paint)PV76.paint()}catch(e){}}
     else{try{const b=$('btnU');if(b&&b.style.display!=='none'&&md()==='dg129'&&DG129.D&&(DG129.D.ph==='arch'||DG129.D.ph==='doc'))b.style.display='none'}catch(e){}}}catch(e){console.error('sk130',e)}
    return r}}
+ /* v136: 늦게 들어오는 피해(연쇄 번개 · 섬광 대시 · 연속 베기 · 운석 · 화상 같은 setTimeout/틱)는 asTower가 끝난 뒤라
+    진짜 탑 함수로 가서 괴물이 「셈에 안 들어가고」 죽었음 → 장면이 클라비스 결투 · 던전이면 늘 이 장면으로 보냄 */
+ try{if(window.TW71){const th=TW71.hitMob,tp=TW71.addPop;TW71.hitMob=function(m){if(!RM&&(mode==='dg129'||mode==='sec127'))return hitMob.apply(this,arguments);return th.apply(this,arguments)};
+  TW71.addPop=function(){if(!RM&&(mode==='dg129'||mode==='sec127'))return;return tp.apply(this,arguments)}}}catch(e){}
  window.SK130={gain,fire,atk,onHit,swing,kill,hurt,dash,parry,hitMob,mineShot,petList,stunned,chilled,enemies,asTower,get U(){return U}};
 }catch(e){console.error('v130 secret kit',e)}})();
