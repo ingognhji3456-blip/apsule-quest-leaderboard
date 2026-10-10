@@ -19890,7 +19890,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const PAY=()=>window.PAY58;const owns=it=>{try{if(it&&it.kind==='pack')return !!(PAY()&&PAY().ownsItem({pid:'pet_'+it.id}))&&(shopInv().inv.pt||[]).includes(it.base);return !!(PAY()&&PAY().ownsItem(it))}catch(e){return false}};
  /* v119: 펫 묶음을 사면 서버가 petbase_<번호>를 준다 → 그 펫을 공방 보유 목록에 넣는다
     v120: 테스터(「모두 보유」)도 펫 묶음의 펫을 받는다(한 번 받으면 저장 기록에 남음) */
- function grantBases(){try{const P=PAY();if(!P)return false;const inv=shopInv();let n=0;for(const x of P.owned()){const m=/^petbase_(\d+)$/.exec(x);if(!m)continue;const i=+m[1];if(typeof PETS!=='undefined'&&PETS[i]&&!inv.inv.pt.includes(i)){inv.inv.pt.push(i);n++}}if(n){saveNow();try{P.apply()}catch(e){}}return n>0}catch(e){return false}}
+ function grantBases(){try{const P=PAY();if(!P)return false;const inv=shopInv();let n=0;/* v123: 테스터는 공방의 캐릭터 · 무기 · 펫을 코인 없이 모두 보유 */if(P.tester()){for(const [k,L] of [['ch',typeof CHARS!=='undefined'?CHARS:[]],['wp',typeof WEAPONS!=='undefined'?WEAPONS:[]],['pt',typeof PETS!=='undefined'?PETS:[]]]){const a=inv.inv[k]||(inv.inv[k]=[]);for(let i=0;i<L.length;i++)if(!a.includes(i)){a.push(i);n++}}}for(const x of P.owned()){const m=/^petbase_(\d+)$/.exec(x);if(!m)continue;const i=+m[1];if(typeof PETS!=='undefined'&&PETS[i]&&!inv.inv.pt.includes(i)){inv.inv.pt.push(i);n++}}if(n){saveNow();try{P.apply()}catch(e){}}return n>0}catch(e){return false}}
  setInterval(grantBases,2000);
  function toggleSave(it){const r=toggle(it);try{PAY()&&PAY().sync()}catch(e){}return r}
 
