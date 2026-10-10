@@ -18,7 +18,7 @@
  /* 탑 보스 층 보상: 첫 클리어(층 · 난이도마다 한 번) = 다이아 20+4×보스번호, 다시 깨면 15%. 난이도 배율 · 골드도 함께 */
  const DM={easy:.6,normal:1,hard:1.5,extreme:2.2};
  function floorReward(f){const d=D(),g=Math.max(1,Math.floor(f/10)),key=f+'|'+diff,first=!d.fl[key],m=DM[diff]||1;
-  let dia=Math.round((20+4*((g-1)%70+1))*m*(1+Math.floor((g-1)/70)*.5));if(!first)dia=Math.max(3,Math.round(dia*.15));
+  /* v125: 보스 층 다이아는 첫 클리어 10개(다시 깨면 2개) */let dia=first?10:2;
   const gold=Math.round((first?150+g*25:50+g*8)*m);d.fl[key]=Date.now();add(dia);try{addCoins(gold)}catch(e){}
   return {dia,gold,first,html:'<div class="rw80"><b>층 보상'+(first?' · 첫 클리어!':'')+'</b><span class="g">🪙 +'+gold.toLocaleString()+' 골드</span><span class="d">💎 +'+dia.toLocaleString()+' 다이아</span><small>보유 💎 '+d.n.toLocaleString()+'</small></div>'}}
  /* 로비 위쪽 줄 💎 칩 (골드 칩 바로 뒤) */
