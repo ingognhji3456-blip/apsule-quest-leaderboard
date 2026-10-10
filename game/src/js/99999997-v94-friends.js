@@ -67,11 +67,16 @@
  async function duel(name){if(D.started){F.msg='경기 중에는 신청할 수 없어요';draw();return}try{gmSfx('ok')}catch(_){}
   if(!(D.on&&D.room&&D.room.kind==='pvp'&&D.role==='host')){if(D.on)DU.end();const r=await api('/api/pvp/create','POST',{lv:DU.myLv(),ch:DU.myCh()});if(r.s!==200){F.msg=r.j.error||'방을 만들지 못했어요';draw();return}
    Object.assign(D,{on:true,code:r.j.room.code,role:'host',room:r.j.room,since:0,started:false,out:[]})}
-  if(await invite(name)){close();DU.open('room')}}
+  D.autoGo=1;/* v116 상대가 수락하면 바로 시작 */if(await invite(name)){close();DU.open('room')}}
  /* 듀오 초대: 이미 듀오 방이 있으면 바로, 없으면 방 만들기 화면 → 방을 만들면 자동 초대 */
- async function duo(name){if(D.started){F.msg='경기 중에는 초대할 수 없어요';draw();return}try{gmSfx('ok')}catch(_){}
-  if(D.on&&D.room&&D.room.kind!=='pvp'&&D.role==='host'){if(await invite(name)){close();DU.open('room')}return}
-  F.pendInvite=name;close();if(D.on)DU.end();DU.open('duo');try{note('방을 만들면 '+name+'님에게 초대가 가요')}catch(e){}}
+ /* v116: 방 만들기 화면 없이 바로 방을 만들고 초대를 보냄. 시작 층 = 두 사람 최고 층 중 낮은 쪽의 구역 첫 층(모르면 1층) */
+ async function duo(name,their){if(D.started){F.msg='경기 중에는 초대할 수 없어요';draw();return}try{gmSfx('ok')}catch(_){}
+  if(D.on&&D.room&&D.room.kind!=='pvp'&&D.role==='host'){D.autoGo=1;if(await invite(name)){close();DU.open('room')}return}
+  if(D.on)DU.end();const mine=Math.max(1,(saveData.tw71&&saveData.tw71.best)||1),tb=their||((F.list.find(f=>f.name===name)||{}).floor)||1,f0=Math.max(1,Math.min(mine,tb)),fl=Math.max(1,Math.floor((f0-1)/10)*10+1);
+  const r=await api('/api/duo/create','POST',{floor:fl,best:mine,diff:(typeof diff!=='undefined'&&diff)||'normal',lv:DU.myLv(),ch:DU.myCh()});
+  if(r.s!==200){F.msg=r.j.error||'방을 만들지 못했어요';draw();try{note(F.msg)}catch(e){}return}
+  Object.assign(D,{on:true,code:r.j.room.code,role:'host',room:r.j.room,since:0,started:false,out:[]});D.autoGo=1;
+  if(await invite(name)){close();DU.open('room')}else{try{DU.end()}catch(e){}}}
  setInterval(()=>{if(F.pendInvite&&D.on&&D.code&&D.role==='host'&&D.room&&D.room.kind!=='pvp'){const n=F.pendInvite;F.pendInvite=null;invite(n)}if(F.pendInvite&&!DU.isOpen()&&!D.on)F.pendInvite=null},500);
  const note=t=>{try{banner(t)}catch(e){}};
 
@@ -84,14 +89,18 @@
  /* ---------- 받은 초대 알림 ---------- */
  const tw=document.createElement('div');tw.id='frToast';document.body.appendChild(tw);
  function toast(i){const d=document.createElement('div');d.className='frT '+(i.kind==='pvp'?'pv':'du');
-  d.innerHTML='<i>'+(i.kind==='pvp'?'⚔':'🤝')+'</i><div><b>'+esc(i.from)+'</b>님이 '+(i.kind==='pvp'?'<em>결투</em>를 신청했어요':'<em>듀오</em>에 초대했어요')+'<small>방 #'+esc(i.code)+'</small></div><button class="y">수락</button><button class="n">거절</button>';
+  d.innerHTML='<i>'+(i.kind==='pvp'?'⚔':'🤝')+'</i><div><b>'+esc(i.from)+'</b>님이 '+(i.kind==='pvp'?'<em>결투</em>를 신청했어요':'<em>듀오</em>에 초대했어요')+'<small>수락하면 바로 시작해요 · 방 #'+esc(i.code)+'</small></div><button class="y">수락</button><button class="n">거절</button>';
   tw.appendChild(d);try{sfx(880,.15,'triangle',.06,1320);setTimeout(()=>sfx(1320,.15,'triangle',.05,1760),120)}catch(e){}
   const done=()=>{d.classList.add('out');setTimeout(()=>d.remove(),300)};const tm=setTimeout(()=>{done()},30000);
   d.addEventListener('pointerdown',e=>e.stopPropagation());
   d.querySelector('.n').onclick=()=>{clearTimeout(tm);api('/api/friends/invite/dismiss','POST',{id:i.id});done()};
   d.querySelector('.y').onclick=async()=>{clearTimeout(tm);done();api('/api/friends/invite/dismiss','POST',{id:i.id});
    try{if(D.started||D.on)DU.end()}catch(e){}try{if(typeof mode!=='undefined'&&mode!=='menu'){$('overlay').hidden=true;toLobby()}}catch(e){}
-   setTimeout(()=>{try{DU.open(i.kind==='pvp'?'pvp':'duo');DU.join(i.code)}catch(e){}},350)}}
+   F.autoReady=i.code;F.arT=Date.now();/* v116 들어가면 「준비 완료」를 자동으로 → 보낸 사람 쪽이 바로 시작 */setTimeout(()=>{try{DU.open(i.kind==='pvp'?'pvp':'duo');DU.join(i.code)}catch(e){}},350)}}
+ setInterval(()=>{try{
+  if(F.autoReady){if(!D.on&&Date.now()-(F.arT||0)>15000){F.autoReady=null}else if(D.on&&D.code===F.autoReady&&!D.started){const mp=((D.room||{}).players||[]).find(p=>p.me);if(mp&&mp.ready)F.autoReady=null;else if(D.wantReady==null)D.wantReady=true}}
+  if(D.autoGo&&D.on&&D.role==='host'&&!D.started&&D.room){const op=(D.room.players||[]).find(p=>!p.me);if(op&&op.ready&&!D.wantStart)D.wantStart=true}
+  if(D.started||!D.on)D.autoGo=0}catch(e){}},200);
 
  const st=document.createElement('style');st.id='fr94s';st.textContent=`
  #gmFr{position:relative;display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px 0 8px;border-radius:999px;font:inherit;font-weight:900;font-size:13px;cursor:pointer;color:#04121a;

@@ -3719,7 +3719,7 @@ function stamTick(dt){const mx=stamMax();if(P.stam===undefined)P.stam=mx;
  if(P.stamLock){P.stam=Math.min(mx,P.stam+dt*mx/3.4*(curPet().regen||1));if(P.stam>=mx-1e-6){P.stam=mx;P.stamLock=false;sfx(700,.12,'triangle',.03,1100)}}
  const pt=curPet();if(pt.heal&&(mode==='boss'&&G&&G.state==='play'||mode==='cave')){const now=performance.now();if(!P.healAt||P.healAt<now-60000)P.healAt=now+pt.heal*1000;if(now>=P.healAt){P.healAt=now+pt.heal*1000;if(P.hp<P.maxhp&&P.hp>0){P.hp=Math.min(P.maxhp,P.hp+1);if(mode==='boss')G.pops.push({x:P.x,y:P.y-30,t:now,tx:'+1',col:'#7dffa8'})}}}}
 /* ---- 보스전 펫 따라다니기 ---- */
-function drawBossPet(now){if(!G||G.state==='dead')return;G.pt=G.pt||{x:P.x-20,y:P.y-30};G.pt.x+=(P.x-(P.face.x<0?-22:22)-G.pt.x)*.06;const id=shopInv().eq.pt||0,pk=id?1.25:.95,ty=window.PET105?PET105.at(id,P.y-34,P.y+2,pk):P.y-34;/* v107 땅 펫은 바닥에 */G.pt.y+=(ty-G.pt.y)*.06;if(!window.PET105||PET105.flies(id))glow(G.pt.x,G.pt.y,10,id?'#ffffff':'#a8f0ff',.25);drawPet(ctx,id,G.pt.x,G.pt.y,now,pk)}
+function drawBossPet(now){if(!G||G.state==='dead')return;G.pt=G.pt||{x:P.x-20,y:P.y-30};G.pt.x+=(P.x-(P.face.x<0?-22:22)-G.pt.x)*.06;const id=shopInv().eq.pt||0,pk=id?.95:.75/* v116 작게(1.25 → .95) */,ty=window.PET105?PET105.at(id,P.y-34,P.y+2,pk):P.y-34;/* v107 땅 펫은 바닥에 */G.pt.y+=(ty-G.pt.y)*.06;if(!window.PET105||PET105.flies(id))glow(G.pt.x,G.pt.y,10,id?'#ffffff':'#a8f0ff',.25);drawPet(ctx,id,G.pt.x,G.pt.y,now,pk)}
 /* ---- 상점 UI ---- */
 let shopTab='ch',shopOpen=false;
 function shopCardHTML(kind,i){const inv=shopInv(),list=kind==='ch'?CHARS:kind==='wp'?WEAPONS:PETS,it=list[i],own=inv.inv[kind].includes(i),eq=inv.eq[kind]===i;
@@ -24214,11 +24214,16 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  async function duel(name){if(D.started){F.msg='경기 중에는 신청할 수 없어요';draw();return}try{gmSfx('ok')}catch(_){}
   if(!(D.on&&D.room&&D.room.kind==='pvp'&&D.role==='host')){if(D.on)DU.end();const r=await api('/api/pvp/create','POST',{lv:DU.myLv(),ch:DU.myCh()});if(r.s!==200){F.msg=r.j.error||'방을 만들지 못했어요';draw();return}
    Object.assign(D,{on:true,code:r.j.room.code,role:'host',room:r.j.room,since:0,started:false,out:[]})}
-  if(await invite(name)){close();DU.open('room')}}
+  D.autoGo=1;/* v116 상대가 수락하면 바로 시작 */if(await invite(name)){close();DU.open('room')}}
  /* 듀오 초대: 이미 듀오 방이 있으면 바로, 없으면 방 만들기 화면 → 방을 만들면 자동 초대 */
- async function duo(name){if(D.started){F.msg='경기 중에는 초대할 수 없어요';draw();return}try{gmSfx('ok')}catch(_){}
-  if(D.on&&D.room&&D.room.kind!=='pvp'&&D.role==='host'){if(await invite(name)){close();DU.open('room')}return}
-  F.pendInvite=name;close();if(D.on)DU.end();DU.open('duo');try{note('방을 만들면 '+name+'님에게 초대가 가요')}catch(e){}}
+ /* v116: 방 만들기 화면 없이 바로 방을 만들고 초대를 보냄. 시작 층 = 두 사람 최고 층 중 낮은 쪽의 구역 첫 층(모르면 1층) */
+ async function duo(name,their){if(D.started){F.msg='경기 중에는 초대할 수 없어요';draw();return}try{gmSfx('ok')}catch(_){}
+  if(D.on&&D.room&&D.room.kind!=='pvp'&&D.role==='host'){D.autoGo=1;if(await invite(name)){close();DU.open('room')}return}
+  if(D.on)DU.end();const mine=Math.max(1,(saveData.tw71&&saveData.tw71.best)||1),tb=their||((F.list.find(f=>f.name===name)||{}).floor)||1,f0=Math.max(1,Math.min(mine,tb)),fl=Math.max(1,Math.floor((f0-1)/10)*10+1);
+  const r=await api('/api/duo/create','POST',{floor:fl,best:mine,diff:(typeof diff!=='undefined'&&diff)||'normal',lv:DU.myLv(),ch:DU.myCh()});
+  if(r.s!==200){F.msg=r.j.error||'방을 만들지 못했어요';draw();try{note(F.msg)}catch(e){}return}
+  Object.assign(D,{on:true,code:r.j.room.code,role:'host',room:r.j.room,since:0,started:false,out:[]});D.autoGo=1;
+  if(await invite(name)){close();DU.open('room')}else{try{DU.end()}catch(e){}}}
  setInterval(()=>{if(F.pendInvite&&D.on&&D.code&&D.role==='host'&&D.room&&D.room.kind!=='pvp'){const n=F.pendInvite;F.pendInvite=null;invite(n)}if(F.pendInvite&&!DU.isOpen()&&!D.on)F.pendInvite=null},500);
  const note=t=>{try{banner(t)}catch(e){}};
 
@@ -24231,14 +24236,18 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* ---------- 받은 초대 알림 ---------- */
  const tw=document.createElement('div');tw.id='frToast';document.body.appendChild(tw);
  function toast(i){const d=document.createElement('div');d.className='frT '+(i.kind==='pvp'?'pv':'du');
-  d.innerHTML='<i>'+(i.kind==='pvp'?'⚔':'🤝')+'</i><div><b>'+esc(i.from)+'</b>님이 '+(i.kind==='pvp'?'<em>결투</em>를 신청했어요':'<em>듀오</em>에 초대했어요')+'<small>방 #'+esc(i.code)+'</small></div><button class="y">수락</button><button class="n">거절</button>';
+  d.innerHTML='<i>'+(i.kind==='pvp'?'⚔':'🤝')+'</i><div><b>'+esc(i.from)+'</b>님이 '+(i.kind==='pvp'?'<em>결투</em>를 신청했어요':'<em>듀오</em>에 초대했어요')+'<small>수락하면 바로 시작해요 · 방 #'+esc(i.code)+'</small></div><button class="y">수락</button><button class="n">거절</button>';
   tw.appendChild(d);try{sfx(880,.15,'triangle',.06,1320);setTimeout(()=>sfx(1320,.15,'triangle',.05,1760),120)}catch(e){}
   const done=()=>{d.classList.add('out');setTimeout(()=>d.remove(),300)};const tm=setTimeout(()=>{done()},30000);
   d.addEventListener('pointerdown',e=>e.stopPropagation());
   d.querySelector('.n').onclick=()=>{clearTimeout(tm);api('/api/friends/invite/dismiss','POST',{id:i.id});done()};
   d.querySelector('.y').onclick=async()=>{clearTimeout(tm);done();api('/api/friends/invite/dismiss','POST',{id:i.id});
    try{if(D.started||D.on)DU.end()}catch(e){}try{if(typeof mode!=='undefined'&&mode!=='menu'){$('overlay').hidden=true;toLobby()}}catch(e){}
-   setTimeout(()=>{try{DU.open(i.kind==='pvp'?'pvp':'duo');DU.join(i.code)}catch(e){}},350)}}
+   F.autoReady=i.code;F.arT=Date.now();/* v116 들어가면 「준비 완료」를 자동으로 → 보낸 사람 쪽이 바로 시작 */setTimeout(()=>{try{DU.open(i.kind==='pvp'?'pvp':'duo');DU.join(i.code)}catch(e){}},350)}}
+ setInterval(()=>{try{
+  if(F.autoReady){if(!D.on&&Date.now()-(F.arT||0)>15000){F.autoReady=null}else if(D.on&&D.code===F.autoReady&&!D.started){const mp=((D.room||{}).players||[]).find(p=>p.me);if(mp&&mp.ready)F.autoReady=null;else if(D.wantReady==null)D.wantReady=true}}
+  if(D.autoGo&&D.on&&D.role==='host'&&!D.started&&D.room){const op=(D.room.players||[]).find(p=>!p.me);if(op&&op.ready&&!D.wantStart)D.wantStart=true}
+  if(D.started||!D.on)D.autoGo=0}catch(e){}},200);
 
  const st=document.createElement('style');st.id='fr94s';st.textContent=`
  #gmFr{position:relative;display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px 0 8px;border-radius:999px;font:inherit;font-weight:900;font-size:13px;cursor:pointer;color:#04121a;
@@ -26040,14 +26049,14 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    - 관전 중(내 캐릭터를 안 그릴 때) · 결투 중에는 그리지 않는다. 크기는 탑 캐릭터(2배)에 맞춰 K. */
 (()=>{try{
  if(!window.TW71)return;
- const K=1.35,F={x:null,y:null,t:0,hop:0,last:0,an:-1};
+ const K=1.0/* v116 작게(1.35 → 1.0) */,F={x:null,y:null,t:0,hop:0,last:0,an:-1};
  function update(now){const dt=Math.min(.05,Math.max(0,(now-(F.t||now))/1000));F.t=now;
-  const side=(P.face&&P.face.x<0)?1:-1,tx=P.x+side*32,ty=P.y-4;
+  const side=(P.face&&P.face.x<0)?1:-1,tx=P.x+side*26,ty=P.y-4;
   if(F.x==null||Math.hypot(tx-F.x,ty-F.y)>140){F.x=tx;F.y=ty}
   const k=Math.min(1,dt*5.5);F.x+=(tx-F.x)*k;F.y+=(ty-F.y)*k;
   /* 공격할 때 살짝 뛰기 */const T=TW71.T,n=T&&T.slash?T.slash.length:0;if(n>F.an&&F.an>=0)F.hop=now;F.an=n}
  function draw(now){const id=(shopInv().eq||{}).pt||0;if(!id&&id!==0)return;
-  const hp=now-F.hop<260?Math.sin((now-F.hop)/260*Math.PI)*5:0,moving=Math.hypot((P.x+((P.face&&P.face.x<0)?1:-1)*32)-F.x,(P.y-4)-F.y)>3,step=moving?Math.abs(Math.sin(now/90))*1.5:0;
+  const hp=now-F.hop<260?Math.sin((now-F.hop)/260*Math.PI)*5:0,moving=Math.hypot((P.x+((P.face&&P.face.x<0)?1:-1)*26)-F.x,(P.y-4)-F.y)>3,step=moving?Math.abs(Math.sin(now/90))*1.5:0;
   drawPet(ctx,id,Math.round(F.x),Math.round(F.y+2-10*K-hp-step),now,K)}
  function list(L,now){try{if(window.WATCH95&&WATCH95.specOn())return;if(window.PVP92&&PVP92.on())return;const T=TW71.T;if(!T||T.bossCard)return;
   if(T.dead&&Math.floor(now/90)%2)return;update(now);L.push({y:F.y,fn:()=>{try{draw(now)}catch(e){}}})}catch(e){}}
@@ -26100,7 +26109,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    - 결투(PvP) 상대 펫은 그리지 않는다(v106 내 펫도 결투에선 안 그림). 쓰러진 동료의 펫은 흐리게. */
 (()=>{try{
  function petAt(m,x,y,fl,pn,boss){const id=m.pt|0,pv=m.pv||'',key=pv||id;
-  const K=boss?(id||pv?1.25:.95):1.35,side=fl?1:-1,tx=x+side*(boss?22:32);
+  const K=boss?(id||pv?.95:.75):1.0/* v116 작게 */,side=fl?1:-1,tx=x+side*(boss?20:26);
   const ty=boss?(window.PET105?PET105.at(key,y-34,y+2,K):y-34):y-4;
   const F=m._pet||(m._pet={x:null,y:null,t:0});const dt=Math.min(.05,Math.max(0,(pn-(F.t||pn))/1000));F.t=pn;
   if(F.x==null||F.boss!==boss||Math.hypot(tx-F.x,ty-F.y)>140){F.x=tx;F.y=ty;F.boss=boss}
@@ -26285,7 +26294,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  function drawMe(now){const c=ctx;c.globalAlpha=.4;c.fillStyle='#000';c.beginPath();c.ellipse(P.x,P.y+2,9,3,0,0,6.28);c.fill();c.globalAlpha=1;
   const fl=P.face.x<0,om=mode;mode='village';try{drawSword(P.x-12,P.y-19,2,fl,now);drawKnight(c,P.x-12,P.y-19,2,fl,P.walkOn?P.walkT:null,P.walkOn?null:now/430)}catch(e){}finally{mode=om}
   c.save();c.font='900 7px sans-serif';c.textAlign='center';const nm='Lv'+lookNow().lv+' '+(saveData.name||'나');c.fillStyle='#000';c.fillText(nm,P.x+.5,P.y-37.5);c.fillStyle='#ffd166';c.fillText(nm,P.x,P.y-38);c.restore()}
- function drawMyPet(now){const id=(shopInv().eq||{}).pt||0,K=1.35,side=(P.face&&P.face.x<0)?1:-1,tx=P.x+side*32,ty=P.y-4,F=S.pet,dt=Math.min(.05,Math.max(0,(now-(F.t||now))/1000));F.t=now;
+ function drawMyPet(now){const id=(shopInv().eq||{}).pt||0,K=1.0,side=(P.face&&P.face.x<0)?1:-1,tx=P.x+side*26,ty=P.y-4,F=S.pet,dt=Math.min(.05,Math.max(0,(now-(F.t||now))/1000));F.t=now;
   if(F.x==null||Math.hypot(tx-F.x,ty-F.y)>140){F.x=tx;F.y=ty}const k=Math.min(1,dt*5.5);F.x+=(tx-F.x)*k;F.y+=(ty-F.y)*k;
   const step=Math.hypot(tx-F.x,ty-F.y)>3?Math.abs(Math.sin(now/90))*1.5:0;try{drawPet(ctx,id,Math.round(F.x),Math.round(F.y+2-10*K-step),now,K)}catch(e){}}
  function draw(now){const c=ctx,t=now/1000;c.fillStyle='#141a2a';c.fillRect(0,0,W,H);c.save();c.translate(-Math.round(S.cam.x),-Math.round(S.cam.y));
@@ -26387,7 +26396,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(q('.af'))q('.af').onclick=async()=>{q('.af').disabled=true;const r=await api('/api/friends/request','POST',{name:j.name});
    if(r.s===200){j.friend=r.j.status==='friends'?'accepted':'pending';renderInfo();msg(r.j.status==='friends'?'✓ 친구가 됐어요!':'✓ 친구 신청을 보냈어요')}else{q('.af').disabled=false;msg(r.j.error||'보내지 못했어요')}};
   if(q('.du2'))q('.du2').onclick=()=>{hideInfo();try{FR94.duel(j.name)}catch(e){msg('결투를 열지 못했어요')}};
-  if(q('.co'))q('.co').onclick=()=>{hideInfo();try{FR94.duo(j.name)}catch(e){msg('듀오를 열지 못했어요')}}}
+  if(q('.co'))q('.co').onclick=()=>{hideInfo();try{FR94.duo(j.name,j.floor)}catch(e){msg('듀오를 열지 못했어요')}}}
  /* ---------- 로비 메뉴 ---------- */
  try{GM_ITEMS.push({id:'plaza',ic:'⛲',t:'광장',sub:'다른 플레이어와 만나기 · 결투 · 듀오 신청'});if(typeof LV_ITEM_EN!=='undefined')LV_ITEM_EN.push('PLAZA');if(window.LB_COL&&LB_COL.length<7)LB_COL.push('#7dd8ff')}catch(e){}
  {const f=gmMainGo;gmMainGo=function(){const it=GM_ITEMS[GM.sel];if(it&&it.id==='plaza'){try{gmSfx('ok')}catch(e){}enter();return}return f.apply(this,arguments)}}

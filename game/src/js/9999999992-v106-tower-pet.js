@@ -5,14 +5,14 @@
    - 관전 중(내 캐릭터를 안 그릴 때) · 결투 중에는 그리지 않는다. 크기는 탑 캐릭터(2배)에 맞춰 K. */
 (()=>{try{
  if(!window.TW71)return;
- const K=1.35,F={x:null,y:null,t:0,hop:0,last:0,an:-1};
+ const K=1.0/* v116 작게(1.35 → 1.0) */,F={x:null,y:null,t:0,hop:0,last:0,an:-1};
  function update(now){const dt=Math.min(.05,Math.max(0,(now-(F.t||now))/1000));F.t=now;
-  const side=(P.face&&P.face.x<0)?1:-1,tx=P.x+side*32,ty=P.y-4;
+  const side=(P.face&&P.face.x<0)?1:-1,tx=P.x+side*26,ty=P.y-4;
   if(F.x==null||Math.hypot(tx-F.x,ty-F.y)>140){F.x=tx;F.y=ty}
   const k=Math.min(1,dt*5.5);F.x+=(tx-F.x)*k;F.y+=(ty-F.y)*k;
   /* 공격할 때 살짝 뛰기 */const T=TW71.T,n=T&&T.slash?T.slash.length:0;if(n>F.an&&F.an>=0)F.hop=now;F.an=n}
  function draw(now){const id=(shopInv().eq||{}).pt||0;if(!id&&id!==0)return;
-  const hp=now-F.hop<260?Math.sin((now-F.hop)/260*Math.PI)*5:0,moving=Math.hypot((P.x+((P.face&&P.face.x<0)?1:-1)*32)-F.x,(P.y-4)-F.y)>3,step=moving?Math.abs(Math.sin(now/90))*1.5:0;
+  const hp=now-F.hop<260?Math.sin((now-F.hop)/260*Math.PI)*5:0,moving=Math.hypot((P.x+((P.face&&P.face.x<0)?1:-1)*26)-F.x,(P.y-4)-F.y)>3,step=moving?Math.abs(Math.sin(now/90))*1.5:0;
   drawPet(ctx,id,Math.round(F.x),Math.round(F.y+2-10*K-hp-step),now,K)}
  function list(L,now){try{if(window.WATCH95&&WATCH95.specOn())return;if(window.PVP92&&PVP92.on())return;const T=TW71.T;if(!T||T.bossCard)return;
   if(T.dead&&Math.floor(now/90)%2)return;update(now);L.push({y:F.y,fn:()=>{try{draw(now)}catch(e){}}})}catch(e){}}

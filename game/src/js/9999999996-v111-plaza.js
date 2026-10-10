@@ -89,7 +89,7 @@
  function drawMe(now){const c=ctx;c.globalAlpha=.4;c.fillStyle='#000';c.beginPath();c.ellipse(P.x,P.y+2,9,3,0,0,6.28);c.fill();c.globalAlpha=1;
   const fl=P.face.x<0,om=mode;mode='village';try{drawSword(P.x-12,P.y-19,2,fl,now);drawKnight(c,P.x-12,P.y-19,2,fl,P.walkOn?P.walkT:null,P.walkOn?null:now/430)}catch(e){}finally{mode=om}
   c.save();c.font='900 7px sans-serif';c.textAlign='center';const nm='Lv'+lookNow().lv+' '+(saveData.name||'나');c.fillStyle='#000';c.fillText(nm,P.x+.5,P.y-37.5);c.fillStyle='#ffd166';c.fillText(nm,P.x,P.y-38);c.restore()}
- function drawMyPet(now){const id=(shopInv().eq||{}).pt||0,K=1.35,side=(P.face&&P.face.x<0)?1:-1,tx=P.x+side*32,ty=P.y-4,F=S.pet,dt=Math.min(.05,Math.max(0,(now-(F.t||now))/1000));F.t=now;
+ function drawMyPet(now){const id=(shopInv().eq||{}).pt||0,K=1.0,side=(P.face&&P.face.x<0)?1:-1,tx=P.x+side*26,ty=P.y-4,F=S.pet,dt=Math.min(.05,Math.max(0,(now-(F.t||now))/1000));F.t=now;
   if(F.x==null||Math.hypot(tx-F.x,ty-F.y)>140){F.x=tx;F.y=ty}const k=Math.min(1,dt*5.5);F.x+=(tx-F.x)*k;F.y+=(ty-F.y)*k;
   const step=Math.hypot(tx-F.x,ty-F.y)>3?Math.abs(Math.sin(now/90))*1.5:0;try{drawPet(ctx,id,Math.round(F.x),Math.round(F.y+2-10*K-step),now,K)}catch(e){}}
  function draw(now){const c=ctx,t=now/1000;c.fillStyle='#141a2a';c.fillRect(0,0,W,H);c.save();c.translate(-Math.round(S.cam.x),-Math.round(S.cam.y));
@@ -191,7 +191,7 @@
   if(q('.af'))q('.af').onclick=async()=>{q('.af').disabled=true;const r=await api('/api/friends/request','POST',{name:j.name});
    if(r.s===200){j.friend=r.j.status==='friends'?'accepted':'pending';renderInfo();msg(r.j.status==='friends'?'✓ 친구가 됐어요!':'✓ 친구 신청을 보냈어요')}else{q('.af').disabled=false;msg(r.j.error||'보내지 못했어요')}};
   if(q('.du2'))q('.du2').onclick=()=>{hideInfo();try{FR94.duel(j.name)}catch(e){msg('결투를 열지 못했어요')}};
-  if(q('.co'))q('.co').onclick=()=>{hideInfo();try{FR94.duo(j.name)}catch(e){msg('듀오를 열지 못했어요')}}}
+  if(q('.co'))q('.co').onclick=()=>{hideInfo();try{FR94.duo(j.name,j.floor)}catch(e){msg('듀오를 열지 못했어요')}}}
  /* ---------- 로비 메뉴 ---------- */
  try{GM_ITEMS.push({id:'plaza',ic:'⛲',t:'광장',sub:'다른 플레이어와 만나기 · 결투 · 듀오 신청'});if(typeof LV_ITEM_EN!=='undefined')LV_ITEM_EN.push('PLAZA');if(window.LB_COL&&LB_COL.length<7)LB_COL.push('#7dd8ff')}catch(e){}
  {const f=gmMainGo;gmMainGo=function(){const it=GM_ITEMS[GM.sel];if(it&&it.id==='plaza'){try{gmSfx('ok')}catch(e){}enter();return}return f.apply(this,arguments)}}
