@@ -23451,12 +23451,15 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(m.n!=null&&M.n!=null&&m.n<=M.n&&!m.d){if(m.ev&&m.ev.length)mateEv(M,m.ev);return}/* 순서가 뒤바뀌어 온 옛 위치는 버림(사건은 살림) */
   const lt=m.ts!=null?m.ts+(M._spec?M.off:D.mOff):now;/* v96: 관전 대상은 관전 쪽이 정한 시계(M.off) */
 
-  if(m.ev)mateEv(M,m.ev);const cap=M._spec?90:24;if(m.pl&&m.pl!==M.pl){M.pl=m.pl;M.hs=[];M.sx=null;M.sy=null;M.tr=[];M.spawnT=lt}
+  if(m.ev)mateEv(M,m.ev);const cap=M._spec?240:40;/* v140: 광장은 걸은 길까지 와서 기록이 많음 */if(m.pl&&m.pl!==M.pl){M.pl=m.pl;M.hs=[];M.sx=null;M.sy=null;M.tr=[];M.spawnT=lt}
   const hs=M.hs||[];hs.push({t:lt,x:m.x,y:m.y,fx:m.ffx,fy:m.ffy});while(hs.length>cap)hs.shift();
   const ev0=m.ev;delete m.ev;Object.assign(M,m,{at:now,hs});m.ev=ev0}
  /* 늦게 도착하는 정도(가장 빨리 온 것 대비)를 모아 90%가 도착하는 만큼만 늦게 그림: 매끄럽게 + 너무 늦지 않게 */
- function lagOf(a,v,ms){a.push(v);if(a.length>40)a.shift();const q=a.slice().sort((x,y)=>x-y)[Math.floor(a.length*.9)];return ms?Math.max(40,Math.min(150,q+15)):Math.max(.04,Math.min(.15,q+.015))}/* v110: 딜레이 0이면 소식이 고르지 않게 와서 상대가 뚝뚝 끊겨 보였음 → 흔들림만큼만 아주 조금(0.04~0.15초) 늦게 그려 매끄럽게 */
- const MDLY=M=>M&&M._spec?0:(D.mDly||60);/* v110: 0.04~0.15초 자동(관전은 시간표에 이미 들어 있음) *//* 관전은 시간표에 이미 재생 지연이 들어 있음 */
+ function lagOf(a,v,ms){a.push(v);if(a.length>60)a.shift();const q=a.slice().sort((x,y)=>x-y)[Math.floor((a.length-1)*.95)];
+  /* v140: 서버를 거쳐 오는 소식은 0.15초보다 훨씬 들쭉날쭉할 때가 많아(렌더 서버) 상대가 멈췄다 튀었음 → 95%가 도착하는 만큼(+여유) 0.06~0.45초로 넓히고,
+     값이 갑자기 바뀌면 그 자체로 튀어 보이니 늘릴 땐 빨리 · 줄일 땐 아주 천천히 따라감 */
+  const want=ms?Math.max(60,Math.min(450,q+30)):Math.max(.06,Math.min(.45,q+.03));if(a._v==null)a._v=want;else a._v+=(want-a._v)*(want>a._v?.25:.03);return a._v}
+ const MDLY=M=>M&&M._spec?0:(D.mDly||90);/* v140: 0.06~0.45초 자동(전 v110: 0.04~0.15초)(관전은 시간표에 이미 들어 있음) *//* 관전은 시간표에 이미 재생 지연이 들어 있음 */
  function mateEv(M,list){for(const e of list){if((M.seen||(M.seen=new Set())).has(e.e))continue;M.seen.add(e.e);if(M.seen.size>200)M.seen=new Set([...M.seen].slice(-100));
    (M.evs||(M.evs=[])).push(Object.assign({},e,{t:e.t+((M._spec?M.off:D.mOff)||0)}));if(M.evs.length>40)M.evs.shift();if(e.k==='U'&&e.sp&&!M._spec)setTimeout(()=>note('동료 필살기! '+(e.sp.name||'')),MDLY())}}
  function matePos(now,MM){const M=MM||D.mate,hs=M.hs;if(!hs||!hs.length)return [M.x,M.y];const rt=now-MDLY(M);
@@ -24381,7 +24384,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(mode==='tower'&&t&&!t.bossCard&&WS.n%2===0){try{o.snap=DU._snap()}catch(e){}}/* 잡몹은 0.13초마다(사이는 보는 쪽이 이어 그림) */
   if(pv){const M=PVP92.M;o.pvp={sc:M.sc,me:M.owner?0:1,round:M.round,ph:M.ph}}
   /* v97: 보스전(과 보스 등장 카드)은 화면을 작은 사진(JPEG)으로 찍어 보냄 — 보스 패턴이 복잡해서 그대로 보여 주려면 이게 확실함. 1초에 약 10장 */
-  if((mode==='boss'||t&&t.bossCard&&mode==='tower')&&now-(WS.imgT||0)>=95&&!(window.VID99&&VID99.outLive()>=Math.max(1,WS.viewers))){/* 모두 영상으로 보고 있으면 사진은 안 보냄 */WS.imgT=now;try{o.img=shot()}catch(e){}}
+  if((mode==='boss'||t&&t.bossCard&&mode==='tower')&&now-(WS.imgT||0)>=(window.VID99&&VID99.outLive()>=Math.max(1,WS.viewers)?400:95)){/* v140: 모두 영상으로 봐도 0.4초마다 사진은 보냄(영상이 멈추면 보는 쪽이 사진으로 이어 봄) */WS.imgT=now;try{o.img=shot()}catch(e){}}
   if(mode==='boss'&&typeof G!=='undefined'&&G){o.boss={name:(G.B&&G.B.name)||(G.bossName)||'보스',hp:Math.round(G.hp||0),mx:Math.round(G.maxHp||1)}}
   try{o.me=ACCT55.get().user||''}catch(e){}
   return o}
@@ -24420,7 +24423,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
     const o=nw-m.ts;if(SP.off==null||o<SP.off)SP.off=o;else SP.off+=.15;SP.jit.push(o-SP.off);if(SP.jit.length>90)SP.jit.shift();
     if(m.img){const im=new Image();im.src=m.img;m._im=im;delete m.img}/* 미리 풀어 둠 */
     SP.buf.push(m);SP.last=Date.now();SP.wait=false;try{feed(m)}catch(e){console.error('watch feed',e)}}
-   if(SP.jit.length){const q=SP.jit.slice().sort((a,b)=>a-b)[Math.floor(SP.jit.length*.95)];SP.pdT=0/* v109: 재생 지연 0(받은 즉시 그림) */}
+   if(SP.jit.length){const q=SP.jit.slice().sort((a,b)=>a-b)[Math.floor(SP.jit.length*.95)];SP.pdT=Math.max(60,Math.min(500,q+40))/* v140: 받은 즉시 그리면(v109) 소식 간격이 들쭉날쭉할 때마다 뚝뚝 끊겼음 → 늦게 오는 정도(95%)만큼만 살짝 늦춰 매끄럽게 */}
    if(SP.buf.length>200)SP.buf.splice(0,SP.buf.length-200);SP.since=Math.max(SP.since,r.j.seq||0);
    SP.where=r.j.where;const quiet=Date.now()-SP.last;
    if(!ms.length&&quiet>9000){if(!r.j.live&&/로비|^$/.test(r.j.where||'')&&!SP.wait){stop(SP.name+'님이 로비로 돌아갔어요');return}paintBar(SP.wait?'친구 화면을 받는 중… (최대 몇 초)':'연결을 기다리는 중…')}
@@ -24597,7 +24600,12 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   catch(e){console.error('vid99 in',e);if(IN.pc===pc)IN.pc=null}}
  /* 영상이 실제로 흘러나오고 있을 때만 그림(멈추면 예전 방식으로) */
  function inFrame(){const v=IN.video;if(!IN.pc||!v||IN.pc.connectionState!=='connected'||v.readyState<2||!v.videoWidth)return null;
-  const now=performance.now();if(v.currentTime!==IN.lastCT){IN.lastCT=v.currentTime;IN.lastCTat=now}if(now-IN.lastCTat>1500)return null;IN.live=true;return v}
+  const now=performance.now();
+  /* v140: 실시간 영상은 그림이 멈춰도 currentTime은 계속 흘러서, 멈춘 화면(예: 15층)을 계속 보여 줬음(소식은 이미 16층).
+     진짜 새 그림이 들어온 때(requestVideoFrameCallback)를 재서 0.7초 넘게 새 그림이 없으면 영상 대신 다시 그리기로, 0.3초 이어서 들어오면 영상으로 돌아감 */
+  if(v.requestVideoFrameCallback){if(IN.vfV!==v){IN.vfV=v;IN.vfAt=0;IN.vfRun=0;const cb=()=>{const t=performance.now();if(t-IN.vfAt>400)IN.vfRun=t;IN.vfAt=t;if(IN.vfV===v)v.requestVideoFrameCallback(cb)};v.requestVideoFrameCallback(cb)}
+   if(now-IN.vfAt>700||now-IN.vfRun<300){IN.live=false;return null}IN.live=true;return v}
+  if(v.currentTime!==IN.lastCT){IN.lastCT=v.currentTime;IN.lastCTat=now}if(now-IN.lastCTat>1500)return null;IN.live=true;return v}
  setInterval(()=>{const SP=WATCH95.SP;
   if(!SP.on){if(IN.name)closeIn(true);return}
   if(IN.name&&IN.name!==SP.name)closeIn(true);
@@ -26319,6 +26327,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const lookNow=()=>{const e=shopInv().eq||{};let sk='',pv='',lv=1;try{sk=SKIN58.get()||''}catch(_){}try{pv=(window.PET59&&PET59.get())||''}catch(_){}try{lv=DU.myLv()}catch(_){}return {ch:DU.myCh(),wp:e.wp||0,pt:e.pt||0,sk,pv,lv}};
  async function sync(){if(!S.on||mode!=='plaza'||S.busy>=2)return;const iv=S.cnt>12?350:S.cnt>6?220:160;/* v117 적으면 더 자주 */if(performance.now()-S.last<iv)return;S.last=performance.now();S.busy++;
   try{const me=Object.assign({x:Math.round(P.x),y:Math.round(P.y),fx:P.face.x<0?-1:1,fy:Math.round((P.face.y||0)*10)/10,w:P.walkOn?1:0,ts:Math.round(performance.now()),n:++S.n},lookNow());if(S.say){me.say=S.say.text;me.sid=S.say.sid}/* v113 말풍선 */if(S.emo&&performance.now()-S.emo.t<3200)me.emo=S.emo.i+'|'+S.emo.s;/* v117 이모티콘 */
+   /* v140: 지난 0.7초 길 「시간차(10ms).x.y」 — 서버는 마지막 위치 하나만 들고 있어 남들이 띄엄띄엄 받았음 */try{const L=(S.trl||[]).filter(q=>me.ts-q.t>30&&me.ts-q.t<720);if(L.length)me.tr=L.map(q=>Math.round((me.ts-q.t)/10)+'.'+Math.round(q.x)+'.'+Math.round(q.y)).join(',').slice(0,238).replace(/,[^,]*$/,m=>m.split('.').length===3?m:'')}catch(e){}
    const r=await api('/api/plaza/sync','POST',{room:S.want||0,me,noinv:!!sv().noinv});if(!S.on)return;
    if(r.s!==200){S.err=r.s===401?'로그인이 필요해요':'서버 연결을 기다리는 중…';paintBar();return}S.err='';
    S.room=r.j.room;if(S.want===S.room)S.want=0;sayAck(r.j.sid,r.j.say);S.rooms=r.j.rooms||[];S.cnt=(r.j.players||[]).length+1;feed(r.j.players||[]);
@@ -26334,9 +26343,14 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    /* v117: 서버는 사람마다 마지막 위치 하나만 들고 있어서 새 위치가 0.2~0.45초마다 와요. 그 간격(gap)을 재서 1.6배+60ms(0.2~0.7초)만큼 늦게 그려
       두 위치 사이를 늘 이어 그림(예전 0.14초는 모자라 멈췄다가 툭 튀었음). 늦게 그리는 기준(off)은 천천히만 바뀌어 위치 순서가 뒤섞이지 않게 */
    if(M.lastN!==p.n){if(M.lastArr){const gp=Math.min(1500,now-M.lastArr);M.gap=M.gap?M.gap*.8+gp*.2:gp}M.lastArr=now;M.lastN=p.n}
-   M.oMin=M.oMin==null||o<M.oMin?o:M.oMin+.3;const want=M.oMin+Math.max(200,Math.min(700,(M.gap||300)*1.6+60));
+   M.oMin=M.oMin==null||o<M.oMin?o:M.oMin+.3;/* v140: 걸은 길이 함께 오니 「소식이 늦게 오는 정도」(95%)+여유만큼만 늦게 그림(0.15~0.9초) — 전엔 간격×1.6이라 너무 늦어져 길 기록이 모자라 멈췄음 */
+   if(M.lastN2!==p.n){M.lastN2=p.n;(M.jit||(M.jit=[])).push(o-M.oMin);if(M.jit.length>50)M.jit.shift()}const J=M.jit&&M.jit.length?M.jit.slice().sort((x,y)=>x-y)[Math.floor((M.jit.length-1)*.95)]:250;const want=M.oMin+Math.max(200,Math.min(900,Math.max((M.gap||300)*1.6+60,J+90)));
    M.off=M.off==null?want:want>M.off?M.off+(want-M.off)*.3:M.off-Math.min(2,M.off-want);
    M.lvT='Lv'+(p.lv||1)+' '+p.name;
+   /* v140: 함께 온 길을 먼저 시간표에 넣음(이미 넣은 시각 뒤의 것만) → 띄엄띄엄 와도 걸은 그대로 이어 그림 */
+   if(p.tr&&typeof p.tr==='string'){try{const T=p.tr.split(',').map(q=>q.split('.').map(Number)).filter(q=>q.length===3&&q.every(v=>isFinite(v))).sort((a,b)=>b[0]-a[0]);const k=T.length;
+     const hl=M.hs&&M.hs.length?M.hs[M.hs.length-1].t:-1e15;T.forEach((q,i)=>{const ts=p.ts-q[0]*10;if((M.lastTrTs==null||ts>M.lastTrTs)&&ts<p.ts&&ts+(M.off||0)>hl){/* 시간표 순서가 꼬이지 않게 */DU.mateIn({x:q[1],y:q[2],ffx:p.fx,ffy:p.fy||0,fx:p.fx,n:p.n-1+(i+1)/(k+1),ts,ch:p.ch|0,wp:p.wp|0,sk:p.sk||'',pt:p.pt|0,pv:p.pv||'',hp:1,mx:1,w:1},M);M.lastTrTs=ts}})}catch(e){}}
+   M.lastTrTs=Math.max(M.lastTrTs||0,p.ts);
    try{DU.mateIn({x:p.x,y:p.y,ffx:p.fx,ffy:p.fy||0,fx:p.fx,n:p.n,ts:p.ts,ch:p.ch|0,wp:p.wp|0,sk:p.sk||'',pt:p.pt|0,pv:p.pv||'',hp:1,mx:1,w:!!p.w},M)}catch(e){}M.nm=M.lvT;M.name=p.name;if(p.emo&&p.emo!==M.emoK){const [ei,es]=String(p.emo).split('|');M.emoK=p.emo;if(M.emoK0!==undefined||!p.age||p.age<2){M.emoI=+ei|0;M.emoT=now}}M.emoK0=1;
    if(p.say&&p.sid&&p.sid!==M.sid){M.sid=p.sid;M.say=p.say;M.sayT=now-(p.sayAge||0)*1000;if(p.sayAge==null||p.sayAge<6)logAdd(p.name,p.say)}}
   for(const k in S.O)if(!seen.has(k)){const M=S.O[k];M.gone=M.gone||now;if(now-M.gone>2500)delete S.O[k]}else S.O[k].gone=0}
@@ -26347,6 +26361,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   else if(S.tgt){const dx=S.tgt.x-P.x,dy=S.tgt.y-P.y,d=Math.hypot(dx,dy);if(d<3)S.tgt=null;else{vx=dx/d*SPD;vy=dy/d*SPD;P.face={x:Math.abs(dx)>4?Math.sign(dx):0,y:Math.abs(dy)>Math.abs(dx)?Math.sign(dy):0};if(!P.face.x&&!P.face.y)P.face={x:0,y:1}}}
   const moving=Math.hypot(vx,vy)>1;P.walkT=(P.walkT||0)+(moving?dt*9:0);P.walkOn=moving;
   if(moving){const nx=P.x+vx*dt,ny=P.y+vy*dt;if(!blocked(nx,ny)){P.x=nx;P.y=ny}else if(!blocked(nx,P.y))P.x=nx;else if(!blocked(P.x,ny))P.y=ny;else S.tgt=null}
+  /* v140: 걸은 길을 0.05초마다 적어 둠(남들에게 0.7초치 길을 함께 보냄) */{const L=S.trl||(S.trl=[]);if(!L.length||now-L[L.length-1].t>=50)L.push({t:now,x:P.x,y:P.y});while(L.length&&now-L[0].t>800)L.shift()}
   S.cam.x=Math.max(0,Math.min(WW-W,P.x-W/2));S.cam.y=Math.max(0,Math.min(WH-H,P.y-H/2-10))}
  /* ---------- 그리기 ---------- */
  function drawMe(now){const c=ctx;c.globalAlpha=.4;c.fillStyle='#000';c.beginPath();c.ellipse(P.x,P.y+2,9,3,0,0,6.28);c.fill();c.globalAlpha=1;

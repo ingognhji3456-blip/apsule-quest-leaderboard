@@ -1992,6 +1992,10 @@ def plaza_sync():
             m[k] = v if not isinstance(v, float) else round(v, 1)
         elif isinstance(v, str):
             m[k] = v[:24]
+    # v140: 지난 0.7초 걸은 길(「시간차.x.y,…」 숫자만) — 서버는 마지막 위치 하나만 들고 있어서, 이게 없으면 남들이 띄엄띄엄 받아 끊겨 보였음
+    tr = me.get('tr')
+    if isinstance(tr, str) and len(tr) <= 240 and re.fullmatch(r'[0-9.,\-]*', tr):
+        m['tr'] = tr
     want = clamp_int(body.get('room'), 0, 999, 0)
     now = time.time()
     with _plaza_lock:

@@ -65,6 +65,7 @@
  const lookNow=()=>{const e=shopInv().eq||{};let sk='',pv='',lv=1;try{sk=SKIN58.get()||''}catch(_){}try{pv=(window.PET59&&PET59.get())||''}catch(_){}try{lv=DU.myLv()}catch(_){}return {ch:DU.myCh(),wp:e.wp||0,pt:e.pt||0,sk,pv,lv}};
  async function sync(){if(!S.on||mode!=='plaza'||S.busy>=2)return;const iv=S.cnt>12?350:S.cnt>6?220:160;/* v117 적으면 더 자주 */if(performance.now()-S.last<iv)return;S.last=performance.now();S.busy++;
   try{const me=Object.assign({x:Math.round(P.x),y:Math.round(P.y),fx:P.face.x<0?-1:1,fy:Math.round((P.face.y||0)*10)/10,w:P.walkOn?1:0,ts:Math.round(performance.now()),n:++S.n},lookNow());if(S.say){me.say=S.say.text;me.sid=S.say.sid}/* v113 말풍선 */if(S.emo&&performance.now()-S.emo.t<3200)me.emo=S.emo.i+'|'+S.emo.s;/* v117 이모티콘 */
+   /* v140: 지난 0.7초 길 「시간차(10ms).x.y」 — 서버는 마지막 위치 하나만 들고 있어 남들이 띄엄띄엄 받았음 */try{const L=(S.trl||[]).filter(q=>me.ts-q.t>30&&me.ts-q.t<720);if(L.length)me.tr=L.map(q=>Math.round((me.ts-q.t)/10)+'.'+Math.round(q.x)+'.'+Math.round(q.y)).join(',').slice(0,238).replace(/,[^,]*$/,m=>m.split('.').length===3?m:'')}catch(e){}
    const r=await api('/api/plaza/sync','POST',{room:S.want||0,me,noinv:!!sv().noinv});if(!S.on)return;
    if(r.s!==200){S.err=r.s===401?'로그인이 필요해요':'서버 연결을 기다리는 중…';paintBar();return}S.err='';
    S.room=r.j.room;if(S.want===S.room)S.want=0;sayAck(r.j.sid,r.j.say);S.rooms=r.j.rooms||[];S.cnt=(r.j.players||[]).length+1;feed(r.j.players||[]);
@@ -80,9 +81,14 @@
    /* v117: 서버는 사람마다 마지막 위치 하나만 들고 있어서 새 위치가 0.2~0.45초마다 와요. 그 간격(gap)을 재서 1.6배+60ms(0.2~0.7초)만큼 늦게 그려
       두 위치 사이를 늘 이어 그림(예전 0.14초는 모자라 멈췄다가 툭 튀었음). 늦게 그리는 기준(off)은 천천히만 바뀌어 위치 순서가 뒤섞이지 않게 */
    if(M.lastN!==p.n){if(M.lastArr){const gp=Math.min(1500,now-M.lastArr);M.gap=M.gap?M.gap*.8+gp*.2:gp}M.lastArr=now;M.lastN=p.n}
-   M.oMin=M.oMin==null||o<M.oMin?o:M.oMin+.3;const want=M.oMin+Math.max(200,Math.min(700,(M.gap||300)*1.6+60));
+   M.oMin=M.oMin==null||o<M.oMin?o:M.oMin+.3;/* v140: 걸은 길이 함께 오니 「소식이 늦게 오는 정도」(95%)+여유만큼만 늦게 그림(0.15~0.9초) — 전엔 간격×1.6이라 너무 늦어져 길 기록이 모자라 멈췄음 */
+   if(M.lastN2!==p.n){M.lastN2=p.n;(M.jit||(M.jit=[])).push(o-M.oMin);if(M.jit.length>50)M.jit.shift()}const J=M.jit&&M.jit.length?M.jit.slice().sort((x,y)=>x-y)[Math.floor((M.jit.length-1)*.95)]:250;const want=M.oMin+Math.max(200,Math.min(900,Math.max((M.gap||300)*1.6+60,J+90)));
    M.off=M.off==null?want:want>M.off?M.off+(want-M.off)*.3:M.off-Math.min(2,M.off-want);
    M.lvT='Lv'+(p.lv||1)+' '+p.name;
+   /* v140: 함께 온 길을 먼저 시간표에 넣음(이미 넣은 시각 뒤의 것만) → 띄엄띄엄 와도 걸은 그대로 이어 그림 */
+   if(p.tr&&typeof p.tr==='string'){try{const T=p.tr.split(',').map(q=>q.split('.').map(Number)).filter(q=>q.length===3&&q.every(v=>isFinite(v))).sort((a,b)=>b[0]-a[0]);const k=T.length;
+     const hl=M.hs&&M.hs.length?M.hs[M.hs.length-1].t:-1e15;T.forEach((q,i)=>{const ts=p.ts-q[0]*10;if((M.lastTrTs==null||ts>M.lastTrTs)&&ts<p.ts&&ts+(M.off||0)>hl){/* 시간표 순서가 꼬이지 않게 */DU.mateIn({x:q[1],y:q[2],ffx:p.fx,ffy:p.fy||0,fx:p.fx,n:p.n-1+(i+1)/(k+1),ts,ch:p.ch|0,wp:p.wp|0,sk:p.sk||'',pt:p.pt|0,pv:p.pv||'',hp:1,mx:1,w:1},M);M.lastTrTs=ts}})}catch(e){}}
+   M.lastTrTs=Math.max(M.lastTrTs||0,p.ts);
    try{DU.mateIn({x:p.x,y:p.y,ffx:p.fx,ffy:p.fy||0,fx:p.fx,n:p.n,ts:p.ts,ch:p.ch|0,wp:p.wp|0,sk:p.sk||'',pt:p.pt|0,pv:p.pv||'',hp:1,mx:1,w:!!p.w},M)}catch(e){}M.nm=M.lvT;M.name=p.name;if(p.emo&&p.emo!==M.emoK){const [ei,es]=String(p.emo).split('|');M.emoK=p.emo;if(M.emoK0!==undefined||!p.age||p.age<2){M.emoI=+ei|0;M.emoT=now}}M.emoK0=1;
    if(p.say&&p.sid&&p.sid!==M.sid){M.sid=p.sid;M.say=p.say;M.sayT=now-(p.sayAge||0)*1000;if(p.sayAge==null||p.sayAge<6)logAdd(p.name,p.say)}}
   for(const k in S.O)if(!seen.has(k)){const M=S.O[k];M.gone=M.gone||now;if(now-M.gone>2500)delete S.O[k]}else S.O[k].gone=0}
@@ -93,6 +99,7 @@
   else if(S.tgt){const dx=S.tgt.x-P.x,dy=S.tgt.y-P.y,d=Math.hypot(dx,dy);if(d<3)S.tgt=null;else{vx=dx/d*SPD;vy=dy/d*SPD;P.face={x:Math.abs(dx)>4?Math.sign(dx):0,y:Math.abs(dy)>Math.abs(dx)?Math.sign(dy):0};if(!P.face.x&&!P.face.y)P.face={x:0,y:1}}}
   const moving=Math.hypot(vx,vy)>1;P.walkT=(P.walkT||0)+(moving?dt*9:0);P.walkOn=moving;
   if(moving){const nx=P.x+vx*dt,ny=P.y+vy*dt;if(!blocked(nx,ny)){P.x=nx;P.y=ny}else if(!blocked(nx,P.y))P.x=nx;else if(!blocked(P.x,ny))P.y=ny;else S.tgt=null}
+  /* v140: 걸은 길을 0.05초마다 적어 둠(남들에게 0.7초치 길을 함께 보냄) */{const L=S.trl||(S.trl=[]);if(!L.length||now-L[L.length-1].t>=50)L.push({t:now,x:P.x,y:P.y});while(L.length&&now-L[0].t>800)L.shift()}
   S.cam.x=Math.max(0,Math.min(WW-W,P.x-W/2));S.cam.y=Math.max(0,Math.min(WH-H,P.y-H/2-10))}
  /* ---------- 그리기 ---------- */
  function drawMe(now){const c=ctx;c.globalAlpha=.4;c.fillStyle='#000';c.beginPath();c.ellipse(P.x,P.y+2,9,3,0,0,6.28);c.fill();c.globalAlpha=1;
