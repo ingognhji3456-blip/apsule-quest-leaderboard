@@ -170,13 +170,15 @@
    /* 회피 대시 */if(!busy(F.st)&&F.st!=='slash'&&F.st!=='parry'&&F.evCd<=0&&Math.random()<(F.ph2?.34:.22)){const s=Math.random()<.5?-1:1,l=d||1;F.dvx=(-dx/l)*.6+(-dy/l)*s;F.dvy=(-dy/l)*.6+(dx/l)*s;const L=Math.hypot(F.dvx,F.dvy)||1;F.dvx/=L;F.dvy/=L;F.st='evade';F.t=now;F.evCd=F.ph2?1600:2600;dpop(F.x,F.y-34,'회피!','#9fe8ff');snd(1100,.07,'triangle',.04,1800);return}
    if(F.st==='evade'||F.st==='blink'){dpop(F.x,F.y-34,'빗나감','#9fe8ff');return}
    /* 클라비스의 패링 */if(F.st==='parry'){F.blockT=now;F.x+=Math.cos(a)*3;F.y+=Math.sin(a)*3;clampB(F);spark((P.x+F.x)/2,(P.y+F.y)/2-12,'#ffe79a',16);dpop(F.x,F.y-36,'패링!','#ffe79a');snd(1600,.12,'square',.06,1200);P._stun127=now+700;F.st='wind';F.t=now;F.wd=260;F.cnt=1;F.cd=0;return}
-   let pet=0;try{pet=(PETS[shopInv().eq.pt]||{}).dmg||0}catch(e){}const crit=Math.random()<(w.crit||0)+.05;let dmg=Math.round(34*(w.dmg||1)*(1+pet)*(crit?1.8:1)*(F.st==='stun'?1.5:1));
-   F.hp=Math.max(0,F.hp-dmg);F.hitF=now;try{window.SK130&&SK130.gain(crit?6:4)}catch(e){}F.x+=Math.cos(a)*5;F.y+=Math.sin(a)*5;clampB(F);dpop(F.x,F.y-34,(crit?'치명! ':'')+dmg,crit?'#ffd84a':'#ffffff');spark(F.x,F.y-12,w.trail||'#ffffff',6);snd(crit?900:700,.06,'sawtooth',.05,200);
+   /* v134: 탑과 같은 피해 공식(박자 · 콤보 · 치명 · 장비/스킨/세트 배율) + 맞힘 효과(상태 이상 · 신화 스킬) */let pet=0;try{pet=(PETS[shopInv().eq.pt]||{}).dmg||0}catch(e){}const K=window.SK130?SK130.atk():{bg:0,mult:1,crit:()=>Math.random()<(w.crit||0)+.05,dmgMul:1,comboMul:1},crit=K.crit(),bg=K.bg;
+   let dmg=Math.round(34*(w.dmg||1)*(1+pet)*K.mult*(crit?1.8:1)*K.comboMul*K.dmgMul*(F.st==='stun'?1.5:1));
+   F.hp=Math.max(0,F.hp-dmg);F.hitF=now;F.hitT=now;try{if(window.SK130){SK130.onHit(F,dmg,crit,bg);SK130.swing(1,bg)}}catch(e){}F.x+=Math.cos(a)*5;F.y+=Math.sin(a)*5;clampB(F);dpop(F.x,F.y-34,(crit?'치명! ':'')+(bg===2?'PERFECT ':'')+dmg,bg===2?'#ffe79a':crit?'#ffd84a':'#ffffff');spark(F.x,F.y-12,w.trail||'#ffffff',crit||bg===2?12:6);snd(crit?900:700,.06,'sawtooth',.05,200);
+   SQ.stop=now+(bg===2||crit?85:55);SQ.shake=now;try{const at=audio.currentTime;perc('snare',at,bg===2||crit?.55:.38);if(bg===2)perc('hat',at+.02,.4)}catch(e){}
    if(F.st==='wind'&&!F.cnt&&Math.random()<.35){F.st='idle';F.cd=300}
    if(F.hp<=0){F.st='dead';F.t=now;snd(220,.6,'triangle',.08,60)}
    else if(!F.ph2&&F.hp<F.mx*.5){F.ph2=true;dpop(F.x,F.y-46,'클라비스가 진심이 되었다!','#ffd84a');spark(F.x,F.y-20,'#ffd84a',20)}}}
  function myDash(){const now=performance.now(),me=SQ.me;if(now<(P.dashCd||0)||now<(P._stun127||0)||P.hp<=0)return;let [mx,my]=moveInput();if(Math.hypot(mx,my)<.1){mx=P.face.x||1;my=P.face.y||0}const l=Math.hypot(mx,my)||1;
-  me.dash={vx:mx/l,vy:my/l,t:now};P.dash={t0:now,dur:150,vx:mx/l*290,vy:my/l*290};if(Math.abs(mx)>.2)P.face={x:Math.sign(mx),y:0};P.dashCd=now+520;me.inv=now+300;snd(330,.09,'sawtooth',.03,200);try{window.CB81&&CB81.onDash()}catch(e){}}
+  me.dash={vx:mx/l,vy:my/l,t:now};P.dash={t0:now,dur:150,vx:mx/l*290,vy:my/l*290};if(Math.abs(mx)>.2)P.face={x:Math.sign(mx),y:0};P.dashCd=now+520;me.inv=now+300;snd(330,.09,'sawtooth',.03,200)}
  function myParry(){const now=performance.now();if(now<(P.parryCd||0)||now<(P._stun127||0)||P.hp<=0)return;SQ.me.parryT=now;P.parryT=now;P.parryCd=now+600}
  {const f=doAttack;doAttack=function(){if(mode==='sec127'){if(SQ&&SQ.ph==='duel')myAtk();return}return f.apply(this,arguments)}}
  {const f=doDash;doDash=function(){if(mode==='sec127'){if(SQ&&SQ.ph==='duel')myDash();return}return f.apply(this,arguments)}}
@@ -194,6 +196,7 @@
   if(f.st==='intro'){if(now-f.t>1400){f.st='idle'}return}
   if(f.st==='dead'||P.hp<=0)return;
   if(f.st==='stun'){if(now-f.t>1200){f.st='idle';f.cd=400}return}
+  /* v134: 장비 · 스킬로 걸린 기절 · 냉기 */if(window.SK130&&SK130.stunned(f)){f.walk=false;return}if(window.SK130&&SK130.chilled(f))dt*=.55;
   if(f.st==='parry'){f.face={x:Math.sign(dx)||1,y:0};if(now-f.t>560){f.st='idle';f.parCd=f.ph2?2200:3200}return}
   if(f.st==='evade'){f.x+=f.dvx*300*dt;f.y+=f.dvy*300*dt;clampB(f);if(now-f.t>170){f.st='idle';f.cd=Math.min(f.cd,250);if(f.ph2&&Math.random()<.5){f.st='dashin';f.t=now;const l=Math.hypot(P.x-f.x,P.y-f.y)||1;f.dvx=(P.x-f.x)/l;f.dvy=(P.y-f.y)/l}}return}
   if(f.st==='dashin'){f.x+=f.dvx*300*dt;f.y+=f.dvy*300*dt;clampB(f);f.face={x:Math.sign(f.dvx)||f.face.x,y:0};if(now-f.t>170||Math.hypot(P.x-f.x,P.y-f.y)<24){f.st='wind';f.t=now;f.wd=(f.ph2?220:300)}return}
@@ -203,7 +206,7 @@
     if(hd<38&&ang(Math.atan2(hy,hx),f.aa)<1.35){
      if(now-me.parryT<200){try{window.SK130&&SK130.gain(10)}catch(e){}f.st='stun';f.t=now;f.cnt=0;dpop(P.x,P.y-36,'PARRY!','#ffe79a');spark((P.x+f.x)/2,P.y-14,'#ffe79a',18);snd(1600,.12,'square',.06,1200);return}
      if(now<me.inv||now<(P._hit127||0)){dpop(P.x,P.y-34,'회피','#9fe8ff')}
-     else{const dmg=Math.round(14*m*(f.ph2?1.2:1)*(f.cnt?1.3:1));P.hp=Math.max(0,P.hp-dmg);P._hit127=now+600;P.x+=Math.cos(f.aa)*9;P.y+=Math.sin(f.aa)*9;clampB(P);dpop(P.x,P.y-34,'-'+dmg,'#ff5a7a');spark(P.x,P.y-12,'#ff5a7a',8);snd(160,.12,'square',.07,80);SQ.shake=now}}f.cnt=0}
+     else{let dmg=Math.round(14*m*(f.ph2?1.2:1)*(f.cnt?1.3:1));/* v134: 장비 · 스킨 · 신화 스킬이 피해를 줄이거나 피함 */try{if(window.SK130)dmg=SK130.hurt(dmg)}catch(e){}if(dmg<=0){dpop(P.x,P.y-34,'회피','#9fe8ff');f.cnt=0;return}P.hp=Math.max(0,P.hp-dmg);P._hit127=now+600;P.x+=Math.cos(f.aa)*9;P.y+=Math.sin(f.aa)*9;clampB(P);dpop(P.x,P.y-34,'-'+dmg,'#ff5a7a');spark(P.x,P.y-12,'#ff5a7a',8);snd(160,.12,'square',.07,80);SQ.shake=now}}f.cnt=0}
    return}
   if(f.st==='slash'){if(now-f.t>230){if(f.ph2&&f.combo<1&&d<46){f.combo++;f.st='wind';f.t=now;f.wd=160;return}f.combo=0;f.st='idle';f.cd=(f.ph2?480:700)+Math.random()*400;f.goal=null}return}
   /* idle: 기술 고르기 */
@@ -328,7 +331,7 @@
   ctx.restore()}
  function hud(now){const og=(typeof G!=='undefined')?G:null;try{clavisBar(now)}catch(e){}
   try{G=Object.assign(Object.create(og||{}),{ult:0,state:'play',sp:null,spUsed:false});drawPlayerHUD(now)}catch(e){}finally{G=og}}
- function duel(now,dt,t){const me=SQ.me,f=F,stun=now<(P._stun127||0);
+ function duel(now,dt0,t){const me=SQ.me,f=F,stun=now<(P._stun127||0),dt=now<(SQ.stop||0)?0:dt0;/* v134 히트스톱 */
   /* 나 */if(P.hp>0&&f.st!=='dead'&&f.st!=='intro'&&!SQ.done&&!stun){let [mx,my]=moveInput();if(SQ.tgt){const ddx=SQ.tgt.x-P.x,ddy=SQ.tgt.y-P.y,dd=Math.hypot(ddx,ddy);if(dd<3)SQ.tgt=null;else{mx=ddx/dd;my=ddy/dd}}
    if(me.dash){const q=(now-me.dash.t)/150;if(q>=1){me.dash=null;P.dash=null}else{P.x+=me.dash.vx*290*dt;P.y+=me.dash.vy*290*dt;P.walkOn=false}}
    else{const l=Math.hypot(mx,my);if(l>.1){P.x+=mx/l*80*dt;P.y+=my/l*80*dt;P.walkOn=true;P.walkT=(P.walkT||0)+dt*8;if(Math.abs(mx)>.2)P.face={x:Math.sign(mx),y:0}}else P.walkOn=false}clampB(P)}else P.walkOn=false;
@@ -337,14 +340,14 @@
   drawRoom(now);
   const L=[{y:f.y,fn:()=>drawFoe(now)},{y:P.y,fn:()=>{if(P.hp<=0)ctx.globalAlpha=.4;const blink=now<(P._hit127||0)&&Math.floor(now/70)%2;if(!blink){if(SQ.me.parryT&&now-SQ.me.parryT<220){ctx.save();ctx.strokeStyle='#ffe79a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(P.x+((P.face.x||1)<0?-8:8),P.y-12,10,0,TAU);ctx.stroke();ctx.restore()}hero(P.x,P.y,(P.face.x||1)<0,P.walkOn,P.walkT||0)}ctx.globalAlpha=1;
    if(stun)for(let i=0;i<3;i++){const a=now/200+i*TAU/3;ctx.fillStyle='#ffe79a';ctx.fillRect(P.x+Math.cos(a)*9-1,P.y-40+Math.sin(a)*3,3,3)}}}];
-  L.sort((a,b)=>a.y-b.y).forEach(o=>{try{o.fn()}catch(e){}});drawFX(now);ctx.restore();
+  try{window.SK130&&SK130.petList(L,now)}catch(e){}/* v134: 펫 */L.sort((a,b)=>a.y-b.y).forEach(o=>{try{o.fn()}catch(e){}});drawFX(now);ctx.restore();
   hud(now);
   if(f.st==='intro'){const k=Math.min(1,(now-f.t)/400);txt('DUEL',W/2,H/2-6,30,'#ffd84a',k);txt('클라비스와 1:1 결투',W/2,H/2+12,10,'#e6d4ff',k)}
   if(t<9&&f.st!=='intro'&&!SQ.done)txt('공격 J · 대시 K · 패링 F — 「!」가 뜨면 패링, 클라비스도 막고 피해요',W/2,AY+AH-3,8,'#e8eef6',.75);
   /* 끝 */if(f.st==='dead'&&now-f.t>5800&&!SQ.done){SQ.done=1;finish(true)}if(P.hp<=0&&!SQ.done){if(!SQ.lose)SQ.lose=now;if(now-SQ.lose>1200){SQ.done=1;finish(false)}}}
  function out(fn){$('overlay').hidden=true;SQ=null;mode='boss';try{fn()}catch(e){}}
  function finish(won){/* 결과창 뒤에는 결투장이 그대로 보이게(mode는 sec127 유지) */
-  if(won){const s=SV(),first=!s.beat;if(first){s.beat=Date.now()}s.core=1;save();found('sec');
+  if(won){const s=SV(),first=!s.beat;if(first){s.beat=Date.now()}s.core=1;save();found('sec');try{window.LV83&&LV83.addXP(300)}catch(e){}/* v134: 보스처럼 경험치 */
    showOverlay('비밀의 방 · CLEAR','열쇠지기 클라비스를 쓰러뜨렸어요!','<b style="color:#c9a8ff">🔮 열쇠지기의 코어</b>를 받았어요.<br>광장 위쪽 <b>탑의 성문</b>에 코어를 박으면 문이 열려요.'+(s.gate?'<br><small style="opacity:.75">(성문은 이미 열려 있어요)</small>':''),
     [['⛲ 광장으로',()=>out(()=>{toLobby();setTimeout(()=>{try{PLZ111.enter()}catch(e){}},300)}),true],['▲ 10F 다시',()=>out(()=>TW71.start(10)),false],['로비로',()=>out(()=>toLobby()),false]])}
   else showOverlay('비밀의 방','클라비스에게 졌어요','열쇠는 그대로 있어요. 바로 다시 결투하거나, 탑 10F 보스전에서 K를 눌러 다시 올 수 있어요.',[['↺ 다시 결투',()=>{$('overlay').hidden=true;SQ={ph:'room',t0:performance.now(),parts:[]};mode='sec127';lastT=performance.now()},true],['로비로',()=>out(()=>toLobby()),false]])}
@@ -359,5 +362,5 @@
  {const f=toLobby;toLobby=function(){if(mode==='sec127'){SQ=null;mode='boss'}return f.apply(this,arguments)}}
 
  const st=document.createElement('style');st.textContent=`#key127{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9400;padding:12px 22px;border:0;border-radius:999px;font:900 17px/1 sans-serif;color:#2a1c08;background:linear-gradient(180deg,#ffe58a,#e0a83a);box-shadow:0 0 0 2px #fff9,0 0 24px #ffd84aaa;animation:eg126c 1.4s ease-in-out infinite}#key127[hidden]{display:none}html.sec127on #songInfo{display:none!important}`;document.head.appendChild(st);
- window.SEC127={IDX,useKey,KEYP,SV,startFight,get SQ(){return SQ},get F(){return F},kit:{hero,txt,ltxt,bubble,brickC,torch,R0,snd,asFoe,kneelImg,foeWp}};
+ window.SEC127={IDX,useKey,KEYP,SV,startFight,get SQ(){return SQ},get F(){return F},kit:{dpop,hero,txt,ltxt,bubble,brickC,torch,R0,snd,asFoe,kneelImg,foeWp}};
 }catch(e){console.error('v127 secret room',e)}})();

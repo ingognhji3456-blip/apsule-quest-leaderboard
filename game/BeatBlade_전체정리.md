@@ -1,17 +1,17 @@
 # BEAT BLADE · MACHINA — 전체 정리 (한 장으로 보기)
 
-> 작성일 2026-10-10 · 최신 게임 파일 **BeatBlade-133.html**
+> 작성일 2026-10-10 · 최신 게임 파일 **BeatBlade-135.html**
 > 버전별 자세한 내용은 `game/BeatBlade_작업요약.md`, 서버 올리는 방법은 `game/서버_로그인_안내.md`에 있어요.
 
 ---
 
 ## 0. 지금 꼭 알아야 할 것 3가지
 
-1. **v133까지 모두 main에 합쳤어요** (PR #49 ~ #81). 최신 게임 파일은 `game/BeatBlade-133.html`이에요.
+1. **v135까지 모두 main에 합쳤어요** (PR #49 ~ #82). 최신 게임 파일은 `game/BeatBlade-135.html`이에요.
 2. **Render에서 최신 커밋을 한 번 배포해 주세요** (「Manual Deploy → Deploy latest commit」, 상태가 초록색 「Live」가 되면 끝).
    서버(`app.py`)가 바뀐 버전은 v102 · v103 · v111 · v113 · v114 · v114.1 · v119 · v122 · v125예요. 최신 커밋 하나에 모두 들어 있어서 **한 번만** 배포하면 돼요.
    배포해야 동작하는 것: 랭킹 장비 표시 · 1~3위 관전 · 새 스킨 30개 · 채팅 · 친구 추천 · 「n분 전 접속」 · **광장 · 광장 결투/듀오 신청 · 새 시즌 보상 · 말풍선 채팅 · 나쁜 말 거르기 · 전용 스킨 · 펫 묶음 상품 · 캐릭터 전용 스킨 40종 · 설정에서 이름 바꾸기 · 네온 세트 ₩8,900**.
-3. 나머지 버전(v104~v110 · v112 · v115 ~ v118 · v120 · v121 · v123 · v124 · v126 · v127 · v128 · v129 · v130 · v131 · v132 · v133)은 게임 파일만 바뀌어서 따로 배포할 필요가 없어요.
+3. 나머지 버전(v104~v110 · v112 · v115 ~ v118 · v120 · v121 · v123 · v124 · v126 · v127 · v128 · v129 · v130 · v131 · v132 · v133 · v134 · v135)은 게임 파일만 바뀌어서 따로 배포할 필요가 없어요.
 
 ---
 
@@ -78,6 +78,8 @@
 | v131 | 클라비스 체력 50,000 → 8,000 |
 | v132 | 던전 괴물 타격감(히트스톱 · 타격음 · 충격 고리 · 흔들림 · 쓰러지는 연출) · 아르카 체력 7,000 → 4,000 |
 | v133 | 던전 · 클라비스 결투 대시를 보스전과 같은 연출로(P.dash) · 벽에서 미끄러짐 |
+| v134 | 열쇠 보스 · 던전에도 탑 전투 기능 전부(콤보 · 박자 · 무기 특성 · 신화 스킬 · 펫 · 탑 패링 · 경험치 · 골드) · 대시 칸 충전 |
+| v135 | 던전 보스 아르카 새 모습(옆모습 · 걷기 · 공격 동작) · 던전 괴물 · 바닥 · 보스방 난이도별 디자인 |
 
 ---
 
@@ -164,6 +166,8 @@
 | v128 | SEC127: 장면 off → crack(벽 금 · 무너짐, `snapNow`로 멈춘 보스방 한 장) → free(직접 이동 · `okAt` · 카메라 `SQ.cam`, 복도 `corridor`) → room → duel(`F` AI: 목표 지점 걷기 · dashin · evade · parry · blink · wind/slash, 체력 1500×난이도, 전용 바 `clavisBar` + `drawPlayerHUD`, 결투장 `roomBg`/`drawRoom`). 370 터치 단추 목록에 sec127 |
 | v129 | 99999999995 `DG129`(광장 성문 `gateDraw`(PLZART.objs) · 코어 `insertCore` · 기록실 `arch`/서랍 `openDrawer`/문서 `#doc129` · 던전 `startFloor`(괴물 `SPC`/`POOL`/`mobAI`, 그림 `MON.reg.m_dg*` → `TW71.mobFrame`) · 20층 `placePaper` → `bossIn` → `boss`(`bossAI`, 그림 `c_dgarca` 큰 그림판) → `portalDraw` → `ending`, 기록 `saveData.dg129`), SEC127: 체력 5만 · 10줄 바 · `guardDraw` · 쓰러짐 `defeated`(코어 `sec127.core`), 상점 공개는 `sec127.clear` |
 | v130 | 99999999996 `SK130`(F/L · C 키를 sec127 · dg129에서도 받음, doDash 감싸기로 `P.stam` · `stamTick`, 패링 대기 · 발밑 방패, 궁극기 `gain`/`fire`/`tickUlt`(drawSpecialFX · SET61.ULT) · `drawUltGauge` · `#btnU`, 장면별 곡 `musicKey` → `startMusic` + `sched`) |
+| v134 | SK130을 탑 호환 층으로: `asTower`(잠깐 mode=tower · `TW71.T`=가짜 탑 `FT` · hitMob/addPop 바꿔 끼움, 진짜 장면은 `RM`)로 CB81 · MYTH100 · TPET106을 그대로 부름. `atk/onHit/swing/kill/hurt/parry/petList`를 결투 · 던전이 사용. CB81 `tick` · MYTH100 `tick/draw` 내보냄 |
+| v135 | 99999999997 `DG135`(아르카 `c_dgarca` 새로: `o.view/walk/sk/ph/q` → `POSE[기술_단계]`, `bossO`가 보스 상태로 옵션을 만듦 · 옆모습 왼쪽은 drawBoss가 뒤집음 · 크기 `bossK` 1.6~1.9, 괴물 `m_dg*` 난이도 꾸밈(`A.o.tier`), 바닥 `floorUnder` · 보스방 `bossUnder` 덧그림) |
 | v117 | PLZ111 `emote`(`me.emo`='번호|순번') · `feed`의 사람별 `gap`→`off`(0.2~0.7초, 천천히만 바뀜) · 새로 연 페이지 감지(`lastTs`/`lastN`) |
 | v116 | FR94 `duel/duo`가 `D.autoGo`, 수락 쪽 `F.autoReady` → 자동 준비 · 자동 시작. 펫 K: 탑 · 광장 1.0, 보스 .95 |
 | v115 | 9999999997 `PLZART`(build · under · objs · over), PLZ111이 있으면 사용 |

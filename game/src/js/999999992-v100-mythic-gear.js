@@ -262,5 +262,5 @@
  #abBox100 .abS b{display:block;font-size:13.5px;color:var(--ac)}#abBox100 .abS small{font-size:11.5px;color:#d8e0e8;line-height:1.4}
  #abBox100 .abT{display:flex;flex-wrap:wrap;gap:4px}#abBox100 .abT span{font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:8px;color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,#0a0f14);border:1px solid color-mix(in srgb,var(--ac) 40%,transparent)}
  #wsInfo:has(#abBox100) #wsBtn{position:static!important}`;document.head.appendChild(st);
- window.MYTH100={GR,ABL,act:AB,MC,MW,MP,C0,W0,P0,traits,S};
+ window.MYTH100={GR,ABL,act:AB,MC,MW,MP,C0,W0,P0,traits,S,tick:()=>{resetIf();tick()},draw/* v134: 비밀의 방 · 던전(SK130)이 직접 부름 */};
 }catch(e){console.error('v100 myth',e)}})();
