@@ -1,17 +1,17 @@
 # BEAT BLADE · MACHINA — 전체 정리 (한 장으로 보기)
 
-> 작성일 2026-10-10 · 최신 게임 파일 **BeatBlade-129.html**
+> 작성일 2026-10-10 · 최신 게임 파일 **BeatBlade-130.html**
 > 버전별 자세한 내용은 `game/BeatBlade_작업요약.md`, 서버 올리는 방법은 `game/서버_로그인_안내.md`에 있어요.
 
 ---
 
 ## 0. 지금 꼭 알아야 할 것 3가지
 
-1. **v129까지 모두 main에 합쳤어요** (PR #49 ~ #77). 최신 게임 파일은 `game/BeatBlade-129.html`이에요.
+1. **v129까지 모두 main에 합쳤어요** (PR #49 ~ #77). 최신 게임 파일은 `game/BeatBlade-130.html`이에요(v130은 아직 합치기 전).
 2. **Render에서 최신 커밋을 한 번 배포해 주세요** (「Manual Deploy → Deploy latest commit」, 상태가 초록색 「Live」가 되면 끝).
    서버(`app.py`)가 바뀐 버전은 v102 · v103 · v111 · v113 · v114 · v114.1 · v119 · v122 · v125예요. 최신 커밋 하나에 모두 들어 있어서 **한 번만** 배포하면 돼요.
    배포해야 동작하는 것: 랭킹 장비 표시 · 1~3위 관전 · 새 스킨 30개 · 채팅 · 친구 추천 · 「n분 전 접속」 · **광장 · 광장 결투/듀오 신청 · 새 시즌 보상 · 말풍선 채팅 · 나쁜 말 거르기 · 전용 스킨 · 펫 묶음 상품 · 캐릭터 전용 스킨 40종 · 설정에서 이름 바꾸기 · 네온 세트 ₩8,900**.
-3. 나머지 버전(v104~v110 · v112 · v115 ~ v118 · v120 · v121 · v123 · v124 · v126 · v127 · v128 · v129)은 게임 파일만 바뀌어서 따로 배포할 필요가 없어요.
+3. 나머지 버전(v104~v110 · v112 · v115 ~ v118 · v120 · v121 · v123 · v124 · v126 · v127 · v128 · v129 · v130)은 게임 파일만 바뀌어서 따로 배포할 필요가 없어요.
 
 ---
 
@@ -74,6 +74,7 @@
 | v127 | 비밀의 방: 광장 열쇠 → 탑 10F 보스전 K → 보스 꺼짐 · 벽 문 · 비밀 복도 → 열쇠지기 클라비스 → 신화 캐릭터 클라비스(상점에 나타남 · 🪙30,000) |
 | v128 | 비밀의 방 다시 만들기: 갈라지는 벽 · 직접 걸어 이어진 복도 · 클라비스와 1:1 결투(대시 · 회피 · 패링) · 전용 체력바 · 새 모습 |
 | v129 | 클라비스 체력 5만 · 검으로 막는 패링 · 지면 코어 → 광장 성문 → 비밀 기록실 → 봉인 보관소 20층(새 괴물 6종 · 보스 아르카) → 포탈로 나가면 비밀 캐릭터 |
+| v130 | 클라비스 결투 · 던전에서 패링 · 궁극기 키가 눌리게 · 대시 칸 · 궁극기 게이지 · 배경음악 |
 
 ---
 
@@ -159,6 +160,7 @@
 | v127 | 99999999994 `SEC127`(CHARS 끝 클라비스 `sec127` · `CH2DEF[IDX]`=NG82.paintChar, 상점 카드 숨김 `hideCard`, 광장 열쇠 `KEYP`(PLZART.objs 감싸기), 10F K/`#key127` → mode `sec127` 장면 off·door·walk·corr·room, 싸움은 `s7Fight(9)` + `S7ART[9]` 이름 잠깐 바꿈 + `MON.reg.c_s7_mharu`를 `G.sec127`일 때 클라비스 그림으로, 체력 ×1.8), EGG126 `pop` 공개 |
 | v128 | SEC127: 장면 off → crack(벽 금 · 무너짐, `snapNow`로 멈춘 보스방 한 장) → free(직접 이동 · `okAt` · 카메라 `SQ.cam`, 복도 `corridor`) → room → duel(`F` AI: 목표 지점 걷기 · dashin · evade · parry · blink · wind/slash, 체력 1500×난이도, 전용 바 `clavisBar` + `drawPlayerHUD`, 결투장 `roomBg`/`drawRoom`). 370 터치 단추 목록에 sec127 |
 | v129 | 99999999995 `DG129`(광장 성문 `gateDraw`(PLZART.objs) · 코어 `insertCore` · 기록실 `arch`/서랍 `openDrawer`/문서 `#doc129` · 던전 `startFloor`(괴물 `SPC`/`POOL`/`mobAI`, 그림 `MON.reg.m_dg*` → `TW71.mobFrame`) · 20층 `placePaper` → `bossIn` → `boss`(`bossAI`, 그림 `c_dgarca` 큰 그림판) → `portalDraw` → `ending`, 기록 `saveData.dg129`), SEC127: 체력 5만 · 10줄 바 · `guardDraw` · 쓰러짐 `defeated`(코어 `sec127.core`), 상점 공개는 `sec127.clear` |
+| v130 | 99999999996 `SK130`(F/L · C 키를 sec127 · dg129에서도 받음, doDash 감싸기로 `P.stam` · `stamTick`, 패링 대기 · 발밑 방패, 궁극기 `gain`/`fire`/`tickUlt`(drawSpecialFX · SET61.ULT) · `drawUltGauge` · `#btnU`, 장면별 곡 `musicKey` → `startMusic` + `sched`) |
 | v117 | PLZ111 `emote`(`me.emo`='번호|순번') · `feed`의 사람별 `gap`→`off`(0.2~0.7초, 천천히만 바뀜) · 새로 연 페이지 감지(`lastTs`/`lastN`) |
 | v116 | FR94 `duel/duo`가 `D.autoGo`, 수락 쪽 `F.autoReady` → 자동 준비 · 자동 시작. 펫 K: 탑 · 광장 1.0, 보스 .95 |
 | v115 | 9999999997 `PLZART`(build · under · objs · over), PLZ111이 있으면 사용 |
