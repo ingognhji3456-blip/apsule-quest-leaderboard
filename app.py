@@ -1856,6 +1856,7 @@ _plaza_lock = threading.Lock()
 _PLAZA_INV_T = {}    # 친구가 아닌 사람에게 보낸 마지막 신청 시각
 PLAZA_CAP = 30
 PLAZA_TTL = 8        # 이 시간 동안 소식이 없으면 광장에서 뺀다
+PLAZA_SAY_MAX = 50   # v113 말풍선 한 마디 최대 글자
 _PLAZA_KEYS = ('x', 'y', 'fx', 'fy', 'w', 'ch', 'wp', 'sk', 'pt', 'pv', 'lv', 'ts', 'n', 'emo', 'dn')
 
 
@@ -1923,12 +1924,27 @@ def plaza_sync():
             if ch is None:
                 ch = max(_PLAZA or {0: 0}) + 1
         room = _PLAZA.setdefault(ch, {})
-        room[uid] = {'name': user['username'], 't': now, 'm': m, 'noinv': bool(body.get('noinv'))}
-        others = [dict(p['m'], name=p['name'], age=round(now - p['t'], 2)) for u, p in room.items() if u != uid]
+        prev = room.get(uid) or {}
+        ent = {'name': user['username'], 't': now, 'm': m, 'noinv': bool(body.get('noinv')),
+               'say': prev.get('say', ''), 'sid': prev.get('sid', 0), 'sayT': prev.get('sayT', 0)}
+        # v113 말풍선: 새 말(sid가 바뀜)은 1.2초에 한 번, 50자까지. 8초 동안 남들에게 보낸다
+        say, sid = _chat_clean(me.get('say'))[:PLAZA_SAY_MAX], clamp_int(me.get('sid'), 0, 10 ** 9, 0)
+        if say and sid and sid != ent['sid'] and now - ent['sayT'] >= CHAT_GAP:
+            ent.update(say=say, sid=sid, sayT=now)
+        room[uid] = ent
+        others = []
+        for u, p in room.items():
+            if u == uid:
+                continue
+            o = dict(p['m'], name=p['name'], age=round(now - p['t'], 2))
+            if p.get('say') and now - p['sayT'] < 8:
+                o.update(say=p['say'], sid=p['sid'], sayAge=round(now - p['sayT'], 1))
+            others.append(o)
         rooms = [{'room': c, 'n': len(r)} for c, r in sorted(_PLAZA.items())]
     _SEEN[uid] = (now, '⛲ 광장 ' + str(ch))
     invites = [{k: i[k] for k in ('id', 'from', 'kind', 'code')} for i in _INV.get(uid, []) if now - i['t'] < 120]
-    return jsonify(ok=True, room=ch, cap=PLAZA_CAP, players=others, rooms=rooms, invites=invites)
+    mine = room.get(uid, {})
+    return jsonify(ok=True, room=ch, cap=PLAZA_CAP, players=others, rooms=rooms, invites=invites, sid=mine.get('sid', 0))
 
 
 @app.route('/api/plaza/leave', methods=['POST'])
