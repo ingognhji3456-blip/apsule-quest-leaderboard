@@ -120,7 +120,7 @@
   A.fx();for(let i=0;i<3;i++){const a=t*2+i*2.1;A.a(.7);A.C(cs(a)*10,y-2+sn(a)*3,1.2,'#9ad8ff');A.px(cs(a)*10,y-2+sn(a)*3,'#ffffff')}A.a(1)};
  /* 9 황금 불사조 — 공작처럼 긴 장식 깃 */
  CFG[9]={fly:1,glow:['#ffd166',16,-14]};
- PT[9]=(A,t)=>{const y=-16+Math.round(sn(t*2.2)*1.5),wf=sn(t*7);
+ PT[9]=(A,t)=>{const y=-16+Math.round(sn(t*2.2)*1.5),wf=sn(t*5.2)*1.4;
   for(let i=0;i<5;i++){const a=2.35+(i-2)*.2+sn(t*2+i)*.05,l=14+(i%2)*3;let px0=-1,py0=y+3;for(let j=1;j<=6;j++){const q=j/6,nx=-1+cs(a)*l*q,ny=y+3+sn(a)*l*q+q*q*3;A.L(px0,py0,nx,ny,j<5?'#d8a020':'#ffe08a',j<4?2:1);px0=nx;py0=ny}A.C(px0,py0,2,'#ffe08a');A.C(px0,py0,1.1,'#3a8ad0');A.px(px0,py0,'#0a2a5a')}
   A.wing(-2,y-1,11,-2.5-wf*.35,5,['#c88a10','#ffd166','#fff6c0'],1);A.wing(2,y-1,11,-.64+wf*.35,5,['#c88a10','#ffd166','#fff6c0'],1);
   A.ball(0,y,3.8,5,['#c88a10','#ffd166','#fff6c0']);A.E(.6,y+1,2,3,'#fff6c0');A.ball(1,y-6,3,3,['#c88a10','#ffe08a','#ffffff']);
@@ -226,7 +226,7 @@
   for(let i=0;i<3;i++){const q=(t*.7+i/3)%1;A.a(.7*(1-q));A.C(-8+i*8,y-8-q*6,.9,'#e0c8ff')}A.a(1)};
  /* 21 바람 매 — 넓게 펼친 날개로 활공 */
  CFG[21]={fly:1};
- PT[21]=(A,t)=>{const y=-16+Math.round(sn(t*1.4)*2.5),wf=Math.round(sn(t*3)*1.2);
+ PT[21]=(A,t)=>{const y=-16+Math.round(sn(t*1.4)*2.5),wf=Math.round(sn(t*5)*3.4);
   for(const s of [-1,1]){const W=[[s*2,y-2],[s*8,y-4-wf],[s*15,y-4-wf],[s*18,y-2-wf],[s*16,y],[s*14,y-.4],[s*13,y+1.4],[s*11,y+.6],[s*10,y+2],[s*7,y+1.2],[s*2,y+2]];
    A.P(W,'#6a4220');A.P([[s*2,y-1.4],[s*8,y-3.2-wf],[s*14,y-3.2-wf],[s*12,y-1.4-wf*.5],[s*3,y]],'#a8743a');A.L(s*3,y-2,s*14,y-3.6-wf,'#e8c8a0');
    for(let i=0;i<3;i++)A.px(s*(13+i*1.6),y-1-wf+i*.2,'#2a1a0a')}
@@ -264,7 +264,7 @@
   for(let i=0;i<4;i++){const x=-11+i*5,yy=by((i*5+2)/20)-3;A.px(x,yy,'#ffffff')}};
  /* 25 불사조 — 불꽃으로 된 새, V자로 든 날개 */
  CFG[25]={fly:1,glow:['#ff5a1f',17,-16]};
- PT[25]=(A,t)=>{const y=-15+Math.round(sn(t*2.6)*2),wf=sn(t*6)*.25;
+ PT[25]=(A,t)=>{const y=-15+Math.round(sn(t*2.6)*2),wf=sn(t*5.4)*.45;
   A.fx();for(let i=0;i<7;i++){const q=(t*1.1+i/7)%1;A.a(1-q);A.C(sn(i*2.3)*6,y+8+q*10,1.6*(1-q)+.3,q<.3?'#ffe36b':'#ff6a1f')}A.a(1);A.body();
   for(const s of [-1,1]){for(let i=0;i<5;i++){const a=(s<0?Math.PI:0)+s*(-.9-i*.18-wf),l=13-i*1.2;A.P([[s*2,y-1],[s*2+cs(a-.1*s)*l,y-1+sn(a-.1*s)*l],[s*2+cs(a+.12*s)*l*.9,y-1+sn(a+.12*s)*l*.9]],['#c82a0a','#ff5a1f','#ff9a3a','#ffd166','#fff6c0'][i])}}
   for(let i=0;i<3;i++)A.P([[-1.5+i*1.5,y+4],[-3+i*3+sn(t*8+i),y+11],[i*1.5,y+4]],['#ff5a1f','#ffd166','#ff5a1f'][i]);
@@ -369,7 +369,7 @@
   A.fx();const sp=[[-9,-3],[2,-3],[8,-3],[-4,-3],[5,-5]][tw];A.star(sp[0],sp[1],'#ffffff')};
  /* 35 암흑 까마귀 — 들쭉날쭉한 날개, 붉은 눈, 깃털이 흩날림 */
  CFG[35]={fly:1,glow:['#8a2a6a',12,-15]};
- PT[35]=(A,t)=>{const y=-15+Math.round(sn(t*2.4)*2),fu=sn(t*7);
+ PT[35]=(A,t)=>{const y=-15+Math.round(sn(t*2.4)*2),fu=sn(t*5.6)*1.5;
   for(const s of [-1,1]){const base=s<0?Math.PI+.4:-.4;for(let i=0;i<6;i++){const a=base+s*(-.5+i*.22)+fu*.3*s,l=12-Math.abs(i-2)*1.2;A.P([[s*2,y-1],[s*2+cs(a)*l,y-1+sn(a)*l],[s*2+cs(a+.16*s)*(l-2),y-1+sn(a+.16*s)*(l-2)]],i%2?'#1a1424':'#2a1e3a')}}
   for(let i=0;i<4;i++)A.P([[-1.6+i,y+4],[-3+i*2,y+11+(i%2)],[-.4+i,y+4]],'#1a1424');
   A.ball(0,y,4,5,['#0e0a16','#2a1e3a','#4a3a6a']);A.ball(1,y-6,3,2.8,['#0e0a16','#2a1e3a','#4a3a6a']);
@@ -408,7 +408,7 @@
   A.fx();for(let i=0;i<4;i++){const q=(t*.7+i/4)%1;A.a(1-q);A.C(-7+i*5,-16-q*8-sq,.9+q*.8,['#ff4dc8','#5ad0ff','#ffe36b','#7aff8a'][i]);A.px(-7.3+i*5,-16.4-q*8-sq,'#ffffff')}A.a(1)};
  /* 39 여신의 천사 — 날개 두 쌍, 후광, 하프 */
  CFG[39]={fly:1,glow:['#fff0a0',18,-18]};
- PT[39]=(A,t)=>{const y=-18+Math.round(sn(t*1.6)*2),wf=sn(t*2.4)*.15;
+ PT[39]=(A,t)=>{const y=-18+Math.round(sn(t*1.6)*2),wf=sn(t*4.6)*.38;
   for(const [w,a1,a2,l] of [[0,-2.2,-.94,12],[1,-2.9,-.24,10]]){A.wing(-2,y-1+w*3,l,a1-wf,5,['#d8d0b8','#ffffff','#fff0a0'],.8);A.wing(2,y-1+w*3,l,a2+wf,5,['#d8d0b8','#ffffff','#fff0a0'],.8)}
   A.P([[-5,y+12],[5,y+12],[3,y-1],[-3,y-1]],'#ffffff');A.P([[-5,y+12],[-1,y+12],[-1.6,y],[-3,y-1]],'#e8e4f0');A.R(-5,y+11,10,1,'#ffd166');A.R(-3,y+2,6,1,'#ffd166');
   A.C(0,y-5,3.6,'#f8e2d0');A.E(0,y-7.6,4,2.2,'#ffe08a');A.R(-4,y-7,1.6,6,'#ffe08a');A.R(2.4,y-7,1.6,6,'#ffe08a');
@@ -421,7 +421,7 @@
  const CACHE=new Map(),CAP=320;
  function render(id,fr){const key=id+'|'+fr;let cvv=CACHE.get(key);if(cvv){CACHE.delete(key);CACHE.set(key,cvv);return cvv}
   bo.clearRect(0,0,S,S);fo.clearRect(0,0,S,S);o=bo;o.globalAlpha=1;const t=fr/12;A.t=t;A.f=fr;A.bl=((fr+id*7)%46)<2;
-  PT[id](A,t);bo.globalAlpha=1;fo.globalAlpha=1;o=bo;
+  PT[id](A,t);bo.globalAlpha=1;fo.globalAlpha=1;o=bo;try{window.PET107&&PET107.on&&PET107.shade(bo,S,id)}catch(e){}/* v107 빛 칠하기 */
   so.globalCompositeOperation='source-over';so.clearRect(0,0,S,S);so.drawImage(BODY,0,0);so.globalCompositeOperation='source-in';so.fillStyle=OL;so.fillRect(0,0,S,S);so.globalCompositeOperation='source-over';
   cvv=mk();const c2=cvv.getContext('2d');for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]])c2.drawImage(SIL,dx,dy);c2.drawImage(BODY,0,0);c2.drawImage(FX,0,0);
   CACHE.set(key,cvv);if(CACHE.size>CAP)CACHE.delete(CACHE.keys().next().value);return cvv}
@@ -434,5 +434,8 @@
   if(fl){c.translate(Math.round(x),0);c.scale(-1,1);c.drawImage(img,Math.round(-OX*k),Math.round(gy-OY*k),Math.round(S*k),Math.round(S*k))}
   else c.drawImage(img,Math.round(x-OX*k),Math.round(gy-OY*k),Math.round(S*k),Math.round(S*k));
   c.imageSmoothingEnabled=sm;c.restore();c.globalAlpha=1;return true}
- window.PET105={draw,P:PT,CFG,render};
+ /* v107: 땅 펫은 바닥(groundY)에 발이 닿게, 나는 펫은 원래 공중 자리(yAir)에. 변이 펫 번호도 됨 */
+ const flies=id=>{try{if(typeof id==='string'&&window.PET59&&PET59.byId){const v=PET59.byId(id);if(v)id=v.base}}catch(e){}return !!(CFG[id]&&CFG[id].fly)};
+ const at=(id,yAir,groundY,k)=>flies(id)?yAir:groundY-10*(k||1);
+ window.PET105={draw,P:PT,CFG,render,clear:()=>CACHE.clear(),flies,at};
 }catch(e){console.error('v105 pets',e)}})();
