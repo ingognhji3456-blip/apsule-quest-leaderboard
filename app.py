@@ -2526,7 +2526,7 @@ def chat_send():
         return _bad('로그인이 필요해요', 401)
     uid = user['user_id']
     body = request.get_json(silent=True) or {}
-    text = _chat_clean(body.get('text'))
+    text = _bad_filter(_chat_clean(body.get('text')))  # v114.1 나쁜 말은 *로(서버 채팅 · 친구 대화 모두)
     if not text:
         return _bad('보낼 말을 적어 주세요', 400)
     now = time.time()
