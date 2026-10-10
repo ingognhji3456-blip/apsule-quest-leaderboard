@@ -107,7 +107,7 @@
  html.lpL #lp146 .rk::before{content:'RANKING';font-size:11px;letter-spacing:.12em;color:#ffc04a;padding-left:20px;line-height:16px;background:var(--sp-trophy) left center/14px 14px no-repeat;image-rendering:pixelated}
  html.lpL #lp146 .rk>b{display:none}
  html.lpL #lp146 .rk .rl{display:flex;flex-direction:column;gap:3px;min-height:0;overflow:hidden}
- html.lpL #lp146 .rk .rl .rlRow{display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:5px;padding:2px 6px;border-radius:7px;background:#0d151c;border:1px solid #ffffff10;font-size:11px;color:#e8f4ef}
+ html.lpL #lp146 .rk .rl .rlRow{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:5px;padding:2px 6px;border-radius:7px;background:#0d151c;border:1px solid #ffffff10;font-size:11px;color:#e8f4ef}
  html.lpL #lp146 .rk .rl .rlRow i{font-style:normal;font-size:12px}
  html.lpL #lp146 .rk .rl .rlRow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
  html.lpL #lp146 .rk .rl .rlRow b{color:#a6f5c6;font-size:10.5px}
