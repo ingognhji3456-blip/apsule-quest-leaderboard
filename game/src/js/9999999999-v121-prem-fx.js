@@ -7,7 +7,10 @@
       그리기는 984 drawKnight 감싸기의 window.__heroFx(층 0=몸 뒤, 1=몸 앞) — 전투 · 탑 · 동굴 · 마을.
    ③ 능력: 그 프리미엄 캐릭터(CHARS[TP84.PI[id]])의 abl을 전용 스킨을 낄 때만 늘림 → 신화 장비의 스킬 엔진(MYTH100)이 그대로 씀.
       공허 군주 = 섬광 대시 + 회피 15% / 시간의 대성기사 = 시간 감속(6번째 타격) + 재생(6초) / 하이퍼 비트 = 연쇄 번개 25% + 회전 칼날 2개.
-      원래 프리미엄 능력(CB81 PERK)과 세트 효과는 그대로 함께. */
+      원래 프리미엄 능력(CB81 PERK)과 세트 효과는 그대로 함께.
+   ④ 궁극기: SET61 궁극기 위에 전용 이름(공허 군림 · 시간 정지 · 하이퍼 피날레)과 화면 연출(drawSpecialFX 감싸기, 보스전 · 탑 모두).
+      공허=어두워진 화면 + 거대한 공허 구멍 · 강착 고리 · 빨려 드는 조각 · 마지막 십자 섬광 / 태엽=흑백으로 멈춘 세상 + 거대한 시계판 · 거꾸로 도는 바늘 · 금빛 기둥
+      네온=무대 레이저 · 바닥 이퀄라이저 · 박자 스피커 고리 · 마지막 무지개 섬광. 피해량은 원래 궁극기와 같다. */
 (()=>{try{
  if(!window.PREM119||typeof CHARS==='undefined')return;
  const RB=['#ff3ad6','#b05cff','#29f0ff','#5affb0','#ffe14d','#ff9a3a'];
@@ -91,5 +94,39 @@
 
  /* 매 프레임: 대시 모양 바꿔 끼우기 · 다른 스킨이면 남은 조각 비우기 */
  {const f=frame;frame=function(){try{const u=PREM119.cur();swapDash(u);if(!u&&S.parts.length)S.parts.length=0}catch(e){}return f.apply(this,arguments)}}
- window.PFX121={ABI,S,VX};
+ /* ---------- ④ 전용 궁극기: SET61 궁극기(공허 붕괴 · 태엽 심판 · 네온 드롭) 위에 전용 이름 · 화면 연출을 덧씌움 ---------- */
+ const UN={vx_void:'공허 군림',vx_clock:'시간 정지',vx_neon:'하이퍼 피날레'};
+ for(const u of PREM119.list)if(UN[u.id]&&!(u.tags||[]).some(x=>/^💥/.test(x)))u.tags.splice(1,0,'💥 궁극기 · '+UN[u.id]);
+ /* 궁극기를 쓰는 순간에만 SET61 궁극기 이름을 전용 이름으로 (보스전 useSpecial · 탑 ult 모두 tryUlt를 거침) */
+ function withName(fn){const u=PREM119.cur(),U=u&&window.SET61&&SET61.ULT[u.base];if(!U)return fn();const o=U.name;U.name=UN[u.id];try{return fn()}finally{U.name=o}}
+ if(typeof tryUlt==='function'){const f=tryUlt;tryUlt=function(){const a=arguments,t=this;return withName(()=>f.apply(t,a))}}
+ if(typeof useSpecial==='function'){const f=useSpecial;useSpecial=function(){const a=arguments,t=this;return withName(()=>f.apply(t,a))}}
+ function ultFx(sp,now){const u=PREM119.cur();if(!u||!sp||sp.type!=='p61'||sp.set!==u.base)return;const c=ctx,t=now-sp.t0,k=t/sp.dur;if(k<0||k>=1)return;
+  const fade=k<.08?k/.08:k>.85?(1-k)/.15:1,cx=sp.cx,cy=sp.cy,lastHit=sp.hits[sp.hits.length-1],fin=t>lastHit?Math.min(1,(t-lastHit)/400):0,W0=typeof W!=='undefined'?W:480,H0=typeof H!=='undefined'?H:300;
+  c.save();
+  if(u.base==='void'){/* 화면이 어두워지고 보스 자리에 거대한 공허 구멍 · 청록 강착 고리 · 빨려 드는 조각 비 */
+   c.globalAlpha=.42*fade;c.fillStyle='#05000c';c.fillRect(0,0,W0,H0);
+   const R=26+Math.min(1,t/500)*30;c.globalAlpha=.9*fade;c.fillStyle='#000';c.beginPath();c.ellipse(cx,cy,R,R*.8,0,0,6.283);c.fill();
+   c.globalCompositeOperation='lighter';for(let i=0;i<3;i++){c.globalAlpha=(.7-i*.2)*fade;c.strokeStyle=i%2?'#b07aff':'#5affd8';c.lineWidth=3-i;c.beginPath();c.ellipse(cx,cy,R*(1.25+i*.22),R*(.38+i*.08),t/400+i,0,6.283);c.stroke()}
+   for(let i=0;i<26;i++){const q=((t/900)+i/26)%1,a=i*2.4,d=(1-q)*160+R;c.globalAlpha=q*fade;c.fillStyle=i%2?'#b07aff':'#5affd8';c.fillRect(cx+Math.cos(a)*d-1,cy+Math.sin(a)*d*.6-1,2+q*2,2)}
+   if(fin){c.globalAlpha=(1-fin)*.9;c.fillStyle='#e8fff8';c.fillRect(cx-W0*fin,cy-2,W0*2*fin,4);c.fillRect(cx-2,cy-H0*fin,4,H0*2*fin)}}
+  else if(u.base==='clock'){/* 세상이 멈춘 듯 빛이 바래고, 보스 뒤 거대한 시계판 · 거꾸로 도는 바늘 · 타격마다 금빛 기둥 */
+   try{c.globalCompositeOperation='saturation';c.globalAlpha=.75*fade;c.fillStyle='#808080';c.fillRect(0,0,W0,H0)}catch(e){}
+   c.globalCompositeOperation='lighter';const R=78;c.globalAlpha=.85*fade;c.strokeStyle='#ffd84a';c.lineWidth=3;c.beginPath();c.arc(cx,cy,R,0,6.283);c.stroke();c.lineWidth=1;c.beginPath();c.arc(cx,cy,R-8,0,6.283);c.stroke();
+   for(let i=0;i<12;i++){const a=i/12*6.283-Math.PI/2;c.fillStyle='#fff0b0';c.fillRect(cx+Math.cos(a)*(R-14)-2,cy+Math.sin(a)*(R-14)-2,i%3?3:5,i%3?3:5)}
+   c.strokeStyle='#ffffff';c.lineWidth=3;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+Math.cos(-t/120)*R*.8,cy+Math.sin(-t/120)*R*.8);c.stroke();c.lineWidth=4;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+Math.cos(-t/700)*R*.5,cy+Math.sin(-t/700)*R*.5);c.stroke();
+   for(const d of sp.done){const q=(now-d)/380;if(q<0||q>1)continue;const x=cx+Math.sin(d)*40;c.globalAlpha=(1-q)*.8;const g=c.createLinearGradient(0,0,0,cy+30);g.addColorStop(0,'rgba(255,240,176,0)');g.addColorStop(1,'#fff0b0');c.fillStyle=g;c.fillRect(x-8*(1-q),0,16*(1-q),cy+30)}
+   if(fin){c.globalAlpha=(1-fin)*.8;c.strokeStyle='#ffd84a';c.lineWidth=4;c.beginPath();c.arc(cx,cy,R+fin*200,0,6.283);c.stroke()}}
+  else{/* 무대 조명: 위 양쪽에서 무지개 레이저가 쓸고, 바닥에 이퀄라이저, 박자마다 보스 둘레 스피커 고리 */
+   c.globalAlpha=.3*fade;c.fillStyle='#0a0018';c.fillRect(0,0,W0,H0);c.globalCompositeOperation='lighter';
+   for(let i=0;i<8;i++){const sx=i%2?W0+10:-10,a=(i%2?Math.PI:0)+(i%2?-1:1)*(.35+.3*Math.sin(t/300+i)),L=W0*1.2;c.globalAlpha=.55*fade;c.strokeStyle=RB[i%6];c.lineWidth=2;c.beginPath();c.moveTo(sx,-10+i*6);c.lineTo(sx+Math.cos(a)*L,-10+i*6+Math.sin(a)*L);c.stroke()}
+   for(let i=0;i<24;i++){const h=8+Math.abs(Math.sin(t/120+i*.9))*40;c.globalAlpha=.6*fade;c.fillStyle=RB[i%6];c.fillRect(i*(W0/24)+2,H0-h,W0/24-4,h)}
+   for(const d of sp.done){const q=(now-d)/420;if(q<0||q>1)continue;c.globalAlpha=(1-q)*.9;c.lineWidth=3;c.strokeStyle=RB[Math.floor(d/7)%6];c.beginPath();c.ellipse(cx,cy,20+q*90,12+q*50,0,0,6.283);c.stroke()}
+   if(fin){c.globalAlpha=(1-fin)*.7;for(let i=0;i<6;i++){c.fillStyle=RB[i];c.fillRect(0,i*H0/6,W0,H0/6)}}}
+  /* 전용 궁극기 이름 */
+  c.globalCompositeOperation='source-over';c.globalAlpha=fade*Math.min(1,t/250);c.font='900 18px '+(typeof FONT_STACK!=='undefined'?FONT_STACK:'sans-serif');c.textAlign='center';c.lineWidth=4;c.strokeStyle='#05070a';const tx=UN[u.id],ty=46+Math.max(0,1-t/250)*-12;c.strokeText(tx,W0/2,ty);c.fillStyle=u.base==='void'?'#5affd8':u.base==='clock'?'#ffd84a':RB[Math.floor(t/90)%6];c.fillText(tx,W0/2,ty);
+  c.font='800 9px sans-serif';c.fillStyle='#ffffff';c.fillText('♛ 전용 궁극기',W0/2,ty+13);c.textAlign='left';
+  c.restore();c.globalAlpha=1}
+ if(typeof drawSpecialFX==='function'){const f=drawSpecialFX;drawSpecialFX=function(now){const sp=typeof G!=='undefined'&&G&&G.sp;const r=f.apply(this,arguments);try{if(!(window.WATCH95&&WATCH95.specOn&&WATCH95.specOn()))ultFx(sp,now)}catch(e){}return r}}
+ window.PFX121={ABI,S,VX,UN};
 }catch(e){console.error('v121 prem fx',e)}})();

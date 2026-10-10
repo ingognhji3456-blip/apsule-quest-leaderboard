@@ -65,7 +65,7 @@
 | v118 | 펫 스킨은 원래 펫을 산 사람만 사고 낄 수 있게 |
 | v119 | 상점 고르기 창(일반 · 현질) · 스킨은 공방의 캐릭터 · 펫 아래 · 프리미엄 전용 스킨 3개 · 펫 묶음 39개 |
 | v120 | 테스터도 펫 묶음의 펫을 받음 |
-| v121 | 프리미엄 전용 스킨의 걷기 · 대시 연출 + 전용 능력 |
+| v121 | 프리미엄 전용 스킨의 걷기 · 대시 연출 + 전용 능력 + 전용 궁극기 연출 |
 
 ---
 
@@ -142,7 +142,7 @@
 | v118 | 99991 `petLock`(🔒 단추 `.lock118` → 공방), 99998 `ownsKind`에 `baseOk`(원래 펫 없으면 장착 풀림) |
 | v119 | 9999999998 `PREM119`(CH2DEF[190~192] · 전용 `motion` · 984 `__idlePose`) · 공방 스킨 줄 `#sk119` · 상점 고르기 `#shopPick119`, 99991 `BBShopAPI` · 탭 `pack` · `grantBases`(petbase_N), app.py `skin_vx_*` · `pack_p_*` |
 | v120 | 99991 `grantBases`에서 테스터 제외를 뺌 |
-| v121 | 9999999999 `PFX121`(984 `__heroFx` · `DASH70.ST` 바꿔 끼우기 · 프리미엄 캐릭터 `abl` getter → MYTH100) |
+| v121 | 9999999999 `PFX121`(984 `__heroFx` · `DASH70.ST` 바꿔 끼우기 · 프리미엄 캐릭터 `abl` getter → MYTH100 · 궁극기 이름 `UN`(tryUlt/useSpecial 동안 SET61.ULT 이름 바꿈) + drawSpecialFX 덧그림 `ultFx`) |
 | v117 | PLZ111 `emote`(`me.emo`='번호|순번') · `feed`의 사람별 `gap`→`off`(0.2~0.7초, 천천히만 바뀜) · 새로 연 페이지 감지(`lastTs`/`lastN`) |
 | v116 | FR94 `duel/duo`가 `D.autoGo`, 수락 쪽 `F.autoReady` → 자동 준비 · 자동 시작. 펫 K: 탑 · 광장 1.0, 보스 .95 |
 | v115 | 9999999997 `PLZART`(build · under · objs · over), PLZ111이 있으면 사용 |
