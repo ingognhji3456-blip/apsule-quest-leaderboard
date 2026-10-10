@@ -636,13 +636,15 @@
   const vp=vetPool(z),vets=vp.length?'<div class="twCard"><h4>앞 구역에서 다시 나오는 잡몹 · 층마다 '+(z>=3?2:1)+'종씩 섞여요</h4><div class="twMobs sm" style="grid-template-columns:repeat(6,1fr)">'+vp.slice(0,6).map(q=>'<div class="twMob"><canvas class="twMc" width="64" height="64" data-k="'+q+'" data-el="0" data-z="'+z+'"></canvas><b>'+SP[q].n+'</b></div>').join('')+'</div></div>':'';
   /* 구역 진행 막대 · 보스 보상 미리 보기(9999995 floorReward와 같은 계산) */
   const segs=Array.from({length:10},(_,i)=>{const ff=z*10+i+1;return '<i class="'+(ff<(s.best||1)?'ok':'')+(ff===f?' sel':'')+(ff%10===0?' bs':'')+'"></i>'}).join('');
-  let rw='';try{const g=Math.max(1,Math.floor(bf/10)),m={easy:.6,normal:1,hard:1.5,extreme:2.2}[diff]||1,first=!(((saveData.dia80||{}).fl||{})[bf+'|'+diff]);let dia=Math.round((20+4*((g-1)%70+1))*m*(1+Math.floor((g-1)/70)*.5));if(!first)dia=Math.max(3,Math.round(dia*.15));const gold=Math.round((first?150+g*25:50+g*8)*m);
+  let rw='';try{const g=Math.max(1,Math.floor(bf/10)),m={easy:.6,normal:1,hard:1.5,extreme:2.2}[diff]||1,first=!(((saveData.dia80||{}).fl||{})[bf+'|'+diff]);let dia=first?10:2;/* v125 */const gold=Math.round((first?150+g*25:50+g*8)*m);
    rw='<div class="twRw"><span class="twRwT">'+bf+'F 보스 보상'+(first?' <em>첫 클리어</em>':'')+'</span><span class="twRwG">🪙 '+gold.toLocaleString()+'</span><span class="twRwD">💎 '+dia.toLocaleString()+'</span></div>'}catch(e){}
   const prog='<div class="twCard twProg"><h4>'+p.n+' 구역 진행 · '+Math.max(0,Math.min(10,(s.best||1)-z*10-1))+' / 10</h4><div class="twSeg" style="--c:'+p.c+'">'+segs+'</div>'+rw+'</div>';
   /* v98: 탑 화면에서 바로 난이도 고르기(보상 · 잡몹 체력/피해가 바로 바뀜) */
   const dsel='<div class="twDiff"><span>난이도</span>'+GM_DIFF.map(([k,n,c])=>'<button data-df="'+k+'" class="'+(k===diff?'on':'')+'" style="--dc:'+c+'">'+n+'</button>').join('')+'</div>';
   /* v102: 시작 단추를 맨 위로(스크롤 없이), 몬스터 정보는 눌러야 펼쳐짐 */
-  const btns='<div class="twBtns"><button class="gmBtn go" id="twGo">▲ '+f+'F '+(f===cur?'이어서 오르기':'부터 오르기')+'</button>'+(f!==cur&&reachable(cur)?'<button class="gmBtn" id="twCont">◎ '+cur+'F 이어하기</button>':'')+'<button class="gmBtn" id="twNew">↺ 1F부터 처음부터</button></div>';
+  /* v125: 「이어하기」(내가 올라간 최고 층부터)와 「선택한 층 플레이」를 따로 */
+  const best=Math.max(1,s.best||1);
+  const btns='<div class="twBtns"><button class="gmBtn go" id="twCont">▶ 이어하기 · '+best+'F<small>내가 올라간 곳부터</small></button><button class="gmBtn sel125" id="twGo">▲ 선택한 '+f+'F 플레이<small>탑에서 고른 층부터</small></button></div>';
   const chips='<div class="twRow"><span class="twChip">최고 '+(s.best||1)+'F</span><span class="twChip">보스 '+(s.bosses||0)+' / 70</span><span class="twChip">처치 '+(s.kills||0)+'</span></div>';
   const mob='<button class="twMobT" id="twMobT">👾 이 구역 몬스터 정보 '+(TV.mobOpen?'접기 ▴':'보기 ▾')+'</button><div class="twMobBox"'+(TV.mobOpen?'':' hidden')+'><div class="twCard"><h4>이 구역의 잡몹 · 정예는 5F · 9F</h4><div class="twMobs">'+mobs+'</div></div>'+vets+'</div>';
   $('twBody').innerHTML=btns+dsel+prog+chips+mob+
@@ -650,15 +652,14 @@
   $('twMobT').onclick=()=>{TV.mobOpen=!TV.mobOpen;try{gmSfx('move')}catch(e){}info()};
   const go=g=>{gmSfx('ok');const S=sv();S.floor=g;S.cp=Math.floor((g-1)/10)*10+1;try{saveNow()}catch(e){}stopPortrait();TW.start(g)};
   $('twBody').querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const v=b.dataset.df;if(v===diff)return;try{gmSfx('ok')}catch(e){}try{$('diffSel').value=v;updDiff()}catch(e){}try{gmHud()}catch(e){}info()});
-  $('twGo').onclick=()=>go(f);if($('twCont'))$('twCont').onclick=()=>go(cur);
-  $('twNew').onclick=()=>{if($('twNew').dataset.ok){go(1);return}$('twNew').dataset.ok=1;$('twNew').textContent='정말 1F부터? 한 번 더 누르기';setTimeout(()=>{const n=$('twNew');if(n){delete n.dataset.ok;n.textContent='↺ 1F부터 처음부터'}},2500)};
+  $('twGo').onclick=()=>go(f);$('twCont').onclick=()=>go(best);
   TV.bz=z;TV.mt=0;try{const g=$('gmTower');g.style.setProperty('--tz',p.c);g.style.setProperty('--tb',B.c);g.classList.toggle('twBossSel',boss)}catch(e){}}
  /* 배너: 그 구역 보스의 경기장 + 살아 움직이는 보스 */
  function startPortrait(){if(TV.raf)return;const loop=()=>{TV.raf=0;const scr=$('gmTower');if(!scr||!scr.classList.contains('on')||mode!=='menu')return;try{drawBanner(performance.now())}catch(e){}TV.raf=requestAnimationFrame(loop)};TV.raf=requestAnimationFrame(loop)}
  function stopPortrait(){if(TV.raf)cancelAnimationFrame(TV.raf);TV.raf=0}
  /* v89 배너: 구역 경기장 + 살아 움직이는 보스 + 보스를 마주 보는 내 캐릭터 + 불씨 · 빛줄기 · (보스 층) 경고 띠 */
  const EMB=[];
- function drawBanner(now){const c=$('twArena');if(!c)return;const o=c.getContext('2d'),z=TV.bz||0,ob=zoneBossObj(z),B=bossOf(z),p=palOf(z),t=now/1000,f=TV.sel||1,boss=f%10===0;const hh=Math.max(90,Math.round(480*(c.clientHeight||220)/(c.clientWidth||480)));if(c.height!==hh)c.height=hh;const k2=hh/220;o.setTransform(1,0,0,1,0,0);o.imageSmoothingEnabled=false;o.fillStyle='#05070a';o.fillRect(0,0,480,hh);
+ function drawBanner(now){const c=$('twArena');if(!c)return;const o=c.getContext('2d'),z=TV.bz||0,ob=zoneBossObj(z),B=bossOf(z),p=palOf(z),t=now/1000,f=TV.sel||1,boss=f%10===0;const hh=Math.max(90,Math.round(480*(c.clientHeight||220)/(c.clientWidth||480)));/* v125: 화면 크기에 맞춰 2~3배 해상도로 그림(컴퓨터에서 뭉개지지 않게) */const R=Math.max(1,Math.min(3,Math.ceil((c.clientWidth||480)*(window.devicePixelRatio||1)/480)));if(c.width!==480*R)c.width=480*R;if(c.height!==hh*R)c.height=hh*R;const k2=hh/220;o.setTransform(R,0,0,R,0,0);o.imageSmoothingEnabled=false;o.fillStyle='#05070a';o.fillRect(0,0,480,hh);
   try{const ar=arenaOf(z);if(ar){const pan=Math.sin(t*.15)*8;o.drawImage(ar,0,Math.max(0,150-hh/2),480,Math.min(300,hh),pan-8,0,496,Math.min(300,hh))}}catch(e){}
   /* 빛줄기 */o.save();o.globalCompositeOperation='lighter';for(let i=0;i<4;i++){const bx=250+i*60+Math.sin(t*.4+i)*20;o.globalAlpha=.05+.03*Math.sin(t+i*2);o.fillStyle=B.c;o.beginPath();o.moveTo(bx,0);o.lineTo(bx+22,0);o.lineTo(bx-40,hh);o.lineTo(bx-70,hh);o.closePath();o.fill()}o.restore();
   const g=o.createRadialGradient(370,hh*.62,10,370,hh*.62,190);g.addColorStop(0,B.c+'66');g.addColorStop(1,'rgba(0,0,0,0)');o.fillStyle=g;o.fillRect(0,0,480,hh);

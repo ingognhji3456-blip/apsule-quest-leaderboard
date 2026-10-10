@@ -436,7 +436,7 @@ SHOP_PRODUCTS = [
      'status': 'on_sale', 'price': 7900, 'currency': 'KRW'},
     {'id': 'set_neon', 'kind': 'set', 'name': '네온 세트', 'tier': '세트',
      'description': '네온 비트 + 비트 브레이커 + 네온 레이저쇼 + 네온 클럽을 한 번에.', 'includes': ['skin_neon', 'sword_beatbreaker', 'fx_v_neon', 'fx_p_neon'],
-     'status': 'on_sale', 'price': 9900, 'currency': 'KRW'},
+     'status': 'on_sale', 'price': 8900, 'currency': 'KRW'},  # v125: 9,900 → 8,900
 ]
 
 
@@ -1066,13 +1066,18 @@ NICK_RE = re.compile(r'^[0-9A-Za-z가-힣_]{2,10}$')
 
 @app.route('/api/account/name', methods=['POST'])
 def api_account_name():
-    """임시 이름(G_...)인 계정이 게임 이름을 한 번 정한다. 랭킹에 이 이름이 나온다.
+    """임시 이름(G_...)인 계정이 게임 이름을 정한다. 랭킹에 이 이름이 나온다.
+    v125: Google 계정은 설정에서 다시 바꿀 수도 있다.
     아이디·비밀번호로 만든 계정은 아이디가 곧 이름이라 바꾸지 않는다."""
     user = _current_user()
     if not user:
         return _bad('로그인이 필요해요', 401)
-    if not _needs_name(user['username']):
-        return _bad('이름은 이미 정해져 있어요', 409)
+    db0 = get_db()
+    # v125: Google로 로그인하는 계정은 설정에서 언제든 이름을 바꿀 수 있다(로그인은 Google이라 이름과 상관없음).
+    #       아이디·비밀번호 계정은 이름이 곧 로그인 아이디라 바꾸지 않는다.
+    linked = db0.execute('SELECT 1 FROM google_accounts WHERE user_id = ?', (user['user_id'],)).fetchone()
+    if not _needs_name(user['username']) and not linked:
+        return _bad('아이디로 만든 계정은 이름(아이디)을 바꿀 수 없어요', 409)
     key = 'name:' + user['user_id']
     if _too_many(key, 20, 600):
         return _bad('너무 자주 시도했어요. 잠시 뒤에 다시 해 주세요', 429)

@@ -241,5 +241,5 @@
  async function checkName(){if(!A.token)return;const r=await api('/api/me');if(r.s===401)return lost(),(gate&&(open(),draw()));if(r.s!==200)return;
   if(r.j.username&&r.j.username!==A.user){A.user=r.j.username;keep();chip()}
   needName=!!r.j.need_name;if(needName){open();draw()}else{syncName();if(boxOn&&gate&&!pend)close()}}
- setTimeout(()=>{chip();if(A.token){syncName();pull(false);checkName()}else{if(st==='')chip();if(!autoTest()){gate=true;open()}}},800);
+ setTimeout(()=>{chip();if(A.token){syncName();pull(false);checkName()}else{if(st==='')chip();if(!autoTest()){gate=true;/* v125: 오프닝(TAP 화면)이 끝난 뒤, 로비가 보이기 전에 로그인 창 */document.documentElement.classList.add('gate125');const go=()=>{if(document.getElementById('splash'))return setTimeout(go,120);open()};go()}}},800);
 }catch(e){console.error('v55 login',e)}})();

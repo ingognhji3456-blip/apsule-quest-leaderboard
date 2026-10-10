@@ -240,7 +240,7 @@
  {const f=renderShop;renderShop=function(){const r=f.apply(this,arguments);try{swBlock()}catch(e){console.error('psw121',e)}try{const t=$('wsTitle');if(t&&t.textContent!=='🪙 일반 상점 · 태엽 공방')t.textContent='🪙 일반 상점 · 태엽 공방'}catch(e){}return r}}
 
  /* ================= ③ 로비 「상점」 → 일반 상점 · 현질 상점 고르기 창 ================= */
- try{const s=GM_ITEMS.find(x=>x.id==='shop');if(s){s.ic='🛒';s.t='상점';s.sub='🪙 일반 상점 · 💎 현질 상점'}}catch(e){}
+ try{const s=GM_ITEMS.find(x=>x.id==='shop');if(s){s.ic='🛒';s.t='상점';s.sub='캐릭터 · 무기 · 펫 · 스킨'}}catch(e){}
  const pk=document.createElement('div');pk.id='shopPick119';pk.hidden=true;
  pk.innerHTML='<div class="sp"><button class="x">닫기</button><h3>🛒 어느 상점으로 갈까요?</h3><div class="cs">'+
   '<button class="cd coin" data-g="coin"><i>🪙</i><b>일반 상점</b><span>태엽 공방 · 코인으로</span><small>캐릭터 · 무기 · 펫<br>고른 것 아래에서 스킨도</small></button>'+
@@ -267,8 +267,8 @@
  pk.addEventListener('click',e=>{e.stopPropagation();if(e.target.closest('.x')){close();try{gmSfx('back')}catch(_){}return}const b=e.target.closest('[data-g]');if(!b)return;close();
   if(b.dataset.g==='coin'){try{openShop('ch')}catch(e){}}else{try{window.BBShopOpen&&BBShopOpen()}catch(e){}}});
  addEventListener('keydown',e=>{if(pk.hidden)return;if(e.code==='Escape'){close();e.preventDefault();e.stopPropagation()}else if(e.code==='Digit1'||e.code==='ArrowLeft'){pk.querySelector('.coin').click();e.preventDefault();e.stopPropagation()}else if(e.code==='Digit2'||e.code==='ArrowRight'){pk.querySelector('.cash').click();e.preventDefault();e.stopPropagation()}},true);
- {const f=gmMainGo;gmMainGo=function(){try{const it=GM_ITEMS[GM.sel];if(it&&it.id==='shop'){pick();return}}catch(e){}return f.apply(this,arguments)}}
- {const f=gmMainSel;gmMainSel=function(){const r=f.apply(this,arguments);try{const it=GM_ITEMS[GM.sel],tp=$('gmTip');if(tp&&it&&it.id==='shop'){tp.textContent='💡 상점: 🪙 일반 상점(코인 · 스킨은 고른 것 아래)과 💎 현질 상점(프리미엄 · 펫 묶음 · 세트) 중에서 골라요.';if(typeof lvDock==='function')lvDock()}}catch(e){}return r}}
+ {const f=gmMainGo;gmMainGo=function(){try{const it=GM_ITEMS[GM.sel];if(it&&it.id==='shop'){/* v125: 일반/현질 고르기 창 없이 바로 상점(현질 상점은 상점 안 「💎 현질 상점」 탭) */try{gmSfx('ok')}catch(_){}openShop('ch');return}}catch(e){}return f.apply(this,arguments)}}
+ {const f=gmMainSel;gmMainSel=function(){const r=f.apply(this,arguments);try{const it=GM_ITEMS[GM.sel],tp=$('gmTip');if(tp&&it&&it.id==='shop'){tp.textContent='💡 상점: 캐릭터 · 무기 · 펫 · 스킨을 사요. 프리미엄 · 펫 묶음 · 세트는 상점 안 「💎 현질 상점」 탭에서.';if(typeof lvDock==='function')lvDock()}}catch(e){}return r}}
  try{if(typeof lvSet==='function')setTimeout(()=>{try{lvSet()}catch(e){}},350)}catch(e){}
  window.SHOPPICK119={open:pick,close};
 }catch(e){console.error('v119 skins',e)}})();

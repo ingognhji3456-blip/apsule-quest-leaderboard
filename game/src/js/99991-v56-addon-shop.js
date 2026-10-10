@@ -76,7 +76,7 @@
  const SETS=[
   {id:'set_void',name:'공허 세트',en:'VOID BUNDLE',price:6900,col:'#9a66ff',items:[['skin','void'],['sword','voidreaver'],['fx','v_void'],['fx','p_void']],desc:'공허 검사 + 공허의 대검 + 공허의 붕괴 + 공허의 무대를 한 번에.'},
   {id:'set_clock',name:'태엽 세트',en:'CLOCKWORK BUNDLE',price:7900,col:'#ffcf5a',items:[['skin','clock'],['sword','gearsaber'],['fx','v_clock'],['fx','p_clock']],desc:'태엽 성기사 + 태엽 톱니검 + 태엽 꽃가루 + 황금 시계탑을 한 번에.'},
-  {id:'set_neon',name:'네온 세트',en:'NEON BUNDLE',price:9900,col:'#ff3ad6',items:[['skin','neon'],['sword','beatbreaker'],['fx','v_neon'],['fx','p_neon']],desc:'네온 비트 + 비트 브레이커 + 네온 레이저쇼 + 네온 클럽을 한 번에.'}];
+  {id:'set_neon',name:'네온 세트',en:'NEON BUNDLE',price:8900,col:'#ff3ad6',items:[['skin','neon'],['sword','beatbreaker'],['fx','v_neon'],['fx','p_neon']],desc:'네온 비트 + 비트 브레이커 + 네온 레이저쇼 + 네온 클럽을 한 번에.'}];
  function items(){const L=[];
   for(const s of (window.SKIN58?.list||[]))L.push({cat:'skin',kind:'skin',pid:'skin_'+s.id,id:s.id,name:s.name,en:s.en,price:s.price,tier:s.tier,col:s.col,desc:s.desc,tags:s.tags,variant:!!s.variant,base:s.base});
   for(const s of (window.PET59?.list||[]))L.push({cat:'pet',kind:'pet',pid:'pet_'+s.id,id:s.id,name:s.name,en:'PET VARIANT',price:s.price,tier:'변이',col:s.col,desc:s.desc,tags:['원래 펫의 변이 모습','둘레에 도는 입자','능력은 원래 펫 그대로'],base:s.base});

@@ -34,7 +34,7 @@
    b.textContent='✕';b.classList.add('cx77');b.setAttribute('aria-label','닫기');b.title='닫기';
    /* 다른 화면의 단추 글씨 크기 규칙이 더 세서, 크기는 단추에 직접 박는다 */for(const [k,v] of [['font-size','22px'],['width','var(--cxs,44px)'],['height','var(--cxs,44px)'],['padding','0'],['line-height','1'],['border-radius','50%']])b.style.setProperty(k,v,'important');
    if(b.id==='acClose'){const p=document.getElementById('acPanel'),row=b.parentElement;if(p&&row!==p){p.appendChild(b);if(row&&row.classList.contains('acRow')&&!row.children.length)row.remove()}}})}
- function noNameEdit(){const i=document.getElementById('nameIn');if(!i)return;const row=i.closest('.row');if(row&&!row.hidden){row.hidden=true;row.style.display='none';const p=row.nextElementSibling;if(p&&p.tagName==='P')p.textContent='이름은 로그인할 때 정한 계정 이름으로 나와요. 랭킹에도 이 이름이 올라가요.'}}
+ function noNameEdit(){const i=document.getElementById('nameIn');if(!i)return;const row=i.closest('.row');if(row&&!row.hidden){row.hidden=true;row.style.display='none';const p=row.nextElementSibling;if(p&&p.tagName==='P')p.textContent='이름은 위의 「이름 바꾸기」로 바꿀 수 있어요. 랭킹에도 이 이름이 올라가요.'}}
  /* 창이 다시 그려지면 바로(다음 화면 그리기 전에) 바꾼다 + 혹시 몰라 1초마다 한 번 */
  let q=0;const run=()=>{q=0;try{fix();noNameEdit()}catch(e){}};
  try{new MutationObserver(()=>{if(!q)q=requestAnimationFrame(run)}).observe(document.body,{childList:true,subtree:true})}catch(e){}
