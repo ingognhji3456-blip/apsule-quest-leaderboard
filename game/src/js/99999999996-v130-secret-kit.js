@@ -76,7 +76,9 @@
  function drawUlt(now){const A=U.act;if(!A)return;const og=(typeof G!=='undefined')?G:null;
   try{G=Object.assign(Object.create(og||{}),{sp:A.sp,ms:mus.ms||500,state:'play',B:BOSSES[0],boss:{x:A.sp.cx,y:A.sp.cy+26,slump:0},vuln:null,pops:[],parts:[]});drawSpecialFX(now)}catch(e){}finally{G=og}}
  function gauge(now){const og=(typeof G!=='undefined')?G:null;try{G=Object.assign(Object.create(og||{}),{ult:U.g,state:'play',sp:U.act?U.act.sp:null,spUsed:false});drawUltGauge(now)}catch(e){}finally{G=og}
-  try{if(isTouchUI()){ensureUltBtn();const b=$('btnU');if(b.style.display!=='')b.style.display='';ultBtnPaint(U.g/100,!U.act)}}catch(e){}}
+  try{if(isTouchUI()){ensureUltBtn();const b=$('btnU');if(b.style.display!=='')b.style.display='';ultBtnPaint(U.g/100,!U.act);}}catch(e){}}
+ /* v142: 폰 단추 — 클라비스 결투는 보스전(공격 단추를 숨기는 곳)에서 들어와서 공격 단추가 없었음. 비밀 장면에 있는 동안은 탑처럼 ATTACK(서랍 열기 · 종이 올리기도 이 단추) · 패링 · 대시 단추를 보이게 */
+ function touchBtns(){try{if(!isTouchUI())return;const bA=$('btnA');if(bA){if(bA.style.display!=='')bA.style.display='';if(bA.textContent!=='ATTACK')bA.textContent='ATTACK'}try{ensureParryBtn()}catch(e){}const bp=$('btnP');if(bp&&bp.style.display!=='')bp.style.display='';const tc=$('touch');if(tc&&tc.style.display!=='')tc.style.display=''}catch(e){}}
  function shield(now){/* 발밑 작은 방패: 패링 준비 / 재사용 대기 */const ready=now>=(P.parryCd||0),sx=P.x+10,sy=P.y+2;ctx.fillStyle='#05090b';ctx.fillRect(sx,sy,5,5);ctx.fillStyle=ready?'#9edbff':'#3a4a50';ctx.fillRect(sx+1,sy+1,3,3);ctx.fillRect(sx+2,sy+4,1,2)}
  function comboHud(now){if(U.combo<2)return;const k=Math.min(1,(now-U.comboT)/200),sc=1+(1-k)*.35,x=AX+AW-8,y=H-50;ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);ctx.textAlign='right';ctx.font='900 18px sans-serif';ctx.fillStyle='#000a';ctx.fillText(U.combo,1,1);ctx.fillStyle=U.combo>=20?'#ffd84a':U.combo>=10?'#ffe79a':'#ffffff';ctx.fillText(U.combo,0,0);ctx.font='bold 7px sans-serif';ctx.fillStyle='#e8eef6';ctx.fillText('COMBO · +'+Math.min(U.combo,20)*2+'%',0,9);ctx.restore()}
  if(typeof tryUlt==='function'){const f=tryUlt;tryUlt=function(){if(ON()){fire();return}return f.apply(this,arguments)}}
@@ -94,7 +96,7 @@
 
  /* ---------- 매 프레임: 장면을 그린 뒤 엔진 틱 · 덧그림 ---------- */
  {const _f=frame;frame=function(){const r=_f.apply(this,arguments);const now=now0();
-   if(!ON()){LT=now;if(MK){MK=null;try{stopMusic()}catch(e){}}return r}
+   if(!ON()){LT=now;if(MK){MK=null;try{stopMusic()}catch(e){}}return r}touchBtns();
    const dt=Math.min(.05,(now-LT)/1000);LT=now;try{music(now);try{stamTick(dt)}catch(e){}ctx.setTransform(SS,0,0,SS,0,0);
     if(fight()||U.act){
      /* 콤보는 3초 안에 다시 맞히지 않으면 끊김 */if(U.combo&&now-U.comboT>3000)U.combo=0;

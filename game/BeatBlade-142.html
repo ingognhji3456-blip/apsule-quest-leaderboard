@@ -28601,7 +28601,9 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  function drawUlt(now){const A=U.act;if(!A)return;const og=(typeof G!=='undefined')?G:null;
   try{G=Object.assign(Object.create(og||{}),{sp:A.sp,ms:mus.ms||500,state:'play',B:BOSSES[0],boss:{x:A.sp.cx,y:A.sp.cy+26,slump:0},vuln:null,pops:[],parts:[]});drawSpecialFX(now)}catch(e){}finally{G=og}}
  function gauge(now){const og=(typeof G!=='undefined')?G:null;try{G=Object.assign(Object.create(og||{}),{ult:U.g,state:'play',sp:U.act?U.act.sp:null,spUsed:false});drawUltGauge(now)}catch(e){}finally{G=og}
-  try{if(isTouchUI()){ensureUltBtn();const b=$('btnU');if(b.style.display!=='')b.style.display='';ultBtnPaint(U.g/100,!U.act)}}catch(e){}}
+  try{if(isTouchUI()){ensureUltBtn();const b=$('btnU');if(b.style.display!=='')b.style.display='';ultBtnPaint(U.g/100,!U.act);}}catch(e){}}
+ /* v142: 폰 단추 — 클라비스 결투는 보스전(공격 단추를 숨기는 곳)에서 들어와서 공격 단추가 없었음. 비밀 장면에 있는 동안은 탑처럼 ATTACK(서랍 열기 · 종이 올리기도 이 단추) · 패링 · 대시 단추를 보이게 */
+ function touchBtns(){try{if(!isTouchUI())return;const bA=$('btnA');if(bA){if(bA.style.display!=='')bA.style.display='';if(bA.textContent!=='ATTACK')bA.textContent='ATTACK'}try{ensureParryBtn()}catch(e){}const bp=$('btnP');if(bp&&bp.style.display!=='')bp.style.display='';const tc=$('touch');if(tc&&tc.style.display!=='')tc.style.display=''}catch(e){}}
  function shield(now){/* 발밑 작은 방패: 패링 준비 / 재사용 대기 */const ready=now>=(P.parryCd||0),sx=P.x+10,sy=P.y+2;ctx.fillStyle='#05090b';ctx.fillRect(sx,sy,5,5);ctx.fillStyle=ready?'#9edbff':'#3a4a50';ctx.fillRect(sx+1,sy+1,3,3);ctx.fillRect(sx+2,sy+4,1,2)}
  function comboHud(now){if(U.combo<2)return;const k=Math.min(1,(now-U.comboT)/200),sc=1+(1-k)*.35,x=AX+AW-8,y=H-50;ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);ctx.textAlign='right';ctx.font='900 18px sans-serif';ctx.fillStyle='#000a';ctx.fillText(U.combo,1,1);ctx.fillStyle=U.combo>=20?'#ffd84a':U.combo>=10?'#ffe79a':'#ffffff';ctx.fillText(U.combo,0,0);ctx.font='bold 7px sans-serif';ctx.fillStyle='#e8eef6';ctx.fillText('COMBO · +'+Math.min(U.combo,20)*2+'%',0,9);ctx.restore()}
  if(typeof tryUlt==='function'){const f=tryUlt;tryUlt=function(){if(ON()){fire();return}return f.apply(this,arguments)}}
@@ -28619,7 +28621,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
 
  /* ---------- 매 프레임: 장면을 그린 뒤 엔진 틱 · 덧그림 ---------- */
  {const _f=frame;frame=function(){const r=_f.apply(this,arguments);const now=now0();
-   if(!ON()){LT=now;if(MK){MK=null;try{stopMusic()}catch(e){}}return r}
+   if(!ON()){LT=now;if(MK){MK=null;try{stopMusic()}catch(e){}}return r}touchBtns();
    const dt=Math.min(.05,(now-LT)/1000);LT=now;try{music(now);try{stamTick(dt)}catch(e){}ctx.setTransform(SS,0,0,SS,0,0);
     if(fight()||U.act){
      /* 콤보는 3초 안에 다시 맞히지 않으면 끊김 */if(U.combo&&now-U.comboT>3000)U.combo=0;
@@ -29149,4 +29151,26 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
 
  window.ULT139={U,DESC,get S(){return S},start,keyOf};
 }catch(e){console.warn('v139',e)}})();
+/* v142: 폰 가로 화면 ✕ 단추가 안 눌리던 것 (MF142)
+   - 게임은 화면 끝까지 그린다(viewport-fit=cover). 가로로 돌리면 왼쪽(또는 오른쪽) 끝이 카메라 구멍 · 「뒤로」 쓸기 자리인데,
+     v125부터 ✕를 왼쪽 끝(9px)에 두어서 손가락이 닿아도 단추가 못 받는 일이 있었음 → 가로 화면에서는 안전 여백(safe-area)만큼 안쪽으로.
+   - 손가락을 떼는 순간 조금 움직였거나 끝자리라서 브라우저가 「누름(click)」을 만들지 않으면, ✕ 위에서 뗐을 때 직접 눌러 줌(두 번 눌리지 않게). */
+(function(){try{
+ const st=document.createElement('style');st.id='mf142';st.textContent=`
+ html.phL .cx125L,html.uiLand .cx125L{margin-left:max(10px,env(safe-area-inset-left))!important}
+ html.phL button.cx77,html.uiLand button.cx77{position:relative;z-index:5}
+ html.phL #acClose,html.uiLand #acClose{margin-right:max(0px,env(safe-area-inset-right))!important}
+ html.phL #bbShop .ssX,html.uiLand #bbShop .ssX{margin-right:max(0px,env(safe-area-inset-right))!important}`;
+ document.head.appendChild(st);
+ const isX=el=>el&&el.closest&&el.closest('button.cx77,#bbShop .ssX,#shopClose,#acClose');
+ let down=null,lastClick=0;
+ document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;const b=isX(e.target);down=b?{b,t:performance.now()}:null},true);
+ document.addEventListener('click',e=>{if(isX(e.target))lastClick=performance.now()},true);
+ document.addEventListener('pointerup',e=>{if(!down||e.pointerType==='mouse')return;const d=down;down=null;
+  const r=d.b.getBoundingClientRect(),pad=14,inside=e.clientX>=r.left-pad&&e.clientX<=r.right+pad&&e.clientY>=r.top-pad&&e.clientY<=r.bottom+pad;
+  if(!inside||performance.now()-d.t>1200)return;
+  setTimeout(()=>{if(lastClick>=d.t)return;/* 브라우저가 click을 안 만들었으면 */try{if(document.contains(d.b))d.b.click()}catch(_){}},120)},true);
+ document.addEventListener('pointercancel',e=>{/* 가장자리 쓸기로 취소돼도 ✕ 위였으면 누름(0.4초 안의 짧은 누름만) */if(!down)return;const d=down;down=null;if(performance.now()-d.t>400)return;setTimeout(()=>{if(lastClick>=d.t)return;try{if(document.contains(d.b))d.b.click()}catch(_){}},120)},true);
+ window.MF142={v:1};
+}catch(e){console.warn('v142',e)}})();
 </script></body></html>
