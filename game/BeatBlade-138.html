@@ -3715,7 +3715,8 @@ function doDash(){if(paused||dlg.active)return;if(!(mode==='boss'&&(G.state==='p
  if(mode==='boss'){G.pops.push({x:P.x,y:P.y-22,t:now,tx:good?'DASH!':'dash',col:good?'#8dcdf5':'#6a8090'});for(let i=0;i<8;i++)G.parts.push({x:P.x,y:P.y,vx:-ix*60+(RND()-.5)*50,vy:-iy*60+(RND()-.5)*50,life:.3,max:.3,col:'#8dcdf5',s:2})}}
 function stamTick(dt){const mx=stamMax();if(P.stam===undefined)P.stam=mx;
  /* v96: 다 쓰지 않아도 대시 칸이 조금씩 다시 참(마지막 대시 0.6초 뒤부터 · 한 칸 약 1.1초). 전에는 칸을 전부 써야만 충전돼서 「안 차오른다」고 느껴졌음 */
- if(!P.stamLock&&P.stam<mx&&performance.now()>(P.dashCd||0)+430){P.stam=Math.min(mx,P.stam+dt*.18*(curPet().regen||1))}
+ /* v138: 조금씩 차는 것은 없앰 — 다 쓰면(한 번 더 대시할 만큼도 안 남으면) 그때 꽉 찰 때까지 충전. 탑 · 보스전 · 결투 · 던전 모두 이 함수 하나 */
+ if(!P.stamLock&&P.stam<((curPet()||{}).dashCost||.2)-.001){P.stamLock=true}
  if(P.stamLock){P.stam=Math.min(mx,P.stam+dt*mx/3.4*(curPet().regen||1));if(P.stam>=mx-1e-6){P.stam=mx;P.stamLock=false;sfx(700,.12,'triangle',.03,1100)}}
  const pt=curPet();if(pt.heal&&(mode==='boss'&&G&&G.state==='play'||mode==='cave')){const now=performance.now();if(!P.healAt||P.healAt<now-60000)P.healAt=now+pt.heal*1000;if(now>=P.healAt){P.healAt=now+pt.heal*1000;if(P.hp<P.maxhp&&P.hp>0){P.hp=Math.min(P.maxhp,P.hp+1);if(mode==='boss')G.pops.push({x:P.x,y:P.y-30,t:now,tx:'+1',col:'#7dffa8'})}}}}
 /* ---- 보스전 펫 따라다니기 ---- */
@@ -22627,14 +22628,14 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(extra>0)setTimeout(()=>bossDmg(extra,(p||b).col),90)}
  if(typeof doParry==='function'){const f=doParry;doParry=function(now){const before=(G.parrySp||[]).length;const r=f.apply(this,arguments);
   try{const p=perk();if(p&&(p.dbl||p.fox)){const add=(G.parrySp||[]).slice(before);for(const s of add.slice(0,p.dbl?add.length:1))G.parrySp.push(Object.assign({},s,{t:s.t+120,side:-s.side*1.3}));if(p.dbl)P.inv=Math.max(P.inv,now+200)}}catch(e){}return r}}
- if(typeof hurtP==='function'){const f=hurtP;hurtP=function(dmg,now){if(mode==='boss'&&!(now<P.inv)){dmg=onHurt(dmg);if(dmg<=0){P.inv=Math.max(P.inv,now+300);return}}const hp0=P.hp;const r=f.call(this,dmg,now);
+ if(typeof hurtP==='function'){const f=hurtP;hurtP=function(dmg,now){if(mode==='boss'&&!(now<P.inv)){/* v138: 바깥에서 감싼 것(신화 스킬 회피 등)도 듣게 CB81.onHurt로 */dmg=(window.CB81&&CB81.onHurt||onHurt)(dmg);if(dmg<=0){P.inv=Math.max(P.inv,now+300);return}}const hp0=P.hp;const r=f.call(this,dmg,now);
   /* 보스의 상태 이상 공격: 보통 15% 중독, 어려움 25% 중독 · 10% 탈진, 익스트림 30% 중독 · 20% 탈진 */
   try{if(mode==='boss'&&P.hp<hp0&&P.hp>0&&G.state==='play'&&diff!=='easy'){const pc={normal:.15,hard:.25,extreme:.3}[diff]||0,dc={hard:.1,extreme:.2}[diff]||0;if(Math.random()<pc)poison(3,'보스의 독');else if(Math.random()<dc)drain(.5)}}catch(e){}return r}}
  /* PERFECT 범위(네온 세트): win은 상수 함수라 감쌀 수 없어서 100 · 999997이 CB81.winMul()을 곱한다 */
  function winMul(){try{const b=setb();return b&&b.win||1}catch(e){return 1}}
  if(typeof stamMax==='function'){const f=stamMax;stamMax=function(){const r=f.apply(this,arguments);try{const b=setb();return r+(b&&b.dash?.2*b.dash:0)}catch(e){return r}}}
  if(typeof stamTick==='function'){const f=stamTick;stamTick=function(dt){let k=1;try{const b=setb();if(b&&b.regen)k*=b.regen;if(ST.drainT>now0())k*=.4}catch(e){}return f.call(this,dt*k)}}
- if(typeof doDash==='function'){const f=doDash;doDash=function(){const d0=P.dash;const r=f.apply(this,arguments);try{if(mode==='boss'&&P.dash&&P.dash!==d0)onDash()}catch(e){}return r}}
+ if(typeof doDash==='function'){const f=doDash;doDash=function(){const d0=P.dash;const r=f.apply(this,arguments);try{if(mode==='boss'&&P.dash&&P.dash!==d0)(window.CB81&&CB81.onDash||onDash)()}catch(e){}return r}}
 
  /* ---------- 상점에 능력 보이기 ---------- */
  try{(window.SKIN58&&SKIN58.list||[]).forEach(s=>{const p=PERK[s.id];if(p&&s.tags&&!s.tags.some(x=>/^⚡/.test(x)))s.tags.unshift('⚡ 능력 · '+p.n)})}catch(e){}
@@ -24752,7 +24753,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  function hitMob(m,d,col,tx){try{TW71.hitMob(m,d,col,tx)}catch(e){}}
  function hitBoss(d,col){try{if(inBoss()&&typeof spDmg==='function')spDmg(Math.max(1,Math.round(d)),G.boss.x,G.boss.y-10,col||'#ffffff',now0())}catch(e){}}
  const FX=[];
- function pop(k){const a=ABL[k];if(!a)return;const n=now0();S.flash[k]=n;const last=FX.find(f=>f.k==='pop'&&f.ab===k&&n-f.t0<500);if(last)return;FX.push({k:'pop',ab:k,t0:n,dur:900,tx:a.ico+' '+a.n,col:a.col});FX.push({k:'ring',x:P.x,y:P.y-12,t0:n,dur:420,r:30,col:a.col})}
+ function pop(k){const a=ABL[k];if(!a)return;const n=now0();S.flash[k]=n;const last=FX.find(f=>f.k==='pop'&&f.ab===k&&n-f.t0<500);if(last)return;/* v138: 스킬 이름은 99999999999가 맨 위 층에 그림(S.flash) */FX.push({k:'ring',x:P.x,y:P.y-12,t0:n,dur:420,r:30,col:a.col})}
  const snd=(f,d,w,v,e)=>{try{sfx(f,d,w,v,e)}catch(_){}};
 
  /* 스킬 동작 */
@@ -24820,7 +24821,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    o.restore()}
   hud(o,n,a);o.restore()}
  /* HUD: 켜진 스킬 칸(왼쪽 아래 체력 칸 위) */
- function hud(o,n,a){const ks=Object.keys(a).filter(k=>ABL[k]);if(!ks.length)return;let x=AX+4;const y=H-84;
+ function hud(o,n,a){const ks=Object.keys(a).filter(k=>ABL[k]);if(!ks.length)return;let x=AX+4;/* v138: 스킬 칩은 화면 위(보스 체력바 · 층 이름 바로 아래)로 — 전엔 아래쪽 H-84 */const y=AY+5;
   for(const k of ks){const ab=ABL[k],fl=S.flash[k]&&n-S.flash[k]<500?1-(n-S.flash[k])/500:0;o.font='800 6.5px sans-serif';const w=o.measureText(ab.n).width+18;
    o.globalAlpha=.82;o.fillStyle='#05070a';o.fillRect(x,y,w,12);o.globalAlpha=1;o.strokeStyle=ab.col;o.lineWidth=fl?1.6:.8;o.strokeRect(x+.5,y+.5,w-1,11);if(fl){o.globalAlpha=fl*.5;o.fillStyle=ab.col;o.fillRect(x,y,w,12);o.globalAlpha=1}
    /* 다시 쓰기까지(시간형) */let cd=null;if(k==='regen')cd=(n-S.regT)/(a.regen*1000);else if(k==='homing')cd=(n-S.homT)/(a.homing*1000);else if(k==='clone')cd=n<S.cloneUntil?1:(n-S.cloneT)/(a.clone*1000);else if(k==='timeslow')cd=(S.hits%Math.round(a.timeslow))/Math.round(a.timeslow);
@@ -28874,7 +28875,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const near=(x,y,r)=>targets().filter(t=>Math.hypot(t.x-x,t.y-y)<r+(t.boss||t.isBoss?18:0)).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y));
  function hit(t,d,col,tx){d=Math.max(1,Math.round(d));S.busy=1;try{if(t.boss){if(typeof spDmg==='function')spDmg(d,G.boss.x,G.boss.y-10,col,now0())}else if(window.TW71)TW71.hitMob(t,d,col,tx)}catch(e){}S.busy=0}
  function clk(){try{if(mode==='tower'&&TW71.T)return TW71.T.clk}catch(e){}return now0()/1000}
- function flash(k){try{MYTH100.S.flash[k]=now0()}catch(e){}const a=AB[k];if(a){const n=now0();if(!FX.some(f=>f.k==='pop'&&f.ab===k&&n-f.t0<500))FX.push({k:'pop',ab:k,t0:n,dur:900,tx:a.ico+' '+a.n,col:a.col})}}
+ function flash(k){try{MYTH100.S.flash[k]=now0()}catch(e){}/* v138: 이름 표시는 99999999999가 맨 위 층에 */}
  function spin(){const n=now0();flash('keyspin');FX.push({k:'spin',x:P.x,y:P.y,t0:n,dur:420});snd(420,.12,'sawtooth',.05,180);for(const t of near(P.x,P.y,48))hit(t,S.last*.7,KEYC,'🌀')}
  function throwKeys(){const t=near(P.x,P.y,220)[0];if(!t)return false;const n=now0(),base=Math.atan2(t.y-10-(P.y-12),t.x-P.x);flash('keythrow');snd(900,.08,'square',.035,1600);
   for(let i=0;i<3;i++){const a=base+(i-1)*.28;FX.push({k:'key',x:P.x,y:P.y-12,vx:Math.cos(a)*240,vy:Math.sin(a)*240,t0:n,dur:2400,back:0,hitA:new Set(),hitB:new Set(),rot:0})}return true}
@@ -28891,8 +28892,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   {const f=C.onParry;C.onParry=function(n){const r=f.apply(this,arguments);try{if(n&&on())cage()}catch(e){}return r}}
   {const f=C.onDash;C.onDash=function(){const r=f.apply(this,arguments);try{if(on()&&inFight())thrust()}catch(e){}return r}}}
  if(typeof doParry==='function'){const f=doParry;doParry=function(now){const b=(typeof G!=='undefined'&&G&&G.parrySp||[]).length;const r=f.apply(this,arguments);try{if(mode==='boss'&&on()&&(G.parrySp||[]).length>b)cage()}catch(e){}return r}}
- /* 보스전의 대시는 CB81이 안에서만 onDash를 불러 바깥 감싸기가 못 들음 → doDash를 직접 살핌(맞힘은 180이 CB81.onBossHit을 부름) */
- if(typeof doDash==='function'){const f=doDash;doDash=function(){const d0=P.dash;const r=f.apply(this,arguments);try{if(mode==='boss'&&P.dash&&P.dash!==d0&&on()&&inFight())thrust()}catch(e){}return r}}
+ /* v138: 보스전 대시도 CB81.onDash를 부르므로(9999996) 여기서 따로 살피지 않음 */
  /* 클라비스 결투에서 클라비스의 칼을 패링했을 때도 감옥 */
  const onDuelParry=()=>{try{if(on())cage()}catch(e){}};
  /* 매 프레임: 열쇠 투척 시계 · 날아가는 열쇠 · 그리기 */
@@ -28915,4 +28915,22 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
 
  window.CA137={pick,state,drawFoe,onDuelParry,AB,get KEYS(){return KEYS},get FX(){return FX},S};
 }catch(e){console.warn('v137',e)}})();
+/* v138: 스킬 이름은 맨 위 층에 (SKT138)
+   신화 스킬 · 클라비스 열쇠 검술이 터지면 MYTH100.S.flash[스킬]에 시각이 적힌다. 전에는 각 파일이 머리 위 글자로 그려서
+   보스 그림 · 말풍선 · 다른 효과 밑에 가려졌다 → 맨 마지막 파일에서 모든 그림 위에, 어두운 띠를 깐 이름표로 다시 그림.
+   자리는 캐릭터 머리 위, 여러 개면 위로 쌓음. (스킬 칩 줄은 999999992 hud가 화면 위쪽에 그림) 탑 · 보스전 · 결투 · 던전 어디서나. */
+(function(){try{
+ const DUR=1100;
+ const fighting=()=>{try{if(window.WATCH95&&WATCH95.specOn&&WATCH95.specOn())return false;if(mode==='tower')return !!(window.TW71&&TW71.T);if(mode==='boss')return typeof G!=='undefined'&&G&&G.state==='play';return mode==='dg129'||mode==='sec127'}catch(e){return false}};
+ function rr(o,x,y,w,h,r){o.beginPath();o.moveTo(x+r,y);o.arcTo(x+w,y,x+w,y+h,r);o.arcTo(x+w,y+h,x,y+h,r);o.arcTo(x,y+h,x,y,r);o.arcTo(x,y,x+w,y,r);o.closePath()}
+ {const _f=frame;frame=function(){const r=_f.apply(this,arguments);try{if(!window.MYTH100||!fighting())return r;const n=performance.now(),F=MYTH100.S.flash||{},A=MYTH100.ABL||{};
+   const L=Object.keys(F).filter(k=>A[k]&&n-F[k]<DUR).sort((a,b)=>F[b]-F[a]).slice(0,4);if(!L.length)return r;
+   const o=ctx;o.save();try{o.setTransform(SS,0,0,SS,0,0)}catch(e){}o.font='900 9px sans-serif';o.textAlign='center';o.textBaseline='middle';
+   const hx=Math.max(60,Math.min(W-60,P.x)),y0=Math.max(70,P.y-52);
+   L.forEach((k,i)=>{const a=A[k],t=(n-F[k])/DUR,al=t<.1?t/.1:t>.75?(1-t)/.25:1,sc=t<.12?1.25-t*2:1,tx=a.ico+' '+a.n,w=o.measureText(tx).width+14,yy=y0-i*14-t*6;
+    o.save();o.globalAlpha=al;o.translate(hx,yy);o.scale(sc,sc);rr(o,-w/2,-6.5,w,13,6.5);o.fillStyle='rgba(5,7,12,.82)';o.fill();o.lineWidth=1.2;o.strokeStyle=a.col||'#ffffff';o.stroke();
+    o.fillStyle=a.col||'#ffffff';o.fillText(tx,0,.5);o.restore()});
+   o.restore();try{if(document.documentElement.classList.contains('phP')&&window.PV76&&PV76.paint)PV76.paint()}catch(e){}}catch(e){}return r}}
+ window.SKT138={DUR};
+}catch(e){console.warn('v138',e)}})();
 </script></body></html>

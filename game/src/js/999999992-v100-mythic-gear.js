@@ -142,7 +142,7 @@
  function hitMob(m,d,col,tx){try{TW71.hitMob(m,d,col,tx)}catch(e){}}
  function hitBoss(d,col){try{if(inBoss()&&typeof spDmg==='function')spDmg(Math.max(1,Math.round(d)),G.boss.x,G.boss.y-10,col||'#ffffff',now0())}catch(e){}}
  const FX=[];
- function pop(k){const a=ABL[k];if(!a)return;const n=now0();S.flash[k]=n;const last=FX.find(f=>f.k==='pop'&&f.ab===k&&n-f.t0<500);if(last)return;FX.push({k:'pop',ab:k,t0:n,dur:900,tx:a.ico+' '+a.n,col:a.col});FX.push({k:'ring',x:P.x,y:P.y-12,t0:n,dur:420,r:30,col:a.col})}
+ function pop(k){const a=ABL[k];if(!a)return;const n=now0();S.flash[k]=n;const last=FX.find(f=>f.k==='pop'&&f.ab===k&&n-f.t0<500);if(last)return;/* v138: 스킬 이름은 99999999999가 맨 위 층에 그림(S.flash) */FX.push({k:'ring',x:P.x,y:P.y-12,t0:n,dur:420,r:30,col:a.col})}
  const snd=(f,d,w,v,e)=>{try{sfx(f,d,w,v,e)}catch(_){}};
 
  /* 스킬 동작 */
@@ -210,7 +210,7 @@
    o.restore()}
   hud(o,n,a);o.restore()}
  /* HUD: 켜진 스킬 칸(왼쪽 아래 체력 칸 위) */
- function hud(o,n,a){const ks=Object.keys(a).filter(k=>ABL[k]);if(!ks.length)return;let x=AX+4;const y=H-84;
+ function hud(o,n,a){const ks=Object.keys(a).filter(k=>ABL[k]);if(!ks.length)return;let x=AX+4;/* v138: 스킬 칩은 화면 위(보스 체력바 · 층 이름 바로 아래)로 — 전엔 아래쪽 H-84 */const y=AY+5;
   for(const k of ks){const ab=ABL[k],fl=S.flash[k]&&n-S.flash[k]<500?1-(n-S.flash[k])/500:0;o.font='800 6.5px sans-serif';const w=o.measureText(ab.n).width+18;
    o.globalAlpha=.82;o.fillStyle='#05070a';o.fillRect(x,y,w,12);o.globalAlpha=1;o.strokeStyle=ab.col;o.lineWidth=fl?1.6:.8;o.strokeRect(x+.5,y+.5,w-1,11);if(fl){o.globalAlpha=fl*.5;o.fillStyle=ab.col;o.fillRect(x,y,w,12);o.globalAlpha=1}
    /* 다시 쓰기까지(시간형) */let cd=null;if(k==='regen')cd=(n-S.regT)/(a.regen*1000);else if(k==='homing')cd=(n-S.homT)/(a.homing*1000);else if(k==='clone')cd=n<S.cloneUntil?1:(n-S.cloneT)/(a.clone*1000);else if(k==='timeslow')cd=(S.hits%Math.round(a.timeslow))/Math.round(a.timeslow);
