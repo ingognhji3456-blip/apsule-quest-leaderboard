@@ -71,7 +71,7 @@
  const prog=d=>{d=d||{};const l=d.lv83||{},t=d.tw71||{},dm=d.dia80||{};return (l.tot||0)+(t.best||0)*400+(t.bosses||0)*3000+clears(d)*2000+(dm.n||0)*5+(d.coins||0)*.05};
  let waitSv=null;
  /* v104: 진행도가 같으면(난이도 · 설정만 바뀐 경우, 저장 응답을 놓친 경우) 이 기기 기록을 그대로 쓴다 — 예전엔 같아도 서버 기록으로 바꾸며 페이지를 다시 열었다 */
- function autoPick(sv,rev){const lo=localObj(),useSv=prog(sv)>prog(lo)+1;
+ function autoPick(sv,rev){const lo=localObj(),rs=x=>(x&&x.rst143)||0,/* v143: 「기록 처음부터」를 한 뒤면 다른 기기의 옛 기록이 더 많아도 서버(처음부터) 기록을 씀 */useSv=rs(sv)>rs(lo)||(rs(sv)===rs(lo)&&prog(sv)>prog(lo)+1);
   try{localStorage.setItem('bb-save-backup',JSON.stringify({at:Date.now(),kept:useSv?'server':'device',data:useSv?lo:sv}))}catch(e){}
   if(useSv){if(inMenu())return useServer(sv,rev);waitSv={sv,rev};return}
   A.rev=rev;keep();return push(true)}
