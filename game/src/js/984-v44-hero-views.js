@@ -106,7 +106,10 @@
    const k=swingK(now);if(k>=0&&v==='back')v='side';
    HV.view=v;const side=v==='side',dfl=side?!fl:fl;HV.sw=k>=0?{hand:handQ(k,side).slice(0,2)}:null;
    const kk=s/2,X=x-s-6*kk,Y=y-6*s-10*kk,cx=X+20*kk,fy=Y+44*kk,lean=leanOf(k),dir=fl?-1:1;
+   /* v121 프리미엄 전용 스킨의 이동 · 대시 연출: window.__heroFx(c,발 x,발 y,배율,시각,걷는 중,층) — 층 0은 몸 뒤, 1은 몸 앞 */
+   const HF=!window.__mateDraw&&window.__heroFx;if(HF)try{HF(c,cx,fy,kk,now,moving,0)}catch(e){}
    c.save();try{if(side||lean){c.translate(cx,fy);if(lean)c.transform(1,0,-lean*dir,1,0,0);if(side)c.scale(.86,1);c.translate(-cx,-fy)}
     _dk.call(this,c,x,y,s,dfl,wt,idleT)}finally{c.restore();HV.view='front';HV.sw=null}
-   try{if(HV.pend&&now-HV.pend.t<40)drawPendingSword(c,X,Y,kk,fl,side,lean,cx,fy,dfl);else HV.pend=null}catch(e){HV.pend=null}}}
+   try{if(HV.pend&&now-HV.pend.t<40)drawPendingSword(c,X,Y,kk,fl,side,lean,cx,fy,dfl);else HV.pend=null}catch(e){HV.pend=null}
+   if(HF)try{HF(c,cx,fy,kk,now,moving,1)}catch(e){}}}
 })();
