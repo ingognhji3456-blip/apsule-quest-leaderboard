@@ -1894,6 +1894,41 @@ def _plaza_can_invite(uid, fid):
     return None
 
 
+# v114 나쁜 말 거르기: 띄어쓰기 · 숫자 · 기호를 끼워 넣어도(「씨 1 발」) 찾아서 그 글자들만 *로 바꾼다.
+# 비슷하지만 흔한 말(「보지 마」 「자지 마」 「시바견」 「미친 듯이」 「불이 꺼져」 「마음에 새기다」 「닥치는 대로」)은 넣지 않았다.
+BAD_WORDS = [
+    '씨발', '시발', '씨바', '씨빨', '시빨', '씨팔', '시팔', '씨벌', '십팔', '씹', '좆', '좃',
+    '존나', '졸라', '존니', '조낸', '개새끼', '개새기', '개색기', '개색끼', '개쉐이', '새끼', '쌔끼',
+    '병신', '븅신', '빙신', '등신', '미친놈', '미친년', '미친새끼', '지랄', '염병', '엠창',
+    '느금', '니애미', '니애비', '니미', '애미뒤', '애비뒤', '썅', '쌍놈', '쌍년', '창녀', '창년',
+    '닥쳐', '한남충', '김치녀', '틀딱', '급식충', '섹스', 'sex',
+    'ㅅㅂ', 'ㅆㅂ', 'ㅄ', 'ㅂㅅ', 'ㅈㄹ', 'ㅈㄴ', 'ㄲㅈ', 'ㄷㅊ', 'ㅅㄲ', 'ㅆㄹㄱ', '쓰레기새',
+    'fuck', 'fuk', 'shit', 'bitch', 'asshole', 'dick', 'pussy', 'cunt', 'motherfucker', 'nigger', 'nigga',
+]
+
+
+def _bad_filter(text):
+    """나쁜 말을 *로 가린다. 한글 · 자모 · 영문만 이어 붙여(사이의 띄어쓰기 · 숫자 · 기호는 건너뜀) 찾는다"""
+    if not text:
+        return text
+    keep = []  # (원래 위치, 소문자 글자)
+    for i, ch in enumerate(text):
+        o = ord(ch)
+        if 0xAC00 <= o <= 0xD7A3 or 0x3131 <= o <= 0x318E or ch.isalpha():
+            keep.append((i, ch.lower()))
+    flat = ''.join(c for _, c in keep)
+    hide = set()
+    for w in BAD_WORDS:
+        start = flat.find(w)
+        while start != -1:
+            for k in range(start, start + len(w)):
+                hide.add(keep[k][0])
+            start = flat.find(w, start + 1)
+    if not hide:
+        return text
+    return ''.join('*' if i in hide else ch for i, ch in enumerate(text))
+
+
 @app.route('/api/plaza/sync', methods=['POST'])
 def plaza_sync():
     """내 위치 · 모습을 올리고 같은 광장 사람들을 받는다. 처음엔 자리가 있는 광장으로, 꽉 차면 새 광장"""
@@ -1928,7 +1963,7 @@ def plaza_sync():
         ent = {'name': user['username'], 't': now, 'm': m, 'noinv': bool(body.get('noinv')),
                'say': prev.get('say', ''), 'sid': prev.get('sid', 0), 'sayT': prev.get('sayT', 0)}
         # v113 말풍선: 새 말(sid가 바뀜)은 1.2초에 한 번, 50자까지. 8초 동안 남들에게 보낸다
-        say, sid = _chat_clean(me.get('say'))[:PLAZA_SAY_MAX], clamp_int(me.get('sid'), 0, 10 ** 9, 0)
+        say, sid = _bad_filter(_chat_clean(me.get('say'))[:PLAZA_SAY_MAX]), clamp_int(me.get('sid'), 0, 10 ** 9, 0)
         if say and sid and sid != ent['sid'] and now - ent['sayT'] >= CHAT_GAP:
             ent.update(say=say, sid=sid, sayT=now)
         room[uid] = ent
@@ -1944,7 +1979,7 @@ def plaza_sync():
     _SEEN[uid] = (now, '⛲ 광장 ' + str(ch))
     invites = [{k: i[k] for k in ('id', 'from', 'kind', 'code')} for i in _INV.get(uid, []) if now - i['t'] < 120]
     mine = room.get(uid, {})
-    return jsonify(ok=True, room=ch, cap=PLAZA_CAP, players=others, rooms=rooms, invites=invites, sid=mine.get('sid', 0))
+    return jsonify(ok=True, room=ch, cap=PLAZA_CAP, players=others, rooms=rooms, invites=invites, sid=mine.get('sid', 0), say=mine.get('say', ''))
 
 
 @app.route('/api/plaza/leave', methods=['POST'])

@@ -26263,7 +26263,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   try{const me=Object.assign({x:Math.round(P.x),y:Math.round(P.y),fx:P.face.x<0?-1:1,fy:Math.round((P.face.y||0)*10)/10,w:P.walkOn?1:0,ts:Math.round(performance.now()),n:++S.n},lookNow());if(S.say){me.say=S.say.text;me.sid=S.say.sid}/* v113 말풍선 */
    const r=await api('/api/plaza/sync','POST',{room:S.want||0,me,noinv:!!sv().noinv});if(!S.on)return;
    if(r.s!==200){S.err=r.s===401?'로그인이 필요해요':'서버 연결을 기다리는 중…';paintBar();return}S.err='';
-   S.room=r.j.room;if(S.want===S.room)S.want=0;sayAck(r.j.sid);S.rooms=r.j.rooms||[];S.cnt=(r.j.players||[]).length+1;feed(r.j.players||[]);
+   S.room=r.j.room;if(S.want===S.room)S.want=0;sayAck(r.j.sid,r.j.say);S.rooms=r.j.rooms||[];S.cnt=(r.j.players||[]).length+1;feed(r.j.players||[]);
    try{r.j.invites&&r.j.invites.length&&window.FR94&&FR94.gotInv(r.j.invites)}catch(e){}paintBar()}
   catch(e){}finally{S.busy--}}
  setInterval(()=>{if(S.on&&mode!=='plaza')leave();try{sync()}catch(e){}try{const hide=!S.on||DU.isOpen();if(bar.hidden!==hide)bar.hidden=hide}catch(e){}},60);/* 듀오 · 결투 방 창이 열려 있으면 막대는 숨김 */
@@ -26336,7 +26336,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
     보낼 말은 다음 sync에 실어 보내고(me.say · me.sid), 서버가 받아 준 번호(r.j.sid)가 오면 내 머리 위에 띄움. 남의 말은 sync 답의 say/sid. */
  S.log=[];S.say=null;S.mySay=null;let sidN=Date.now()%1e6;
  function send(t){t=String(t||'').replace(/\s+/g,' ').trim().slice(0,50);if(!t)return;if(S.say){try{banner('조금 천천히 보내 주세요')}catch(e){}return}S.say={text:t,sid:++sidN,t:performance.now()};S.last=0}
- function sayAck(sid){if(!S.say)return;if(sid===S.say.sid){S.mySay={text:S.say.text,t:performance.now()};logAdd(saveData.name||'나',S.say.text,1);S.say=null}
+ function sayAck(sid,said){if(!S.say)return;if(sid===S.say.sid){const tx=said||S.say.text;/* v114 서버가 나쁜 말을 *로 가린 글 */S.mySay={text:tx,t:performance.now()};logAdd(saveData.name||'나',tx,1);S.say=null}
   else if(performance.now()-S.say.t>3000){S.say=null;try{banner('조금 천천히 보내 주세요')}catch(e){}}}
  function logAdd(name,text,me){S.log.push({name,text,me:!!me,t:performance.now()});if(S.log.length>5)S.log.shift();paintLog()}
  function paintLog(){logEl.innerHTML=S.log.map(l=>'<div'+(l.me?' class="me"':'')+'><b>'+esc(l.name)+'</b> '+esc(l.text)+'</div>').join('')}
