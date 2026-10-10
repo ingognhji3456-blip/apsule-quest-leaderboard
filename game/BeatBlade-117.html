@@ -26268,8 +26268,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  let last=0;
  /* ---------- 서버와 주고받기 ---------- */
  const lookNow=()=>{const e=shopInv().eq||{};let sk='',pv='',lv=1;try{sk=SKIN58.get()||''}catch(_){}try{pv=(window.PET59&&PET59.get())||''}catch(_){}try{lv=DU.myLv()}catch(_){}return {ch:DU.myCh(),wp:e.wp||0,pt:e.pt||0,sk,pv,lv}};
- async function sync(){if(!S.on||mode!=='plaza'||S.busy>=2)return;const iv=S.cnt>12?350:220;if(performance.now()-S.last<iv)return;S.last=performance.now();S.busy++;
-  try{const me=Object.assign({x:Math.round(P.x),y:Math.round(P.y),fx:P.face.x<0?-1:1,fy:Math.round((P.face.y||0)*10)/10,w:P.walkOn?1:0,ts:Math.round(performance.now()),n:++S.n},lookNow());if(S.say){me.say=S.say.text;me.sid=S.say.sid}/* v113 말풍선 */
+ async function sync(){if(!S.on||mode!=='plaza'||S.busy>=2)return;const iv=S.cnt>12?350:S.cnt>6?220:160;/* v117 적으면 더 자주 */if(performance.now()-S.last<iv)return;S.last=performance.now();S.busy++;
+  try{const me=Object.assign({x:Math.round(P.x),y:Math.round(P.y),fx:P.face.x<0?-1:1,fy:Math.round((P.face.y||0)*10)/10,w:P.walkOn?1:0,ts:Math.round(performance.now()),n:++S.n},lookNow());if(S.say){me.say=S.say.text;me.sid=S.say.sid}/* v113 말풍선 */if(S.emo&&performance.now()-S.emo.t<3200)me.emo=S.emo.i+'|'+S.emo.s;/* v117 이모티콘 */
    const r=await api('/api/plaza/sync','POST',{room:S.want||0,me,noinv:!!sv().noinv});if(!S.on)return;
    if(r.s!==200){S.err=r.s===401?'로그인이 필요해요':'서버 연결을 기다리는 중…';paintBar();return}S.err='';
    S.room=r.j.room;if(S.want===S.room)S.want=0;sayAck(r.j.sid,r.j.say);S.rooms=r.j.rooms||[];S.cnt=(r.j.players||[]).length+1;feed(r.j.players||[]);
@@ -26278,9 +26278,18 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  setInterval(()=>{if(S.on&&mode!=='plaza')leave();try{sync()}catch(e){}try{const hide=!S.on||DU.isOpen();if(bar.hidden!==hide)bar.hidden=hide}catch(e){}},60);/* 듀오 · 결투 방 창이 열려 있으면 막대는 숨김 */
  function feed(list){const now=performance.now(),seen=new Set();
   for(const p of list){if(!p.name)continue;seen.add(p.name);let M=S.O[p.name];if(!M)M=S.O[p.name]={_spec:1,nm:p.name,hs:[],ring:'#a6f5c6',nmc:'#e8f4ef',noHp:1,hp:1,mx:1};
-   if(p.ts==null)continue;const o=now-p.ts;M.oMin=M.oMin==null||o<M.oMin?o:M.oMin+.3;M.off=M.oMin+140;/* 0.14초 늦게 그려 매끄럽게 */
+   if(p.ts==null)continue;
+   /* v117: 상대가 페이지를 새로 열면 번호(n) · 시계(ts)가 처음부터 다시 시작 → 예전 기록과 섞이면 새 위치를 「옛것」으로 버려 멈춰 보였음. 새 사람처럼 다시 시작 */
+   if(M.lastTs!=null&&(p.ts<M.lastTs-500||p.n<M.lastN-20)){M=S.O[p.name]={_spec:1,nm:p.name,hs:[],ring:'#a6f5c6',nmc:'#e8f4ef',noHp:1,hp:1,mx:1}}M.lastTs=p.ts;
+   const o=now-p.ts;
+   /* v117: 서버는 사람마다 마지막 위치 하나만 들고 있어서 새 위치가 0.2~0.45초마다 와요. 그 간격(gap)을 재서 1.6배+60ms(0.2~0.7초)만큼 늦게 그려
+      두 위치 사이를 늘 이어 그림(예전 0.14초는 모자라 멈췄다가 툭 튀었음). 늦게 그리는 기준(off)은 천천히만 바뀌어 위치 순서가 뒤섞이지 않게 */
+   if(M.lastN!==p.n){if(M.lastArr){const gp=Math.min(1500,now-M.lastArr);M.gap=M.gap?M.gap*.8+gp*.2:gp}M.lastArr=now;M.lastN=p.n}
+   M.oMin=M.oMin==null||o<M.oMin?o:M.oMin+.3;const want=M.oMin+Math.max(200,Math.min(700,(M.gap||300)*1.6+60));
+   M.off=M.off==null?want:want>M.off?M.off+(want-M.off)*.3:M.off-Math.min(2,M.off-want);
    M.lvT='Lv'+(p.lv||1)+' '+p.name;
-   try{DU.mateIn({x:p.x,y:p.y,ffx:p.fx,ffy:p.fy||0,fx:p.fx,n:p.n,ts:p.ts,ch:p.ch|0,wp:p.wp|0,sk:p.sk||'',pt:p.pt|0,pv:p.pv||'',hp:1,mx:1,w:!!p.w},M)}catch(e){}M.nm=M.lvT;M.name=p.name;if(p.say&&p.sid&&p.sid!==M.sid){M.sid=p.sid;M.say=p.say;M.sayT=now-(p.sayAge||0)*1000;if(p.sayAge==null||p.sayAge<6)logAdd(p.name,p.say)}}
+   try{DU.mateIn({x:p.x,y:p.y,ffx:p.fx,ffy:p.fy||0,fx:p.fx,n:p.n,ts:p.ts,ch:p.ch|0,wp:p.wp|0,sk:p.sk||'',pt:p.pt|0,pv:p.pv||'',hp:1,mx:1,w:!!p.w},M)}catch(e){}M.nm=M.lvT;M.name=p.name;if(p.emo&&p.emo!==M.emoK){const [ei,es]=String(p.emo).split('|');M.emoK=p.emo;if(M.emoK0!==undefined||!p.age||p.age<2){M.emoI=+ei|0;M.emoT=now}}M.emoK0=1;
+   if(p.say&&p.sid&&p.sid!==M.sid){M.sid=p.sid;M.say=p.say;M.sayT=now-(p.sayAge||0)*1000;if(p.sayAge==null||p.sayAge<6)logAdd(p.name,p.say)}}
   for(const k in S.O)if(!seen.has(k)){const M=S.O[k];M.gone=M.gone||now;if(now-M.gone>2500)delete S.O[k]}else S.O[k].gone=0}
  /* ---------- 움직이기 ---------- */
  function blocked(x,y){if(x<16||x>WW-16||y<TOPY+8||y>WH-8)return true;for(const b of OBST){const dx=x-b.x,dy=(y-b.y)*b.ky;if(dx*dx+dy*dy<b.r*b.r)return true}return false}
@@ -26360,14 +26369,23 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   c.fillStyle=me?'#fff4d0':'#ffffff';c.strokeStyle=me?'#ffd166':'#2a3040';c.lineWidth=1;c.beginPath();c.roundRect?c.roundRect(bx,by,w,h,5):c.rect(bx,by,w,h);c.fill();c.stroke();
   c.beginPath();c.moveTo(x-3,by+h-.5);c.lineTo(x,by+h+5);c.lineTo(x+3,by+h-.5);c.closePath();c.fill();c.beginPath();c.moveTo(x-3,by+h);c.lineTo(x,by+h+5);c.lineTo(x+3,by+h);c.stroke();
   c.fillStyle='#1a2030';c.textAlign='center';L.forEach((l,i)=>c.fillText(l,x,by+10+i*9));c.restore()}
- function drawBubbles(now){const c=ctx;for(const k in S.O){const M=S.O[k];if(M.say&&M.sx!=null)bubble(c,M.sx,M.sy-44,M.say,now-M.sayT,0)}if(S.mySay)bubble(c,P.x,P.y-44,S.mySay.text,now-S.mySay.t,1)}
- const chatBox=document.createElement('div');chatBox.id='plzChat';chatBox.hidden=true;chatBox.innerHTML='<div class="lg"></div><form><input maxlength="50" placeholder="말하기 (Enter)" enterkeyhint="send" autocomplete="off"><button>보내기</button></form>';document.body.appendChild(chatBox);
+ function drawBubbles(now){const c=ctx;try{drawEmos(now)}catch(e){};for(const k in S.O){const M=S.O[k];if(M.say&&M.sx!=null)bubble(c,M.sx,M.sy-44,M.say,now-M.sayT,0)}if(S.mySay)bubble(c,P.x,P.y-44,S.mySay.text,now-S.mySay.t,1)}
+ /* ---------- v117 이모티콘: 머리 위에 3초 동안 크게(톡 튀어나와 살짝 떠오름) ---------- */
+ const EMO=['😀','😂','😍','👋','👍','🎉','😢','😡','❤️','🔥','⚔️','🤝'];let emoSeq=0;S.emo=null;
+ function emote(i){if(!S.on||i<0||i>=EMO.length)return;if(S.emo&&performance.now()-S.emo.t<900)return;S.emo={i,s:++emoSeq%1000,t:performance.now()};S.last=0;try{sfx(1100,.05,'triangle',.02,1500)}catch(e){}}
+ function emoAt(c,x,y,i,age){const life=3000;if(age<0||age>life)return;const pop=age<180?age/180:1,sc=age<180?.4+.9*pop:age<300?1.3-(age-180)/400:1,a=age>life-400?(life-age)/400:1,fy=y-Math.min(1,age/life)*6;
+  c.save();c.globalAlpha=a;c.translate(x,fy);c.scale(sc,sc);c.fillStyle='rgba(255,255,255,.92)';c.beginPath();c.arc(0,0,10,0,TAU0);c.fill();c.strokeStyle='rgba(30,40,60,.35)';c.lineWidth=.8;c.stroke();
+  c.font='13px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(EMO[i]||'',0,1);c.restore()}
+ const TAU0=Math.PI*2;
+ function drawEmos(now){const c=ctx;for(const k in S.O){const M=S.O[k];if(M.emoT!=null&&M.sx!=null)emoAt(c,M.sx+14,M.sy-42,M.emoI,now-M.emoT)}if(S.emo)emoAt(c,P.x+14,P.y-42,S.emo.i,now-S.emo.t)}
+ const chatBox=document.createElement('div');chatBox.id='plzChat';chatBox.hidden=true;chatBox.innerHTML='<div class="lg"></div><div class="em" hidden>'+EMO.map((e,i)=>'<button type="button" data-e="'+i+'" title="'+(i<9?(i+1)+'번 키':'')+'">'+e+'</button>').join('')+'</div><form><button type="button" class="eb" title="이모티콘 (숫자키 1~9)">😀</button><input maxlength="50" placeholder="말하기 (Enter)" enterkeyhint="send" autocomplete="off"><button>보내기</button></form>';document.body.appendChild(chatBox);
  const logEl=chatBox.querySelector('.lg'),inp=chatBox.querySelector('input');
  chatBox.addEventListener('pointerdown',e=>e.stopPropagation());
+ const emBox=chatBox.querySelector('.em');chatBox.querySelector('.eb').onclick=()=>{emBox.hidden=!emBox.hidden};emBox.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{emote(+b.dataset.e);emBox.hidden=true});
  for(const ev of ['keydown','keyup'])inp.addEventListener(ev,e=>{e.stopPropagation();if(ev==='keydown'&&e.key==='Escape'){inp.blur()}});/* 적는 동안 캐릭터가 움직이거나 일시정지되지 않게 */
  inp.addEventListener('focus',()=>{try{K.clear()}catch(e){}});
  chatBox.querySelector('form').onsubmit=e=>{e.preventDefault();send(inp.value);inp.value='';if(matchMedia('(pointer:coarse)').matches)inp.blur()};
- addEventListener('keydown',e=>{if(mode!=='plaza'||!S.on||paused||chatBox.hidden)return;if(e.code==='Enter'&&document.activeElement!==inp&&box.hidden){e.preventDefault();e.stopImmediatePropagation();inp.focus()}},true);
+ addEventListener('keydown',e=>{if(mode!=='plaza'||!S.on||paused||chatBox.hidden)return;if(document.activeElement!==inp&&/^Digit[1-9]$/.test(e.code)&&box.hidden){e.preventDefault();emote(+e.code.slice(5)-1);return}/* v117 숫자키 = 이모티콘 */if(e.code==='Enter'&&document.activeElement!==inp&&box.hidden){e.preventDefault();e.stopImmediatePropagation();inp.focus()}},true);
  setInterval(()=>{try{const hide=!S.on||DU.isOpen();if(chatBox.hidden!==hide)chatBox.hidden=hide}catch(e){}},120);
  /* ---------- 위쪽 막대: 광장 번호 · 사람 수 · 신청 받기 · 나가기 ---------- */
  const bar=document.createElement('div');bar.id='plzBar';bar.hidden=true;document.body.appendChild(bar);
@@ -26428,7 +26446,9 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  #plzInfo .ni,#plzInfo .me,#plzInfo .msg,#plzInfo .ld{margin:8px 0 0;font-size:11px;color:#9fb0c8;text-align:center}#plzInfo .msg{color:#a6f5c6}
  #plzChat{position:fixed;left:8px;bottom:8px;z-index:9300;width:min(380px,62vw);display:flex;flex-direction:column;gap:4px;pointer-events:none}#plzChat[hidden]{display:none}
  #plzChat .lg div{font-size:12px;line-height:1.35;color:#e8f4ef;text-shadow:0 1px 2px #000,0 0 4px #000;word-break:break-all}#plzChat .lg b{color:#a6f5c6}#plzChat .lg .me b{color:#ffd166}
- #plzChat form{display:flex;gap:4px;pointer-events:auto}#plzChat input{flex:1;min-width:0;font:inherit;font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid #7dd8ff55;background:#0b1220d9;color:#fff;outline:none}#plzChat input:focus{border-color:#7dd8ff}
+ #plzChat form{display:flex;gap:4px;pointer-events:auto}#plzChat .eb{padding:4px 8px!important;font-size:16px!important;background:#24324c!important}
+ #plzChat .em{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:6px;border-radius:12px;background:#0b1220ee;border:1px solid #7dd8ff55;pointer-events:auto;width:max-content}#plzChat .em[hidden]{display:none}
+ #plzChat .em button{font-size:20px!important;padding:4px 6px!important;background:#ffffff10!important;border-radius:8px!important;line-height:1}#plzChat .em button:hover{background:#ffffff28!important}#plzChat input{flex:1;min-width:0;font:inherit;font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid #7dd8ff55;background:#0b1220d9;color:#fff;outline:none}#plzChat input:focus{border-color:#7dd8ff}
  #plzChat button{font:inherit;font-weight:900;font-size:12px;padding:7px 11px;border-radius:10px;border:0;background:#1a4a6a;color:#dff4ff;cursor:pointer}
  html.ph #plzChat{width:min(300px,64vw)}html.ph #plzChat .lg div{font-size:11px}html.ph #plzChat input{font-size:16px;padding:6px 8px}
  #plzView{position:fixed;inset:0;width:100vw;height:100vh;z-index:60;touch-action:none;background:#141a2a}#plzView[hidden]{display:none}
