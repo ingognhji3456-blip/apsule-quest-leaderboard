@@ -42,7 +42,12 @@
   catch(e){console.error('vid99 in',e);if(IN.pc===pc)IN.pc=null}}
  /* 영상이 실제로 흘러나오고 있을 때만 그림(멈추면 예전 방식으로) */
  function inFrame(){const v=IN.video;if(!IN.pc||!v||IN.pc.connectionState!=='connected'||v.readyState<2||!v.videoWidth)return null;
-  const now=performance.now();if(v.currentTime!==IN.lastCT){IN.lastCT=v.currentTime;IN.lastCTat=now}if(now-IN.lastCTat>1500)return null;IN.live=true;return v}
+  const now=performance.now();
+  /* v140: 실시간 영상은 그림이 멈춰도 currentTime은 계속 흘러서, 멈춘 화면(예: 15층)을 계속 보여 줬음(소식은 이미 16층).
+     진짜 새 그림이 들어온 때(requestVideoFrameCallback)를 재서 0.7초 넘게 새 그림이 없으면 영상 대신 다시 그리기로, 0.3초 이어서 들어오면 영상으로 돌아감 */
+  if(v.requestVideoFrameCallback){if(IN.vfV!==v){IN.vfV=v;IN.vfAt=0;IN.vfRun=0;const cb=()=>{const t=performance.now();if(t-IN.vfAt>400)IN.vfRun=t;IN.vfAt=t;if(IN.vfV===v)v.requestVideoFrameCallback(cb)};v.requestVideoFrameCallback(cb)}
+   if(now-IN.vfAt>700||now-IN.vfRun<300){IN.live=false;return null}IN.live=true;return v}
+  if(v.currentTime!==IN.lastCT){IN.lastCT=v.currentTime;IN.lastCTat=now}if(now-IN.lastCTat>1500)return null;IN.live=true;return v}
  setInterval(()=>{const SP=WATCH95.SP;
   if(!SP.on){if(IN.name)closeIn(true);return}
   if(IN.name&&IN.name!==SP.name)closeIn(true);

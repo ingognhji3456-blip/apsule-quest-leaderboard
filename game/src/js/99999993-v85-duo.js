@@ -186,12 +186,15 @@
   if(m.n!=null&&M.n!=null&&m.n<=M.n&&!m.d){if(m.ev&&m.ev.length)mateEv(M,m.ev);return}/* 순서가 뒤바뀌어 온 옛 위치는 버림(사건은 살림) */
   const lt=m.ts!=null?m.ts+(M._spec?M.off:D.mOff):now;/* v96: 관전 대상은 관전 쪽이 정한 시계(M.off) */
 
-  if(m.ev)mateEv(M,m.ev);const cap=M._spec?90:24;if(m.pl&&m.pl!==M.pl){M.pl=m.pl;M.hs=[];M.sx=null;M.sy=null;M.tr=[];M.spawnT=lt}
+  if(m.ev)mateEv(M,m.ev);const cap=M._spec?240:40;/* v140: 광장은 걸은 길까지 와서 기록이 많음 */if(m.pl&&m.pl!==M.pl){M.pl=m.pl;M.hs=[];M.sx=null;M.sy=null;M.tr=[];M.spawnT=lt}
   const hs=M.hs||[];hs.push({t:lt,x:m.x,y:m.y,fx:m.ffx,fy:m.ffy});while(hs.length>cap)hs.shift();
   const ev0=m.ev;delete m.ev;Object.assign(M,m,{at:now,hs});m.ev=ev0}
  /* 늦게 도착하는 정도(가장 빨리 온 것 대비)를 모아 90%가 도착하는 만큼만 늦게 그림: 매끄럽게 + 너무 늦지 않게 */
- function lagOf(a,v,ms){a.push(v);if(a.length>40)a.shift();const q=a.slice().sort((x,y)=>x-y)[Math.floor(a.length*.9)];return ms?Math.max(40,Math.min(150,q+15)):Math.max(.04,Math.min(.15,q+.015))}/* v110: 딜레이 0이면 소식이 고르지 않게 와서 상대가 뚝뚝 끊겨 보였음 → 흔들림만큼만 아주 조금(0.04~0.15초) 늦게 그려 매끄럽게 */
- const MDLY=M=>M&&M._spec?0:(D.mDly||60);/* v110: 0.04~0.15초 자동(관전은 시간표에 이미 들어 있음) *//* 관전은 시간표에 이미 재생 지연이 들어 있음 */
+ function lagOf(a,v,ms){a.push(v);if(a.length>60)a.shift();const q=a.slice().sort((x,y)=>x-y)[Math.floor((a.length-1)*.95)];
+  /* v140: 서버를 거쳐 오는 소식은 0.15초보다 훨씬 들쭉날쭉할 때가 많아(렌더 서버) 상대가 멈췄다 튀었음 → 95%가 도착하는 만큼(+여유) 0.06~0.45초로 넓히고,
+     값이 갑자기 바뀌면 그 자체로 튀어 보이니 늘릴 땐 빨리 · 줄일 땐 아주 천천히 따라감 */
+  const want=ms?Math.max(60,Math.min(450,q+30)):Math.max(.06,Math.min(.45,q+.03));if(a._v==null)a._v=want;else a._v+=(want-a._v)*(want>a._v?.25:.03);return a._v}
+ const MDLY=M=>M&&M._spec?0:(D.mDly||90);/* v140: 0.06~0.45초 자동(전 v110: 0.04~0.15초)(관전은 시간표에 이미 들어 있음) *//* 관전은 시간표에 이미 재생 지연이 들어 있음 */
  function mateEv(M,list){for(const e of list){if((M.seen||(M.seen=new Set())).has(e.e))continue;M.seen.add(e.e);if(M.seen.size>200)M.seen=new Set([...M.seen].slice(-100));
    (M.evs||(M.evs=[])).push(Object.assign({},e,{t:e.t+((M._spec?M.off:D.mOff)||0)}));if(M.evs.length>40)M.evs.shift();if(e.k==='U'&&e.sp&&!M._spec)setTimeout(()=>note('동료 필살기! '+(e.sp.name||'')),MDLY())}}
  function matePos(now,MM){const M=MM||D.mate,hs=M.hs;if(!hs||!hs.length)return [M.x,M.y];const rt=now-MDLY(M);

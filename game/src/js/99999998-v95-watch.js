@@ -39,7 +39,7 @@
   if(mode==='tower'&&t&&!t.bossCard&&WS.n%2===0){try{o.snap=DU._snap()}catch(e){}}/* 잡몹은 0.13초마다(사이는 보는 쪽이 이어 그림) */
   if(pv){const M=PVP92.M;o.pvp={sc:M.sc,me:M.owner?0:1,round:M.round,ph:M.ph}}
   /* v97: 보스전(과 보스 등장 카드)은 화면을 작은 사진(JPEG)으로 찍어 보냄 — 보스 패턴이 복잡해서 그대로 보여 주려면 이게 확실함. 1초에 약 10장 */
-  if((mode==='boss'||t&&t.bossCard&&mode==='tower')&&now-(WS.imgT||0)>=95&&!(window.VID99&&VID99.outLive()>=Math.max(1,WS.viewers))){/* 모두 영상으로 보고 있으면 사진은 안 보냄 */WS.imgT=now;try{o.img=shot()}catch(e){}}
+  if((mode==='boss'||t&&t.bossCard&&mode==='tower')&&now-(WS.imgT||0)>=(window.VID99&&VID99.outLive()>=Math.max(1,WS.viewers)?400:95)){/* v140: 모두 영상으로 봐도 0.4초마다 사진은 보냄(영상이 멈추면 보는 쪽이 사진으로 이어 봄) */WS.imgT=now;try{o.img=shot()}catch(e){}}
   if(mode==='boss'&&typeof G!=='undefined'&&G){o.boss={name:(G.B&&G.B.name)||(G.bossName)||'보스',hp:Math.round(G.hp||0),mx:Math.round(G.maxHp||1)}}
   try{o.me=ACCT55.get().user||''}catch(e){}
   return o}
@@ -78,7 +78,7 @@
     const o=nw-m.ts;if(SP.off==null||o<SP.off)SP.off=o;else SP.off+=.15;SP.jit.push(o-SP.off);if(SP.jit.length>90)SP.jit.shift();
     if(m.img){const im=new Image();im.src=m.img;m._im=im;delete m.img}/* 미리 풀어 둠 */
     SP.buf.push(m);SP.last=Date.now();SP.wait=false;try{feed(m)}catch(e){console.error('watch feed',e)}}
-   if(SP.jit.length){const q=SP.jit.slice().sort((a,b)=>a-b)[Math.floor(SP.jit.length*.95)];SP.pdT=0/* v109: 재생 지연 0(받은 즉시 그림) */}
+   if(SP.jit.length){const q=SP.jit.slice().sort((a,b)=>a-b)[Math.floor(SP.jit.length*.95)];SP.pdT=Math.max(60,Math.min(500,q+40))/* v140: 받은 즉시 그리면(v109) 소식 간격이 들쭉날쭉할 때마다 뚝뚝 끊겼음 → 늦게 오는 정도(95%)만큼만 살짝 늦춰 매끄럽게 */}
    if(SP.buf.length>200)SP.buf.splice(0,SP.buf.length-200);SP.since=Math.max(SP.since,r.j.seq||0);
    SP.where=r.j.where;const quiet=Date.now()-SP.last;
    if(!ms.length&&quiet>9000){if(!r.j.live&&/로비|^$/.test(r.j.where||'')&&!SP.wait){stop(SP.name+'님이 로비로 돌아갔어요');return}paintBar(SP.wait?'친구 화면을 받는 중… (최대 몇 초)':'연결을 기다리는 중…')}
