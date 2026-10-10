@@ -280,6 +280,7 @@
  function floor(now,dt,t){const me=D.me,dtu=now<(D.stop||0)?0:dt;/* 히트스톱 동안은 멈춤 */if(P.hp>0)moveMe(now,dtu,okRect);
   if(P.hp>0&&!D.stair&&now>D.spT){const alive=D.mobs.filter(m=>m.hp>0).length,total=3+Math.round(D.f*.95);if(alive<D.cap&&D.spawned<total){spawnMob();D.spT=now+500+Math.random()*500}}
   for(const m of D.mobs)if(m.hp>0)mobAI(m,now,dtu);D.mobs=D.mobs.filter(m=>m.hp>0||now-(m.dieT||m.hitT)<420);
+  /* v136: 어디서 죽었든 셈에 안 들어간 괴물은 여기서 정리(남은 괴물 수가 줄지 않아 계단이 안 뜨던 문제) */for(const m of D.mobs)if(m.hp<=0&&!m.dieT){killFx(m,now);try{window.SK130&&SK130.kill(m)}catch(e){}}
   if(!D.stair&&D.left<=0&&P.hp>0){D.stair=now;const g=30+D.f*10;try{addCoins(g)}catch(e){}P.hp=Math.min(P.maxhp,P.hp+Math.round(P.maxhp*.25));dpop(P.x,P.y-40,'층 정리! 🪙+'+g+' · 체력 회복','#ffe9a8');snd(880,.3,'sine',.06,1320)}
   const sh=D.shake&&now-D.shake<160?(Math.random()-.5)*(D.shk||3)*(1-(now-D.shake)/160)*2:0,shy=sh*.6;ctx.save();ctx.translate(sh,shy);ctx.drawImage(floorBg(bandOf(D.f)),0,0,W,H);try{window.DG135&&DG135.floorUnder(now,bandOf(D.f))}catch(e){}
   for(const x of [AX+100,MX,AX+AW-100])torch(x,AY+30,now);teleDraw(now);if(D.stair)stairDraw(now);
