@@ -25,6 +25,9 @@
  const localStr=()=>canon(localObj());
  const clears=d=>Object.keys((d&&d.clear)||{}).length;
  const blank=d=>!clears(d)&&!(d&&d.coins);
+ const OWN='bb-save-owner';let PREV=A.user||'';/* v141: 로그인하기 바로 전 계정 */
+ const ownerOf=()=>{try{return localStorage.getItem(OWN)||PREV||''}catch(e){return PREV||''}};
+ const setOwner=()=>{try{if(A.token&&A.user)localStorage.setItem(OWN,A.user)}catch(e){}};
  const sum=d=>'깬 기록 '+clears(d)+'개 · 코인 '+((d&&d.coins)||0);
  const when=t=>t?new Date(t*1000).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
  const inMenu=()=>{try{return mode==='menu'&&!document.body.classList.contains('inBattle')}catch(e){return false}};
@@ -51,6 +54,12 @@
  async function pull(afterLogin){if(!A.token)return;busy=true;setSt('up');let r;try{r=await api('/api/save')}finally{busy=false}
   if(r.s===401)return lost();if(r.s!==200)return setSt('off');
   const j=r.j,sv=j.data,cur=localStr();
+  /* v141: 이 기기 기록의 주인(계정 이름)을 적어 두고, 다른 계정으로 로그인하면 그 기록을 넘겨주지 않는다.
+     전에는 새 계정(서버 기록 없음)에 이 기기 기록(앞 계정의 성문 · 열쇠 · 코인 …)이 그대로 올라갔음. 앞 계정 기록은 'bb-save-of-<이름>'에 남겨 둠.
+     로그인한 적 없는 손님 기록(주인 없음)은 예전처럼 첫 로그인 계정으로 넘어간다. */
+  if(afterLogin){const own=ownerOf();if(own&&own!==A.user){try{localStorage.setItem('bb-save-of-'+own,JSON.stringify(localObj()))}catch(e){}setOwner();
+    if(sv&&j.rev)return useServer(sv,j.rev);return useServer({},0)}}
+  setOwner();
   if(!sv||!j.rev){A.rev=0;keep();return push(false)}/* 서버가 비었으면 이 기기 기록을 올림 */
   if(canon(sv)===cur){A.rev=j.rev;A.synced=cur;keep();return setSt('ok')}
   if(afterLogin){if(blank(localObj()))return useServer(sv,j.rev);return autoPick(sv,j.rev)}
@@ -145,7 +154,7 @@
        if(res.s!==200||(!linking&&!res.j.token))throw new Error(res.j.error||'Google 로그인에 실패했어요.');
        if(linking){draw();msg('Google 계정을 연결했어요. 기존 기록을 그대로 사용할 수 있어요.',true)}
        else{
-        A.user=res.j.username;A.token=res.j.token;A.rev=0;A.synced='';keep();setSt('');
+        PREV=A.user||PREV;A.user=res.j.username;A.token=res.j.token;A.rev=0;A.synced='';keep();setSt('');
         // Allow the existing pull routine to upload a local save for a new account.
         googleWorking=false;needName=!!res.j.need_name||/^G_/.test(A.user);await pull(true);if(needName){open();draw()}else{syncName();if(boxOn){if(gate&&!pend){close()}else draw()}}
        }
@@ -180,7 +189,7 @@
    const go=async()=>{const v=$('acNick').value.trim();
     if(!/^[0-9A-Za-z가-힣_]{2,10}$/.test(v)||/^g_/i.test(v))return msg('이름은 2~10자의 한글·영문·숫자·_ 만 쓸 수 있어요');
     const b=$('acNickGo');b.disabled=true;msg('정하는 중…',true);const r=await api('/api/account/name','POST',{name:v});b.disabled=false;
-    if(r.s===200&&r.j.username){A.user=r.j.username;keep();needName=false;syncName();chip();msg('',true);close();try{gmSfx('ok')}catch(_){}return}
+    if(r.s===200&&r.j.username){A.user=r.j.username;keep();setOwner();needName=false;syncName();chip();msg('',true);close();try{gmSfx('ok')}catch(_){}return}
     if(r.s===409&&/이미 정해/.test(r.j.error||'')){needName=false;return checkName()}
     if(r.s===401)return lost(),draw();msg(r.j.error||'서버에 연결할 수 없어요. 잠시 뒤에 다시 해 주세요')};
    $('acNickGo').onclick=go;$('acNick').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go()}});
@@ -210,7 +219,7 @@
    const b=$('acGo');b.disabled=true;msg('서버에 연결하는 중… (서버가 자고 있으면 1분쯤 걸려요)',true);
    const r=await api('/api/login','POST',{username:id,password:pw});b.disabled=false;
    if(r.s!==200||!r.j.token){if(r.s===0&&!netFail){netFail=true;draw();msg('서버에 연결할 수 없어요. 인터넷을 확인하고 다시 눌러 주세요')}return msg(r.j.error||'잠시 뒤에 다시 해 주세요')}
-   A.user=r.j.username;A.token=r.j.token;A.rev=0;A.synced='';keep();setSt('');msg('로그인했어요! 기록을 맞추는 중…',true);
+   PREV=A.user||PREV;A.user=r.j.username;A.token=r.j.token;A.rev=0;A.synced='';keep();setSt('');msg('로그인했어요! 기록을 맞추는 중…',true);
    syncName();await pull(true);if(!pend&&boxOn){draw();msg('로그인했어요. 아래 「Google 계정 연결」을 눌러 Google로도 들어올 수 있게 해 주세요.',true)}else if(pend)draw()};
   $('acGo').onclick=go;
   for(const id of ['acId','acPw'])$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go()}})}
@@ -229,7 +238,7 @@
  setInterval(()=>{try{if(!A.token)return;if(pend){later();return}if(st==='off'&&Date.now()-lastTry<30000)return;push(false)}catch(e){}},5000);
  /* 창을 닫거나 다른 앱으로 넘어갈 때 한 번 더 */
  document.addEventListener('visibilitychange',()=>{try{if(document.hidden&&A.token&&!busy&&!pend&&!googleWorking){const cur=localStr();if(cur!==A.synced){busy=true;/* v104: 이 저장이 끝나기 전에 다른 저장이 같이 가서 엇갈리지 않게 */fetch(A.url.replace(/\/+$/,'')+'/api/save',{method:'PUT',keepalive:true,headers:{'Content-Type':'application/json',Authorization:'Bearer '+A.token},body:JSON.stringify({base_rev:A.rev,data:JSON.parse(cur)})}).then(r=>r.ok&&r.json()).then(j=>{if(j&&j.ok){A.rev=j.rev;A.synced=cur;keep();setSt('ok')}}).catch(()=>{}).finally(()=>{busy=false})}}}catch(e){}});
- window.addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='beatblade-google-auth'||!d.ok)return;/* 다른 창이 가짜 로그인 표를 넣지 못하게: 우리 서버 주소에서 온 메시지만 */try{if(e.origin!==new URL(A.url).origin)return}catch(_){return}if(d.mode==='link'){draw();msg('Google 계정을 연결했어요. 기존 기록을 그대로 사용할 수 있어요.',true);return}if(d.token){A.user=d.username||'Google 사용자';A.token=d.token;A.rev=0;A.synced='';keep();setSt('');msg('Google 로그인했어요! 기록을 맞추는 중…',true);needName=/^G_/.test(A.user);pull(true).then(()=>{checkName()})}});
+ window.addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='beatblade-google-auth'||!d.ok)return;/* 다른 창이 가짜 로그인 표를 넣지 못하게: 우리 서버 주소에서 온 메시지만 */try{if(e.origin!==new URL(A.url).origin)return}catch(_){return}if(d.mode==='link'){draw();msg('Google 계정을 연결했어요. 기존 기록을 그대로 사용할 수 있어요.',true);return}if(d.token){PREV=A.user||PREV;A.user=d.username||'Google 사용자';A.token=d.token;A.rev=0;A.synced='';keep();setSt('');msg('Google 로그인했어요! 기록을 맞추는 중…',true);needName=/^G_/.test(A.user);pull(true).then(()=>{checkName()})}});
  async function rankSubmit(score,meta){if(!A.token||!Number.isFinite(Number(score))||Number(score)<=0)return null;const r=await api('/api/ranking','PUT',{score:Math.floor(Number(score)),chapter:meta&&meta.chapter||0,boss:meta&&meta.boss||'',difficulty:meta&&meta.difficulty||''});return r.s===200?r.j:null}
  async function rankGet(limit){const r=await api('/api/ranking?limit='+(limit||20));return r.s===200?r.j:null}
  function rankHTML(j){const rows=(j&&j.players||[]).map(x=>'<div class="acRankRow"><b>#'+x.rank+'</b><span>'+esc(x.username)+'</span><strong>'+Number(x.score||0).toLocaleString()+'</strong></div>').join('')||'<div class="acNote">아직 등록된 점수가 없어요.</div>';const m=j&&j.mine;return '<h3>🏆 글로벌 랭킹</h3><div class="acNote">전체 최고 점수 기준 · 보스 클리어 후 자동 등록</div><div class="acRankList">'+rows+'</div>'+(m?'<div class="acCard" style="margin-top:10px">내 순위 <b>#'+m.rank+'</b> · '+Number(m.score||0).toLocaleString()+'점</div>':'<div class="acNote">로그인 후 내 점수를 등록할 수 있어요.</div>')+'<div class="acRow"><button class="gmBtn" id="acRankBack">뒤로</button><button class="gmBtn" id="acRankRefresh">새로고침</button></div>'}
@@ -239,7 +248,7 @@
  /* v77: 이름 맞추기 · 확인 */
  function syncName(){try{if(!A.token||!A.user||/^G_/.test(A.user))return;const n=String(A.user).slice(0,10);if(saveData.name!==n){saveData.name=n;saveNow();try{gmHud()}catch(e){}}}catch(e){}}
  async function checkName(){if(!A.token)return;const r=await api('/api/me');if(r.s===401)return lost(),(gate&&(open(),draw()));if(r.s!==200)return;
-  if(r.j.username&&r.j.username!==A.user){A.user=r.j.username;keep();chip()}
+  if(r.j.username&&r.j.username!==A.user){A.user=r.j.username;keep();setOwner();chip()}
   needName=!!r.j.need_name;if(needName){open();draw()}else{syncName();if(boxOn&&gate&&!pend)close()}}
  setTimeout(()=>{chip();if(A.token){syncName();pull(false);checkName()}else{if(st==='')chip();if(!autoTest()){gate=true;/* v125: 오프닝(TAP 화면)이 끝난 뒤, 로비가 보이기 전에 로그인 창 */document.documentElement.classList.add('gate125');const go=()=>{if(document.getElementById('splash'))return setTimeout(go,120);open()};go()}}},800);
 }catch(e){console.error('v55 login',e)}})();
