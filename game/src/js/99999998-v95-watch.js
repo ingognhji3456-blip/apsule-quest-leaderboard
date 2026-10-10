@@ -48,7 +48,7 @@
    if(WS.was&&!SP.on&&acc().token&&Date.now()<WS.until){WS.was=false;api('/api/watch/push','POST',{msgs:[{t:'w',mode:'lobby',ts:Math.round(performance.now()),n:++WS.n}]}).catch(()=>{})}return}
   WS.was=true;WS.q=WS.q||[];WS.q.push(frameMsg());if(WS.q.length>20)WS.q.splice(0,WS.q.length-20);/* 답이 늦어도 장면이 빠지지 않게 모아서 한꺼번에 */
   /* v96: 1초에 15장면 · 동시에 2개까지 보냄(하나가 늦어도 다음 것이 감) */
-  if((WS.fly|0)>=2||Date.now()-(WS.lastSend||0)<120&&WS.q.length<3)return;WS.fly=(WS.fly|0)+1;WS.lastSend=Date.now();
+  if((WS.fly|0)>=3||Date.now()-(WS.lastSend||0)<50)return;/* v109: 0.05초마다 · 동시 3개 */WS.fly=(WS.fly|0)+1;WS.lastSend=Date.now();
   api('/api/watch/push','POST',{msgs:WS.q.splice(0)}).then(r=>{if(r.s===200){try{r.j.sig&&r.j.sig.length&&window.VID99&&VID99.sig(r.j.sig)}catch(e){}WS.viewers=r.j.viewers||0;if(WS.viewers>0)WS.until=Date.now()+10000}}).finally(()=>{WS.fly--})},50);
  /* 게임 중엔 친구 목록(=보는 사람 확인)을 5초마다 */
  setInterval(()=>{try{if(acc().token&&inGame()&&window.FR94)FR94.refresh()}catch(e){}},6000);
@@ -58,7 +58,7 @@
 
  /* ---------- ② 보는 쪽 ---------- */
  function spec(name){if(D.on){note('방에 있을 땐 관전할 수 없어요');return}try{gmSfx('ok')}catch(_){}
-  Object.assign(SP,{on:true,name,since:0,buf:[],off:null,jit:[],pd:200,pdT:200,P:{_spec:1,nm:name,ring:'#ffd166'},M2:{_spec:1,ring:'#ff9aaa'},last:Date.now(),f:null,lastW:null,busy:false,wait:true,start:Date.now()});
+  Object.assign(SP,{on:true,name,since:0,buf:[],off:null,jit:[],pd:0,pdT:0,P:{_spec:1,nm:name,ring:'#ffd166'},M2:{_spec:1,ring:'#ff9aaa'},last:Date.now(),f:null,lastW:null,busy:false,wait:true,start:Date.now()});
   bar.hidden=false;paintBar('연결하는 중…');try{if(window.FR94)FR94.F.open=false;$('fr94').hidden=true}catch(e){}}
  function stop(msg){if(!SP.on)return;SP.on=false;bar.hidden=true;P.inv=0;try{$('overlay').hidden=true;toLobby()}catch(e){}if(msg)setTimeout(()=>note(msg),400)}
  function enterArena(f){if(f%10===0)f=Math.max(1,f-1);/* 보스 층 번호로 열면 보스전이 시작되므로 바로 아래 층 경기장 */
@@ -78,12 +78,12 @@
     const o=nw-m.ts;if(SP.off==null||o<SP.off)SP.off=o;else SP.off+=.15;SP.jit.push(o-SP.off);if(SP.jit.length>90)SP.jit.shift();
     if(m.img){const im=new Image();im.src=m.img;m._im=im;delete m.img}/* 미리 풀어 둠 */
     SP.buf.push(m);SP.last=Date.now();SP.wait=false;try{feed(m)}catch(e){console.error('watch feed',e)}}
-   if(SP.jit.length){const q=SP.jit.slice().sort((a,b)=>a-b)[Math.floor(SP.jit.length*.95)];SP.pdT=Math.max(110,Math.min(1200,q+90))/* v99: 딜레이 줄임(최소 0.11초 · 최대 1.2초) */}
+   if(SP.jit.length){const q=SP.jit.slice().sort((a,b)=>a-b)[Math.floor(SP.jit.length*.95)];SP.pdT=0/* v109: 재생 지연 0(받은 즉시 그림) */}
    if(SP.buf.length>200)SP.buf.splice(0,SP.buf.length-200);SP.since=Math.max(SP.since,r.j.seq||0);
    SP.where=r.j.where;const quiet=Date.now()-SP.last;
    if(!ms.length&&quiet>9000){if(!r.j.live&&/로비|^$/.test(r.j.where||'')&&!SP.wait){stop(SP.name+'님이 로비로 돌아갔어요');return}paintBar(SP.wait?'친구 화면을 받는 중… (최대 몇 초)':'연결을 기다리는 중…')}
    if(SP.wait&&Date.now()-SP.start>25000){stop(SP.name+'님 화면을 받지 못했어요');return}
-  }finally{SP.busy=false}},120);
+  }finally{SP.busy=false}},50);/* v109: 0.05초마다 */
  /* 관전 중엔 조작 막기 · 내 캐릭터는 맞지 않게 */
  for(const fn of ['doAttack','doDash','tryParry','tryUlt']){try{const f=window[fn];if(typeof f!=='function')continue;window[fn]=function(){if(SP.on)return;return f.apply(this,arguments)}}catch(e){}}
  try{const f=doAttack;doAttack=function(){if(SP.on)return;return f.apply(this,arguments)}}catch(e){}
@@ -130,6 +130,10 @@
  #wt95{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:9400;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:14px;background:linear-gradient(180deg,#2a2210ee,#120d06ee);border:2px solid #ffd166;color:#fff3c8;box-shadow:0 8px 24px #000a,0 0 16px #ffd16644;font-family:inherit}
  #wt95[hidden]{display:none}#wt95 i{font-style:normal;font-size:20px;animation:wtB 1.4s ease-in-out infinite}#wt95 b{display:block;font-size:13px}#wt95 small{font-size:11px;color:#d8c89a}
  #wt95 button{font:inherit;font-weight:900;padding:7px 11px;border-radius:10px;border:0;cursor:pointer;background:#2a3436;color:#e8f4ef}
+ /* v109: 폰에서는 작은 알약 모양으로(화면을 덜 가리게) — 아래 설명 줄 숨김, 반투명 */
+ html.ph #wt95,html.uiLand #wt95,html.uiPort #wt95{top:4px;gap:5px;padding:2px 3px 2px 8px;border-width:1px;border-radius:999px;box-shadow:0 2px 8px #0008;background:#120d06b8;max-width:calc(100vw - 16px)}
+ html.ph #wt95 i,html.uiLand #wt95 i,html.uiPort #wt95 i{font-size:12px}html.ph #wt95 b,html.uiLand #wt95 b,html.uiPort #wt95 b{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+ html.ph #wt95 small,html.uiLand #wt95 small,html.uiPort #wt95 small{display:none}html.ph #wt95 button,html.uiLand #wt95 button,html.uiPort #wt95 button{font-size:10.5px;padding:4px 9px;border-radius:999px;white-space:nowrap;flex-shrink:0}
  @keyframes wtB{50%{transform:scale(1.15)}}`;document.head.appendChild(st);
  window.WATCH95={spec,stop,specOn,objs:()=>[SP.P,SP.M2].filter(Boolean),setWatched,W:WS,SP};
 }catch(e){console.error('v95 watch',e)}})();
