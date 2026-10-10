@@ -9,7 +9,11 @@
    - 맨 아래 작은 단추 4개: 친구 · 채팅 · 설정 · 조작법 (친구 · 채팅 알림 숫자도 옮겨 보임)
    원래 단추(#phNav · #phPlay · #gmFr · #gmChat · #acctChip · #gmLv · #rkLob)는 지우지 않고 숨긴 채 .click()으로 대신 누른다. */
 (function(){try{
- const L='html.phP #gameMenu.lvOn';
+ const L='html.lpP #gameMenu.lvOn';
+ /* v147: 패드(dvPad)도 같은 로비 — lp(폰 또는 패드) · lpL/lpP(가로/세로) · lpPad(패드) */
+ const RT=document.documentElement;function lpCls(){const ph=RT.classList.contains('ph'),pad=RT.classList.contains('dvPad')&&!ph,on=ph||pad,land=ph?RT.classList.contains('phL'):innerWidth>innerHeight;
+  RT.classList.toggle('lp',on);RT.classList.toggle('lpL',on&&land);RT.classList.toggle('lpP',on&&!land);RT.classList.toggle('lpPad',pad)}
+ lpCls();addEventListener('resize',()=>setTimeout(lpCls,60));
  const st=document.createElement('style');st.id='lp146css';st.textContent=`
  ${L} .gmTop{display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:center!important;height:auto!important;padding:8px 10px 0 12px!important;box-sizing:border-box;row-gap:8px!important}
  ${L} .gmLogo{flex:1 1 auto!important;width:auto!important;zoom:.8}
@@ -30,11 +34,11 @@
  #pf146 .r1 small{font-size:10px;font-weight:900;color:#ffd36a}
  #pf146 .bar{height:4px;border-radius:3px;background:#ffffff18;overflow:hidden}
  #pf146 .bar u{display:block;height:100%;background:linear-gradient(90deg,#3fd3ff,#7dffa8);border-radius:3px}
- html.ph #rkLob,html.ph #gameMenu #gmMain.lvFull>#phNav#phNav#phNav,html.ph #gameMenu #gmMain.lvFull>#phPlay#phPlay#phPlay{display:none!important}
- html.phP #lvCv{top:0!important;bottom:auto!important;height:100%!important}
- html.phP #gmMain.lvFull>#lvDock{top:auto!important;bottom:calc(var(--lp146h,330px) - 4px)!important}
+ html.lp #rkLob,html.lp #gameMenu #gmMain.lvFull>#phNav#phNav#phNav,html.lp #gameMenu #gmMain.lvFull>#phPlay#phPlay#phPlay{display:none!important}
+ html.lpP #lvCv{top:0!important;bottom:auto!important;height:100%!important}
+ html.lpP #gmMain.lvFull>#lvDock{top:auto!important;bottom:calc(var(--lp146h,330px) - 4px)!important}
  #lp146{display:none}
- html.ph #gameMenu #gmMain.lvFull>#lp146#lp146#lp146{display:flex!important}
+ html.lp #gameMenu #gmMain.lvFull>#lp146#lp146#lp146{display:flex!important}
  #lp146{position:absolute;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:7;flex-direction:column;gap:8px;pointer-events:auto}
  #lp146 button{font:inherit;cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent}
  #lp146 button:active{transform:translateY(2px)}
@@ -73,46 +77,89 @@
  #lp146 .bt em:empty{display:none}
  @media (max-width:385px){#lp146 .bt{gap:5px}#lp146 .bt button{font-size:11px;gap:3px;white-space:nowrap}#lp146 .bt i{width:18px;height:16px}#lp146 .cd b{font-size:13px}#lp146 .cd i{width:32px;height:32px}#lp146 .cd{gap:7px}}
  @media (max-height:700px){#lp146 .cd{height:62px}#lp146 .cd i{width:34px;height:34px}#lp146 .cd span{gap:4px}#lp146 .pl{height:48px;font-size:18px}#lp146 .bt button{height:46px}#lp146{gap:6px}}
- html.phP #egCoin{bottom:calc(70px + env(safe-area-inset-bottom))!important}
+ html.lpP #egCoin{bottom:calc(70px + env(safe-area-inset-bottom))!important}
  /* ── 가로 ── 왼쪽 카드 4개 · 가운데 무대 · 오른쪽 랭킹 + 광장 입장 + 작은 단추 */
- html.phL #gameMenu.lvOn .gmTop{transform:none!important}
- html.phL #gameMenu.lvOn .gmHud{transform:none!important;gap:6px!important;align-items:center!important}
- html.phL #gameMenu.lvOn .gmHud>#gmFr,html.phL #gameMenu.lvOn .gmHud>#gmChat,html.phL #gameMenu.lvOn .gmHud>#acctChip,html.phL #gameMenu.lvOn .gmHud>#gmLv{display:none!important}
- html.phL #gameMenu.lvOn .gmHud>#pf146{display:flex;flex:0 1 210px;height:36px;margin-right:auto}
- html.phL #gameMenu.lvOn .gmHud>#pf146 .av{width:28px;height:28px;font-size:13px}
- html.phL #gameMenu.lvOn .gmHud>#gmCoins,html.phL #gameMenu.lvOn .gmHud>#gmDia{flex:0 0 auto!important;min-width:0!important;height:32px!important;border-radius:999px!important;padding:0 7px 0 9px!important;font-size:12px!important}
- html.phL #gameMenu.lvOn .gmHud>#gmCoins::after,html.phL #gameMenu.lvOn .gmHud>#gmDia::after{content:'+';display:inline-grid;place-items:center;width:15px;height:15px;margin-left:5px;border-radius:50%;background:#ffffff1c;color:#fff;font-size:11px;font-weight:900;line-height:1}
- html.phL #gameMenu.lvOn .gmHud>#gmMore{flex:0 0 32px!important;width:32px!important;height:32px!important}
- html.phL #lvCv{top:0!important;height:100%!important}
- html.phL #lp146{position:fixed;top:calc(52px + 2px);bottom:max(8px,env(safe-area-inset-bottom));left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));
+ html.lpL #gameMenu.lvOn .gmTop{transform:none!important}
+ html.lpL #gameMenu.lvOn .gmHud{transform:none!important;gap:6px!important;align-items:center!important}
+ html.lpL #gameMenu.lvOn .gmHud>#gmFr,html.lpL #gameMenu.lvOn .gmHud>#gmChat,html.lpL #gameMenu.lvOn .gmHud>#acctChip,html.lpL #gameMenu.lvOn .gmHud>#gmLv{display:none!important}
+ html.lpL #gameMenu.lvOn .gmHud>#pf146{display:flex;flex:0 1 210px;height:36px;margin-right:auto}
+ html.lpL #gameMenu.lvOn .gmHud>#pf146 .av{width:28px;height:28px;font-size:13px}
+ html.lpL #gameMenu.lvOn .gmHud>#gmCoins,html.lpL #gameMenu.lvOn .gmHud>#gmDia{flex:0 0 auto!important;min-width:0!important;height:32px!important;border-radius:999px!important;padding:0 7px 0 9px!important;font-size:12px!important}
+ html.lpL #gameMenu.lvOn .gmHud>#gmCoins::after,html.lpL #gameMenu.lvOn .gmHud>#gmDia::after{content:'+';display:inline-grid;place-items:center;width:15px;height:15px;margin-left:5px;border-radius:50%;background:#ffffff1c;color:#fff;font-size:11px;font-weight:900;line-height:1}
+ html.lpL #gameMenu.lvOn .gmHud>#gmMore{flex:0 0 32px!important;width:32px!important;height:32px!important}
+ html.lpL #lvCv{top:0!important;height:100%!important}
+ html.lpL #lp146{position:fixed;top:calc(52px + 2px);bottom:max(8px,env(safe-area-inset-bottom));left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));
   display:grid!important;grid-template-columns:minmax(150px,25%) 1fr minmax(180px,27%);grid-template-rows:1fr auto auto;gap:7px;pointer-events:none}
- html.phL #gameMenu #gmMain.lvFull>#lp146#lp146#lp146{display:grid!important}
- html.phL #lp146>*{pointer-events:auto}
- html.phL #lp146 .gd{grid-column:1;grid-row:1/4;grid-template-columns:1fr;grid-auto-rows:1fr;gap:6px;min-height:0}
- html.phL #lp146 .cd{height:auto;min-height:0;padding:0 8px;gap:8px}
- html.phL #lp146 .cd i{width:30px;height:30px}
- html.phL #lp146 .cd .dc{width:50px;height:50px;right:20px}
- html.phL #lp146 .cd span{gap:3px}
- html.phL #lp146 .cd b{font-size:13px}
- html.phL #lp146 .cd em{font-size:9.5px;padding:1px 7px}
- html.phL #lp146 .rk{grid-column:3;grid-row:1;height:auto;min-height:0;flex-direction:column;align-items:stretch;gap:4px;padding:7px 9px;overflow:hidden}
- html.phL #lp146 .rk::before{content:'RANKING';font-size:11px;letter-spacing:.12em;color:#ffc04a;padding-left:20px;line-height:16px;background:var(--sp-trophy) left center/14px 14px no-repeat;image-rendering:pixelated}
- html.phL #lp146 .rk>b{display:none}
- html.phL #lp146 .rk .rl{display:flex;flex-direction:column;gap:3px;min-height:0;overflow:hidden}
- html.phL #lp146 .rk .rl .rlRow{display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:5px;padding:2px 6px;border-radius:7px;background:#0d151c;border:1px solid #ffffff10;font-size:11px;color:#e8f4ef}
- html.phL #lp146 .rk .rl .rlRow i{font-style:normal;font-size:12px}
- html.phL #lp146 .rk .rl .rlRow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
- html.phL #lp146 .rk .rl .rlRow b{color:#a6f5c6;font-size:10.5px}
- html.phL #lp146 .rk .rl .rlRow.r1{background:linear-gradient(90deg,#4a3a10,#0d151c);border-color:#ffd16666}
- html.phL #lp146 .rk .rl .rlNote{font-size:10.5px;color:#8aa0a8;font-weight:700}
- html.phL #lp146 .rk>span{order:3;font-size:11px;color:#ffe2a0}
- html.phL #lp146 .rk>em{position:absolute;right:10px;top:6px;font-size:14px}
- html.phL #lp146 .pl{grid-column:3;grid-row:2;height:48px;font-size:18px}
- html.phL #lp146 .bt{grid-column:3;grid-row:3;gap:5px;grid-template-columns:repeat(4,minmax(0,1fr))}
- html.phL #lp146 .rk>span.no{display:none}
- html.phL #lp146 .bt button{height:44px;font-size:10px;gap:2px;min-width:0}
- html.phL #lp146 .bt i{width:18px;height:16px}
- @media (max-height:340px){html.phL #lp146 .pl{height:40px;font-size:16px}html.phL #lp146 .bt button{height:38px}html.phL #lp146 .bt i{width:16px;height:14px}html.phL #lp146 .cd i{width:24px;height:24px}}`;
+ html.lpL #gameMenu #gmMain.lvFull>#lp146#lp146#lp146{display:grid!important}
+ html.lpPad #gmMain.lvFull #lvSet#lvSet{display:none!important}
+ html.lpPad #gmMain.lvFull #lvDock#lvDock{visibility:hidden!important}
+ /* 패드 가로: 720 lvDraw가 무대를 오른쪽(62%)에 두므로 그림판을 넓혀 왼쪽으로 밀어 가운데에 오게 */
+ html.lpPad.lpL #lvCv{width:125%!important;left:-27.5%!important;right:auto!important}
+ html.lpL #lp146>*{pointer-events:auto}
+ html.lpL #lp146 .gd{grid-column:1;grid-row:1/4;grid-template-columns:1fr;grid-auto-rows:1fr;gap:6px;min-height:0}
+ html.lpL #lp146 .cd{height:auto;min-height:0;padding:0 8px;gap:8px}
+ html.lpL #lp146 .cd i{width:30px;height:30px}
+ html.lpL #lp146 .cd .dc{width:50px;height:50px;right:20px}
+ html.lpL #lp146 .cd span{gap:3px}
+ html.lpL #lp146 .cd b{font-size:13px}
+ html.lpL #lp146 .cd em{font-size:9.5px;padding:1px 7px}
+ html.lpL #lp146 .rk{grid-column:3;grid-row:1;height:auto;min-height:0;flex-direction:column;align-items:stretch;gap:4px;padding:7px 9px;overflow:hidden}
+ html.lpL #lp146 .rk::before{content:'RANKING';font-size:11px;letter-spacing:.12em;color:#ffc04a;padding-left:20px;line-height:16px;background:var(--sp-trophy) left center/14px 14px no-repeat;image-rendering:pixelated}
+ html.lpL #lp146 .rk>b{display:none}
+ html.lpL #lp146 .rk .rl{display:flex;flex-direction:column;gap:3px;min-height:0;overflow:hidden}
+ html.lpL #lp146 .rk .rl .rlRow{display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:5px;padding:2px 6px;border-radius:7px;background:#0d151c;border:1px solid #ffffff10;font-size:11px;color:#e8f4ef}
+ html.lpL #lp146 .rk .rl .rlRow i{font-style:normal;font-size:12px}
+ html.lpL #lp146 .rk .rl .rlRow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ html.lpL #lp146 .rk .rl .rlRow b{color:#a6f5c6;font-size:10.5px}
+ html.lpL #lp146 .rk .rl .rlRow.r1{background:linear-gradient(90deg,#4a3a10,#0d151c);border-color:#ffd16666}
+ html.lpL #lp146 .rk .rl .rlNote{font-size:10.5px;color:#8aa0a8;font-weight:700}
+ html.lpL #lp146 .rk>span{order:3;font-size:11px;color:#ffe2a0}
+ html.lpL #lp146 .rk>em{position:absolute;right:10px;top:6px;font-size:14px}
+ html.lpL #lp146 .pl{grid-column:3;grid-row:2;height:48px;font-size:18px}
+ html.lpL #lp146 .bt{grid-column:3;grid-row:3;gap:5px;grid-template-columns:repeat(4,minmax(0,1fr))}
+ html.lpL #lp146 .rk>span.no{display:none}
+ html.lpL #lp146 .bt button{height:44px;font-size:10px;gap:2px;min-width:0}
+ html.lpL #lp146 .bt i{width:18px;height:16px}
+ /* ── 패드: 같은 배치를 크게 ── */
+ html.lpPad.lpL #lp146{top:94px;bottom:max(16px,env(safe-area-inset-bottom));left:max(18px,env(safe-area-inset-left));right:max(18px,env(safe-area-inset-right));grid-template-columns:minmax(220px,25%) 1fr minmax(250px,27%);gap:12px}
+ html.lpPad.lpL #lp146 .gd{gap:12px}
+ html.lpPad #lp146 .cd{padding:0 16px;gap:14px;border-radius:18px;border-width:2px}
+ html.lpPad #lp146 .cd i{width:56px;height:56px}
+ html.lpPad #lp146 .cd .dc{width:96px;height:96px;right:28px}
+ html.lpPad #lp146 .cd b{font-size:19px}
+ html.lpPad #lp146 .cd em{font-size:13px;padding:3px 12px}
+ html.lpPad #lp146 .cd em .sp{width:13px;height:13px}
+ html.lpPad #lp146 .cd::after{font-size:28px;right:14px}
+ html.lpPad #lp146 .rk{padding:12px 14px;border-radius:16px;font-size:14px}
+ html.lpPad #lp146 .rk::before{font-size:14px;padding-left:26px;background-size:18px 18px;line-height:20px}
+ html.lpPad #lp146 .rk .rl{gap:6px}
+ html.lpPad #lp146 .rk .rl .rlRow{font-size:14px;padding:6px 10px;border-radius:10px;grid-template-columns:26px 1fr auto}
+ html.lpPad #lp146 .rk .rl .rlRow i{font-size:16px}
+ html.lpPad #lp146 .rk .rl .rlRow b{font-size:13px}
+ html.lpPad #lp146 .rk>span{font-size:14px}
+ html.lpPad #lp146 .pl{height:76px;font-size:26px;border-radius:18px}
+ html.lpPad #lp146 .pl i{width:42px;height:32px}
+ html.lpPad #lp146 .bt{grid-template-columns:1fr 1fr!important;gap:10px}
+ html.lpPad #lp146 .bt button{height:62px;flex-direction:row;gap:10px;font-size:16px;border-radius:14px}
+ html.lpPad #lp146 .bt button::after{content:'›';opacity:.6;font-size:20px;margin-left:4px}
+ html.lpPad #lp146 .bt i{width:30px;height:26px}
+ html.lpPad.lpP #lp146{left:24px;right:24px;bottom:calc(20px + env(safe-area-inset-bottom));gap:12px}
+ html.lpPad.lpP #lp146 .gd{gap:12px}
+ html.lpPad.lpP #lp146 .cd{height:104px}
+ html.lpPad.lpP #lp146 .rk{height:52px;flex-direction:row}
+ html.lpPad.lpP #lp146 .bt{grid-template-columns:repeat(4,1fr)!important}
+ html.lpPad #gameMenu.lvOn .gmHud>#pf146{flex:0 1 300px;height:50px}
+ html.lp #gameMenu.lvOn .gmFoot{display:none!important}
+ html.lpPad.lpL #gameMenu.lvOn .gmTop{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;height:76px!important;padding:12px max(18px,env(safe-area-inset-right)) 0 max(18px,env(safe-area-inset-left))!important;box-sizing:border-box}
+ html.lpPad.lpL #gameMenu.lvOn .gmLogo{flex:0 0 auto!important;width:auto!important}
+ html.lpPad.lpL #gameMenu.lvOn .gmHud{flex:1 1 auto!important;flex-wrap:nowrap!important;justify-content:flex-end!important;gap:10px!important;margin:0 0 0 24px!important;width:auto!important}
+ html.lpPad.lpL #gameMenu.lvOn .gmHud>#pf146{margin-right:auto;flex:0 1 320px}
+ html.lpPad.lpP #gmMain.lvFull>#lvDock#lvDock{bottom:calc(var(--lp146h,330px) - 150px)!important}
+ html.lpPad #gameMenu.lvOn .gmHud>#pf146 .av{width:38px;height:38px;font-size:17px}
+ html.lpPad #pf146 .r1 b{font-size:16px}html.lpPad #pf146 .r1 small{font-size:12px}html.lpPad #pf146 .bar{height:6px}
+ html.lpPad #gameMenu.lvOn .gmHud>#gmCoins,html.lpPad #gameMenu.lvOn .gmHud>#gmDia{height:42px!important;font-size:16px!important;padding:0 10px 0 14px!important}
+ html.lpPad #gameMenu.lvOn .gmHud>#gmMore{flex:0 0 44px!important;width:44px!important;height:44px!important}
+ @media (max-height:340px){html.lpL #lp146 .pl{height:40px;font-size:16px}html.lpL #lp146 .bt button{height:38px}html.lpL #lp146 .bt i{width:16px;height:14px}html.lpL #lp146 .cd i{width:24px;height:24px}}`;
  document.head.appendChild(st);
  const go=i=>{if(i===0){const p=document.getElementById('phPlay');if(p)return p.click()}const b=document.querySelector('#phNav button[data-i="'+i+'"]');if(b)b.click()};
  const byId=id=>{const b=document.getElementById(id);if(b)b.click()};
@@ -169,7 +216,7 @@
    else if(b.dataset.k!=null)BTNS[+b.dataset.k][2]()});
   m.appendChild(w)}
  const need=lv=>Math.round(40*Math.pow(lv,1.6)+60);
- function upd(){const root=document.documentElement;if(!root.classList.contains('ph'))return;const port=root.classList.contains('phP');
+ function upd(){lpCls();const root=document.documentElement;if(!root.classList.contains('lp'))return;const port=root.classList.contains('lpP');
   /* 프로필 */
   const p=document.getElementById('pf146');if(p){let a={};try{a=ACCT55.get()||{}}catch(_){}const o=(window.saveData&&saveData.lv83)||{lv:1,xp:0};
    const nm=a.token?(a.user||saveData.name||'플레이어'):'로그인',lv=Math.max(1,o.lv|0),q=Math.min(1,(o.xp|0)/need(lv));
@@ -178,7 +225,7 @@
     p.querySelector('.r1 b').textContent=nm;p.querySelector('.r1 small').textContent='Lv.'+lv;p.querySelector('.bar u').style.width=Math.round(q*100)+'%'}}
   const w=document.getElementById('lp146');if(!w)return;
   /* 카드 작은 글자 = 원래 단추의 것 */
-  w.querySelectorAll('.cd').forEach(c=>{const i=+c.dataset.i,s=i===0?document.querySelector('#phPlay em'):document.querySelector('#phNav button[data-i="'+i+'"] em'),t0=s?s.textContent.trim():'',e=c.querySelector('em');if(e.dataset.t===t0)return;e.dataset.t=t0;
+  w.querySelectorAll('.cd').forEach(c=>{const i=+c.dataset.i,s=document.querySelector('#lvSet .lvI[data-i="'+i+'"] em'),t0=s?s.textContent.trim():'',e=c.querySelector('em');if(e.dataset.t===t0)return;e.dataset.t=t0;
    /* 이모지는 빼고, 코인은 도트 코인으로 */const coin=/\u{1FA99}/u.test(t0),t=t0.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]\uFE0F?/gu,'').trim();e.innerHTML=(coin?sp('coin'):'')+t.replace(/[&<>]/g,'')});
   /* 친구 · 채팅 알림 */
   BTNS.forEach((x,k)=>{if(!x[3])return;const s=document.querySelector('#'+x[3]+' em'),d=w.querySelector('.bt button[data-k="'+k+'"] em');if(!d)return;const v=s&&getComputedStyle(s).display!=='none'?s.textContent.trim():'';if(d.textContent!==v)d.textContent=v});
