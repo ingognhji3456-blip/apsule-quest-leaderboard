@@ -165,5 +165,5 @@
  addEventListener('keydown',e=>{if(!bk.hidden&&e.code==='Escape'){bk.hidden=true;e.stopPropagation();e.preventDefault()}},true);
 
  setTimeout(retro,500);
- window.EGG126={EG,LINES,found,book,dance,open777,perfectEntry,showLine,throwCoin};
+ window.EGG126={EG,LINES,found,pop,book,dance,open777,perfectEntry,showLine,throwCoin};
 }catch(e){console.error('v126 easter',e)}})();
