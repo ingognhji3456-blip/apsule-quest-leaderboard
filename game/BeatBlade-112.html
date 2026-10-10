@@ -26255,7 +26255,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   enterGame();$('overlay').hidden=true;mode='plaza';paused=false;try{resetP(480,470)}catch(e){P.x=480;P.y=470}P.face={x:0,y:1};
   S.on=true;S.O={};S.tgt=null;S.err='';S.last=0;S.pet={x:null,y:null,t:0};if(!S.bg)S.bg=buildBg();
   document.documentElement.classList.add('plz111');try{$('bvTitle').textContent='BEAT BLADE · ⛲ 광장'}catch(e){}bar.hidden=false;paintBar();last=performance.now()}
- function leave(){if(!S.on)return;S.on=false;S.O={};hideInfo();bar.hidden=true;document.documentElement.classList.remove('plz111');api('/api/plaza/leave','POST',{}).catch(()=>{})}
+ function leave(){if(!S.on)return;S.on=false;S.O={};hideInfo();try{pv.hidden=true;S.hiW=0;document.documentElement.classList.remove('plzP')}catch(e){}bar.hidden=true;document.documentElement.classList.remove('plz111');api('/api/plaza/leave','POST',{}).catch(()=>{})}
  let last=0;
  /* ---------- 서버와 주고받기 ---------- */
  const lookNow=()=>{const e=shopInv().eq||{};let sk='',pv='',lv=1;try{sk=SKIN58.get()||''}catch(_){}try{pv=(window.PET59&&PET59.get())||''}catch(_){}try{lv=DU.myLv()}catch(_){}return {ch:DU.myCh(),wp:e.wp||0,pt:e.pt||0,sk,pv,lv}};
@@ -26297,22 +26297,37 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   L.sort((a,b)=>a.y-b.y).forEach(o=>{try{o.fn()}catch(e){}});
   /* 고른 사람 표시 */if(S.info&&S.O[S.info.name]){const M=S.O[S.info.name];c.strokeStyle='#ffd166';c.lineWidth=1.5;c.globalAlpha=.6+.4*Math.sin(t*6);c.beginPath();c.ellipse(M.sx,M.sy+2,14,5,0,0,6.28);c.stroke();c.globalAlpha=1}
   c.restore();
+  if(portrait())return;
   /* 작은 지도 */const mw=72,mh=45,mx=W-mw-6,my=H-mh-6;c.globalAlpha=.75;c.fillStyle='#05070a';c.fillRect(mx-1,my-1,mw+2,mh+2);c.globalAlpha=.9;c.drawImage(S.bg,mx,my,mw,mh);c.globalAlpha=1;
   for(const k in S.O){const M=S.O[k];if(M.sx==null)continue;c.fillStyle='#a6f5c6';c.fillRect(mx+M.sx/WW*mw-1,my+M.sy/WH*mh-1,2,2)}c.fillStyle='#ffd166';c.fillRect(mx+P.x/WW*mw-1.5,my+P.y/WH*mh-1.5,3,3);
   c.strokeStyle='#ffffff55';c.strokeRect(mx+S.cam.x/WW*mw,my+S.cam.y/WH*mh,W/WW*mw,H/WH*mh)}
  {const _f=frame;frame=function(){if(mode!=='plaza')return _f.apply(this,arguments);const now=performance.now(),dt=Math.min((now-last)/1000,.05)||0;last=now;
-  try{if(!paused)update(now,dt);draw(paused?pauseAtMs:now)}catch(e){console.error('plaza',e)}requestAnimationFrame(frame)}}
+  try{if(!paused)update(now,dt);draw(paused?pauseAtMs:now);paintPortrait()}catch(e){console.error('plaza',e)}requestAnimationFrame(frame)}}
  /* 광장에서는 싸움 동작 없음 */
  {const f=doAttack;doAttack=function(){if(mode==='plaza')return;return f.apply(this,arguments)}}
  {const f=doDash;doDash=function(){if(mode==='plaza')return;return f.apply(this,arguments)}}
  if(typeof tryParry==='function'){const f=tryParry;tryParry=function(){if(mode==='plaza')return;return f.apply(this,arguments)}}
  if(typeof tryUlt==='function'){const f=tryUlt;tryUlt=function(){if(mode==='plaza')return;return f.apply(this,arguments)}}
  {const f=toLobby;toLobby=function(){if(mode==='plaza')leave();return f.apply(this,arguments)}}
+ /* ---------- 폰 세로: 그린 화면 중 내 캐릭터 둘레의 세로로 긴 부분을 화면 가득 크게 ----------
+    게임 캔버스(480×300)는 가로라서 세로 폰에서는 작게 보였음. 그대로 그린 뒤 가운데 세로 띠(높이 300 전부, 폭은 화면 비율만큼)를 #plzView에 옮겨 그린다. */
+ const pv=document.createElement('canvas');pv.id='plzView';pv.hidden=true;document.body.appendChild(pv);
+ function portrait(){return S.on&&mode==='plaza'&&document.documentElement.classList.contains('phP')&&innerHeight>innerWidth}
+ function paintPortrait(){const on=portrait();if(pv.hidden===on)pv.hidden=!on;document.documentElement.classList.toggle('plzP',on);if(!on){S.crop=null;if(S.hiW){S.hiW=0;try{fitBattle()}catch(e){}}return}
+  const vw=innerWidth,vh=innerHeight,dpr=Math.min(2.5,devicePixelRatio||1),ww=Math.round(vw*dpr),hh=Math.round(vh*dpr);if(pv.width!==ww)pv.width=ww;if(pv.height!==hh)pv.height=hh;
+  const cw0=Math.min(W,H*vw/vh),want=Math.round(W*vw/cw0);if(S.hiW!==want){S.hiW=want;try{applyHiRes(want)}catch(e){}}/* 확대해도 또렷하게 */
+  const cv=$('game'),k=cv.width/W,cw=cw0,cx=Math.max(cw/2,Math.min(W-cw/2,P.x-S.cam.x)),x0=cx-cw/2;S.crop={x0,w:cw};
+  const o=pv.getContext('2d');o.imageSmoothingEnabled=true;o.drawImage(cv,x0*k,0,cw*k,H*k,0,0,ww,hh);
+  /* 작은 지도(오른쪽 아래, 단추 줄 위) */const mw=Math.round(ww*.3),mh=Math.round(mw*WH/WW),mx=ww-mw-Math.round(10*dpr),my=hh-mh-Math.round(14*dpr);
+  o.globalAlpha=.8;o.fillStyle='#05070a';o.fillRect(mx-2,my-2,mw+4,mh+4);o.globalAlpha=.9;o.imageSmoothingEnabled=false;o.drawImage(S.bg,mx,my,mw,mh);o.globalAlpha=1;
+  const d=Math.max(2,Math.round(2*dpr));for(const nm in S.O){const M=S.O[nm];if(M.sx==null)continue;o.fillStyle='#a6f5c6';o.fillRect(mx+M.sx/WW*mw-d/2,my+M.sy/WH*mh-d/2,d,d)}
+  o.fillStyle='#ffd166';o.fillRect(mx+P.x/WW*mw-d,my+P.y/WH*mh-d,d*2,d*2);o.strokeStyle='#ffffff66';o.lineWidth=dpr;o.strokeRect(mx+(S.cam.x+x0)/WW*mw,my+S.cam.y/WH*mh,cw/WW*mw,H/WH*mh)}
  /* ---------- 누르기: 땅 = 걸어가기, 사람 = 정보(컴퓨터는 두 번, 폰은 한 번) ---------- */
- function toWorld(e){const cv=$('game'),r=cv.getBoundingClientRect();if(!r.width)return null;return {x:(e.clientX-r.left)/r.width*W+S.cam.x,y:(e.clientY-r.top)/r.height*H+S.cam.y}}
+ function toWorld(e){if(e.target===pv&&S.crop){const r=pv.getBoundingClientRect();return {x:S.crop.x0+(e.clientX-r.left)/r.width*S.crop.w+S.cam.x,y:(e.clientY-r.top)/r.height*H+S.cam.y}}
+  const cv=$('game'),r=cv.getBoundingClientRect();if(!r.width)return null;return {x:(e.clientX-r.left)/r.width*W+S.cam.x,y:(e.clientY-r.top)/r.height*H+S.cam.y}}
  function pick(w){let best=null,bd=16;for(const k in S.O){const M=S.O[k];if(M.sx==null)continue;const d=Math.hypot(w.x-M.sx,(w.y-(M.sy-12))*.8);if(d<bd){bd=d;best=M}}
   if(!best&&Math.hypot(w.x-P.x,(w.y-(P.y-12))*.8)<14)return {name:saveData.name||'',me:1};return best}
- document.addEventListener('pointerdown',e=>{if(mode!=='plaza'||paused)return;const cv=$('game');if(!cv||e.target!==cv)return;const w=toWorld(e);if(!w)return;
+ document.addEventListener('pointerdown',e=>{if(mode!=='plaza'||paused)return;const cv=$('game');if(!cv||(e.target!==cv&&e.target!==pv))return;const w=toWorld(e);if(!w)return;
   const p=pick(w),touch=e.pointerType==='touch'||e.pointerType==='pen';
   if(p){const nm=p.name||'';const now=performance.now();if(touch||(S.clickN===nm&&now-S.clickT<400)){S.clickT=0;openInfo(nm)}else{S.clickN=nm;S.clickT=now}return}
   S.clickN='';const x=Math.max(16,Math.min(WW-16,w.x)),y=Math.max(TOPY+8,Math.min(WH-8,w.y));S.tgt={x,y}},true);
@@ -26373,6 +26388,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  #plzInfo .ac{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}#plzInfo .ac button,#plzInfo .x{font:inherit;font-weight:900;font-size:12px;padding:9px 4px;border-radius:10px;border:0;cursor:pointer;background:#24324c;color:#e8f4ef}
  #plzInfo .ac .du2{background:#5a1a2a;color:#ffd0d8}#plzInfo .ac .co{background:#1a4a3a;color:#c8ffe4}#plzInfo .ac .af{background:#1a3a5a;color:#cfe8ff}#plzInfo button:disabled{opacity:.5;cursor:default}
  #plzInfo .ni,#plzInfo .me,#plzInfo .msg,#plzInfo .ld{margin:8px 0 0;font-size:11px;color:#9fb0c8;text-align:center}#plzInfo .msg{color:#a6f5c6}
+ #plzView{position:fixed;inset:0;width:100vw;height:100vh;z-index:60;touch-action:none;background:#141a2a}#plzView[hidden]{display:none}
  html.plz111 #touch .tbtn,html.plz111 #btnP,html.plz111 #btnU{display:none!important}`;document.head.appendChild(st);
  window.PLZ111={enter,leave,S,openInfo,feed,WW,WH};
 }catch(e){console.error('v111 plaza',e)}})();
