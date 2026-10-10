@@ -29,12 +29,12 @@
   return SH.c.toDataURL('image/jpeg',.6)}
  function frameMsg(){const t=T(),now=Math.round(performance.now()),pv=!!(window.PVP92&&PVP92.on());
   const sk=(()=>{try{return SKIN58.get()||''}catch(e){return ''}})(),wp=(()=>{try{return shopInv().eq.wp||0}catch(e){return 0}})();
-  const o={t:'w',ts:now,n:++WS.n,mode:pv?'pvp':mode,f:(t&&t.f)||1,x:r1(P.x),y:r1(P.y),hp:Math.round(P.hp),mx:P.maxhp,ch:DU.myCh(),sk,wp,
+  const o={t:'w',ts:now,n:++WS.n,mode:pv?'pvp':mode,f:(t&&t.f)||1,x:r1(P.x),y:r1(P.y),hp:Math.round(P.hp),mx:P.maxhp,ch:DU.myCh(),sk,wp,pt:(()=>{try{return shopInv().eq.pt||0}catch(e){return 0}})(),pv:(()=>{try{return (window.PET59&&PET59.get())||''}catch(e){return ''}})(),
    ffx:r1((P.face&&P.face.x)||0),ffy:r1((P.face&&P.face.y)||1),w:!!P.walkOn,down:!!P.downDuo,ev:(D.evW||[]).splice(0,30),pz:(typeof paused!=='undefined'&&paused)?1:0};/* v99: 일시정지 */
   const m=D.started&&D.mate;
   if(m&&m.x!=null){const evs=(m.evs||[]).filter(e=>!WS.mSeen.has(e.e));evs.forEach(e=>WS.mSeen.add(e.e));if(WS.mSeen.size>400)WS.mSeen=new Set([...WS.mSeen].slice(-200));
    const pl=(D.room&&(D.room.players||[]).find(p=>!p.me))||{};
-   o.mate={ts:now-Math.round(DU.MDLY()),x:r1(m.sx!=null?m.sx:m.x),y:r1(m.sy!=null?m.sy:m.y),hp:m.hp,mx:m.mx,ch:m.ch,sk:m.sk,wp:m.wp,ffx:(m.cf||{}).fx,ffy:(m.cf||{}).fy,w:!!m.wk,down:!!m.down,nm:pl.name||'',
+   o.mate={ts:now-Math.round(DU.MDLY()),x:r1(m.sx!=null?m.sx:m.x),y:r1(m.sy!=null?m.sy:m.y),hp:m.hp,mx:m.mx,ch:m.ch,sk:m.sk,wp:m.wp,pt:m.pt,pv:m.pv,ffx:(m.cf||{}).fx,ffy:(m.cf||{}).fy,w:!!m.wk,down:!!m.down,nm:pl.name||'',
     ev:evs.map(e=>Object.assign({},e,{e:'m'+e.e,t:Math.round(e.t)}))}}
   if(mode==='tower'&&t&&!t.bossCard&&WS.n%2===0){try{o.snap=DU._snap()}catch(e){}}/* 잡몹은 0.13초마다(사이는 보는 쪽이 이어 그림) */
   if(pv){const M=PVP92.M;o.pvp={sc:M.sc,me:M.owner?0:1,round:M.round,ph:M.ph}}
@@ -68,8 +68,8 @@
   if(w.mode==='tower'||w.mode==='pvp'){const t=T(),want=w.f%10===0?Math.max(1,w.f-1):w.f;if(mode!=='tower'||!t||t.f!==want){enterArena(w.f);if(w.mode==='pvp')try{T().trans=null}catch(e){}}}/* 결투엔 층 이름 안 띄움 */
   else if(w.mode==='boss'){if(mode!=='tower')enterArena(w.f)}
   SP.P.nm=w.me||SP.name;/* 위치 · 사건은 feed가 미리 넣어 둠. 여기선 체력 · 장비만 재생 시각에 맞춰 */
-  Object.assign(SP.P,{hp:w.hp,mx:w.mx,ch:w.ch,sk:w.sk,wp:w.wp,down:w.down,at:performance.now()});
-  if(w.mate){SP.M2.nm=w.mate.nm||'동료';SP.M2.ring=w.mode==='pvp'?'#ff5a7a':'#8de4ff';Object.assign(SP.M2,{hp:w.mate.hp,mx:w.mate.mx,ch:w.mate.ch,sk:w.mate.sk,wp:w.mate.wp,down:w.mate.down,at:performance.now()})}else SP.M2.x=null;
+  Object.assign(SP.P,{hp:w.hp,mx:w.mx,ch:w.ch,sk:w.sk,wp:w.wp,pt:w.pt,pv:w.pv,down:w.down,at:performance.now()});
+  if(w.mate){SP.M2.nm=w.mate.nm||'동료';SP.M2.ring=w.mode==='pvp'?'#ff5a7a':'#8de4ff';Object.assign(SP.M2,{hp:w.mate.hp,mx:w.mate.mx,ch:w.mate.ch,sk:w.mate.sk,wp:w.mate.wp,pt:w.mate.pt,pv:w.mate.pv,down:w.mate.down,at:performance.now()})}else SP.M2.x=null;
   if(w.snap&&w.mode!=='boss'&&mode==='tower'){try{DU._applySnap(w.snap)}catch(e){}}}
  setInterval(async()=>{if(!SP.on||SP.busy)return;SP.busy=true;try{const r=await api('/api/watch/pull','POST',{name:SP.name,since:SP.since});if(!SP.on)return;
    if(r.s===403||r.s===401){stop(r.j.error||'관전할 수 없어요');return}if(r.s!==200)return;SP.vw=r.j.viewers||0;try{r.j.sig&&r.j.sig.length&&window.VID99&&VID99.sig(r.j.sig)}catch(e){}
