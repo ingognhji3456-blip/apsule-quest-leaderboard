@@ -38,7 +38,7 @@
  async function tick(){if(!D.on||(D.fly||0)>=3)return;D.fly=(D.fly||0)+1;try{
   const t=T();
   const ev=D.ev.splice(0,30);
-  const ex={n:(D.pn=(D.pn||0)+1),ts:Math.round(performance.now()),wp:(()=>{try{return shopInv().eq.wp||0}catch(e){return 0}})(),sk:(()=>{try{return SKIN58.get()||''}catch(e){return ''}})(),
+  const ex={n:(D.pn=(D.pn||0)+1),ts:Math.round(performance.now()),wp:(()=>{try{return shopInv().eq.wp||0}catch(e){return 0}})(),sk:(()=>{try{return SKIN58.get()||''}catch(e){return ''}})(),pt:(()=>{try{return shopInv().eq.pt||0}catch(e){return 0}})(),pv:(()=>{try{return (window.PET59&&PET59.get())||''}catch(e){return ''}})(),/* v108 펫 */
    ffx:r1((P.face&&P.face.x)||0),ffy:r1((P.face&&P.face.y)||1),ev,pl:(mode==='boss'?'b':'t')+((t&&t.f)||0)+(D.plX||'')};
   if(D.started&&typeof mode!=='undefined'){
    if(mode==='tower'&&t&&t.duo){send({...ex,t:'p',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,w:!!P.walkOn});
@@ -224,6 +224,7 @@
   m.tr=(m.tr||[]).filter(q=>pn-q.t<260);if(dash&&(!m.tr.length||pn-m.tr[m.tr.length-1].t>28))m.tr.push({x,y,t:pn,fl});
   if(m.tr.length){const gc=col.startsWith('hsl')?'#ffffff':col;for(const q of m.tr){const a=1-(pn-q.t)/260;c.save();c.globalAlpha=a*.5;c.globalCompositeOperation='lighter';c.drawImage(ghostOf(m,q.fl,gc),q.x-32,q.y-41);c.restore()}}
   if(dash){const k=Math.min(1,(rt-dash.t)/(dash.dur||150)),an=Math.atan2(dash.vy||0,dash.vx||0);c.save();c.translate(x,y-9);c.rotate(an);c.fillStyle=col;for(let i=0;i<7;i++){c.globalAlpha=.55*(1-k);const off=(i-3)*4,len=14+((i*13)%10);c.fillRect(-len-10-((pn/3+i*9)%8),off,len,1)}c.restore()}
+  try{window.MPET108&&MPET108.draw(m,x,y,fl,pn,boss)}catch(e){}/* v108 동료 펫 */
   c.save();c.globalAlpha=m.down?.3:.35;c.fillStyle='#000';c.beginPath();c.ellipse(x,y+2,9,3,0,0,6.28);c.fill();c.restore();
   /* 동료 표시: 발밑 하늘색 고리(같은 캐릭터여도 한눈에 구분) */
   const rc=m.ring||(window.PVP92&&PVP92.on()?'#ff5a7a':'#8de4ff');/* 결투 상대는 빨간 고리 */
