@@ -113,7 +113,7 @@
   t.pools=s.pools.map(([x,y,r,t0,t1])=>({x,y,r,t0:t0+c,t1:t1+c}));
   const nw=[];for(const a of s.waves){const [id,x,y,r,max,t0,dmg,col]=a;let o=(t.waves||[]).find(q=>q.id===id);if(!o)o={id};Object.assign(o,{x,y,r,max,t0:t0+c,dmg,col});nw.push(o)}t.waves=nw;
   if(s.clear&&!t.clear){t.clear=true;t.clearT=c0;try{TW71.addPop(AX+AW/2,AY+60,'FLOOR CLEAR!','#a6f5c6')}catch(e){}}t.doorK=s.door;t.total=s.total;t.queue=new Array(s.q).fill(null)}
- function guestMobs(dt){const t=T(),rc=performance.now()/1000+(D.hOff||0)-(D.hDly||0);for(const m of t.mobs){if(m.hp<=0)continue;
+ function guestMobs(dt){const t=T(),rc=performance.now()/1000+(D.hOff||0)-(D.hDly||.06);for(const m of t.mobs){if(m.hp<=0)continue;
    /* v86: 받은 두 화면 사이를 시간에 맞춰 이어 그림(0.16초 늦게) — 뚝뚝 끊기지 않게 */
    if(m.p1&&m.p0&&m.p1.c>m.p0.c){const k=Math.max(0,Math.min(1.4,(rc-m.p0.c)/(m.p1.c-m.p0.c))),gx=m.p0.x+(m.p1.x-m.p0.x)*k,gy=m.p0.y+(m.p1.y-m.p0.y)*k;m.x+=(gx-m.x)*Math.min(1,dt*20);m.y+=(gy-m.y)*Math.min(1,dt*20)}
    else if(m.tx!=null){m.x+=(m.tx-m.x)*Math.min(1,dt*12);m.y+=(m.ty-m.y)*Math.min(1,dt*12)}if(m.born>0){m.born-=dt;continue}
@@ -190,8 +190,8 @@
   const hs=M.hs||[];hs.push({t:lt,x:m.x,y:m.y,fx:m.ffx,fy:m.ffy});while(hs.length>cap)hs.shift();
   const ev0=m.ev;delete m.ev;Object.assign(M,m,{at:now,hs});m.ev=ev0}
  /* 늦게 도착하는 정도(가장 빨리 온 것 대비)를 모아 90%가 도착하는 만큼만 늦게 그림: 매끄럽게 + 너무 늦지 않게 */
- function lagOf(a,v,ms){a.push(v);if(a.length>40)a.shift();return 0}/* v109: 늦게 그리기 없앰(딜레이 0) — 받은 가장 새 위치를 바로 그리고, 다음 것이 늦으면 앞으로 이어 그림 */
- const MDLY=M=>0;/* v109: 딜레이 0 *//* 관전은 시간표에 이미 재생 지연이 들어 있음 */
+ function lagOf(a,v,ms){a.push(v);if(a.length>40)a.shift();const q=a.slice().sort((x,y)=>x-y)[Math.floor(a.length*.9)];return ms?Math.max(40,Math.min(150,q+15)):Math.max(.04,Math.min(.15,q+.015))}/* v110: 딜레이 0이면 소식이 고르지 않게 와서 상대가 뚝뚝 끊겨 보였음 → 흔들림만큼만 아주 조금(0.04~0.15초) 늦게 그려 매끄럽게 */
+ const MDLY=M=>M&&M._spec?0:(D.mDly||60);/* v110: 0.04~0.15초 자동(관전은 시간표에 이미 들어 있음) *//* 관전은 시간표에 이미 재생 지연이 들어 있음 */
  function mateEv(M,list){for(const e of list){if((M.seen||(M.seen=new Set())).has(e.e))continue;M.seen.add(e.e);if(M.seen.size>200)M.seen=new Set([...M.seen].slice(-100));
    (M.evs||(M.evs=[])).push(Object.assign({},e,{t:e.t+((M._spec?M.off:D.mOff)||0)}));if(M.evs.length>40)M.evs.shift();if(e.k==='U'&&e.sp&&!M._spec)setTimeout(()=>note('동료 필살기! '+(e.sp.name||'')),MDLY())}}
  function matePos(now,MM){const M=MM||D.mate,hs=M.hs;if(!hs||!hs.length)return [M.x,M.y];const rt=now-MDLY(M);
