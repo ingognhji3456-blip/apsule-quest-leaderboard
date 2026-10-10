@@ -37,13 +37,15 @@
   return '<div class="pvRank" style="--tc:'+c+'"><div class="pvTb" data-lad="1" title="눌러서 전체 등급 보기"><i>'+({bronze:'🥉',silver:'🥈',gold:'🥇',plat:'💠',dia:'💎',master:'👑'}[t.key]||'⚔')+'</i><b>'+esc(t.name||'')+'</b><em>'+num(r.rating)+'점</em><small>#'+num(r.pos)+'</small></div>'+
    '<div class="pvBar"><i style="width:'+Math.round(q*100)+'%"></i></div><div class="pvRs"><span>'+(r.next?esc(r.next.name)+'까지 '+num(r.next.need)+'점':'최고 등급!')+'</span><span>시즌 '+esc(r.season)+' · '+days+'일 남음</span></div>'+'<button class="pvLadB" data-lad="1">'+(({bronze:'🥉',silver:'🥈',gold:'🥇',plat:'💠',dia:'💎',master:'👑'})[t.key]||'⚔')+' 전체 등급 보기 <i>6단계</i> ›</button></div>'}
  /* v100: 등급 사다리 — 전체 몇 단계인지 · 내 위치 · 각 등급 점수 · 시즌 보상 */
- const LAD=[['bronze','브론즈',0,'🥉',[20,500]],['silver','실버',1100,'🥈',[50,1000]],['gold','골드',1250,'🥇',[100,2000]],['plat','플래티넘',1400,'💠',[180,3500]],['dia','다이아',1550,'💎',[300,6000]],['master','마스터',1700,'👑',[500,10000]]];
+ const LAD=[['bronze','브론즈',0,'🥉',[60,1500]],['silver','실버',1100,'🥈',[150,3000]],['gold','골드',1250,'🥇',[300,6000]],['plat','플래티넘',1400,'💠',[500,10000]],['dia','다이아',1550,'💎',[800,16000]],['master','마스터',1700,'👑',[1500,30000]]];/* v111 보상 넉넉하게 — 서버 PVP_SEASON_REWARD와 같게 */
  /* v102: 등급 카드를 누르면 뜨는 세로 등급 창 — 마스터가 맨 위, 내 등급에 빛 · 다음 등급까지 막대 */
  function ladPop(){let el=document.getElementById('pvLad102');if(!el){el=document.createElement('div');el.id='pvLad102';document.body.appendChild(el);el.addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===el)el.hidden=true})}
   const r=Q.rank||{},key=(r.tier||{}).key||'bronze',mi=Math.max(0,LAD.findIndex(x=>x[0]===key)),rt=r.rating||1000;
-  const rows=LAD.map((x,i)=>{const nx=LAD[i+1],lo=x[2],hi=nx?nx[2]:null,me=i===mi,done=i<mi,q=me&&hi?Math.max(0,Math.min(1,(rt-Math.max(lo,900))/(hi-Math.max(lo,900)))):me?1:0;
-   return '<div class="lr'+(me?' me':'')+(done?' done':'')+(i>mi?' up':'')+'" style="--lc:'+(TIERC[x[0]]||'#fff')+';--d:'+((LAD.length-i)*.06)+'s"><div class="em"><i>'+x[3]+'</i></div><div class="tx"><b>'+x[1]+'</b><small>'+(hi?num(lo||0)+' ~ '+num(hi-1)+'점':num(lo)+'점 이상')+'</small>'+
-    (me?'<div class="pb"><i style="width:'+Math.round(q*100)+'%"></i></div><em>'+(hi?'다음 등급까지 '+num(Math.max(0,hi-rt))+'점':'최고 등급!')+'</em>':'')+'</div><div class="rw"><span>시즌 보상</span><b>💎 '+x[4][0]+'</b><b>🪙 '+num(x[4][1])+'</b></div>'+(me?'<u>나 · '+num(rt)+'점</u>':done?'<u class="ok">✓</u>':'')+'</div>'}).reverse().join('');
+  /* v111: 가운데 세로줄(아래가 브론즈 · 위가 마스터)에 등급 카드가 왼쪽 · 오른쪽 번갈아 가지로 붙음. 내 등급까지 줄에 불이 들어옴 */
+  const rows=LAD.map((x,i)=>{const nx=LAD[i+1],lo=x[2],hi=nx?nx[2]:null,me=i===mi,done=i<mi,q=me&&hi?Math.max(0,Math.min(1,(rt-Math.max(lo,900))/(hi-Math.max(lo,900)))):me?1:0,side=i%2?'R':'L';
+   const card='<div class="lr'+(me?' me':'')+(done?' done':'')+(i>mi?' up':'')+'"><div class="hd"><div class="em"><i>'+x[3]+'</i></div><div class="tx"><b>'+x[1]+'</b><small>'+(hi?num(lo||0)+' ~ '+num(hi-1)+'점':num(lo)+'점 이상')+'</small></div></div>'+
+    (me?'<div class="pb"><i style="width:'+Math.round(q*100)+'%"></i></div><em>'+(hi?'다음 등급까지 '+num(Math.max(0,hi-rt))+'점':'최고 등급!')+'</em>':'')+'<div class="rw"><span>시즌 보상</span><b>💎 '+x[4][0]+'</b><b>🪙 '+num(x[4][1])+'</b></div>'+(me?'<u>나 · '+num(rt)+'점</u>':done?'<u class="ok">✓</u>':'')+'</div>';
+   return '<div class="lrow s'+side+(me?' me':'')+(done?' done':'')+(i===0?' first':'')+(i===LAD.length-1?' last':'')+'" style="--lc:'+(TIERC[x[0]]||'#fff')+';--d:'+((LAD.length-i)*.07)+'s"><div class="cL">'+(side==='L'?card:'')+'</div><div class="nd"><i></i></div><div class="cR">'+(side==='R'?card:'')+'</div></div>'}).reverse().join('');
   el.innerHTML='<div class="lp"><div class="lh"><b>⚔ 결투 등급</b><small>전체 '+LAD.length+'단계 · 시즌 '+esc(r.season||'')+'</small><button>닫기</button></div><div class="ll">'+rows+'</div><div class="lf">빠른 대전에서 이기면 점수가 오르고 지면 내려가요. 시즌(한 달)이 끝나면 그 시즌 최고 등급만큼 보상(5판 이상)!</div></div>';
   el.querySelector('.lh button').onclick=()=>{el.hidden=true};el.hidden=false}
  function ladder(key){const mi=Math.max(0,LAD.findIndex(x=>x[0]===key));
@@ -239,17 +241,36 @@
  #pvLad102{position:fixed;inset:0;z-index:9300;display:grid;place-items:center;background:#000b;backdrop-filter:blur(3px)}#pvLad102[hidden]{display:none}
  #pvLad102 .lp{width:min(520px,94vw);max-height:92vh;display:flex;flex-direction:column;border-radius:18px;background:radial-gradient(120% 80% at 50% 0%,#2a1e3a,#0a0c14 70%);border:1px solid #ffffff22;box-shadow:0 20px 60px #000c;color:#e8f4ef;overflow:hidden;animation:lpIn .25s ease-out}
  #pvLad102 .lh{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #ffffff14}#pvLad102 .lh b{font-size:19px;color:#ffe79a;letter-spacing:.06em}#pvLad102 .lh small{color:#9ab8ac}#pvLad102 .lh button{margin-left:auto;font:inherit;font-weight:800;padding:6px 12px;border-radius:10px;border:1px solid #ffffff2a;background:#1a2430;color:#e8f4ef;cursor:pointer}
- #pvLad102 .ll{overflow:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
- #pvLad102 .lr{position:relative;display:grid;grid-template-columns:58px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:linear-gradient(90deg,color-mix(in srgb,var(--lc) 14%,#0c1018),#0c1018);border:1px solid color-mix(in srgb,var(--lc) 35%,transparent);animation:lrIn .4s both;animation-delay:var(--d)}
- #pvLad102 .lr.up{filter:saturate(.55) brightness(.8)}#pvLad102 .lr.done{opacity:.85}
- #pvLad102 .lr.me{background:linear-gradient(90deg,color-mix(in srgb,var(--lc) 32%,#0c1018),#0c1018);border:2px solid var(--lc);box-shadow:0 0 22px color-mix(in srgb,var(--lc) 45%,transparent);transform:scale(1.03)}
- #pvLad102 .em{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--lc) 70%,#fff),color-mix(in srgb,var(--lc) 40%,#05070a));box-shadow:0 0 0 2px #05070a,0 0 0 3.5px var(--lc),0 0 16px color-mix(in srgb,var(--lc) 60%,transparent)}
- #pvLad102 .lr.me .em{animation:emP 1.6s ease-in-out infinite}#pvLad102 .em i{font-style:normal;font-size:26px;filter:drop-shadow(0 2px 2px #0008)}
- #pvLad102 .tx b{display:block;font-size:17px;color:var(--lc);text-shadow:0 0 10px color-mix(in srgb,var(--lc) 50%,transparent)}#pvLad102 .tx small{font-size:11.5px;color:#9ab8ac}
- #pvLad102 .pb{margin-top:5px;height:7px;border-radius:4px;background:#05070a;box-shadow:inset 0 0 0 1px #ffffff22;overflow:hidden}#pvLad102 .pb i{display:block;height:100%;background:linear-gradient(90deg,var(--lc),#fff)}
- #pvLad102 .tx em{font-style:normal;font-size:11px;color:#e8f4ef}
- #pvLad102 .rw{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:11px}#pvLad102 .rw span{color:#7a8a90;font-size:10px}#pvLad102 .rw b{color:#e8f4ef}
- #pvLad102 .lr u{position:absolute;top:-9px;left:14px;text-decoration:none;font-size:10.5px;font-weight:900;color:#05070a;background:var(--lc);border-radius:7px;padding:1px 8px}#pvLad102 .lr u.ok{left:auto;right:12px;background:#7dffa8}
+ #pvLad102 .ll{overflow:auto;padding:16px 10px 18px;display:flex;flex-direction:column}
+ /* 가지 모양: [왼쪽 카드 | 가운데 줄 · 마디 | 오른쪽 카드] */
+ #pvLad102 .lrow{position:relative;display:grid;grid-template-columns:1fr 34px 1fr;align-items:center;min-height:96px;animation:lrIn .4s both;animation-delay:var(--d)}
+ #pvLad102 .lrow+.lrow{margin-top:-14px}#pvLad102 .lrow.sL .cR,#pvLad102 .lrow.sR .cL{min-height:1px}
+ #pvLad102 .nd{position:relative;align-self:stretch;display:flex;align-items:center;justify-content:center}
+ #pvLad102 .nd::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;border-radius:2px;background:#2b3140}
+ #pvLad102 .lrow.done .nd::before{background:linear-gradient(0deg,var(--lc),color-mix(in srgb,var(--lc) 60%,#fff));box-shadow:0 0 10px color-mix(in srgb,var(--lc) 60%,transparent)}
+ #pvLad102 .lrow.me .nd::before{background:linear-gradient(0deg,var(--lc) 50%,#2b3140 50%)}
+ #pvLad102 .lrow.last .nd::before{top:50%}#pvLad102 .lrow.first .nd::before{bottom:50%}
+ #pvLad102 .nd i{position:relative;z-index:1;width:12px;height:12px;border-radius:50%;background:#0c1018;box-shadow:0 0 0 3px #ffffff33}
+ #pvLad102 .lrow.done .nd i,#pvLad102 .lrow.me .nd i{background:var(--lc);box-shadow:0 0 0 3px #05070a,0 0 0 5px var(--lc),0 0 14px var(--lc)}
+ #pvLad102 .lrow.me .nd i{width:16px;height:16px;animation:emP 1.6s ease-in-out infinite}
+ #pvLad102 .lrow.first .nd i{width:14px;height:14px}
+ /* 줄에서 카드로 이어지는 가지 */
+ #pvLad102 .lr{position:relative;padding:9px 10px 8px;border-radius:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--lc) 16%,#0c1018),#0c1018);border:1px solid color-mix(in srgb,var(--lc) 40%,transparent)}
+ #pvLad102 .lr::after{content:'';position:absolute;top:50%;width:18px;height:3px;margin-top:-1.5px;background:color-mix(in srgb,var(--lc) 55%,#ffffff22)}
+ #pvLad102 .cL .lr{margin-right:2px}#pvLad102 .cL .lr::after{right:-19px}#pvLad102 .cR .lr{margin-left:2px}#pvLad102 .cR .lr::after{left:-19px}
+ #pvLad102 .lr.up{filter:saturate(.55) brightness(.8)}#pvLad102 .lr.done{opacity:.9}
+ #pvLad102 .lr.me{background:linear-gradient(180deg,color-mix(in srgb,var(--lc) 34%,#0c1018),#0c1018);border:2px solid var(--lc);box-shadow:0 0 22px color-mix(in srgb,var(--lc) 45%,transparent)}
+ #pvLad102 .lr.me::after{background:var(--lc);height:4px;margin-top:-2px;box-shadow:0 0 8px var(--lc)}
+ #pvLad102 .lh b{white-space:nowrap}#pvLad102 .lh small{min-width:0}
+ #pvLad102 .hd{display:flex;align-items:center;gap:8px}
+ #pvLad102 .em{flex:none;width:40px;height:40px;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--lc) 70%,#fff),color-mix(in srgb,var(--lc) 40%,#05070a));box-shadow:0 0 0 2px #05070a,0 0 0 3.5px var(--lc),0 0 14px color-mix(in srgb,var(--lc) 60%,transparent)}
+ #pvLad102 .lr.me .em{animation:emP 1.6s ease-in-out infinite}#pvLad102 .em i{font-style:normal;font-size:20px;filter:drop-shadow(0 2px 2px #0008)}
+ #pvLad102 .tx{min-width:0}#pvLad102 .tx b{display:block;font-size:15px;color:var(--lc);text-shadow:0 0 10px color-mix(in srgb,var(--lc) 50%,transparent)}#pvLad102 .tx small{font-size:10.5px;color:#9ab8ac}
+ #pvLad102 .pb{margin-top:6px;height:6px;border-radius:4px;background:#05070a;box-shadow:inset 0 0 0 1px #ffffff22;overflow:hidden}#pvLad102 .pb i{display:block;height:100%;background:linear-gradient(90deg,var(--lc),#fff)}
+ #pvLad102 .lr>em{display:block;margin-top:3px;font-style:normal;font-size:10.5px;color:#e8f4ef}
+ #pvLad102 .rw{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin-top:6px;padding-top:5px;border-top:1px dashed #ffffff18;font-size:10.5px}#pvLad102 .rw span{color:#7a8a90;font-size:9.5px;flex-basis:100%}#pvLad102 .rw b{color:#e8f4ef}
+ #pvLad102 .lr u{position:absolute;top:-9px;left:10px;text-decoration:none;font-size:10px;font-weight:900;color:#05070a;background:var(--lc);border-radius:7px;padding:1px 7px;white-space:nowrap}#pvLad102 .lr u.ok{left:auto;right:10px;background:#7dffa8}
+ @media (max-width:420px){#pvLad102 .lrow{grid-template-columns:1fr 26px 1fr}#pvLad102 .em{width:32px;height:32px}#pvLad102 .em i{font-size:16px}#pvLad102 .tx b{font-size:13.5px}#pvLad102 .lr{padding:8px 7px 7px}#pvLad102 .lr::after{width:14px}#pvLad102 .cL .lr::after{right:-15px}#pvLad102 .cR .lr::after{left:-15px}}
  #pvLad102 .lf{padding:10px 16px;font-size:11.5px;color:#9ab8ac;border-top:1px solid #ffffff14}
  @keyframes lpIn{from{transform:scale(.94);opacity:0}}@keyframes lrIn{from{transform:translateX(-14px);opacity:0}}@keyframes emP{50%{box-shadow:0 0 0 2px #05070a,0 0 0 3.5px var(--lc),0 0 28px var(--lc)}}
  #duo85 .pvLad{margin-top:8px;padding-top:7px;border-top:1px dashed #ffffff22}#duo85 .pvLadH{font-size:11px;color:#9ab8ac;margin-bottom:6px}#duo85 .pvLadH b{color:#fff}

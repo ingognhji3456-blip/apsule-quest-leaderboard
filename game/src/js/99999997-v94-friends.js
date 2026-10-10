@@ -13,7 +13,7 @@
  const ago=t=>{if(!t)return '접속 기록 없음';const s=Math.max(0,Date.now()/1000-t);return s<90?'방금 전':s<3600?Math.floor(s/60)+'분 전':s<86400?Math.floor(s/3600)+'시간 전':s<86400*30?Math.floor(s/86400)+'일 전':'오래 전'};
  const readMap=()=>{try{return JSON.parse(localStorage.getItem('bb-dm-read')||'{}')}catch(e){return {}}};
  const unread=f=>f.dm&&f.dmFrom==='them'&&f.dm>(readMap()[f.name]||0);
- const where=()=>{try{if(typeof mode==='undefined')return '로비';if(window.PVP92&&PVP92.on())return '⚔ 결투 중';const t=window.TW71&&TW71.T;
+ const where=()=>{try{if(typeof mode==='undefined')return '로비';if(window.PVP92&&PVP92.on())return '⚔ 결투 중';if(mode==='plaza')return '⛲ 광장';/* v111 */const t=window.TW71&&TW71.T;
    if(mode==='tower')return (D.started?'🤝 듀오 ':'🏰 탑 ')+((t&&t.f)||'')+'F';if(mode==='boss')return '👹 보스전';if(D.on&&!D.started)return '방에서 기다리는 중';return '로비'}catch(e){return '로비'}};
  async function refresh(){if(!acc().token||F.busy)return;F.busy=true;try{const r=await api('/api/friends','POST',{where:where()});if(r.s!==200)return;
    F.list=(r.j.friends||[]).sort((a,b)=>(b.online-a.online)||((b.last||0)-(a.last||0)));F.inc=r.j.incoming||[];
@@ -133,5 +133,5 @@
  .frT button{font:inherit;font-weight:900;padding:7px 11px;border-radius:10px;border:0;cursor:pointer}.frT .y{background:linear-gradient(180deg,#d4ffe6,#74d3b0);color:#04120c}.frT .n{background:#2a3436;color:#e8f4ef}
  .frT.out{opacity:0;transform:translateY(-10px);transition:.3s}
  @keyframes frIn{from{transform:translateY(10px);opacity:0}}@keyframes frT{from{transform:translateY(-16px);opacity:0}}`;document.head.appendChild(st);
- window.FR94={open,refresh,F,ago,unread,readMap};
+ window.FR94={open,refresh,F,ago,unread,readMap,duel,duo,gotInv:list=>{for(const i of list||[])if(!F.seenInv.has(i.id)){F.seenInv.add(i.id);toast(i)}}};/* v111 광장에서 씀 */
 }catch(e){console.error('v94 friends',e)}})();

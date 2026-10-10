@@ -13,7 +13,7 @@
  addEventListener('resize',mode);addEventListener('orientationchange',()=>setTimeout(mode,250));mode();
 
  /* 로비 단추 (GM_ITEMS 순서: 0 이야기 · 1 보스 러시 · 2 상점 · 3 명예의 전당 · 4 설정 · 5 조작법) */
- const NAV=[[1,'⚔','보스 러시'],[2,'✦','상점'],[3,'♛','전당'],[4,'⚙','설정'],[5,'?','조작법']];
+ const NAV=[[6,'⛲','광장'],[1,'⚔','보스 러시'],[2,'✦','상점'],[3,'♛','전당'],[4,'⚙','설정'],[5,'?','조작법']];/* v111 광장 = GM_ITEMS[6] */
  function go(i){try{if(typeof LV!=='undefined'&&LV.enter)return;GM.sel=i;gmMainSel();lvGo()}catch(e){try{GM.sel=i;gmMainGo()}catch(_){}}}
  function build(){const m=document.getElementById('gmMain');if(!m||document.getElementById('phNav'))return;
   const nav=document.createElement('div');nav.id='phNav';

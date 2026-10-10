@@ -18,13 +18,13 @@
 
  const st=document.createElement('style');st.id='dv76';st.textContent=`
  /* ======== 컴퓨터(큰 모니터) ======== */
- html.dvDesk #lvSet{width:min(400px,28vw)!important;gap:8px!important}
+ html.dvDesk #lvSet{width:min(400px,28vw)!important;gap:8px!important;bottom:46px!important;justify-content:space-between!important}/* v111: 목록이 화면 아래(안내 줄 위)까지 고르게 */
  html.dvDesk .lvI{padding:10px 14px!important}
  html.dvDesk .lvI b{font-size:22px!important}html.dvDesk .lvI.sel b{font-size:30px!important}
  html.dvDesk .lvI small{font-size:10.5px!important}
 
  /* ======== 노트북(높이가 낮은 화면) ======== */
- html.dvLap #lvSet{width:min(350px,31vw)!important;bottom:auto!important;gap:2px!important;top:2px!important;padding:6px 8px 8px!important;border-radius:14px;
+ html.dvLap #lvSet{width:min(350px,31vw)!important;bottom:46px!important;justify-content:space-between!important;gap:2px!important;top:2px!important;padding:6px 8px 8px!important;border-radius:14px;
   background:linear-gradient(90deg,#05070cd0,#05070c90 70%,transparent)!important}
  html.dvLap .lvI{padding:5px 10px!important}
  html.dvLap .lvI b{font-size:17px!important}html.dvLap .lvI.sel b{font-size:22px!important}
