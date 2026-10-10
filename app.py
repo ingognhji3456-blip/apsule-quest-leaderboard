@@ -491,6 +491,31 @@ for _id, _nm, _th in _V102_PET:
     SHOP_PRODUCTS.append({'id': 'pet_p_' + _id, 'kind': 'pet', 'name': _nm + ' · ' + _th, 'tier': '변이',
                           'description': _nm + '의 「' + _th + '」 스킨. 전용 장식이 붙어요.', 'status': 'on_sale', 'price': 1800, 'currency': 'KRW'})
 
+# v119: 프리미엄 캐릭터 전용 스킨(게임 9999999998 PREM119) — 그 프리미엄 캐릭터(skin_void 등)를 가진 사람이 사는 겉모습
+for _id, _base, _nm in [('vx_void', 'void', '공허 군주'), ('vx_clock', 'clock', '시간의 대성기사'), ('vx_neon', 'neon', '하이퍼 비트')]:
+    SHOP_PRODUCTS.append({'id': 'skin_' + _id, 'kind': 'skin', 'name': _nm, 'tier': '전용',
+                          'description': _nm + ' — 프리미엄 캐릭터 전용 스킨(전용 휘두르기 · 검 쥐는 자세).', 'status': 'on_sale', 'price': 4900, 'currency': 'KRW'})
+
+# v119: 펫 묶음 = 원래 펫(petbase_<번호>, 게임이 공방 보유 목록에 넣음) + 그 펫의 스킨. 값은 원래 펫 등급별(게임 99991 PACK_PRICE와 같게)
+_PACK_PRICE = {'일반': 1500, '희귀': 2500, '영웅': 3500, '전설': 4500, '유물': 5200, '신화': 5500, '초월': 5900}
+_PACKS = [('p_firefly', 1, '반딧불', '일반'), ('p_mouse', 2, '태엽 쥐', '일반'), ('p_sheep', 3, '구름 양', '일반'),
+          ('p_owl', 4, '부엉이 봇', '희귀'), ('p_fox', 5, '불꽃 여우', '희귀'), ('p_penguin', 6, '얼음 펭귄', '희귀'),
+          ('p_dragon', 7, '수정 드래곤', '영웅'), ('p_cat', 8, '유령 고양이', '영웅'), ('p_phoenix', 9, '황금 불사조', '전설'),
+          ('p_turtle', 10, '약초 거북', '희귀'), ('p_squirrel', 11, '전기 다람쥐', '희귀'), ('p_golem', 12, '아기 골렘', '희귀'),
+          ('p_bee', 13, '독침 벌', '희귀'), ('p_lizard', 14, '불씨 도마뱀', '희귀'), ('p_snowfairy', 15, '눈송이 요정', '희귀'),
+          ('p_batcookie', 16, '박쥐 쿠키', '희귀'), ('p_clockowl', 17, '시계 부엉이', '영웅'), ('p_luckycat', 18, '행운 고양이', '영웅'),
+          ('p_drone', 19, '방패 드론', '영웅'), ('p_jelly', 20, '번개 해파리', '영웅'), ('p_hawk', 21, '바람 매', '영웅'),
+          ('p_viper', 22, '맹독 뱀', '전설'), ('p_whale', 23, '별빛 고래', '전설'), ('p_skydragon', 24, '창공의 용', '전설'),
+          ('p_phx', 25, '불사조', '유물'), ('p_gdragon', 26, '은하 용', '유물'), ('p_owlking', 27, '시간 부엉이왕', '유물'),
+          ('p_swolf', 28, '그림자 늑대', '유물'), ('p_qilin', 29, '천둥 기린', '유물'), ('p_cturtle', 30, '수정 거북왕', '유물'),
+          ('p_sfox', 31, '별빛 여우', '유물'), ('p_lgolem', 32, '용암 골렘', '신화'), ('p_frost', 33, '서리 정령', '신화'),
+          ('p_gold', 34, '황금 드래곤', '신화'), ('p_crow', 35, '암흑 까마귀', '신화'), ('p_rwhale', 36, '무지개 고래', '신화'),
+          ('p_griffin', 37, '바람 그리핀', '초월'), ('p_slime', 38, '혼돈 슬라임', '초월'), ('p_angel', 39, '여신의 천사', '초월')]
+for _vid, _base, _nm, _g in _PACKS:
+    SHOP_PRODUCTS.append({'id': 'pack_' + _vid, 'kind': 'pack', 'name': _nm + ' 펫 + 스킨 묶음', 'tier': '묶음',
+                          'description': '펫 「' + _nm + '」(' + _g + ')과 그 펫의 스킨을 한 번에.', 'status': 'on_sale',
+                          'price': _PACK_PRICE[_g], 'currency': 'KRW', 'includes': ['pet_' + _vid, 'petbase_%d' % _base]})
+
 PRODUCTS_BY_ID = {p['id']: p for p in SHOP_PRODUCTS}
 
 
