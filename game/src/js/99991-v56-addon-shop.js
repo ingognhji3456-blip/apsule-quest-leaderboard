@@ -87,14 +87,16 @@
   for(const s of (window.PREM119?.list||[]))L.push({cat:'skin',kind:'prem',pid:'skin_'+s.id,id:s.id,name:s.name,en:s.en,price:s.price,tier:'전용',col:s.col,desc:s.desc,tags:s.tags,base:s.base});
   for(const s of (window.PET59?.list||[])){const bp=(typeof PETS!=='undefined')&&PETS[s.base];if(!bp||!bp.price)continue;const g=wsTier(bp).n,pr=PACK_PRICE[g];if(!pr)continue;
    L.push({cat:'pack',kind:'pack',pid:'pack_'+s.id,id:s.id,name:bp.name+' + '+s.name.split(' · ').pop(),en:'PET + SKIN PACK',price:pr,tier:'묶음',col:s.col,desc:'펫 「'+bp.name+'」('+g+')과 그 펫의 스킨 「'+s.name+'」을 한 번에. '+s.desc,tags:['펫 '+bp.name+' ('+g+')','스킨 '+s.name.split(' · ').pop(),'산 펫은 공방에 바로 들어가요'],base:s.base,grade:g})}
+  /* v122: 캐릭터 전용 스킨 40종(99999999991 ELITE122) — 공방의 그 캐릭터 아래에서 판다 */
+  for(const s of (window.ELITE122?.list||[]))L.push({cat:'elite',kind:'elite',pid:'skin_'+s.id,id:s.id,name:((typeof CHARS!=='undefined'&&CHARS[s.i])||{}).name+' · '+s.name,en:s.en,price:s.price,tier:'전용',col:s.c1,desc:s.desc,tags:s.tags,base:s.i});
   for(const s of SETS){const sum=s.items.reduce((a,[c,id])=>a+((L.find(x=>x.cat===c&&x.id===id)||{}).price||0),0);L.push({cat:'set',kind:'set',pid:s.id,id:s.id,name:s.name,en:s.en,price:s.price,full:sum,tier:'세트',col:s.col,desc:s.desc,tags:['4개 묶음',sum?Math.round((1-s.price/sum)*100)+'% 할인':''],parts:s.items})}
   return L}
  /* 각 상품 파일(99992~99996)이 이 파일보다 뒤에 실행되므로, 쓸 때마다 찾는다 */
- const API0=()=>({skin:window.SKIN58,pet:window.PET59,pack:window.PET59,prem:window.PREM119,sword:window.SWORD59,vic:window.VIC59,lob:window.LOB59});
+ const API0=()=>({skin:window.SKIN58,pet:window.PET59,pack:window.PET59,prem:window.PREM119,elite:window.ELITE122,sword:window.SWORD59,vic:window.VIC59,lob:window.LOB59});
  const isOn=it=>{const API=API0();return it.kind==='set'?it.parts.every(([c,id])=>{const k=c==='fx'?(id.startsWith('v_')?'vic':'lob'):c;return API[k]&&API[k].get()===id}):!!(API[it.kind]&&API[it.kind].get()===it.id)};
  function toggle(it){const API=API0(),on=isOn(it);if(it.kind==='set'){for(const [c,id] of it.parts){const k=c==='fx'?(id.startsWith('v_')?'vic':'lob'):c;API[k]&&API[k].equip(on?null:id)}return !on}
   /* v119: 펫 · 캐릭터 스킨을 끼면 그 스킨의 원래 펫 · 캐릭터도 함께 고른다(가지고 있을 때) */
-  if(!on&&it.base!=null&&typeof it.base==='number')try{const inv=shopInv(),k=it.kind==='skin'?'ch':'pt';if((inv.inv[k]||[]).includes(it.base)){inv.eq[k]=it.base;saveNow()}}catch(e){}
+  if(!on&&it.base!=null&&typeof it.base==='number')try{const inv=shopInv(),k=(it.kind==='skin'||it.kind==='elite')?'ch':'pt';if((inv.inv[k]||[]).includes(it.base)){inv.eq[k]=it.base;saveNow()}}catch(e){}
   API[it.kind].equip(on?null:it.id);return !on}
  const PAY=()=>window.PAY58;const owns=it=>{try{if(it&&it.kind==='pack')return !!(PAY()&&PAY().ownsItem({pid:'pet_'+it.id}))&&(shopInv().inv.pt||[]).includes(it.base);return !!(PAY()&&PAY().ownsItem(it))}catch(e){return false}};
  /* v119: 펫 묶음을 사면 서버가 petbase_<번호>를 준다 → 그 펫을 공방 보유 목록에 넣는다
@@ -157,7 +159,7 @@
   body.innerHTML=ownedErr?'<div class="ssEmpty">'+safe(ownedErr)+'</div>':mine.length?'<div class="ssSec" style="margin:0 0 8px">카드를 누르면 그 상품 화면에서 장착할 수 있어요</div><div class="ssList">'+mine.map(card).join('')+'</div>':'<div class="ssEmpty">아직 산 상품이 없어요.<br>마음에 드는 상품을 입어 보세요!</div>';
   body.querySelectorAll('.ssCard').forEach(c=>c.onclick=()=>{const it=items().find(x=>x.id===c.dataset.id&&x.cat===c.dataset.cat);if(it&&toWorkshop(it))return;tab=c.dataset.cat;sel[tab]=c.dataset.id;try{gmSfx('move')}catch(_){}build()})}
  /* v119: 변이 스킨 · 펫 스킨은 공방의 그 캐릭터 · 펫 화면에서 */
- function toWorkshop(it){if(!(it.kind==='pet'||(it.kind==='skin'&&it.variant))||typeof it.base!=='number')return false;try{gmSfx('ok')}catch(_){}try{sheet.close()}catch(_){}
+ function toWorkshop(it){if(!(it.kind==='pet'||it.kind==='elite'||(it.kind==='skin'&&it.variant))||typeof it.base!=='number')return false;try{gmSfx('ok')}catch(_){}try{sheet.close()}catch(_){}
   const k=it.kind==='pet'?'pt':'ch';setTimeout(()=>{try{openShop(k);if(typeof WS!=='undefined'){WS.sel[k]=it.base;wsRefresh()}}catch(e){}},120);return true}
 
  /* ---------- 무대 그리기 ---------- */
@@ -173,8 +175,8 @@
    c.save();try{if(!mini){c.fillStyle='#ffffff10';c.beginPath();c.arc(w*.18,h*.3,h*.16,0,TAU);c.fill()}drawPet(c,it.base,mini?w*.22:w*.18,mini?h*.32:h*.3,now,mini?1.3:3)}catch(e){}c.restore();
    c.fillStyle='#ffffffdd';c.font='900 '+(mini?12:22)+'px '+FONT;c.textAlign='center';c.fillText('+',mini?w*.38:w*.33,mini?h*.42:h*.36);
    if(!mini){c.font='800 12px '+FONT;c.fillStyle='#8ea2c0';c.fillText('펫',w*.18,h*.5);c.fillText('스킨',w*.58,h*.9)}c.textAlign='left';return}
-  if(it.kind==='skin'||it.kind==='prem'){const ph=Math.floor(t/1.6)%4,v=mini?'front':viewMode==='auto'?['front','side','back','side'][ph]:viewMode,flip=!mini&&viewMode==='auto'&&ph===3,walk=v==='side'?Math.floor(t*6)%4:0;
-   const o=it.kind==='prem'?PREM119.render(it.id,v,walk,t):SKIN58.render(it.id,v,walk,t),S=mini?1.6:Math.floor(Math.min(w/40,h/48)*.78),dw=40*S,dh=48*S,x=w/2-dw/2,y=(mini?h*.98:h*.84)-dh*.94;
+  if(it.kind==='skin'||it.kind==='prem'||it.kind==='elite'){const ph=Math.floor(t/1.6)%4,v=mini?'front':viewMode==='auto'?['front','side','back','side'][ph]:viewMode,flip=!mini&&viewMode==='auto'&&ph===3,walk=v==='side'?Math.floor(t*6)%4:0;
+   const o=it.kind==='prem'?PREM119.render(it.id,v,walk,t):it.kind==='elite'?ELITE122.render(it.id,v,walk,t):SKIN58.render(it.id,v,walk,t),S=mini?1.6:Math.floor(Math.min(w/40,h/48)*.78),dw=40*S,dh=48*S,x=w/2-dw/2,y=(mini?h*.98:h*.84)-dh*.94;
    c.save();if(flip){c.translate(w/2,0);c.scale(-1,1);c.translate(-w/2,0)}if(v==='side'){c.translate(w/2,0);c.scale(.86,1);c.translate(-w/2,0)}c.drawImage(o,Math.round(x),Math.round(y),dw,dh);c.restore();return}
   if(it.kind==='pet'){const k=mini?2.4:7;PET59.draw(c,it.id,w/2,mini?h*.55:h*.5+Math.sin(t*2)*4,now,k);if(!mini){c.globalAlpha=.75;try{drawPet(c,it.base,w*.14,h*.22,now,2.4)}catch(e){}c.globalAlpha=1;c.fillStyle='#8ea2c0';c.font='800 12px '+FONT;c.textAlign='center';c.fillText('원래 모습',w*.14,h*.36);c.textAlign='left'}return}
   if(it.kind==='sword'){const ang=mini?-Math.PI/2+.7:-Math.PI/2+.55+Math.sin(t*1.2)*.12;SWORD59.preview(c,it.id,mini?w*.38:w*.42,mini?h*.86:h*.8,ang,mini?3:12,now);return}

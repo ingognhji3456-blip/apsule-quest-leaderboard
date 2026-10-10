@@ -154,7 +154,7 @@
  const MOS=LIST.map(u=>u.motion);
  function tick(){if(window.__mateDraw)return;const u=cur();
   if(u){if(window.__skinMotion!==u.motion)window.__skinMotion=u.motion;window.__idlePose=u.idle;window.__skinTrail=u.trail}
-  else{if(MOS.includes(window.__skinMotion)){const s=SKIN58.byId(SKIN58.get());window.__skinMotion=s?s.motion:null;window.__skinTrail=s?s.trail:null}window.__idlePose=null}}
+  else{if(MOS.includes(window.__skinMotion)){const s=SKIN58.byId(SKIN58.get());window.__skinMotion=s?s.motion:null;window.__skinTrail=s?s.trail:null}if(LIST.some(u=>u.idle===window.__idlePose))window.__idlePose=null}}
  {const f=frame;frame=function(){try{tick()}catch(e){}return f.apply(this,arguments)}}
  document.addEventListener('skin58',()=>{try{tick()}catch(e){}});
 
@@ -185,7 +185,7 @@
  /* 고른 캐릭터 · 펫의 스킨 상품 */
  function skinsFor(k,i){const A=API();if(!A)return [];const L=A.items();
   if(k==='pt')return L.filter(x=>x.kind==='pet'&&x.base===i);
-  if(k==='ch'){const c=CHARS[i];if(c&&c.prem)return L.filter(x=>x.kind==='prem'&&x.base===c.prem);return L.filter(x=>x.kind==='skin'&&x.variant&&x.base===i)}return []}
+  if(k==='ch'){const c=CHARS[i];if(c&&c.prem)return L.filter(x=>x.kind==='prem'&&x.base===c.prem);return L.filter(x=>x.kind==='elite'&&x.base===i).concat(L.filter(x=>x.kind==='skin'&&x.variant&&x.base===i))}return []}
  /* 원래 캐릭터 · 펫을 가졌나 (프리미엄은 그 프리미엄 스킨을 샀나) */
  function baseOwned(k,i){try{const c=k==='ch'&&CHARS[i];if(c&&c.prem)return !!(PAY()&&PAY().ownsKind('skin',c.prem));return (shopInv().inv[k]||[]).includes(i)}catch(e){return false}}
  function rows(){const k=shopTab;if(k!=='ch'&&k!=='pt')return '';const i=wsSelOf(k),L=skinsFor(k,i),A=API();if(!L.length||!A)return '';
