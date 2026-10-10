@@ -1433,8 +1433,8 @@ def _pvp_stake(db, a, b):
 
 PVP_TIERS = [(0, 'bronze', '브론즈'), (1100, 'silver', '실버'), (1250, 'gold', '골드'), (1400, 'plat', '플래티넘'),
              (1550, 'dia', '다이아'), (1700, 'master', '마스터')]
-PVP_SEASON_REWARD = {'bronze': (20, 500), 'silver': (50, 1000), 'gold': (100, 2000), 'plat': (180, 3500),
-                     'dia': (300, 6000), 'master': (500, 10000)}
+PVP_SEASON_REWARD = {'bronze': (60, 1500), 'silver': (150, 3000), 'gold': (300, 6000), 'plat': (500, 10000),
+                     'dia': (800, 16000), 'master': (1500, 30000)}  # v111 넉넉하게(예전의 약 2.5~3배)
 
 
 def _pvp_season(t=None):
@@ -1828,8 +1828,14 @@ def friends_invite():
     body = request.get_json(silent=True) or {}
     db = get_db()
     fid, fname = _uid_by_name(db, body.get('name'))
-    if not fid or not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (uid, fid, 'accepted')).fetchone():
-        return _bad('친구에게만 초대를 보낼 수 있어요', 403)
+    if not fid:
+        return _bad('그런 이름이 없어요', 404)
+    is_friend = bool(db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (uid, fid, 'accepted')).fetchone())
+    if not is_friend:
+        # v111 광장: 둘 다 광장에 있으면 친구가 아니어도 신청할 수 있다(10초에 한 번, 「신청 받지 않기」면 막힘)
+        err = _plaza_can_invite(uid, fid)
+        if err:
+            return _bad(err[0], err[1])
     code = clamp_text(body.get('code'), 8).upper()
     with _duo_lock:
         r = _DUO.get(code)
@@ -1841,6 +1847,130 @@ def friends_invite():
         lst.append({'id': secrets.token_hex(4), 'from': user['username'], 'from_uid': uid, 'kind': r.get('kind', 'coop'), 'code': code, 't': time.time()})
         _INV[fid] = lst[-5:]
     return jsonify(ok=True, name=fname)
+
+
+# ---------------- v111 광장 ----------------
+# 메모리. 채널(광장 1, 2, …)마다 최대 PLAZA_CAP명. 각자 0.2~0.35초마다 내 위치를 올리고 남들 위치를 받아 간다.
+_PLAZA = {}          # 채널 번호 -> {user_id: {'name', 't', 'm'(위치 · 모습), 'noinv'}}
+_plaza_lock = threading.Lock()
+_PLAZA_INV_T = {}    # 친구가 아닌 사람에게 보낸 마지막 신청 시각
+PLAZA_CAP = 30
+PLAZA_TTL = 8        # 이 시간 동안 소식이 없으면 광장에서 뺀다
+_PLAZA_KEYS = ('x', 'y', 'fx', 'fy', 'w', 'ch', 'wp', 'sk', 'pt', 'pv', 'lv', 'ts', 'n', 'emo', 'dn')
+
+
+def _plaza_prune(now):
+    for ch in list(_PLAZA):
+        room = _PLAZA[ch]
+        for uid in [u for u, p in room.items() if now - p['t'] > PLAZA_TTL]:
+            room.pop(uid, None)
+        if not room and ch != 1:
+            _PLAZA.pop(ch, None)
+
+
+def _plaza_find(uid):
+    for ch, room in _PLAZA.items():
+        if uid in room:
+            return ch
+    return None
+
+
+def _plaza_can_invite(uid, fid):
+    """친구가 아닌 사람에게 결투 · 듀오 신청: 둘 다 광장에 있어야 하고 10초에 한 번"""
+    now = time.time()
+    with _plaza_lock:
+        _plaza_prune(now)
+        ch_me, ch_to = _plaza_find(uid), _plaza_find(fid)
+        if ch_me is None or ch_to is None:
+            return ('친구에게만 초대를 보낼 수 있어요(광장에서는 누구에게나)', 403)
+        if _PLAZA[ch_to][fid].get('noinv'):
+            return ('이 사람은 지금 신청을 받지 않아요', 403)
+        if now - _PLAZA_INV_T.get(uid, 0) < 10:
+            return ('신청은 10초에 한 번만 보낼 수 있어요', 429)
+        _PLAZA_INV_T[uid] = now
+        if len(_PLAZA_INV_T) > 5000:
+            _PLAZA_INV_T.clear()
+    return None
+
+
+@app.route('/api/plaza/sync', methods=['POST'])
+def plaza_sync():
+    """내 위치 · 모습을 올리고 같은 광장 사람들을 받는다. 처음엔 자리가 있는 광장으로, 꽉 차면 새 광장"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    me = body.get('me') if isinstance(body.get('me'), dict) else {}
+    m = {}
+    for k in _PLAZA_KEYS:
+        v = me.get(k)
+        if isinstance(v, bool) or isinstance(v, (int, float)):
+            m[k] = v if not isinstance(v, float) else round(v, 1)
+        elif isinstance(v, str):
+            m[k] = v[:24]
+    want = clamp_int(body.get('room'), 0, 999, 0)
+    now = time.time()
+    with _plaza_lock:
+        _plaza_prune(now)
+        ch = _plaza_find(uid)
+        if want and ch != want and want in _PLAZA and len(_PLAZA[want]) < PLAZA_CAP:
+            if ch is not None:
+                _PLAZA[ch].pop(uid, None)
+            ch = want
+        if ch is None:
+            ch = next((c for c in sorted(_PLAZA) if len(_PLAZA[c]) < PLAZA_CAP), None)
+            if ch is None:
+                ch = max(_PLAZA or {0: 0}) + 1
+        room = _PLAZA.setdefault(ch, {})
+        room[uid] = {'name': user['username'], 't': now, 'm': m, 'noinv': bool(body.get('noinv'))}
+        others = [dict(p['m'], name=p['name'], age=round(now - p['t'], 2)) for u, p in room.items() if u != uid]
+        rooms = [{'room': c, 'n': len(r)} for c, r in sorted(_PLAZA.items())]
+    _SEEN[uid] = (now, '⛲ 광장 ' + str(ch))
+    invites = [{k: i[k] for k in ('id', 'from', 'kind', 'code')} for i in _INV.get(uid, []) if now - i['t'] < 120]
+    return jsonify(ok=True, room=ch, cap=PLAZA_CAP, players=others, rooms=rooms, invites=invites)
+
+
+@app.route('/api/plaza/leave', methods=['POST'])
+def plaza_leave():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    with _plaza_lock:
+        ch = _plaza_find(user['user_id'])
+        if ch is not None:
+            _PLAZA[ch].pop(user['user_id'], None)
+    return jsonify(ok=True)
+
+
+@app.route('/api/plaza/info', methods=['POST'])
+def plaza_info():
+    """광장에서 누른 사람의 정보: 레벨 · 탑 최고 층 · 결투 등급 · 장비 · 친구 사이"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    fid, fname = _uid_by_name(db, (request.get_json(silent=True) or {}).get('name'))
+    if not fid:
+        return _bad('그런 이름이 없어요', 404)
+    st = db.execute('SELECT level, floor FROM player_stats WHERE user_id=?', (fid,)).fetchone()
+    rk = db.execute('SELECT rating, wins, losses FROM pvp_rank WHERE user_id=? AND season=?', (fid, _pvp_season())).fetchone()
+    lk = db.execute('SELECT look FROM player_look WHERE user_id=?', (fid,)).fetchone()
+    fr = db.execute('SELECT status FROM friends WHERE user_id=? AND friend_id=?', (user['user_id'], fid)).fetchone()
+    look = None
+    if lk:
+        try:
+            look = json.loads(lk['look'])
+        except Exception:
+            look = None
+    pvp = None
+    if rk and rk['wins'] + rk['losses'] > 0:
+        pvp = {'tier': _pvp_tier(rk['rating'])['name'], 'rating': rk['rating'], 'wins': rk['wins'], 'losses': rk['losses']}
+    with _plaza_lock:
+        ch = _plaza_find(fid)
+        noinv = bool(ch is not None and _PLAZA[ch][fid].get('noinv'))
+    return jsonify(ok=True, name=fname, me=fid == user['user_id'], level=st['level'] if st else 1, floor=st['floor'] if st else 1,
+                   pvp=pvp, look=look, friend=fr['status'] if fr else '', in_plaza=ch is not None, noinv=noinv)
 
 
 # v95 관전: 게임 중인 사람이 화면 상태를 올리고(push, 보는 사람이 있을 때만), 친구가 받아 간다(pull). 메모리.

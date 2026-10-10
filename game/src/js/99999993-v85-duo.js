@@ -250,7 +250,7 @@
     catch(e){}finally{G=og}})}
   /* 맞음: 빨간 번쩍 */
   if(hurt){c.save();c.globalAlpha=.55*(1-(rt-hurt.t)/160);c.fillStyle='#ff3a4a';c.beginPath();c.ellipse(x,y-10,12,15,0,0,6.28);c.fill();c.restore()}
-  c.globalAlpha=1;const nm=m.nm||(D.room&&(D.room.players.find(p=>!p.me)||{}).name)||'동료';c.save();c.font='900 7px sans-serif';c.textAlign='center';c.fillStyle='#000';c.fillText(nm,x+.5,y-37.5);c.fillStyle=m.down?'#ff8a9a':'#8de4ff';c.fillText(m.down?nm+' (쓰러짐)':nm,x,y-38);
+  c.globalAlpha=1;const nm=m.nm||(D.room&&(D.room.players.find(p=>!p.me)||{}).name)||'동료';c.save();c.font='900 7px sans-serif';c.textAlign='center';c.fillStyle='#000';c.fillText(nm,x+.5,y-37.5);c.fillStyle=m.down?'#ff8a9a':(m.nmc||'#8de4ff');c.fillText(m.down?nm+' (쓰러짐)':nm,x,y-38);if(m.noHp){c.restore();return}/* v111 광장: 체력 막대 없음 */
   const q=Math.max(0,Math.min(1,(m.hp||0)/(m.mx||1)));c.fillStyle='#05070ae6';c.fillRect(x-12,y-35,24,4);c.fillStyle='#3a0a14';c.fillRect(x-11,y-34,22,2);c.fillStyle='#7dffa8';c.fillRect(x-11,y-34,22*q,2);c.restore()}
  function drawList(list,now){if(window.WATCH95&&WATCH95.specOn()){for(const M of WATCH95.objs())if(M.x!=null)list.push({y:M.sy||M.y||0,fn:()=>drawMate(now,false,M)});return}list.push({y:(D.mate&&D.mate.sy)||0,fn:()=>drawMate(now,false)})}
  /* 동료 칸(위 오른쪽): 이름 · 레벨 · 체력 */
