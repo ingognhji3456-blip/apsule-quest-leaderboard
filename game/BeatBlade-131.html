@@ -27877,7 +27877,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  let F=null,FX=[],POPS=[],ROOM=null;
  const foeWp=()=>{try{let i=-1;for(let k=WEAPONS.length-1;k>=0;k--){const w=WEAPONS[k];if(w&&w.myth&&(w.type==='katana'||w.type==='sword'||w.type==='rapier')){i=k;break}}return i<0?0:i}catch(e){return 0}};
  function startFight(){const m=DM[diff]||1,now=performance.now();try{resetP(BX0+70,(BY0+BY1)/2)}catch(e){P.x=BX0+70;P.y=(BY0+BY1)/2}P.face={x:1,y:0};P.maxhp=P.maxhp||110;P.hp=P.maxhp;P.hpShow=undefined;P._stun127=0;P._hit127=0;
-  F={x:BX1-70,y:(BY0+BY1)/2,face:{x:-1,y:0},mx:Math.round(50000*m),hp:Math.round(50000*m),st:'intro',t:now,cd:900,walkT:0,walk:false,lungeT:0,lungeA:Math.PI,blinkCd:4000,parCd:2500,dashCd:2000,evCd:1500,ph2:false,hitF:0,combo:0,wp:foeWp(),goal:null,gT:0,tr:[]};
+  F={x:BX1-70,y:(BY0+BY1)/2,face:{x:-1,y:0},mx:Math.round(8000*m),hp:Math.round(8000*m),st:'intro',t:now,cd:900,walkT:0,walk:false,lungeT:0,lungeA:Math.PI,blinkCd:4000,parCd:2500,dashCd:2000,evCd:1500,ph2:false,hitF:0,combo:0,wp:foeWp(),goal:null,gT:0,tr:[]};
   FX=[];POPS=[];SQ.ph='duel';SQ.t0=now;SQ.me={atk:0,dash:null,parryT:0,inv:0};try{sfx('ok')}catch(e){}}
  const ang=(a,b)=>Math.abs(((a-b+Math.PI*3)%(Math.PI*2))-Math.PI);
  const clampB=o=>{o.x=Math.max(BX0,Math.min(BX1,o.x));o.y=Math.max(BY0,Math.min(BY1,o.y))};
