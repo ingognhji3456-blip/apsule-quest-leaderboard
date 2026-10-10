@@ -57,7 +57,7 @@
   if(D.started){try{banner('경기 중에는 광장에 갈 수 없어요')}catch(e){}return}
   try{initAudio();stopMusic()}catch(e){}try{story=false}catch(e){}
   enterGame();$('overlay').hidden=true;mode='plaza';paused=false;try{resetP(480,470)}catch(e){P.x=480;P.y=470}P.face={x:0,y:1};
-  S.on=true;S.O={};S.tgt=null;S.err='';S.last=0;S.pet={x:null,y:null,t:0};if(!S.bg)S.bg=buildBg();
+  S.on=true;S.O={};S.tgt=null;S.err='';S.last=0;S.pet={x:null,y:null,t:0};if(!S.bg)S.bg=(window.PLZART&&PLZART.build())||buildBg();
   document.documentElement.classList.add('plz111');try{$('bvTitle').textContent='BEAT BLADE · ⛲ 광장'}catch(e){}bar.hidden=false;paintBar();last=performance.now()}
  function leave(){if(!S.on)return;S.on=false;S.O={};hideInfo();S.say=null;S.mySay=null;S.log=[];try{chatBox.hidden=true;inp.blur()}catch(e){}try{pv.hidden=true;S.hiW=0;document.documentElement.classList.remove('plzP')}catch(e){}bar.hidden=true;document.documentElement.classList.remove('plz111');api('/api/plaza/leave','POST',{}).catch(()=>{})}
  let last=0;
@@ -93,12 +93,14 @@
   if(F.x==null||Math.hypot(tx-F.x,ty-F.y)>140){F.x=tx;F.y=ty}const k=Math.min(1,dt*5.5);F.x+=(tx-F.x)*k;F.y+=(ty-F.y)*k;
   const step=Math.hypot(tx-F.x,ty-F.y)>3?Math.abs(Math.sin(now/90))*1.5:0;try{drawPet(ctx,id,Math.round(F.x),Math.round(F.y+2-10*K-step),now,K)}catch(e){}}
  function draw(now){const c=ctx,t=now/1000;c.fillStyle='#141a2a';c.fillRect(0,0,W,H);c.save();c.translate(-Math.round(S.cam.x),-Math.round(S.cam.y));
-  const sm=c.imageSmoothingEnabled;c.imageSmoothingEnabled=false;c.drawImage(S.bg,0,0);c.imageSmoothingEnabled=sm;
+  const ART=window.PLZART&&S.bg&&S.bg._art?PLZART:null;/* v115 사실적인 광장 그림 */
+  if(ART){try{ART.under(c,now,S.cam)}catch(e){}}else{const sm=c.imageSmoothingEnabled;c.imageSmoothingEnabled=false;c.drawImage(S.bg,0,0);c.imageSmoothingEnabled=sm}
   /* 누른 곳 표시 */if(S.tgt){const q=(now%600)/600;c.strokeStyle='#a6f5c6';c.globalAlpha=1-q;c.lineWidth=1;c.beginPath();c.ellipse(S.tgt.x,S.tgt.y+2,4+q*6,2+q*3,0,0,6.28);c.stroke();c.globalAlpha=1}
-  const L=[{y:FOUNT.y,fn:()=>drawFountain(now,t)}];for(const [x,y] of TREES)L.push({y,fn:()=>drawTree(x,y)});for(const [x,y] of LAMPS)L.push({y,fn:()=>drawLamp(x,y,t)});
+  let L=[];if(ART){try{L=ART.objs(now)}catch(e){L=[]}}else{L.push({y:FOUNT.y,fn:()=>drawFountain(now,t)});for(const [x,y] of TREES)L.push({y,fn:()=>drawTree(x,y)});for(const [x,y] of LAMPS)L.push({y,fn:()=>drawLamp(x,y,t)})}
   for(const k in S.O){const M=S.O[k];if(M.x==null)continue;L.push({y:(M.sy!=null?M.sy:M.y)||0,fn:()=>{try{DU.drawMate(now,false,M)}catch(e){}}})}
   L.push({y:P.y-1,fn:()=>drawMyPet(now)});L.push({y:P.y,fn:()=>drawMe(now)});
   L.sort((a,b)=>a.y-b.y).forEach(o=>{try{o.fn()}catch(e){}});
+  if(ART){try{ART.over(c,now,S.cam)}catch(e){}}
   try{drawBubbles(now)}catch(e){}
   /* 고른 사람 표시 */if(S.info&&S.O[S.info.name]){const M=S.O[S.info.name];c.strokeStyle='#ffd166';c.lineWidth=1.5;c.globalAlpha=.6+.4*Math.sin(t*6);c.beginPath();c.ellipse(M.sx,M.sy+2,14,5,0,0,6.28);c.stroke();c.globalAlpha=1}
   c.restore();
@@ -226,5 +228,5 @@
  html.ph #plzChat{width:min(300px,64vw)}html.ph #plzChat .lg div{font-size:11px}html.ph #plzChat input{font-size:16px;padding:6px 8px}
  #plzView{position:fixed;inset:0;width:100vw;height:100vh;z-index:60;touch-action:none;background:#141a2a}#plzView[hidden]{display:none}
  html.plz111 #touch .tbtn,html.plz111 #btnP,html.plz111 #btnU{display:none!important}`;document.head.appendChild(st);
- window.PLZ111={enter,leave,S,openInfo,feed,WW,WH};
+ window.PLZ111={enter,leave,S,openInfo,feed,WW,WH,FOUNT,TREES,LAMPS,BENCH,TOPY};
 }catch(e){console.error('v111 plaza',e)}})();
