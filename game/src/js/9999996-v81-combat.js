@@ -175,6 +175,6 @@
  const st=document.createElement('style');st.textContent=`#bbShop .ssPerk81{margin:8px 0;padding:8px 10px;border-radius:10px;background:linear-gradient(90deg,#2a1a4a,#16203a);border:1px solid #c8a8ff55;color:#e8e0ff;font-size:12.5px;line-height:1.5}
  #bbShop .ssPerk81 b{color:#ffd166}#bbShop .ssPerk81 small{color:#b8c0e0}`;document.head.appendChild(st);
 
- window.CB81={poison,drain,onHurt,critAdd,forceCrit,dmgMul,shieldHit,onHit,onKill,onDash,onParry,doubleParry,mobTick,drawWorld,drawPlayer,drawMobFx,onBossHit,
+ window.CB81={tick/* v134: 비밀의 방 · 던전(SK130)이 직접 부름 */,poison,drain,onHurt,critAdd,forceCrit,dmgMul,shieldHit,onHit,onKill,onDash,onParry,doubleParry,mobTick,drawWorld,drawPlayer,drawMobFx,onBossHit,
   perk,setOn,winMul,PERK,SETB,WT,state:()=>ST};
 }catch(e){console.error('v81 combat',e)}})();
