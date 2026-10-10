@@ -31,7 +31,7 @@
   while(A.k<A.hits.length&&now-A.t0>=A.hits[A.k]){const k=A.k++,last=k===A.hits.length-1,n=A.hits.length,w=curWp()||{},wd=w.dmg||1,share=A.type==='p61'?(last?.3:.7/(n-1||1)):1/n;let pet=0;try{pet=(PETS[shopInv().eq.pt]||{}).dmg||0}catch(e){}
    for(const q of targets()){const o=q.o;let d;if(q.boss)d=Math.round(34*wd*(1+pet)*30*share);else d=Math.round((o.mx||100)*(o.el?.6:1.25)*share*Math.min(1.6,wd));d=Math.max(1,d);
     const was=o.hp;o.hp=Math.max(0,o.hp-d);o.hitT=now;o.hitF=now;try{const P2=mode==='dg129'?DG129.D:null;if(P2&&P2.pops)P2.pops.push({x:o.x+(Math.random()-.5)*16,y:o.y-(q.boss?60:28),s:'-'+d,c:k%2?'#ffffff':A.col,t:now})}catch(e){}
-    if(was>0&&o.hp<=0){if(mode==='dg129'&&!q.boss){try{DG129.D.left--}catch(e){}}if(mode==='sec127'){o.st='dead';o.t=now}}
+    if(was>0&&o.hp<=0){if(mode==='dg129'&&!q.boss){try{DG129.killFx(o,now)}catch(e){}}if(mode==='sec127'){o.st='dead';o.t=now}}
     if(mode==='sec127'&&o.hp>0&&!o.ph2&&o.hp<o.mx*.5){o.ph2=true}}
    A.sp.done.push(now);if(A.UU){try{A.UU.hit(k,last)}catch(e){}}else{try{sfx((A.hitF||400)*(1+k*.05),.18,'square',.06,(A.hitF||400)*.4);sfx(90,.2,'sawtooth',.05,40)}catch(e){}}}
   if(now>=A.end)U.act=null}
