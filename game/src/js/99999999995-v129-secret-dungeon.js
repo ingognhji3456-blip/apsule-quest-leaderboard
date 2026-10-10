@@ -281,7 +281,7 @@
   if(P.hp>0&&!D.stair&&now>D.spT){const alive=D.mobs.filter(m=>m.hp>0).length,total=3+Math.round(D.f*.95);if(alive<D.cap&&D.spawned<total){spawnMob();D.spT=now+500+Math.random()*500}}
   for(const m of D.mobs)if(m.hp>0)mobAI(m,now,dtu);D.mobs=D.mobs.filter(m=>m.hp>0||now-(m.dieT||m.hitT)<420);
   if(!D.stair&&D.left<=0&&P.hp>0){D.stair=now;const g=30+D.f*10;try{addCoins(g)}catch(e){}P.hp=Math.min(P.maxhp,P.hp+Math.round(P.maxhp*.25));dpop(P.x,P.y-40,'층 정리! 🪙+'+g+' · 체력 회복','#ffe9a8');snd(880,.3,'sine',.06,1320)}
-  const sh=D.shake&&now-D.shake<160?(Math.random()-.5)*(D.shk||3)*(1-(now-D.shake)/160)*2:0,shy=sh*.6;ctx.save();ctx.translate(sh,shy);ctx.drawImage(floorBg(bandOf(D.f)),0,0,W,H);
+  const sh=D.shake&&now-D.shake<160?(Math.random()-.5)*(D.shk||3)*(1-(now-D.shake)/160)*2:0,shy=sh*.6;ctx.save();ctx.translate(sh,shy);ctx.drawImage(floorBg(bandOf(D.f)),0,0,W,H);try{window.DG135&&DG135.floorUnder(now,bandOf(D.f))}catch(e){}
   for(const x of [AX+100,MX,AX+AW-100])torch(x,AY+30,now);teleDraw(now);if(D.stair)stairDraw(now);
   const L=D.mobs.map(m=>({y:m.y,fn:()=>drawMob(m,now)}));L.push({y:P.y,fn:()=>drawMe(now)});try{window.SK130&&SK130.petList(L,now)}catch(e){}L.sort((a,b)=>a.y-b.y).forEach(o=>{try{o.fn()}catch(e){}});shotsTick(now,dtu);fxDraw(now);ctx.restore();hud(now);
   if(D.fade&&now-D.fade<700){const q=(now-D.fade)/700;ctx.fillStyle='rgba(0,0,0,'+(1-q)+')';ctx.fillRect(0,0,W,H);txt(D.f+'층',W/2,H/2,26,TCOL[bandOf(D.f)],1-q*q)}
@@ -294,17 +294,17 @@
  const ALT={x:MX,y:(BY0+BY1)/2};
  function placePaper(){D.alt=performance.now();snd(990,.3,'sine',.05,1480);setTimeout(()=>{if(D&&D.ph==='f20'){go('bossIn',{alt:D.alt,chunks:[],parts:[]});snd(80,.8,'sawtooth',.09,40)}},1600)}
  const BW={x0:MX-40,x1:MX+40};/* 보스가 부수고 나오는 벽 자리 */
- function bossBg(now){ctx.drawImage(floorBg(3),0,0,W,H);for(const x of [AX+100,AX+AW-100])torch(x,AY+30,now);
+ function bossBg(now){ctx.drawImage(floorBg(3),0,0,W,H);try{window.DG135&&DG135.bossUnder(now)}catch(e){}for(const x of [AX+100,AX+AW-100])torch(x,AY+30,now);
   /* 제단 */const x=ALT.x,y=ALT.y;ctx.save();ctx.translate(x,y+6);ctx.scale(1,.42);ctx.strokeStyle='rgba(201,168,255,.5)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,40,0,TAU);ctx.stroke();ctx.rotate(now/3000);for(let i=0;i<8;i++){ctx.rotate(TAU/8);ctx.fillStyle='rgba(255,216,74,.5)';ctx.fillRect(30,-2,8,4)}ctx.restore();
   ctx.fillStyle='#000a';ctx.fillRect(x-13,y-2,28,8);ctx.fillStyle='#3a3450';ctx.fillRect(x-14,y-10,28,12);ctx.fillStyle='#5a5478';ctx.fillRect(x-14,y-10,28,2);ctx.fillStyle='#2a2440';ctx.fillRect(x-10,y-2,20,4);
   if(D.alt){const q=Math.min(1,(now-D.alt)/700),py=y-14-(1-q)*20;ctx.save();ctx.globalCompositeOperation='lighter';const g=ctx.createRadialGradient(x,py,1,x,py,26);g.addColorStop(0,'rgba(255,230,160,.6)');g.addColorStop(1,'rgba(255,230,160,0)');ctx.fillStyle=g;ctx.fillRect(x-26,py-26,52,52);ctx.restore();ctx.fillStyle='#efe4c8';ctx.fillRect(x-6,py-6,12,9);ctx.fillStyle='#a03a3a';ctx.fillRect(x+2,py+1,3,2)}}
  function wallBreak(now,q){/* 위쪽 벽에 구멍 */if(q<=0)return;const r=R0(19);ctx.fillStyle='#05030a';ctx.beginPath();ctx.moveTo(BW.x0,AY+54);for(let i=0;i<=10;i++){const x=BW.x0+(BW.x1-BW.x0)*i/10;ctx.lineTo(x,AY+54-(14+r()*24)*Math.min(1,q*1.4))}ctx.lineTo(BW.x1,AY+54);ctx.closePath();ctx.fill()}
  try{if(window.__V43BIG)__V43BIG.c_dgarca=1}catch(e){}/* 큰 그림판(80×70칸)에서 그림 */
  const BIG={cv:null};function bossImg(now,o){if(!BIG.cv){BIG.cv=document.createElement('canvas');BIG.cv.width=240;BIG.cv.height=210}const bo=BIG.cv.getContext('2d');bo.setTransform(1,0,0,1,0,0);bo.clearRect(0,0,240,210);bo.imageSmoothingEnabled=false;try{monDraw('c_dgarca',bo,{c:'#c9a8ff'},120,174,now,o,3)}catch(e){}return BIG.cv}
- function drawBoss(now){const b=D.boss,k=1.55,img=bossImg(now,{atk:b.st==='wind'?1:0,hit:b.st==='act'?1:0,rage:b.ph2?1:0});let al=1;if(b.st==='dead')al=Math.max(0,1-(now-b.t)/1800);
+ function drawBoss(now){const b=D.boss,k=window.DG135?DG135.bossK():1.55,o0={atk:b.st==='wind'?1:0,hit:b.st==='act'?1:0,rage:b.ph2?1:0},bo=window.DG135?DG135.bossO(b,now,o0):o0,img=bossImg(now,bo),fl=bo.view==='side'&&bo.fx<0;let al=1;if(b.st==='dead')al=Math.max(0,1-(now-b.t)/1800);
   ctx.save();ctx.globalAlpha=.4*al;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(b.x,b.y+2,28,7,0,0,TAU);ctx.fill();ctx.restore();
-  ctx.save();ctx.globalAlpha=al;ctx.imageSmoothingEnabled=false;ctx.drawImage(img,b.x-40*k,b.y-58*k,80*k,70*k);if(now-b.hitT<90){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.45;ctx.drawImage(img,b.x-40*k,b.y-58*k,80*k,70*k)}ctx.restore();
-  if(b.st==='dead'&&Math.random()<.6)D.fx.push({k:'sp',x:b.x+(Math.random()-.5)*60,y:b.y-Math.random()*70,vx:(Math.random()-.5)*40,vy:-30-Math.random()*40,col:Math.random()<.5?'#efe4c8':'#c9a8ff',t:now,g:-20})}
+  try{window.DG135&&DG135.bossBack(b,now,al,k)}catch(e){}ctx.save();ctx.globalAlpha=al;ctx.imageSmoothingEnabled=false;/* v135 옆모습이 왼쪽을 보면 좌우로 뒤집음 */if(fl){ctx.translate(b.x*2,0);ctx.scale(-1,1)}ctx.drawImage(img,b.x-40*k,b.y-58*k,80*k,70*k);if(now-b.hitT<90){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.45;ctx.drawImage(img,b.x-40*k,b.y-58*k,80*k,70*k)}ctx.restore();
+  try{window.DG135&&DG135.bossFront(b,now,al,k)}catch(e){}if(b.st==='dead'&&Math.random()<.6)D.fx.push({k:'sp',x:b.x+(Math.random()-.5)*60,y:b.y-Math.random()*70,vx:(Math.random()-.5)*40,vy:-30-Math.random()*40,col:Math.random()<.5?'#efe4c8':'#c9a8ff',t:now,g:-20})}
  function bossIn(now,dt,t){bossBg(now);const q=Math.max(0,Math.min(1,(t-.6)/.6));
   if(t>.6&&!D.broke){D.broke=1;const r=R0(23);for(let i=0;i<26;i++)D.chunks.push({x:BW.x0+r()*(BW.x1-BW.x0),y:AY+30+r()*24,vx:(r()-.5)*120,vy:-60+r()*40,rr:0,vr:(r()-.5)*8,w:4+r()*9,h:3+r()*6});try{perc&&perc('crash',audio.currentTime)}catch(e){}snd(70,.8,'sawtooth',.1,35);D.shake=now}
   const sh=t<1.6&&t>.4?(Math.random()-.5)*5:0;ctx.save();ctx.translate(sh,sh*.6);wallBreak(now,q);
@@ -312,9 +312,9 @@
   /* 보스가 걸어 나옴 */if(!D.boss){const m=DM[diff]||1;D.boss={x:MX,y:AY+40,hp:Math.round(4000*m),mx:Math.round(4000*m),st:'intro',t:now,cd:1500,hitT:0,ph2:false,sk:0,face:{x:1,y:0}}}
   const b=D.boss,wq=Math.max(0,Math.min(1,(t-1.2)/1.6));b.y=AY+40+(BY0+44-(AY+40))*wq;if(t>1.2)drawBoss(now);
   drawMe(now);ctx.restore();fxDraw(now);
-  if(t>3.1&&t<5.2)bubble(b.x,b.y-82,'…넌 누구냐.',Math.min(1,(t-3.1)*3));
-  if(t>5.2&&t<7.4)bubble(b.x,b.y-82,'그 문서를… 어디서 얻었지?',Math.min(1,(t-5.2)*3));
-  if(t>7.4&&t<9.4)bubble(b.x,b.y-82,'기록을 건드린 자는 모두 잊혀진다!',Math.min(1,(t-7.4)*3));
+  if(t>3.1&&t<5.2)bubble(b.x,b.y-(window.DG135?DG135.bossK()*58-8:82),'…넌 누구냐.',Math.min(1,(t-3.1)*3));
+  if(t>5.2&&t<7.4)bubble(b.x,b.y-(window.DG135?DG135.bossK()*58-8:82),'그 문서를… 어디서 얻었지?',Math.min(1,(t-5.2)*3));
+  if(t>7.4&&t<9.4)bubble(b.x,b.y-(window.DG135?DG135.bossK()*58-8:82),'기록을 건드린 자는 모두 잊혀진다!',Math.min(1,(t-7.4)*3));
   if(t>9.4){b.st='idle';b.t=now;go('boss');pop('📜','BOSS · 봉인 기록관 아르카','')}}
  function bossAI(now,dt){if(window.SK130&&SK130.chilled(D.boss))dt*=.55;const b=D.boss,dx=P.x-b.x,dy=P.y-b.y,d=Math.hypot(dx,dy)||1,m=DM[diff]||1,me=D.me;b.cd-=dt*1000;if(b.hp<=0)return;if(!b.ph2&&b.hp<b.mx*.5){b.ph2=true;dpop(b.x,b.y-90,'아르카가 분노했다!','#ff5a7a');D.shake=now;spark(b.x,b.y-40,'#ff5a7a',24)}
   const sp=b.ph2?40:30;
