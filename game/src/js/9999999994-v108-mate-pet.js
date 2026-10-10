@@ -7,7 +7,7 @@
    - 결투(PvP) 상대 펫은 그리지 않는다(v106 내 펫도 결투에선 안 그림). 쓰러진 동료의 펫은 흐리게. */
 (()=>{try{
  function petAt(m,x,y,fl,pn,boss){const id=m.pt|0,pv=m.pv||'',key=pv||id;
-  const K=boss?(id||pv?1.25:.95):1.35,side=fl?1:-1,tx=x+side*(boss?22:32);
+  const K=boss?(id||pv?.95:.75):1.0/* v116 작게 */,side=fl?1:-1,tx=x+side*(boss?20:26);
   const ty=boss?(window.PET105?PET105.at(key,y-34,y+2,K):y-34):y-4;
   const F=m._pet||(m._pet={x:null,y:null,t:0});const dt=Math.min(.05,Math.max(0,(pn-(F.t||pn))/1000));F.t=pn;
   if(F.x==null||F.boss!==boss||Math.hypot(tx-F.x,ty-F.y)>140){F.x=tx;F.y=ty;F.boss=boss}
