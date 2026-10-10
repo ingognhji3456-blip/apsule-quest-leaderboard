@@ -195,7 +195,7 @@
  const owned=u=>{try{const P=PAY();return !!(P&&P.ownsItem({pid:'skin_'+u.id}))}catch(e){return false}};
  function cur(){try{if(SKIN58.get())return null;const i=(shopInv().eq||{}).ch||0,u=LIST.find(x=>x.i===i);return u&&st()[u.i]&&owned(u)?u:null}catch(e){return null}}
  const ELITE122=window.ELITE122={list:LIST,byId,cur,owned,get:()=>{const u=cur();return u?u.id:null},
-  equip(id){const S=st(),u=id&&byId(id);if(!u){const c=cur();if(c)delete S[c.i]}else{S[u.i]=1;try{if(SKIN58.get())SKIN58.equip(null)}catch(e){}try{const inv=shopInv();if(inv.inv.ch.includes(u.i))inv.eq.ch=u.i}catch(e){}}try{saveNow()}catch(e){}tick()},
+  equip(id){const S=st(),u=id&&byId(id);if(!u){const c=cur();if(c)delete S[c.i]}else{S[u.i]=1;try{if(SKIN58.get())SKIN58.equip(null)}catch(e){}try{const inv=shopInv(),P=PAY();if(P&&P.tester()&&!inv.inv.ch.includes(u.i))inv.inv.ch.push(u.i);/* v123: 테스터는 캐릭터도 받음 */if(inv.inv.ch.includes(u.i))inv.eq.ch=u.i}catch(e){}}try{saveNow()}catch(e){}tick()},
   render(id,v,f,t){const u=byId(id);if(!u)return null;const ov=HV.view,osw=HV.sw;HV.view=v||'front';HV.sw=null;try{return ch2Render(u.idx,f||0,0,false,t!=null?t:performance.now()/1000)}finally{HV.view=ov;HV.sw=osw}}};
  /* 내 캐릭터 그림 */
  {const base=ch2Render;ch2Render=function(idx,f,b,bl,t){try{if(idx<100&&!window.__mateDraw){const sm=document.getElementById('shopModal');if(!(sm&&!sm.hidden)&&idx===((shopInv().eq||{}).ch||0)){const u=cur();if(u&&u.i===idx)return base.call(this,u.idx,f,b,bl,t)}}}catch(e){}return base.apply(this,arguments)}}

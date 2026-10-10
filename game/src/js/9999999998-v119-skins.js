@@ -187,7 +187,7 @@
   if(k==='pt')return L.filter(x=>x.kind==='pet'&&x.base===i);
   if(k==='ch'){const c=CHARS[i];if(c&&c.prem)return L.filter(x=>x.kind==='prem'&&x.base===c.prem);return L.filter(x=>x.kind==='elite'&&x.base===i).concat(L.filter(x=>x.kind==='skin'&&x.variant&&x.base===i))}return []}
  /* 원래 캐릭터 · 펫을 가졌나 (프리미엄은 그 프리미엄 스킨을 샀나) */
- function baseOwned(k,i){try{const c=k==='ch'&&CHARS[i];if(c&&c.prem)return !!(PAY()&&PAY().ownsKind('skin',c.prem));return (shopInv().inv[k]||[]).includes(i)}catch(e){return false}}
+ function baseOwned(k,i){try{if(PAY()&&PAY().tester&&PAY().tester())return true;/* v123: 테스터는 잠금 없음 */const c=k==='ch'&&CHARS[i];if(c&&c.prem)return !!(PAY()&&PAY().ownsKind('skin',c.prem));return (shopInv().inv[k]||[]).includes(i)}catch(e){return false}}
  function rows(){const k=shopTab;if(k!=='ch'&&k!=='pt')return '';const i=wsSelOf(k),L=skinsFor(k,i),A=API();if(!L.length||!A)return '';
   const bo=baseOwned(k,i),D=window.DIA80,it0=WS_LIST(k)[i]||{},prem=k==='ch'&&it0.prem;
   let h='<div id="sk119"><h4>🎨 '+(k==='pt'?'이 펫의 스킨':prem?'♛ 전용 스킨':'이 캐릭터의 스킨')+'<small>'+(bo?(prem?'특별한 휘두르기 · 검 쥐는 자세':'사면 이 모습으로 바뀌어요 · 능력은 그대로'):'🔒 먼저 위에서 '+safe(it0.name||'')+'을(를) '+(prem?'사야':'사야')+' 해요')+'</small></h4>';

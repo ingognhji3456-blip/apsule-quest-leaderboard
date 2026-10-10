@@ -19885,7 +19885,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const isOn=it=>{const API=API0();return it.kind==='set'?it.parts.every(([c,id])=>{const k=c==='fx'?(id.startsWith('v_')?'vic':'lob'):c;return API[k]&&API[k].get()===id}):!!(API[it.kind]&&API[it.kind].get()===it.id)};
  function toggle(it){const API=API0(),on=isOn(it);if(it.kind==='set'){for(const [c,id] of it.parts){const k=c==='fx'?(id.startsWith('v_')?'vic':'lob'):c;API[k]&&API[k].equip(on?null:id)}return !on}
   /* v119: 펫 · 캐릭터 스킨을 끼면 그 스킨의 원래 펫 · 캐릭터도 함께 고른다(가지고 있을 때) */
-  if(!on&&it.base!=null&&typeof it.base==='number')try{const inv=shopInv(),k=(it.kind==='skin'||it.kind==='elite')?'ch':'pt';if((inv.inv[k]||[]).includes(it.base)){inv.eq[k]=it.base;saveNow()}}catch(e){}
+  if(!on&&it.base!=null&&typeof it.base==='number')try{const inv=shopInv(),k=(it.kind==='skin'||it.kind==='elite')?'ch':'pt';/* v123: 테스터는 원래 캐릭터 · 펫이 없으면 공방 보유에 넣어 줌 */if(PAY()&&PAY().tester()&&!(inv.inv[k]||[]).includes(it.base))inv.inv[k].push(it.base);if((inv.inv[k]||[]).includes(it.base)){inv.eq[k]=it.base;saveNow()}}catch(e){}
   API[it.kind].equip(on?null:it.id);return !on}
  const PAY=()=>window.PAY58;const owns=it=>{try{if(it&&it.kind==='pack')return !!(PAY()&&PAY().ownsItem({pid:'pet_'+it.id}))&&(shopInv().inv.pt||[]).includes(it.base);return !!(PAY()&&PAY().ownsItem(it))}catch(e){return false}};
  /* v119: 펫 묶음을 사면 서버가 petbase_<번호>를 준다 → 그 펫을 공방 보유 목록에 넣는다
@@ -19905,7 +19905,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   const body=sheet.querySelector('#ssBody');if(tab==='owned')ownedTab(body);else listTab(body)}
  function card(x){const lk=petLock(x);return '<button class="ssCard'+(lk?' lk118':'')+'" title="'+(lk?'먼저 공방에서 '+safe(lk)+'을(를) 사야 해요':'')+'" data-tier="'+x.tier+'" data-id="'+x.id+'" data-cat="'+x.cat+'" aria-pressed="'+(sel[tab]===x.id)+'" style="--tc:'+x.col+'"><canvas width="72" height="72" data-k="'+x.kind+'" data-id="'+x.id+'"></canvas><div style="min-width:0"><em style="background:'+TIER_BG[x.tier]+'">'+x.tier+'</em><b>'+safe(x.name)+'</b><div class="sub">'+safe(x.en)+'</div></div><div>'+(owns(x)?'<div class="pr own">✓ 보유</div>':'<div class="pr">'+won(x.price)+'</div>'+(window.DIA80&&x.kind!=='pack'?'<div class="dpr">💎 '+DIA80.price(x).toLocaleString()+'</div>':''))+(isOn(x)?'<span class="on">'+(owns(x)?'장착 중':'입어보는 중')+'</span>':'')+'</div></button>'}
  /* v118: 펫 스킨(변이 펫)은 원래 펫을 공방에서 산 사람만 살 수 있고 장착할 수 있다(안 사면 스킨이 보이지 않았음) */
- function petLock(x){try{/* v119: 프리미엄 전용 스킨은 그 프리미엄 캐릭터를 먼저 */if(x&&x.kind==='prem'){const P=PAY();if(P&&P.ownsKind('skin',x.base))return null;const b=window.SKIN58&&SKIN58.byId(x.base);return (b&&b.name)||'프리미엄 캐릭터'}
+ function petLock(x){try{/* v123: 테스터는 잠금 없음 */if(PAY()&&PAY().tester())return null;/* v119: 프리미엄 전용 스킨은 그 프리미엄 캐릭터를 먼저 */if(x&&x.kind==='prem'){const P=PAY();if(P&&P.ownsKind('skin',x.base))return null;const b=window.SKIN58&&SKIN58.byId(x.base);return (b&&b.name)||'프리미엄 캐릭터'}
   if(!x||x.kind!=='pet'||x.base==null)return null;const inv=(typeof shopInv==='function')?shopInv():null;if(!inv||(inv.inv.pt||[]).includes(x.base))return null;return (PETS[x.base]&&PETS[x.base].name)||'원래 펫'}catch(e){return null}}
  function listTab(body){const L=items().filter(x=>x.cat===tab&&!(x.kind==='skin'&&x.variant));if(!L.length){body.innerHTML='<div class="ssEmpty">상품을 불러오지 못했어요.</div>';return}
   if(!sel[tab]||!L.find(x=>x.id===sel[tab]))sel[tab]=L[0].id;const s=L.find(x=>x.id===sel[tab]),on=isOn(s),own=owns(s),P=PAY(),test=P&&P.test();
@@ -20602,7 +20602,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* 상품 하나(상점 카드 항목)를 가지고 있나 — 세트는 안에 든 것을 모두 가지고 있어야 함 */
  function ownsItem(it){if(!it)return false;if(it.kind==='set')return (it.parts||[]).every(([c,id])=>has((c==='fx'?'fx_':c+'_')+id));return has(it.pid||'')}
  /* v118: 펫 스킨은 원래 펫을 공방에서 산 사람만 낄 수 있다(안 샀으면 벗김) */
- const baseOk=(k,id)=>{try{if(PRE[k]!=='pet_'||!window.PET59)return true;const v=PET59.byId(id);return !v||v.base==null||(shopInv().inv.pt||[]).includes(v.base)}catch(e){return true}};
+ /* v123: 테스터는 원래 펫이 없어도 펫 스킨을 낄 수 있다(끼면 그 펫이 공방에 생김, 99991 toggle) */
+ const baseOk=(k,id)=>{try{if(tester||PRE[k]!=='pet_'||!window.PET59)return true;const v=PET59.byId(id);return !v||v.base==null||(shopInv().inv.pt||[]).includes(v.base)}catch(e){return true}};
  const ownsKind=(k,id)=>!!id&&has(PRE[k]+id)&&baseOk(k,id);
 
  /* 저장된 장착을 다시 입힘 / 보유하지 않게 된 것(로그아웃 등)은 벗김 */
@@ -26851,7 +26852,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(k==='pt')return L.filter(x=>x.kind==='pet'&&x.base===i);
   if(k==='ch'){const c=CHARS[i];if(c&&c.prem)return L.filter(x=>x.kind==='prem'&&x.base===c.prem);return L.filter(x=>x.kind==='elite'&&x.base===i).concat(L.filter(x=>x.kind==='skin'&&x.variant&&x.base===i))}return []}
  /* 원래 캐릭터 · 펫을 가졌나 (프리미엄은 그 프리미엄 스킨을 샀나) */
- function baseOwned(k,i){try{const c=k==='ch'&&CHARS[i];if(c&&c.prem)return !!(PAY()&&PAY().ownsKind('skin',c.prem));return (shopInv().inv[k]||[]).includes(i)}catch(e){return false}}
+ function baseOwned(k,i){try{if(PAY()&&PAY().tester&&PAY().tester())return true;/* v123: 테스터는 잠금 없음 */const c=k==='ch'&&CHARS[i];if(c&&c.prem)return !!(PAY()&&PAY().ownsKind('skin',c.prem));return (shopInv().inv[k]||[]).includes(i)}catch(e){return false}}
  function rows(){const k=shopTab;if(k!=='ch'&&k!=='pt')return '';const i=wsSelOf(k),L=skinsFor(k,i),A=API();if(!L.length||!A)return '';
   const bo=baseOwned(k,i),D=window.DIA80,it0=WS_LIST(k)[i]||{},prem=k==='ch'&&it0.prem;
   let h='<div id="sk119"><h4>🎨 '+(k==='pt'?'이 펫의 스킨':prem?'♛ 전용 스킨':'이 캐릭터의 스킨')+'<small>'+(bo?(prem?'특별한 휘두르기 · 검 쥐는 자세':'사면 이 모습으로 바뀌어요 · 능력은 그대로'):'🔒 먼저 위에서 '+safe(it0.name||'')+'을(를) '+(prem?'사야':'사야')+' 해요')+'</small></h4>';
@@ -27265,7 +27266,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const owned=u=>{try{const P=PAY();return !!(P&&P.ownsItem({pid:'skin_'+u.id}))}catch(e){return false}};
  function cur(){try{if(SKIN58.get())return null;const i=(shopInv().eq||{}).ch||0,u=LIST.find(x=>x.i===i);return u&&st()[u.i]&&owned(u)?u:null}catch(e){return null}}
  const ELITE122=window.ELITE122={list:LIST,byId,cur,owned,get:()=>{const u=cur();return u?u.id:null},
-  equip(id){const S=st(),u=id&&byId(id);if(!u){const c=cur();if(c)delete S[c.i]}else{S[u.i]=1;try{if(SKIN58.get())SKIN58.equip(null)}catch(e){}try{const inv=shopInv();if(inv.inv.ch.includes(u.i))inv.eq.ch=u.i}catch(e){}}try{saveNow()}catch(e){}tick()},
+  equip(id){const S=st(),u=id&&byId(id);if(!u){const c=cur();if(c)delete S[c.i]}else{S[u.i]=1;try{if(SKIN58.get())SKIN58.equip(null)}catch(e){}try{const inv=shopInv(),P=PAY();if(P&&P.tester()&&!inv.inv.ch.includes(u.i))inv.inv.ch.push(u.i);/* v123: 테스터는 캐릭터도 받음 */if(inv.inv.ch.includes(u.i))inv.eq.ch=u.i}catch(e){}}try{saveNow()}catch(e){}tick()},
   render(id,v,f,t){const u=byId(id);if(!u)return null;const ov=HV.view,osw=HV.sw;HV.view=v||'front';HV.sw=null;try{return ch2Render(u.idx,f||0,0,false,t!=null?t:performance.now()/1000)}finally{HV.view=ov;HV.sw=osw}}};
  /* 내 캐릭터 그림 */
  {const base=ch2Render;ch2Render=function(idx,f,b,bl,t){try{if(idx<100&&!window.__mateDraw){const sm=document.getElementById('shopModal');if(!(sm&&!sm.hidden)&&idx===((shopInv().eq||{}).ch||0)){const u=cur();if(u&&u.i===idx)return base.call(this,u.idx,f,b,bl,t)}}}catch(e){}return base.apply(this,arguments)}}
