@@ -105,7 +105,7 @@
   try{const c=d.querySelector('.kn'),x=c.getContext('2d');c.width=96;c.height=96;x.imageSmoothingEnabled=false;drawKnight(x,26,38,4,false,null,0)}catch(e){}
   const bar=d.querySelector('.bar i'),tx=d.querySelector('.tx'),msgs=['장비를 챙기는 중…','탑의 문을 여는 중…','보스를 깨우는 중…','무대 조명을 켜는 중…'],t0=performance.now();
   const step=()=>{const k=Math.min(1,(performance.now()-t0)/ms),e=1-Math.pow(1-k,2);bar.style.width=(e*100).toFixed(1)+'%';tx.innerHTML=E(msgs[Math.min(msgs.length-1,Math.floor(e*msgs.length))])+'<b>'+Math.round(e*100)+'%</b>';
-   if(k<1)requestAnimationFrame(step);else{d.classList.add('out');setTimeout(()=>d.remove(),380)}};requestAnimationFrame(step)}
+   if(k<1||(d._hold&&performance.now()<d._hold))requestAnimationFrame(step);else{/* v126: 캐릭터를 누르면 _hold까지 조금 더 머묾 */d.classList.add('out');setTimeout(()=>d.remove(),380)}};requestAnimationFrame(step)}
  function waitLobby(){if(ldDone)return;if($('splash')||performance.now()-T0<950||boxOpen())return void setTimeout(waitLobby,100);
   ldDone=true;document.documentElement.classList.remove('gate125');if(!head())showLoad(1300)}
  setTimeout(waitLobby,100);

@@ -682,5 +682,5 @@
  /* v81: 다른 파일(CB81)이 잡몹을 때리고 이펙트를 쓰도록 */
  TW.hitMob=(m,d,col,tx)=>{if(!m||m.hp<=0||m.born>0)return;d=Math.max(1,Math.round(d));m.hp-=d;if(T.duo&&T.duo.role==='guest')try{DUO85.hitSent(m,d,0)}catch(e){}m.hitT=T.clk;addPop(m.x+rnd(-5,5),m.y-14-rnd(0,6),(tx||'')+d,col||'#ffffff');if(m.hp<=0)kill(m)};
  TW.addPop=addPop;TW.burst=burst;TW.kill=kill;TW.nextFloor=nextFloor;TW.goBoss=goBoss;TW.buildFloor=buildFloor;TW.hurt=(d)=>hurt(d);TW.pool=pool;TW.nearest=nearest;TW.SP=SP;
- TW.T=T;TW.ult=()=>{T.ult=100;ult()};TW.beatGood=beatGood;TW.music=music;TW.sv=sv;TW.bossOf=bossOf;TW.zoneOf=zoneOf;TW.speciesOf=speciesOf;
+ TW.T=T;TW.bossStart=bossStart;TW.grant=grant;/* v126 이스터에그(777F)가 씀 */TW.ult=()=>{T.ult=100;ult()};TW.beatGood=beatGood;TW.music=music;TW.sv=sv;TW.bossOf=bossOf;TW.zoneOf=zoneOf;TW.speciesOf=speciesOf;
 }catch(e){console.error('v71 tower',e)}})();
