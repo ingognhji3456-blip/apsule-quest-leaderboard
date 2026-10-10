@@ -23,7 +23,9 @@
  const allOwned=()=>{const s=new Set(owned);for(const x of diaOwn())s.add(x);return s};
  /* 상품 하나(상점 카드 항목)를 가지고 있나 — 세트는 안에 든 것을 모두 가지고 있어야 함 */
  function ownsItem(it){if(!it)return false;if(it.kind==='set')return (it.parts||[]).every(([c,id])=>has((c==='fx'?'fx_':c+'_')+id));return has(it.pid||'')}
- const ownsKind=(k,id)=>!!id&&has(PRE[k]+id);
+ /* v118: 펫 스킨은 원래 펫을 공방에서 산 사람만 낄 수 있다(안 샀으면 벗김) */
+ const baseOk=(k,id)=>{try{if(PRE[k]!=='pet_'||!window.PET59)return true;const v=PET59.byId(id);return !v||v.base==null||(shopInv().inv.pt||[]).includes(v.base)}catch(e){return true}};
+ const ownsKind=(k,id)=>!!id&&has(PRE[k]+id)&&baseOk(k,id);
 
  /* 저장된 장착을 다시 입힘 / 보유하지 않게 된 것(로그아웃 등)은 벗김 */
  function apply(){const A=API(),cos=saveData.cos58||{};
