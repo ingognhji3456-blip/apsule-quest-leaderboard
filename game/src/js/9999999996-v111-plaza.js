@@ -59,15 +59,15 @@
   enterGame();$('overlay').hidden=true;mode='plaza';paused=false;try{resetP(480,470)}catch(e){P.x=480;P.y=470}P.face={x:0,y:1};
   S.on=true;S.O={};S.tgt=null;S.err='';S.last=0;S.pet={x:null,y:null,t:0};if(!S.bg)S.bg=buildBg();
   document.documentElement.classList.add('plz111');try{$('bvTitle').textContent='BEAT BLADE · ⛲ 광장'}catch(e){}bar.hidden=false;paintBar();last=performance.now()}
- function leave(){if(!S.on)return;S.on=false;S.O={};hideInfo();try{pv.hidden=true;S.hiW=0;document.documentElement.classList.remove('plzP')}catch(e){}bar.hidden=true;document.documentElement.classList.remove('plz111');api('/api/plaza/leave','POST',{}).catch(()=>{})}
+ function leave(){if(!S.on)return;S.on=false;S.O={};hideInfo();S.say=null;S.mySay=null;S.log=[];try{chatBox.hidden=true;inp.blur()}catch(e){}try{pv.hidden=true;S.hiW=0;document.documentElement.classList.remove('plzP')}catch(e){}bar.hidden=true;document.documentElement.classList.remove('plz111');api('/api/plaza/leave','POST',{}).catch(()=>{})}
  let last=0;
  /* ---------- 서버와 주고받기 ---------- */
  const lookNow=()=>{const e=shopInv().eq||{};let sk='',pv='',lv=1;try{sk=SKIN58.get()||''}catch(_){}try{pv=(window.PET59&&PET59.get())||''}catch(_){}try{lv=DU.myLv()}catch(_){}return {ch:DU.myCh(),wp:e.wp||0,pt:e.pt||0,sk,pv,lv}};
  async function sync(){if(!S.on||mode!=='plaza'||S.busy>=2)return;const iv=S.cnt>12?350:220;if(performance.now()-S.last<iv)return;S.last=performance.now();S.busy++;
-  try{const me=Object.assign({x:Math.round(P.x),y:Math.round(P.y),fx:P.face.x<0?-1:1,fy:Math.round((P.face.y||0)*10)/10,w:P.walkOn?1:0,ts:Math.round(performance.now()),n:++S.n},lookNow());
+  try{const me=Object.assign({x:Math.round(P.x),y:Math.round(P.y),fx:P.face.x<0?-1:1,fy:Math.round((P.face.y||0)*10)/10,w:P.walkOn?1:0,ts:Math.round(performance.now()),n:++S.n},lookNow());if(S.say){me.say=S.say.text;me.sid=S.say.sid}/* v113 말풍선 */
    const r=await api('/api/plaza/sync','POST',{room:S.want||0,me,noinv:!!sv().noinv});if(!S.on)return;
    if(r.s!==200){S.err=r.s===401?'로그인이 필요해요':'서버 연결을 기다리는 중…';paintBar();return}S.err='';
-   S.room=r.j.room;if(S.want===S.room)S.want=0;S.rooms=r.j.rooms||[];S.cnt=(r.j.players||[]).length+1;feed(r.j.players||[]);
+   S.room=r.j.room;if(S.want===S.room)S.want=0;sayAck(r.j.sid);S.rooms=r.j.rooms||[];S.cnt=(r.j.players||[]).length+1;feed(r.j.players||[]);
    try{r.j.invites&&r.j.invites.length&&window.FR94&&FR94.gotInv(r.j.invites)}catch(e){}paintBar()}
   catch(e){}finally{S.busy--}}
  setInterval(()=>{if(S.on&&mode!=='plaza')leave();try{sync()}catch(e){}try{const hide=!S.on||DU.isOpen();if(bar.hidden!==hide)bar.hidden=hide}catch(e){}},60);/* 듀오 · 결투 방 창이 열려 있으면 막대는 숨김 */
@@ -75,7 +75,7 @@
   for(const p of list){if(!p.name)continue;seen.add(p.name);let M=S.O[p.name];if(!M)M=S.O[p.name]={_spec:1,nm:p.name,hs:[],ring:'#a6f5c6',nmc:'#e8f4ef',noHp:1,hp:1,mx:1};
    if(p.ts==null)continue;const o=now-p.ts;M.oMin=M.oMin==null||o<M.oMin?o:M.oMin+.3;M.off=M.oMin+140;/* 0.14초 늦게 그려 매끄럽게 */
    M.lvT='Lv'+(p.lv||1)+' '+p.name;
-   try{DU.mateIn({x:p.x,y:p.y,ffx:p.fx,ffy:p.fy||0,fx:p.fx,n:p.n,ts:p.ts,ch:p.ch|0,wp:p.wp|0,sk:p.sk||'',pt:p.pt|0,pv:p.pv||'',hp:1,mx:1,w:!!p.w},M)}catch(e){}M.nm=M.lvT;M.name=p.name}
+   try{DU.mateIn({x:p.x,y:p.y,ffx:p.fx,ffy:p.fy||0,fx:p.fx,n:p.n,ts:p.ts,ch:p.ch|0,wp:p.wp|0,sk:p.sk||'',pt:p.pt|0,pv:p.pv||'',hp:1,mx:1,w:!!p.w},M)}catch(e){}M.nm=M.lvT;M.name=p.name;if(p.say&&p.sid&&p.sid!==M.sid){M.sid=p.sid;M.say=p.say;M.sayT=now-(p.sayAge||0)*1000;if(p.sayAge==null||p.sayAge<6)logAdd(p.name,p.say)}}
   for(const k in S.O)if(!seen.has(k)){const M=S.O[k];M.gone=M.gone||now;if(now-M.gone>2500)delete S.O[k]}else S.O[k].gone=0}
  /* ---------- 움직이기 ---------- */
  function blocked(x,y){if(x<16||x>WW-16||y<TOPY+8||y>WH-8)return true;for(const b of OBST){const dx=x-b.x,dy=(y-b.y)*b.ky;if(dx*dx+dy*dy<b.r*b.r)return true}return false}
@@ -99,6 +99,7 @@
   for(const k in S.O){const M=S.O[k];if(M.x==null)continue;L.push({y:(M.sy!=null?M.sy:M.y)||0,fn:()=>{try{DU.drawMate(now,false,M)}catch(e){}}})}
   L.push({y:P.y-1,fn:()=>drawMyPet(now)});L.push({y:P.y,fn:()=>drawMe(now)});
   L.sort((a,b)=>a.y-b.y).forEach(o=>{try{o.fn()}catch(e){}});
+  try{drawBubbles(now)}catch(e){}
   /* 고른 사람 표시 */if(S.info&&S.O[S.info.name]){const M=S.O[S.info.name];c.strokeStyle='#ffd166';c.lineWidth=1.5;c.globalAlpha=.6+.4*Math.sin(t*6);c.beginPath();c.ellipse(M.sx,M.sy+2,14,5,0,0,6.28);c.stroke();c.globalAlpha=1}
   c.restore();
   if(portrait())return;
@@ -135,6 +136,32 @@
   const p=pick(w),touch=e.pointerType==='touch'||e.pointerType==='pen';
   if(p){const nm=p.name||'';const now=performance.now();if(touch||(S.clickN===nm&&now-S.clickT<400)){S.clickT=0;openInfo(nm)}else{S.clickN=nm;S.clickT=now}return}
   S.clickN='';const x=Math.max(16,Math.min(WW-16,w.x)),y=Math.max(TOPY+8,Math.min(WH-8,w.y));S.tgt={x,y}},true);
+ /* ---------- v113 말풍선 채팅 ----------
+    보낼 말은 다음 sync에 실어 보내고(me.say · me.sid), 서버가 받아 준 번호(r.j.sid)가 오면 내 머리 위에 띄움. 남의 말은 sync 답의 say/sid. */
+ S.log=[];S.say=null;S.mySay=null;let sidN=Date.now()%1e6;
+ function send(t){t=String(t||'').replace(/\s+/g,' ').trim().slice(0,50);if(!t)return;if(S.say){try{banner('조금 천천히 보내 주세요')}catch(e){}return}S.say={text:t,sid:++sidN,t:performance.now()};S.last=0}
+ function sayAck(sid){if(!S.say)return;if(sid===S.say.sid){S.mySay={text:S.say.text,t:performance.now()};logAdd(saveData.name||'나',S.say.text,1);S.say=null}
+  else if(performance.now()-S.say.t>3000){S.say=null;try{banner('조금 천천히 보내 주세요')}catch(e){}}}
+ function logAdd(name,text,me){S.log.push({name,text,me:!!me,t:performance.now()});if(S.log.length>5)S.log.shift();paintLog()}
+ function paintLog(){logEl.innerHTML=S.log.map(l=>'<div'+(l.me?' class="me"':'')+'><b>'+esc(l.name)+'</b> '+esc(l.text)+'</div>').join('')}
+ setInterval(()=>{if(!S.log.length)return;const n=S.log.length;S.log=S.log.filter(l=>performance.now()-l.t<20000);if(S.log.length!==n)paintLog()},1000);
+ function wrapText(c,t,maxW){const out=[];let line='';for(const ch of t){const nx=line+ch;if(c.measureText(nx).width>maxW&&line){out.push(line);line=ch;if(out.length===3)break}else line=nx}if(out.length<3&&line)out.push(line);
+  if(out.length===3&&out.join('').length<t.length)out[2]=out[2].slice(0,-1)+'…';return out}
+ function bubble(c,x,y,text,age,me){const life=5500;if(age>life)return;const a=age>life-500?(life-age)/500:Math.min(1,age/120);c.save();c.globalAlpha=a;c.font='700 7px sans-serif';
+  const L=wrapText(c,text,92),w=Math.max(...L.map(l=>c.measureText(l).width))+10,h=L.length*9+6,bx=Math.round(x-w/2),by=Math.round(y-h-6-(1-Math.min(1,age/120))*4);
+  c.fillStyle='#00000055';c.beginPath();c.roundRect?c.roundRect(bx+1,by+2,w,h,5):c.rect(bx+1,by+2,w,h);c.fill();
+  c.fillStyle=me?'#fff4d0':'#ffffff';c.strokeStyle=me?'#ffd166':'#2a3040';c.lineWidth=1;c.beginPath();c.roundRect?c.roundRect(bx,by,w,h,5):c.rect(bx,by,w,h);c.fill();c.stroke();
+  c.beginPath();c.moveTo(x-3,by+h-.5);c.lineTo(x,by+h+5);c.lineTo(x+3,by+h-.5);c.closePath();c.fill();c.beginPath();c.moveTo(x-3,by+h);c.lineTo(x,by+h+5);c.lineTo(x+3,by+h);c.stroke();
+  c.fillStyle='#1a2030';c.textAlign='center';L.forEach((l,i)=>c.fillText(l,x,by+10+i*9));c.restore()}
+ function drawBubbles(now){const c=ctx;for(const k in S.O){const M=S.O[k];if(M.say&&M.sx!=null)bubble(c,M.sx,M.sy-44,M.say,now-M.sayT,0)}if(S.mySay)bubble(c,P.x,P.y-44,S.mySay.text,now-S.mySay.t,1)}
+ const chatBox=document.createElement('div');chatBox.id='plzChat';chatBox.hidden=true;chatBox.innerHTML='<div class="lg"></div><form><input maxlength="50" placeholder="말하기 (Enter)" enterkeyhint="send" autocomplete="off"><button>보내기</button></form>';document.body.appendChild(chatBox);
+ const logEl=chatBox.querySelector('.lg'),inp=chatBox.querySelector('input');
+ chatBox.addEventListener('pointerdown',e=>e.stopPropagation());
+ for(const ev of ['keydown','keyup'])inp.addEventListener(ev,e=>{e.stopPropagation();if(ev==='keydown'&&e.key==='Escape'){inp.blur()}});/* 적는 동안 캐릭터가 움직이거나 일시정지되지 않게 */
+ inp.addEventListener('focus',()=>{try{K.clear()}catch(e){}});
+ chatBox.querySelector('form').onsubmit=e=>{e.preventDefault();send(inp.value);inp.value='';if(matchMedia('(pointer:coarse)').matches)inp.blur()};
+ addEventListener('keydown',e=>{if(mode!=='plaza'||!S.on||paused||chatBox.hidden)return;if(e.code==='Enter'&&document.activeElement!==inp&&box.hidden){e.preventDefault();e.stopImmediatePropagation();inp.focus()}},true);
+ setInterval(()=>{try{const hide=!S.on||DU.isOpen();if(chatBox.hidden!==hide)chatBox.hidden=hide}catch(e){}},120);
  /* ---------- 위쪽 막대: 광장 번호 · 사람 수 · 신청 받기 · 나가기 ---------- */
  const bar=document.createElement('div');bar.id='plzBar';bar.hidden=true;document.body.appendChild(bar);
  bar.addEventListener('pointerdown',e=>e.stopPropagation());
@@ -192,6 +219,11 @@
  #plzInfo .ac{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}#plzInfo .ac button,#plzInfo .x{font:inherit;font-weight:900;font-size:12px;padding:9px 4px;border-radius:10px;border:0;cursor:pointer;background:#24324c;color:#e8f4ef}
  #plzInfo .ac .du2{background:#5a1a2a;color:#ffd0d8}#plzInfo .ac .co{background:#1a4a3a;color:#c8ffe4}#plzInfo .ac .af{background:#1a3a5a;color:#cfe8ff}#plzInfo button:disabled{opacity:.5;cursor:default}
  #plzInfo .ni,#plzInfo .me,#plzInfo .msg,#plzInfo .ld{margin:8px 0 0;font-size:11px;color:#9fb0c8;text-align:center}#plzInfo .msg{color:#a6f5c6}
+ #plzChat{position:fixed;left:8px;bottom:8px;z-index:9300;width:min(380px,62vw);display:flex;flex-direction:column;gap:4px;pointer-events:none}#plzChat[hidden]{display:none}
+ #plzChat .lg div{font-size:12px;line-height:1.35;color:#e8f4ef;text-shadow:0 1px 2px #000,0 0 4px #000;word-break:break-all}#plzChat .lg b{color:#a6f5c6}#plzChat .lg .me b{color:#ffd166}
+ #plzChat form{display:flex;gap:4px;pointer-events:auto}#plzChat input{flex:1;min-width:0;font:inherit;font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid #7dd8ff55;background:#0b1220d9;color:#fff;outline:none}#plzChat input:focus{border-color:#7dd8ff}
+ #plzChat button{font:inherit;font-weight:900;font-size:12px;padding:7px 11px;border-radius:10px;border:0;background:#1a4a6a;color:#dff4ff;cursor:pointer}
+ html.ph #plzChat{width:min(300px,64vw)}html.ph #plzChat .lg div{font-size:11px}html.ph #plzChat input{font-size:16px;padding:6px 8px}
  #plzView{position:fixed;inset:0;width:100vw;height:100vh;z-index:60;touch-action:none;background:#141a2a}#plzView[hidden]{display:none}
  html.plz111 #touch .tbtn,html.plz111 #btnP,html.plz111 #btnU{display:none!important}`;document.head.appendChild(st);
  window.PLZ111={enter,leave,S,openInfo,feed,WW,WH};
