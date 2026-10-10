@@ -122,7 +122,7 @@ function stamTick(dt){const mx=stamMax();if(P.stam===undefined)P.stam=mx;
  if(P.stamLock){P.stam=Math.min(mx,P.stam+dt*mx/3.4*(curPet().regen||1));if(P.stam>=mx-1e-6){P.stam=mx;P.stamLock=false;sfx(700,.12,'triangle',.03,1100)}}
  const pt=curPet();if(pt.heal&&(mode==='boss'&&G&&G.state==='play'||mode==='cave')){const now=performance.now();if(!P.healAt||P.healAt<now-60000)P.healAt=now+pt.heal*1000;if(now>=P.healAt){P.healAt=now+pt.heal*1000;if(P.hp<P.maxhp&&P.hp>0){P.hp=Math.min(P.maxhp,P.hp+1);if(mode==='boss')G.pops.push({x:P.x,y:P.y-30,t:now,tx:'+1',col:'#7dffa8'})}}}}
 /* ---- 보스전 펫 따라다니기 ---- */
-function drawBossPet(now){if(!G||G.state==='dead')return;G.pt=G.pt||{x:P.x-20,y:P.y-30};G.pt.x+=(P.x-(P.face.x<0?-22:22)-G.pt.x)*.06;G.pt.y+=(P.y-34-G.pt.y)*.06;const id=shopInv().eq.pt||0;glow(G.pt.x,G.pt.y,10,id?'#ffffff':'#a8f0ff',.25);drawPet(ctx,id,G.pt.x,G.pt.y,now,id?1.25:.95)}
+function drawBossPet(now){if(!G||G.state==='dead')return;G.pt=G.pt||{x:P.x-20,y:P.y-30};G.pt.x+=(P.x-(P.face.x<0?-22:22)-G.pt.x)*.06;const id=shopInv().eq.pt||0,pk=id?1.25:.95,ty=window.PET105?PET105.at(id,P.y-34,P.y+2,pk):P.y-34;/* v107 땅 펫은 바닥에 */G.pt.y+=(ty-G.pt.y)*.06;if(!window.PET105||PET105.flies(id))glow(G.pt.x,G.pt.y,10,id?'#ffffff':'#a8f0ff',.25);drawPet(ctx,id,G.pt.x,G.pt.y,now,pk)}
 /* ---- 상점 UI ---- */
 let shopTab='ch',shopOpen=false;
 function shopCardHTML(kind,i){const inv=shopInv(),list=kind==='ch'?CHARS:kind==='wp'?WEAPONS:PETS,it=list[i],own=inv.inv[kind].includes(i),eq=inv.eq[kind]===i;

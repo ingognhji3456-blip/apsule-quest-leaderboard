@@ -87,7 +87,7 @@ function wsStage(now){const cv=$('wsCv');if(!cv)return;const c=cv.getContext('2d
  try{const w=WEAPONS[inv.eq.wp]||WEAPONS[0],st=(now-WS.swing)/1000,auto=(t%3)/3,sw=st<.45?st/.45:(k==='wp'&&auto>.74?(auto-.74)/.26:-1),dir=fl?-1:1,bx=px+11*dir,by=py-27+jy;let ang;
   if(sw>=0&&sw<=1){const e=1-Math.pow(1-sw,3);ang=-2.3+e*3.0;c.globalAlpha=.4*(1-sw);c.strokeStyle=w.trail||w.col||'#fff';c.lineWidth=4;c.beginPath();c.arc(bx,by,26,-2.3,ang);c.stroke();c.lineWidth=1;c.globalAlpha=1}else ang=-1.2+Math.sin(t*1.6)*.05;
   if(dir<0)ang=Math.PI-ang;wsWeaponCopy(c,w,bx,by,ang,2.4,now,0,0,WS_W,WS_H)}catch(e){}
- try{const pid=inv.eq.pt||0,pj=k==='pt'&&(t%2.4)<.4?-Math.sin((t%2.4)/.4*Math.PI)*8:0;drawPet(c,pid,px+40+Math.sin(t*1.3)*4,py-56+Math.sin(t*2.1)*3+pj,now,pid?1.7:1.5);
+ try{const pid=inv.eq.pt||0,pj=k==='pt'&&(t%2.4)<.4?-Math.sin((t%2.4)/.4*Math.PI)*8:0;drawPet(c,pid,px+40+(window.PET105&&!PET105.flies(pid)?0:Math.sin(t*1.3)*4),window.PET105?PET105.at(pid,py-56+Math.sin(t*2.1)*3+pj,py+pj,pid?1.7:1.5):py-56+Math.sin(t*2.1)*3+pj,now,pid?1.7:1.5);
   if(k==='pt'&&(t%2.4)<.9){const q=(t%2.4)/.9;c.globalAlpha=1-q;c.fillStyle='#ff7a9a';const hx2=px+48,hy2=py-70-q*12;c.fillRect(hx2,hy2,2,2);c.fillRect(hx2+3,hy2,2,2);c.fillRect(hx2+1,hy2+2,3,2);c.fillRect(hx2+2,hy2+4,1,1);c.globalAlpha=1}}catch(e){}
  inv.eq.ch=save.ch;inv.eq.wp=save.wp;inv.eq.pt=save.pt;
  /* 계산대 + 부엉이 */const cx0=232;c.fillStyle='#4a2e16';c.fillRect(cx0,110,88,60);c.fillStyle='#6a4424';c.fillRect(cx0-2,106,92,6);c.fillStyle='#8a6434';c.fillRect(cx0-2,106,92,1);c.fillStyle='#2a1a0e';c.fillRect(cx0,112,88,2);

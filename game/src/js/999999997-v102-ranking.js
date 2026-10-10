@@ -24,7 +24,7 @@
   const g=c.createRadialGradient(W/2,H*.7,4,W/2,H*.6,W*.7);g.addColorStop(0,'#2a3a4a');g.addColorStop(1,'#0a0f14');c.fillStyle=g;c.fillRect(0,0,W,H);
   c.fillStyle='#00000066';c.beginPath();c.ellipse(W/2,H*.86,W*.26,H*.05,0,0,TAU);c.fill();
   l=l||{};const S=big?3:1.6;
-  try{const pid=l.pt|0;if(pid||l.pv){const px=W/2+18*S,py=H*.5+Math.sin(t*2.2)*2;if(l.pv&&window.PET59&&PET59.byId&&PET59.byId(l.pv))PET59.draw(c,l.pv,px,py,now,S*.7);else drawPet(c,pid,px,py,now,S*.7)}}catch(e){}
+  try{const pid=l.pt|0;if(pid||l.pv){const px=W/2+18*S,py=window.PET105?PET105.at(l.pv||pid,H*.5+Math.sin(t*2.2)*2,H*.86,S*.7):H*.5+Math.sin(t*2.2)*2;if(l.pv&&window.PET59&&PET59.byId&&PET59.byId(l.pv))PET59.draw(c,l.pv,px,py,now,S*.7);else drawPet(c,pid,px,py,now,S*.7)}}catch(e){}
   try{const img=ch2Render(chIdx(l),0,Math.round(Math.sin(t*2)*.6),false,t);c.drawImage(img,Math.round(W/2-20*S-6*S),Math.round(H*.88-44*S),40*S,48*S)}catch(e){}
   try{const w=WEAPONS[l.wp|0]||WEAPONS[0],sp=WSPR[w.type]||WSPR.sword,n=sp.r.length,sc=Math.min(big?2.6:1.4,(H*.55)/(n*.72)),ang=-1.1+Math.sin(t)*.04,L=(n-1)*sc*.72,hx=W/2-22*S-Math.cos(ang)*(L/2-sp.g*sc*.72)+ (big?6:2),hy=H*.5-Math.sin(ang)*(L/2-sp.g*sc*.72);wsWeaponCopy(c,w,hx,hy,ang,sc,now,0,0,W,H)}catch(e){}}
  function frameLoop(){R.raf=0;if(box.hidden)return;const now=performance.now();for(const q of R.cvs){const c=q.cv.getContext('2d');drawLook(c,q.l,q.cv.width,q.cv.height,now,q.big)}R.raf=requestAnimationFrame(frameLoop)}
