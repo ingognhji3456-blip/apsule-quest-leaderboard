@@ -64,7 +64,7 @@
   if(D.started){const mp=(D.room.players||[]).find(p=>!p.me);if(!mp){mateLeft('동료가 나갔어요. 혼자 계속해요.');return}
    if(mp.online)D.mateOff=0;else if(!D.mateOff)D.mateOff=performance.now();else if(performance.now()-D.mateOff>20000){mateLeft('동료와 연결이 끊겼어요. 혼자 계속해요.');return}}
  }finally{D.fly=Math.max(0,(D.fly||1)-1)}}
- setInterval(()=>{try{tick()}catch(e){}},100);
+ setInterval(()=>{try{tick()}catch(e){}},50);/* v109: 0.05초마다 */
 
  /* ---------- 받은 메시지 ---------- */
  function onMsg(m){const t=T();
@@ -113,7 +113,7 @@
   t.pools=s.pools.map(([x,y,r,t0,t1])=>({x,y,r,t0:t0+c,t1:t1+c}));
   const nw=[];for(const a of s.waves){const [id,x,y,r,max,t0,dmg,col]=a;let o=(t.waves||[]).find(q=>q.id===id);if(!o)o={id};Object.assign(o,{x,y,r,max,t0:t0+c,dmg,col});nw.push(o)}t.waves=nw;
   if(s.clear&&!t.clear){t.clear=true;t.clearT=c0;try{TW71.addPop(AX+AW/2,AY+60,'FLOOR CLEAR!','#a6f5c6')}catch(e){}}t.doorK=s.door;t.total=s.total;t.queue=new Array(s.q).fill(null)}
- function guestMobs(dt){const t=T(),rc=performance.now()/1000+(D.hOff||0)-(D.hDly||.16);for(const m of t.mobs){if(m.hp<=0)continue;
+ function guestMobs(dt){const t=T(),rc=performance.now()/1000+(D.hOff||0)-(D.hDly||0);for(const m of t.mobs){if(m.hp<=0)continue;
    /* v86: 받은 두 화면 사이를 시간에 맞춰 이어 그림(0.16초 늦게) — 뚝뚝 끊기지 않게 */
    if(m.p1&&m.p0&&m.p1.c>m.p0.c){const k=Math.max(0,Math.min(1.4,(rc-m.p0.c)/(m.p1.c-m.p0.c))),gx=m.p0.x+(m.p1.x-m.p0.x)*k,gy=m.p0.y+(m.p1.y-m.p0.y)*k;m.x+=(gx-m.x)*Math.min(1,dt*20);m.y+=(gy-m.y)*Math.min(1,dt*20)}
    else if(m.tx!=null){m.x+=(m.tx-m.x)*Math.min(1,dt*12);m.y+=(m.ty-m.y)*Math.min(1,dt*12)}if(m.born>0){m.born-=dt;continue}
@@ -190,14 +190,14 @@
   const hs=M.hs||[];hs.push({t:lt,x:m.x,y:m.y,fx:m.ffx,fy:m.ffy});while(hs.length>cap)hs.shift();
   const ev0=m.ev;delete m.ev;Object.assign(M,m,{at:now,hs});m.ev=ev0}
  /* 늦게 도착하는 정도(가장 빨리 온 것 대비)를 모아 90%가 도착하는 만큼만 늦게 그림: 매끄럽게 + 너무 늦지 않게 */
- function lagOf(a,v,ms){a.push(v);if(a.length>40)a.shift();const q=a.slice().sort((x,y)=>x-y)[Math.floor(a.length*.9)];return ms?Math.max(110,Math.min(700,q+70)):Math.max(.11,Math.min(.7,q+.07))}
- const MDLY=M=>M&&M._spec?0:(D.mDly||160);/* 관전은 시간표에 이미 재생 지연이 들어 있음 */
+ function lagOf(a,v,ms){a.push(v);if(a.length>40)a.shift();return 0}/* v109: 늦게 그리기 없앰(딜레이 0) — 받은 가장 새 위치를 바로 그리고, 다음 것이 늦으면 앞으로 이어 그림 */
+ const MDLY=M=>0;/* v109: 딜레이 0 *//* 관전은 시간표에 이미 재생 지연이 들어 있음 */
  function mateEv(M,list){for(const e of list){if((M.seen||(M.seen=new Set())).has(e.e))continue;M.seen.add(e.e);if(M.seen.size>200)M.seen=new Set([...M.seen].slice(-100));
    (M.evs||(M.evs=[])).push(Object.assign({},e,{t:e.t+((M._spec?M.off:D.mOff)||0)}));if(M.evs.length>40)M.evs.shift();if(e.k==='U'&&e.sp&&!M._spec)setTimeout(()=>note('동료 필살기! '+(e.sp.name||'')),MDLY())}}
  function matePos(now,MM){const M=MM||D.mate,hs=M.hs;if(!hs||!hs.length)return [M.x,M.y];const rt=now-MDLY(M);
   if(rt<=hs[0].t)return [hs[0].x,hs[0].y];
   for(let i=hs.length-1;i>0;i--){const a=hs[i-1],b=hs[i];if(rt>=a.t&&rt<=b.t){const k=b.t>a.t?(rt-a.t)/(b.t-a.t):1;M.cf=k<.5?a:b;return [a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k]}}
-  const b=hs[hs.length-1],a=hs[hs.length-2];M.cf=b;if(a&&b.t>a.t){const k=Math.min(rt-b.t,120)/(b.t-a.t);return [b.x+(b.x-a.x)*k,b.y+(b.y-a.y)*k]}return [b.x,b.y]}
+  const b=hs[hs.length-1],a=hs[hs.length-2];M.cf=b;if(a&&b.t>a.t){const k=Math.min(rt-b.t,200)/(b.t-a.t);return [b.x+(b.x-a.x)*k,b.y+(b.y-a.y)*k]}return [b.x,b.y]}
  /* v88: 동료를 「내 캐릭터 그리기」 그대로 그림 — 잠깐 내 값(P · 장비 · 스킨)을 동료 값으로 바꿔 그리고 되돌림.
     그래서 앞 · 옆 · 뒤 모습, 걷기, 스킨 연출, 검 휘두르기, 패링 자세가 내 화면에서 보이는 것과 같다. */
  const PK=['x','y','face','walkOn','walkT','lungeT','lungeA','lungeDur','parryT','parryPerf','parryUsed','dash','inv','hp','maxhp'];
