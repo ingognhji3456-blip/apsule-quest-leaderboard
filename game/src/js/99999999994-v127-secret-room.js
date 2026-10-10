@@ -27,13 +27,13 @@
  if(NG&&NG.paintChar)CH2DEF[IDX]={__v44:1,paint:NG.paintChar(S)};
 
  /* 상점: 쓰러뜨리기 전에는 진열대에 없음 */
- const hideCard=()=>{try{if(SV().beat)return;const cv=document.querySelector('#shopGrid canvas[data-k="ch"][data-i="'+IDX+'"]');if(!cv)return;let el=cv;while(el.parentElement&&el.parentElement.id!=='shopGrid')el=el.parentElement;if(el.style.display!=='none')el.style.display='none'}catch(e){}};
+ const hideCard=()=>{try{if(SV().clear)return;/* v129: 던전 20층을 깨야 상점에 나타남 */const cv=document.querySelector('#shopGrid canvas[data-k="ch"][data-i="'+IDX+'"]');if(!cv)return;let el=cv;while(el.parentElement&&el.parentElement.id!=='shopGrid')el=el.parentElement;if(el.style.display!=='none')el.style.display='none'}catch(e){}};
  {const f=renderShop;renderShop=function(){const r=f.apply(this,arguments);hideCard();return r}}
  setInterval(hideCard,700);
 
  /* 비밀 도감에 두 줄 */
  try{if(window.EGG126&&EGG126.EG){EGG126.EG.push({id:'key',ic:'🗝',n:'녹슨 열쇠',hint:'광장 가장자리, 나무 그늘에서 무언가 반짝여요.',how:'광장 왼쪽 나무 뒤에서 열쇠 줍기',dia:5},
-   {id:'sec',ic:'🚪',n:'열쇠지기의 방',hint:'열쇠는 어딘가의 10층에서 쓰는 것 같아요…',how:'탑 10F 보스전에서 열쇠를 가진 채 K(폰은 🗝 단추) → 비밀 복도 → 클라비스 쓰러뜨리기',dia:50})}}catch(e){}
+   {id:'sec',ic:'🚪',n:'열쇠지기의 방',hint:'열쇠는 어딘가의 10층에서 쓰는 것 같아요…',how:'탑 10F 보스전에서 열쇠를 가진 채 K(폰은 🗝 단추) → 비밀 복도 → 클라비스와 결투에서 이기기(코어를 받음)',dia:50})}}catch(e){}
  const found=id=>{try{return window.EGG126&&EGG126.found(id)}catch(e){return false}};
 
  /* ---------- ① 광장의 열쇠 ---------- */
@@ -153,7 +153,7 @@
  let F=null,FX=[],POPS=[],ROOM=null;
  const foeWp=()=>{try{let i=-1;for(let k=WEAPONS.length-1;k>=0;k--){const w=WEAPONS[k];if(w&&w.myth&&(w.type==='katana'||w.type==='sword'||w.type==='rapier')){i=k;break}}return i<0?0:i}catch(e){return 0}};
  function startFight(){const m=DM[diff]||1,now=performance.now();try{resetP(BX0+70,(BY0+BY1)/2)}catch(e){P.x=BX0+70;P.y=(BY0+BY1)/2}P.face={x:1,y:0};P.maxhp=P.maxhp||110;P.hp=P.maxhp;P.hpShow=undefined;P._stun127=0;P._hit127=0;
-  F={x:BX1-70,y:(BY0+BY1)/2,face:{x:-1,y:0},mx:Math.round(1500*m),hp:Math.round(1500*m),st:'intro',t:now,cd:900,walkT:0,walk:false,lungeT:0,lungeA:Math.PI,blinkCd:4000,parCd:2500,dashCd:2000,evCd:1500,ph2:false,hitF:0,combo:0,wp:foeWp(),goal:null,gT:0,tr:[]};
+  F={x:BX1-70,y:(BY0+BY1)/2,face:{x:-1,y:0},mx:Math.round(50000*m),hp:Math.round(50000*m),st:'intro',t:now,cd:900,walkT:0,walk:false,lungeT:0,lungeA:Math.PI,blinkCd:4000,parCd:2500,dashCd:2000,evCd:1500,ph2:false,hitF:0,combo:0,wp:foeWp(),goal:null,gT:0,tr:[]};
   FX=[];POPS=[];SQ.ph='duel';SQ.t0=now;SQ.me={atk:0,dash:null,parryT:0,inv:0};try{sfx('ok')}catch(e){}}
  const ang=(a,b)=>Math.abs(((a-b+Math.PI*3)%(Math.PI*2))-Math.PI);
  const clampB=o=>{o.x=Math.max(BX0,Math.min(BX1,o.x));o.y=Math.max(BY0,Math.min(BY1,o.y))};
@@ -169,7 +169,7 @@
   if(d<34&&ang(Math.atan2(dy,dx),a)<1.3){
    /* 회피 대시 */if(!busy(F.st)&&F.st!=='slash'&&F.st!=='parry'&&F.evCd<=0&&Math.random()<(F.ph2?.34:.22)){const s=Math.random()<.5?-1:1,l=d||1;F.dvx=(-dx/l)*.6+(-dy/l)*s;F.dvy=(-dy/l)*.6+(dx/l)*s;const L=Math.hypot(F.dvx,F.dvy)||1;F.dvx/=L;F.dvy/=L;F.st='evade';F.t=now;F.evCd=F.ph2?1600:2600;dpop(F.x,F.y-34,'회피!','#9fe8ff');snd(1100,.07,'triangle',.04,1800);return}
    if(F.st==='evade'||F.st==='blink'){dpop(F.x,F.y-34,'빗나감','#9fe8ff');return}
-   /* 클라비스의 패링 */if(F.st==='parry'){spark((P.x+F.x)/2,(P.y+F.y)/2-12,'#ffe79a',16);dpop(F.x,F.y-36,'패링!','#ffe79a');snd(1600,.12,'square',.06,1200);P._stun127=now+700;F.st='wind';F.t=now;F.wd=150;F.cnt=1;F.cd=0;return}
+   /* 클라비스의 패링 */if(F.st==='parry'){F.blockT=now;F.x+=Math.cos(a)*3;F.y+=Math.sin(a)*3;clampB(F);spark((P.x+F.x)/2,(P.y+F.y)/2-12,'#ffe79a',16);dpop(F.x,F.y-36,'패링!','#ffe79a');snd(1600,.12,'square',.06,1200);P._stun127=now+700;F.st='wind';F.t=now;F.wd=260;F.cnt=1;F.cd=0;return}
    let pet=0;try{pet=(PETS[shopInv().eq.pt]||{}).dmg||0}catch(e){}const crit=Math.random()<(w.crit||0)+.05;let dmg=Math.round(34*(w.dmg||1)*(1+pet)*(crit?1.8:1)*(F.st==='stun'?1.5:1));
    F.hp=Math.max(0,F.hp-dmg);F.hitF=now;F.x+=Math.cos(a)*5;F.y+=Math.sin(a)*5;clampB(F);dpop(F.x,F.y-34,(crit?'치명! ':'')+dmg,crit?'#ffd84a':'#ffffff');spark(F.x,F.y-12,w.trail||'#ffffff',6);snd(crit?900:700,.06,'sawtooth',.05,200);
    if(F.st==='wind'&&!F.cnt&&Math.random()<.35){F.st='idle';F.cd=300}
@@ -228,12 +228,42 @@
   ctx.save();ctx.globalAlpha=.35;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(f.x,f.y+2,9,3,0,0,TAU);ctx.fill();ctx.restore();
   ctx.save();ctx.globalAlpha=.75;ctx.strokeStyle='#ffd84a';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(f.x,f.y+2,11,4,0,0,TAU);ctx.stroke();ctx.restore();
   if(f.ph2){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.25+.15*Math.sin(now/120);const g=ctx.createRadialGradient(f.x,f.y-14,2,f.x,f.y-14,26);g.addColorStop(0,'#ffd84a');g.addColorStop(1,'rgba(255,216,74,0)');ctx.fillStyle=g;ctx.fillRect(f.x-26,f.y-40,52,52);ctx.restore()}
-  let al=1;if(f.st==='blink'&&!f.bl)al=Math.max(0,1-(now-f.t)/260);if(f.st==='blink'&&f.bl)al=Math.min(1,(now-f.t-260)/160);if(f.st==='dead')al=Math.max(0,1-(now-f.t)/1600);
-  ctx.save();ctx.globalAlpha=al;asFoe(()=>{drawSword(f.x-12+lx,f.y-19+ly,2,fl,now);drawKnight(ctx,f.x-12+lx,f.y-19+ly,2,fl,f.walk?f.walkT:null,f.walk?null:now/430)});ctx.restore();
+  let al=1;if(f.st==='blink'&&!f.bl)al=Math.max(0,1-(now-f.t)/260);if(f.st==='blink'&&f.bl)al=Math.min(1,(now-f.t-260)/160);
+  if(f.st==='dead'){defeated(now);return}
+  if(f.st==='parry'||now-(f.blockT||0)<220){guardDraw(now,fl);}else{
+  ctx.save();ctx.globalAlpha=al;asFoe(()=>{drawSword(f.x-12+lx,f.y-19+ly,2,fl,now);drawKnight(ctx,f.x-12+lx,f.y-19+ly,2,fl,f.walk?f.walkT:null,f.walk?null:now/430)});ctx.restore();}
   if(now-f.hitF<90){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.5;ctx.fillStyle='#ffffff';ctx.fillRect(f.x-10,f.y-34,20,34);ctx.restore()}
   if(f.st==='wind'){ctx.save();ctx.globalAlpha=.6+.4*Math.sin(now/40);txt('!',f.x,f.y-40,14,'#ff5a7a');ctx.restore()}
-  if(f.st==='parry'){const q=(now-f.t)/560;ctx.save();ctx.strokeStyle='#ffe79a';ctx.lineWidth=2;ctx.globalAlpha=.9-q*.5;ctx.beginPath();ctx.arc(f.x+(fl?-8:8),f.y-12,8+q*3,0,TAU);ctx.stroke();ctx.globalAlpha=.25;ctx.fillStyle='#ffe79a';ctx.beginPath();ctx.arc(f.x+(fl?-8:8),f.y-12,8+q*3,0,TAU);ctx.fill();ctx.restore()}
+
   if(f.st==='stun')for(let i=0;i<3;i++){const a=now/250+i*TAU/3;ctx.fillStyle='#ffe79a';ctx.fillRect(f.x+Math.cos(a)*9-1,f.y-40+Math.sin(a)*3,3,3)}}
+ /* v129: 패링 자세 — 검을 몸 앞에 비스듬히 세워 막음(검날이 빛나고, 막는 순간 번쩍 · 불꽃) */
+ function guardDraw(now,fl){const f=F,d=fl?-1:1,q=Math.min(1,(now-f.t)/90),bx=f.x+d*(5+q*3),by=f.y-13,blk=now-(f.blockT||0)<220;
+  ctx.save();asFoe(()=>{P.lungeT=0;drawKnight(ctx,f.x-12-d*1,f.y-19+1,2,fl,null,0)});ctx.restore();
+  /* 검: 손잡이는 가슴 앞, 날은 위쪽 앞으로 비스듬히 */const a=-Math.PI/2+d*.42,L=19,hx=bx,hy=by+3,tx=hx+Math.cos(a)*L,ty=hy+Math.sin(a)*L;
+  ctx.save();ctx.lineCap='square';ctx.strokeStyle='#2a2440';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(tx,ty);ctx.stroke();ctx.strokeStyle='#d8e0f0';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(tx,ty);ctx.stroke();ctx.strokeStyle='#ffffff';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(hx+d*.6,hy);ctx.lineTo(tx+d*.6,ty);ctx.stroke();
+  /* 날밑 · 손잡이 */const ca=a+Math.PI/2;ctx.strokeStyle='#ffd84a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(hx+Math.cos(ca)*5,hy+Math.sin(ca)*5);ctx.lineTo(hx-Math.cos(ca)*5,hy-Math.sin(ca)*5);ctx.stroke();ctx.strokeStyle='#3a2a1a';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(hx-Math.cos(a)*5,hy-Math.sin(a)*5);ctx.stroke();ctx.fillStyle='#ffd84a';ctx.fillRect(hx-Math.cos(a)*6-1,hy-Math.sin(a)*6-1,2,2);
+  /* 날을 따라 흐르는 빛 */const sh=((now-f.t)/300)%1;ctx.globalCompositeOperation='lighter';ctx.fillStyle='rgba(255,240,180,.8)';ctx.fillRect(hx+Math.cos(a)*L*sh-1,hy+Math.sin(a)*L*sh-1,3,3);
+  const g=ctx.createRadialGradient(hx+Math.cos(a)*L*.55,hy+Math.sin(a)*L*.55,1,hx+Math.cos(a)*L*.55,hy+Math.sin(a)*L*.55,blk?26:14);g.addColorStop(0,blk?'rgba(255,240,180,.85)':'rgba(255,231,154,.35)');g.addColorStop(1,'rgba(255,231,154,0)');ctx.fillStyle=g;ctx.fillRect(hx-30,hy-40,60,60);
+  if(blk){const k=1-(now-f.blockT)/220;ctx.strokeStyle='rgba(255,255,255,'+k+')';ctx.lineWidth=1.5;for(let i=0;i<6;i++){const ra=i*Math.PI/3+now/100,cx=hx+Math.cos(a)*L*.55,cy=hy+Math.sin(a)*L*.55;ctx.beginPath();ctx.moveTo(cx+Math.cos(ra)*4,cy+Math.sin(ra)*4);ctx.lineTo(cx+Math.cos(ra)*(10+(1-k)*8),cy+Math.sin(ra)*(10+(1-k)*8));ctx.stroke()}}
+  ctx.restore()}
+ /* v129: 쓰러지면 — 검을 바닥에 꽂고 무릎을 반쯤 꿇고 「내가 졌다」 → 코어를 건넴 */
+ let KN=null;function kneelImg(fl){const k=fl?1:0;KN=KN||{};if(KN[k])return KN[k];const cv=document.createElement('canvas');cv.width=64;cv.height=64;const o=cv.getContext('2d');o.imageSmoothingEnabled=false;const sf=F.face,sw=F.walk;F.face={x:fl?-1:1,y:0};F.walk=false;
+  asFoe(()=>{try{drawKnight(o,20,22,2,fl,null,0)}catch(e){}});F.face=sf;F.walk=sw;return KN[k]=cv}
+ function bubble(x,y,s2,al){ctx.save();ctx.globalAlpha=al;ctx.font='bold 9px sans-serif';const w=ctx.measureText(s2).width+12,h=15,bx=Math.round(x-w/2),by=Math.round(y-h);ctx.fillStyle='#000a';ctx.fillRect(bx+1,by+1,w,h);ctx.fillStyle='#f6f0ff';ctx.fillRect(bx,by,w,h);ctx.fillStyle='#3a2a5a';ctx.fillRect(bx,by,w,1);ctx.fillRect(bx,by+h-1,w,1);ctx.fillRect(bx,by,1,h);ctx.fillRect(bx+w-1,by,1,h);
+  ctx.fillStyle='#f6f0ff';ctx.beginPath();ctx.moveTo(x-4,by+h-1);ctx.lineTo(x+4,by+h-1);ctx.lineTo(x,by+h+5);ctx.fill();ctx.fillStyle='#2a1a4a';ctx.textAlign='center';ctx.fillText(s2,x,by+11);ctx.restore()}
+ function defeated(now){const f=F,t=(now-f.t)/1000,fl=f.face.x<0,sx=f.x+(fl?-11:11);
+  /* 검: 0.5초에 바닥에 꽂힘 */if(t>.5){const q=Math.min(1,(t-.5)/.12),top=f.y-26+(1-q)*-14;ctx.fillStyle='#000a';ctx.fillRect(sx-1,f.y+1,4,2);ctx.fillStyle='#c8d0e0';ctx.fillRect(sx,top+6,2,f.y-top-4);ctx.fillStyle='#ffffff';ctx.fillRect(sx,top+6,1,f.y-top-6);ctx.fillStyle='#ffd84a';ctx.fillRect(sx-3,top+4,8,2);ctx.fillStyle='#3a2a1a';ctx.fillRect(sx,top,2,4);ctx.fillStyle='#ffd84a';ctx.fillRect(sx,top-1,2,1);
+   if(!f.planted&&q>=1){f.planted=1;spark(sx,f.y,'#c8b89a',14);snd(1300,.12,'square',.06,600);SQ.shake=now}
+   if(t<1.1){ctx.strokeStyle='#120e1a';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sx-6,f.y+1);ctx.lineTo(sx,f.y);ctx.lineTo(sx+7,f.y+2);ctx.stroke()}}
+  /* 무릎: 0.7~1.1초에 반쯤 꿇음(아래쪽 다리를 접고 몸을 내림) */const kq=Math.max(0,Math.min(1,(t-.7)/.4)),img=kneelImg(fl),dx=f.x-32,dy=f.y-41,cut=34,drop=Math.round(kq*7),lean=Math.round(kq*2)*(fl?-1:1);
+  ctx.save();ctx.globalAlpha=.35;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(f.x,f.y+2,10,3,0,0,TAU);ctx.fill();ctx.restore();
+  ctx.drawImage(img,0,0,64,cut,dx+lean,dy+drop,64,cut);ctx.drawImage(img,0,cut,64,64-cut,dx,dy+cut+drop,64,Math.max(1,64-cut-drop));
+  /* 말풍선 */if(t>1.2&&t<3)bubble(f.x,f.y-34+drop,'…내가 졌다.',Math.min(1,(t-1.2)*3));
+  if(t>3&&t<5.4)bubble(f.x,f.y-34+drop,'이 코어를 가져가라. 광장의 성문이 너를 기다린다.',Math.min(1,(t-3)*3));
+  /* 코어: 가슴에서 떠올라 나에게 */if(t>3.2){const q=Math.min(1,(t-3.6)/1.1),ox=f.x,oy=f.y-18+drop,rx=ox+(P.x-ox)*Math.max(0,q),ry=oy-Math.min(1,(t-3.2)/.4)*10+(P.y-14-oy+10)*Math.max(0,q)-Math.sin(Math.max(0,q)*Math.PI)*16;
+   if(q<1){ctx.save();ctx.globalCompositeOperation='lighter';const g=ctx.createRadialGradient(rx,ry,1,rx,ry,14);g.addColorStop(0,'rgba(201,168,255,.9)');g.addColorStop(1,'rgba(201,168,255,0)');ctx.fillStyle=g;ctx.fillRect(rx-14,ry-14,28,28);ctx.restore();ctx.fillStyle='#7a4ae8';ctx.fillRect(rx-3,ry-3,6,6);ctx.fillStyle='#c9a8ff';ctx.fillRect(rx-2,ry-2,3,3);ctx.fillStyle='#fff';ctx.fillRect(rx-1,ry-2,1,1);
+    if(Math.random()<.5)FX.push({k:'sp',x:rx,y:ry,vx:(Math.random()-.5)*20,vy:(Math.random()-.5)*20,col:'#c9a8ff',t:now})}
+   else if(!f.gotCore){f.gotCore=1;spark(P.x,P.y-14,'#c9a8ff',20);snd(880,.3,'sine',.07,1760);dpop(P.x,P.y-40,'🔮 열쇠지기의 코어!','#e6d4ff');const s=SV();s.core=1;save()}}}
  function drawFX(now){FX=FX.filter(e=>now-e.t<(e.k==='sl'?220:500));for(const e of FX){const q=(now-e.t)/(e.k==='sl'?220:500);ctx.save();
    if(e.k==='sl'){ctx.globalAlpha=(1-q)*.8;ctx.fillStyle=e.col;ctx.beginPath();ctx.arc(e.x,e.y,19,e.a-1.25+q*.5,e.a+1.25+q*.5);ctx.arc(e.x,e.y,12,e.a+1.05+q*.5,e.a-1.05+q*.5,true);ctx.closePath();ctx.fill();ctx.globalAlpha=1-q;ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(e.x,e.y,19,e.a-1.1+q*.5,e.a+1.1+q*.5);ctx.stroke()}
    else{const s=(now-e.t)/1000;ctx.globalAlpha=1-q;ctx.fillStyle=e.col;ctx.fillRect(e.x+e.vx*s,e.y+e.vy*s+200*s*s,2,2)}ctx.restore()}
@@ -269,8 +299,11 @@
   /* 사슬 장식 */for(let i=0;i<6;i++){ctx.fillStyle=i%2?'#6a6480':'#8a84a0';ctx.fillRect(x+40+i*48,y-6+Math.sin(t*2+i)*.5,6,3)}
   /* 열쇠 몸통(체력바) 테두리 */ctx.fillStyle='#000a';ctx.fillRect(x-2,y-3,w+4,h+6);ctx.fillStyle=gold2;ctx.fillRect(x-1,y-2,w+2,h+4);ctx.fillStyle=dk;ctx.fillRect(x,y-1,w,h+2);
   /* 빈 칸 무늬 */for(let i=0;i<w;i+=10){ctx.fillStyle='#1c1430';ctx.fillRect(x+i,y,9,h)}
-  /* 잃은 만큼 흰 잔상 → 채움 */ctx.fillStyle='#fff0d0';ctx.fillRect(x,y,Math.round(w*f.show),h);
-  const fw=Math.round(w*r),g=ctx.createLinearGradient(x,0,x+w,0);g.addColorStop(0,main);g.addColorStop(1,main2);ctx.fillStyle=g;ctx.fillRect(x,y,fw,h);
+  /* v129: 여러 줄 체력바 — 전체를 10줄로, 남은 줄 수 ×N, 줄마다 색이 바뀜 */const LY=Math.max(400,Math.round(f.mx/10)),LC=[['#b48aff','#ffd84a'],['#7a8aff','#b48aff'],['#5ad0ff','#7a8aff'],['#5affb0','#5ad0ff'],['#ffd84a','#5affb0'],['#ff9a3a','#ffd84a'],['#ff5a7a','#ff9a3a'],['#ff4dd2','#ff5a7a']];
+  const nL=Math.max(1,Math.ceil(f.hp/LY)),inL=f.hp<=0?0:(f.hp-(nL-1)*LY)/LY,shL=Math.max(inL,Math.min(1,(f.show*f.mx-(nL-1)*LY)/LY)),cc=LC[(nL-1)%LC.length],nc=nL>1?LC[(nL-2)%LC.length]:null;
+  if(nc){ctx.fillStyle=nc[0];ctx.globalAlpha=.55;ctx.fillRect(x,y,w,h);ctx.globalAlpha=1}
+  /* 잃은 만큼 흰 잔상 → 채움 */ctx.fillStyle='#fff0d0';ctx.fillRect(x,y,Math.round(w*shL),h);
+  const fw=Math.round(w*inL),g=ctx.createLinearGradient(x,0,x+w,0);g.addColorStop(0,f.ph2&&nL===1?'#ff5a3a':cc[0]);g.addColorStop(1,cc[1]);ctx.fillStyle=g;ctx.fillRect(x,y,fw,h);
   ctx.fillStyle='#ffffff55';ctx.fillRect(x,y,fw,2);ctx.fillStyle='#00000040';ctx.fillRect(x,y+h-2,fw,2);
   /* 열쇠 홈 무늬 */for(let i=6;i<fw;i+=12){ctx.fillStyle='#00000030';ctx.fillRect(x+i,y+3,5,4);ctx.fillStyle='#ffffff30';ctx.fillRect(x+i,y+3,5,1)}
   /* 지나가는 빛 */const q=((now/1400)%1.6)-.3;if(q>0&&q<1&&fw>4){ctx.globalAlpha=.3;ctx.fillStyle='#fff';ctx.fillRect(x+fw*q,y-1,4,h+2);ctx.globalAlpha=1}
@@ -290,6 +323,7 @@
   ctx.fillStyle=f.ph2?'#ff5a7a':'#c9a8ff';ctx.fillRect(cx-2,cy+R-1,4,4);
   /* 글자 */const nm='✪ 클라비스 · 비밀의 열쇠지기',pl=(f.ph2?'◆ PHASE 2 · 진심':'◆ PHASE 1')+' · '+Math.ceil(r*100)+'%';ctx.font='bold 10px sans-serif';const nw=ctx.measureText(nm).width;
   ctx.fillStyle='#04070acc';ctx.fillRect(x-2,y+h+4,nw+ctx.measureText(pl).width*.8+22,13);ltxt(nm,x+2,y+h+14,'bold 10px sans-serif',main2);ltxt(pl,x+nw+12,y+h+14,'bold 8px sans-serif',f.ph2?'#ffb0a0':'#e6d4ff');
+  /* ×N */if(nL>1){ctx.fillStyle='#000c';ctx.fillRect(x+w+30,y-4,26,16);ltxt('×'+nL,x+w+43,y+8,'900 11px sans-serif',cc[0],1,'center')}
   const hp=Math.max(0,Math.ceil(f.hp)).toLocaleString('en-US')+' / '+f.mx.toLocaleString('en-US');ltxt(hp,x+w,y+h+14,'bold 10px monospace',r<.25?'#ff8a9a':'#fff6c8',1,'right');
   ctx.restore()}
  function hud(now){const og=(typeof G!=='undefined')?G:null;try{clavisBar(now)}catch(e){}
@@ -307,12 +341,12 @@
   hud(now);
   if(f.st==='intro'){const k=Math.min(1,(now-f.t)/400);txt('DUEL',W/2,H/2-6,30,'#ffd84a',k);txt('클라비스와 1:1 결투',W/2,H/2+12,10,'#e6d4ff',k)}
   if(t<9&&f.st!=='intro'&&!SQ.done)txt('공격 J · 대시 K · 패링 F — 「!」가 뜨면 패링, 클라비스도 막고 피해요',W/2,AY+AH-3,8,'#e8eef6',.75);
-  /* 끝 */if(f.st==='dead'&&now-f.t>1800&&!SQ.done){SQ.done=1;finish(true)}if(P.hp<=0&&!SQ.done){if(!SQ.lose)SQ.lose=now;if(now-SQ.lose>1200){SQ.done=1;finish(false)}}}
+  /* 끝 */if(f.st==='dead'&&now-f.t>5800&&!SQ.done){SQ.done=1;finish(true)}if(P.hp<=0&&!SQ.done){if(!SQ.lose)SQ.lose=now;if(now-SQ.lose>1200){SQ.done=1;finish(false)}}}
  function out(fn){$('overlay').hidden=true;SQ=null;mode='boss';try{fn()}catch(e){}}
  function finish(won){/* 결과창 뒤에는 결투장이 그대로 보이게(mode는 sec127 유지) */
-  if(won){const s=SV(),first=!s.beat;if(first){s.beat=Date.now();save()}found('sec');
-   showOverlay('비밀의 방 · CLEAR','열쇠지기 클라비스를 쓰러뜨렸어요!',(first?'<b style="color:#ff4d6d">✪ 신화 캐릭터 「클라비스」</b>가 상점(캐릭터)에 나타났어요.<br>쓰려면 🪙 30,000으로 사야 해요.':'클라비스는 이미 상점에 있어요.')+'<br><small style="opacity:.75">순간이동으로 피하고, 막는 순간 되받아치는 비밀의 열쇠지기.</small>',
-    [['🛒 상점에서 보기',()=>out(()=>{toLobby();setTimeout(()=>{try{openShop('ch');WS.sel.ch=IDX;renderShop();const cv=document.querySelector('#shopGrid canvas[data-i="'+IDX+'"]');cv&&cv.scrollIntoView({block:'center'})}catch(e){}},300)}),true],['▲ 10F 다시',()=>out(()=>TW71.start(10)),false],['로비로',()=>out(()=>toLobby()),false]])}
+  if(won){const s=SV(),first=!s.beat;if(first){s.beat=Date.now()}s.core=1;save();found('sec');
+   showOverlay('비밀의 방 · CLEAR','열쇠지기 클라비스를 쓰러뜨렸어요!','<b style="color:#c9a8ff">🔮 열쇠지기의 코어</b>를 받았어요.<br>광장 위쪽 <b>탑의 성문</b>에 코어를 박으면 문이 열려요.'+(s.gate?'<br><small style="opacity:.75">(성문은 이미 열려 있어요)</small>':''),
+    [['⛲ 광장으로',()=>out(()=>{toLobby();setTimeout(()=>{try{PLZ111.enter()}catch(e){}},300)}),true],['▲ 10F 다시',()=>out(()=>TW71.start(10)),false],['로비로',()=>out(()=>toLobby()),false]])}
   else showOverlay('비밀의 방','클라비스에게 졌어요','열쇠는 그대로 있어요. 바로 다시 결투하거나, 탑 10F 보스전에서 K를 눌러 다시 올 수 있어요.',[['↺ 다시 결투',()=>{$('overlay').hidden=true;SQ={ph:'room',t0:performance.now(),parts:[]};mode='sec127';lastT=performance.now()},true],['로비로',()=>out(()=>toLobby()),false]])}
  /* 폰: 결투 중에는 누른 곳으로 걷기(조이스틱이 없을 때) */
  document.addEventListener('pointerdown',e=>{try{if(!SQ||(SQ.ph!=='duel'&&SQ.ph!=='free')||e.target.closest('button'))return;const cv=$('game'),r=cv.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;SQ.tgt={x:(e.clientX-r.left)/r.width*W,y:(e.clientY-r.top)/r.height*H+(SQ.ph==='free'?SQ.cam||0:0)}}catch(_){}},true);
@@ -325,5 +359,5 @@
  {const f=toLobby;toLobby=function(){if(mode==='sec127'){SQ=null;mode='boss'}return f.apply(this,arguments)}}
 
  const st=document.createElement('style');st.textContent=`#key127{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9400;padding:12px 22px;border:0;border-radius:999px;font:900 17px/1 sans-serif;color:#2a1c08;background:linear-gradient(180deg,#ffe58a,#e0a83a);box-shadow:0 0 0 2px #fff9,0 0 24px #ffd84aaa;animation:eg126c 1.4s ease-in-out infinite}#key127[hidden]{display:none}html.sec127on #songInfo{display:none!important}`;document.head.appendChild(st);
- window.SEC127={IDX,useKey,KEYP,SV,startFight,get SQ(){return SQ},get F(){return F}};
+ window.SEC127={IDX,useKey,KEYP,SV,startFight,get SQ(){return SQ},get F(){return F},kit:{hero,txt,ltxt,bubble,brickC,torch,R0,snd,asFoe,kneelImg,foeWp}};
 }catch(e){console.error('v127 secret room',e)}})();
