@@ -196,8 +196,9 @@
     (showWon()?'<button class="w" data-a="won" data-id="'+x.id+'">'+A.won(x.price)+'</button>':'')+(D?'<button class="d" data-a="dia" data-id="'+x.id+'">💎 '+D.price(x).toLocaleString()+'</button>':'');
    h+='<div class="r'+(on?' on':'')+(lk?' lk':'')+'"><canvas width="72" height="72" data-id="'+x.id+'" data-k="'+x.kind+'"></canvas><div class="n"><b>'+safe(x.name.split(' · ').pop())+'</b><em style="background:'+(TB[x.tier]||TB['변이'])+'">'+x.tier+'</em><small>'+(own?'✓ 보유':safe((x.tags||[])[0]||''))+'</small></div><div class="bt">'+btn+'</div></div>'}
   return h+'<div class="msg" style="color:'+(msgC||'')+'">'+(performance.now()-msgAt<9000?safe(msgT):'')+'</div></div>'}
- const say=(t,c)=>{msgT=t;msgC=c||'';msgAt=performance.now();const m=document.querySelector('#sk119 .msg');if(m){m.textContent=t;m.style.color=c||''}};
- function act(a,id,btn){const A=API(),k=shopTab,x=skinsFor(k,wsSelOf(k)).find(y=>y.id===id);if(!A||!x)return;
+ const say=(t,c)=>{msgT=t;msgC=c||'';msgAt=performance.now();document.querySelectorAll('#sk119 .msg,#psw121 .msg').forEach(m=>{m.textContent=t;m.style.color=c||''})};
+ const swords=()=>{const A=API();return A?A.items().filter(x=>x.kind==='sword'):[]};
+ function act(a,id,btn){const A=API(),k=shopTab,x=skinsFor(k,wsSelOf(k)).concat(swords()).find(y=>y.id===id);if(!A||!x)return;
   if(a==='lock'){try{gmSfx('no')}catch(_){}say(x.kind==='prem'?'먼저 위의 「사기」로 이 프리미엄 캐릭터를 가져야 해요.':'먼저 위에서 이 '+(k==='pt'?'펫':'캐릭터')+'을(를) 코인으로 사야 스킨을 살 수 있어요.','#ffd166');return}
   if(a==='eq'){const now=A.toggleSave(x);try{gmSfx('ok')}catch(_){}say(now?x.name.split(' · ').pop()+' 장착! 게임 화면에서 이 모습으로 보여요.':'원래 모습으로 돌아왔어요.',now?'#7dffb0':'');try{renderShop()}catch(e){wsRefresh()}return}
   if(a==='dia'){const D=window.DIA80,need=D.price(x);if(D.get()<need){try{gmSfx('no')}catch(_){}say('다이아가 '+(need-D.get()).toLocaleString()+'개 모자라요. 탑의 보스 층을 깨면 얻어요.','#ffb2a8');return}
@@ -209,14 +210,34 @@
    P.buy(x.pid,res=>{if(res.opened){say('새 창에서 결제를 마쳐 주세요. 끝나면 여기 저절로 들어와요.'+(res.test?' (테스트 결제)':''));return}
     if(res.ok){try{if(!A.isOn(x))A.toggle(x);P.sync()}catch(e){}try{gmSfx('ok')}catch(_){}say('🎉 '+x.name.split(' · ').pop()+' 구매 완료! 바로 장착했어요.','#7dffb0')}
     else if(res.need==='login')say('먼저 로그인해 주세요.','#ffb2a8');else if(res.fail)say('결제가 승인되지 않았어요. 돈은 빠져나가지 않았어요.','#ffb2a8');else if(res.cancel)say('결제를 마치지 않았어요.','#ffd166');else if(res.err)say(res.err,'#ffb2a8');
-    try{const m=document.getElementById('shopModal');if(m&&!m.hidden)wsRefresh()}catch(e){}})}}
+    try{const m=document.getElementById('shopModal');if(m&&!m.hidden)renderShop()}catch(e){}})}}
  {const f=wsRefresh;wsRefresh=function(){const r=f.apply(this,arguments);try{const inf=$('wsInfo');if(!inf)return r;const o=$('sk119');if(o)o.remove();const h=rows();if(h){inf.insertAdjacentHTML('beforeend',h);draw(performance.now(),true)}}catch(e){console.error('sk119',e)}return r}}
- document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#sk119 button[data-a]');if(!b)return;e.stopPropagation();try{act(b.dataset.a,b.dataset.id,b)}catch(err){console.error('sk119',err)}},true);
+ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#sk119 button[data-a],#psw121 button[data-a]');if(!b)return;e.stopPropagation();try{act(b.dataset.a,b.dataset.id,b)}catch(err){console.error('sk119',err)}},true);
  /* 작은 그림: 공방이 열려 있을 때만 0.12초마다 */
- function draw(now,force){const A=API();if(!A)return;const L=A.items();document.querySelectorAll('#sk119 canvas[data-id]').forEach(cv=>{const x=L.find(y=>y.id===cv.dataset.id&&y.kind===cv.dataset.k);if(x)try{A.drawItem(cv.getContext('2d'),x,cv.width,cv.height,now,true)}catch(e){}})}
- setInterval(()=>{try{const m=document.getElementById('shopModal');if(m&&!m.hidden&&$('sk119'))draw(performance.now())}catch(e){}},120);
+ function draw(now,force){const A=API();if(!A)return;const L=A.items();document.querySelectorAll('#sk119 canvas[data-id],#psw121 canvas[data-id]').forEach(cv=>{const x=L.find(y=>y.id===cv.dataset.id&&y.kind===cv.dataset.k);if(x)try{A.drawItem(cv.getContext('2d'),x,cv.width,cv.height,now,true)}catch(e){}})}
+ setInterval(()=>{try{const m=document.getElementById('shopModal');if(m&&!m.hidden&&($('sk119')||$('psw121')))draw(performance.now())}catch(e){}},120);
  /* 공방 탭 이름 · 안내 */
- {const f=renderShop;renderShop=function(){const r=f.apply(this,arguments);try{const t=$('wsTitle');if(t&&t.textContent!=='🪙 일반 상점 · 태엽 공방')t.textContent='🪙 일반 상점 · 태엽 공방'}catch(e){}return r}}
+ /* v121: 현질 무기 3종을 공방 「무기」 칸 맨 위에 (₩ 또는 💎, 산 무기는 여기서 장착) */
+ function swBlock(){const o=$('psw121');if(o)o.remove();const g=$('shopGrid'),A=API();if(shopTab!=='wp'||!g||!A)return;const L=swords();if(!L.length)return;const D=window.DIA80;
+  let h='<div id="psw121"><h4>💎 현질 무기 <small>₩ 또는 💎 · 장착하면 모양 · 궤적 · 이펙트 · 공격력이 이 검으로</small></h4><div class="g">';
+  for(const x of L){const own=A.owns(x),on=own&&A.isOn(x);
+   const btn=own?'<button class="e'+(on?' on':'')+'" data-a="eq" data-id="'+x.id+'">'+(on?'✓ 장착 중':'장착하기')+'</button>':(showWon()?'<button class="w" data-a="won" data-id="'+x.id+'">'+A.won(x.price)+'</button>':'')+(D?'<button class="d" data-a="dia" data-id="'+x.id+'">💎 '+D.price(x).toLocaleString()+'</button>':'');
+   h+='<div class="c'+(on?' on':'')+'" style="--tc:'+x.col+'"><canvas width="72" height="72" data-id="'+x.id+'" data-k="sword"></canvas><b>'+safe(x.name)+'</b><em>'+x.tier+'</em><div class="bt">'+btn+'</div></div>'}
+  g.insertAdjacentHTML('beforebegin',h+'</div><div class="msg" style="color:'+(msgC||'')+'">'+(performance.now()-msgAt<9000?safe(msgT):'')+'</div></div>');draw(performance.now(),true)}
+ const swc=document.createElement('style');swc.textContent=`
+ #psw121{margin:0 0 10px;padding:8px 10px;border-radius:14px;background:linear-gradient(90deg,#2a0a2a,#14183a);border:1px solid #ff9af066}
+ #psw121 h4{margin:0 0 6px;font-size:13px;font-weight:900;background:linear-gradient(90deg,#fff2a8,#ff9af0,#8ad8ff);-webkit-background-clip:text;background-clip:text;color:transparent}#psw121 h4 small{font-size:10.5px;font-weight:700;color:#c8b0e0;-webkit-text-fill-color:#c8b0e0}
+ #psw121 .g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ #psw121 .c{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border-radius:12px;background:#ffffff0a;border:1px solid var(--tc)}#psw121 .c.on{background:#5affd814;border-color:#5affd8}
+ #psw121 canvas{width:56px;height:56px;image-rendering:pixelated;border-radius:8px;background:#0a0f17}
+ #psw121 b{font-size:12px;color:#fff;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}#psw121 em{font-style:normal;font-size:9.5px;font-weight:900;color:var(--tc)}
+ #psw121 .bt{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+ #psw121 button{font:inherit;font-size:11px;font-weight:900;padding:5px 8px;border-radius:9px;border:1px solid #ffffff2a;background:#ffffff12;color:#fff;cursor:pointer;white-space:nowrap}
+ #psw121 button.w{background:linear-gradient(180deg,#ffe58a,#f0a82a);color:#2a1606}#psw121 button.d{background:linear-gradient(180deg,#8ad8ff,#4a7ad8);color:#06142a}#psw121 button.d.ask{background:#ffd166;color:#2a1606}
+ #psw121 button.e{background:#1d3a2c;color:#7dffb0}#psw121 button.e.on{background:#5affd8;color:#06221a}
+ #psw121 .msg{min-height:12px;margin-top:4px;font-size:11px;color:#ffd166}
+ html.ph #psw121 canvas{width:44px;height:44px}html.ph #psw121 b{font-size:10.5px}`;document.head.appendChild(swc);
+ {const f=renderShop;renderShop=function(){const r=f.apply(this,arguments);try{swBlock()}catch(e){console.error('psw121',e)}try{const t=$('wsTitle');if(t&&t.textContent!=='🪙 일반 상점 · 태엽 공방')t.textContent='🪙 일반 상점 · 태엽 공방'}catch(e){}return r}}
 
  /* ================= ③ 로비 「상점」 → 일반 상점 · 현질 상점 고르기 창 ================= */
  try{const s=GM_ITEMS.find(x=>x.id==='shop');if(s){s.ic='🛒';s.t='상점';s.sub='🪙 일반 상점 · 💎 현질 상점'}}catch(e){}
