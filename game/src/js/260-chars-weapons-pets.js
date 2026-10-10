@@ -118,7 +118,8 @@ function doDash(){if(paused||dlg.active)return;if(!(mode==='boss'&&(G.state==='p
  if(mode==='boss'){G.pops.push({x:P.x,y:P.y-22,t:now,tx:good?'DASH!':'dash',col:good?'#8dcdf5':'#6a8090'});for(let i=0;i<8;i++)G.parts.push({x:P.x,y:P.y,vx:-ix*60+(RND()-.5)*50,vy:-iy*60+(RND()-.5)*50,life:.3,max:.3,col:'#8dcdf5',s:2})}}
 function stamTick(dt){const mx=stamMax();if(P.stam===undefined)P.stam=mx;
  /* v96: 다 쓰지 않아도 대시 칸이 조금씩 다시 참(마지막 대시 0.6초 뒤부터 · 한 칸 약 1.1초). 전에는 칸을 전부 써야만 충전돼서 「안 차오른다」고 느껴졌음 */
- if(!P.stamLock&&P.stam<mx&&performance.now()>(P.dashCd||0)+430){P.stam=Math.min(mx,P.stam+dt*.18*(curPet().regen||1))}
+ /* v138: 조금씩 차는 것은 없앰 — 다 쓰면(한 번 더 대시할 만큼도 안 남으면) 그때 꽉 찰 때까지 충전. 탑 · 보스전 · 결투 · 던전 모두 이 함수 하나 */
+ if(!P.stamLock&&P.stam<((curPet()||{}).dashCost||.2)-.001){P.stamLock=true}
  if(P.stamLock){P.stam=Math.min(mx,P.stam+dt*mx/3.4*(curPet().regen||1));if(P.stam>=mx-1e-6){P.stam=mx;P.stamLock=false;sfx(700,.12,'triangle',.03,1100)}}
  const pt=curPet();if(pt.heal&&(mode==='boss'&&G&&G.state==='play'||mode==='cave')){const now=performance.now();if(!P.healAt||P.healAt<now-60000)P.healAt=now+pt.heal*1000;if(now>=P.healAt){P.healAt=now+pt.heal*1000;if(P.hp<P.maxhp&&P.hp>0){P.hp=Math.min(P.maxhp,P.hp+1);if(mode==='boss')G.pops.push({x:P.x,y:P.y-30,t:now,tx:'+1',col:'#7dffa8'})}}}}
 /* ---- 보스전 펫 따라다니기 ---- */

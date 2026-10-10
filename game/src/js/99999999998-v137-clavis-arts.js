@@ -104,7 +104,7 @@
  const near=(x,y,r)=>targets().filter(t=>Math.hypot(t.x-x,t.y-y)<r+(t.boss||t.isBoss?18:0)).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y));
  function hit(t,d,col,tx){d=Math.max(1,Math.round(d));S.busy=1;try{if(t.boss){if(typeof spDmg==='function')spDmg(d,G.boss.x,G.boss.y-10,col,now0())}else if(window.TW71)TW71.hitMob(t,d,col,tx)}catch(e){}S.busy=0}
  function clk(){try{if(mode==='tower'&&TW71.T)return TW71.T.clk}catch(e){}return now0()/1000}
- function flash(k){try{MYTH100.S.flash[k]=now0()}catch(e){}const a=AB[k];if(a){const n=now0();if(!FX.some(f=>f.k==='pop'&&f.ab===k&&n-f.t0<500))FX.push({k:'pop',ab:k,t0:n,dur:900,tx:a.ico+' '+a.n,col:a.col})}}
+ function flash(k){try{MYTH100.S.flash[k]=now0()}catch(e){}/* v138: 이름 표시는 99999999999가 맨 위 층에 */}
  function spin(){const n=now0();flash('keyspin');FX.push({k:'spin',x:P.x,y:P.y,t0:n,dur:420});snd(420,.12,'sawtooth',.05,180);for(const t of near(P.x,P.y,48))hit(t,S.last*.7,KEYC,'🌀')}
  function throwKeys(){const t=near(P.x,P.y,220)[0];if(!t)return false;const n=now0(),base=Math.atan2(t.y-10-(P.y-12),t.x-P.x);flash('keythrow');snd(900,.08,'square',.035,1600);
   for(let i=0;i<3;i++){const a=base+(i-1)*.28;FX.push({k:'key',x:P.x,y:P.y-12,vx:Math.cos(a)*240,vy:Math.sin(a)*240,t0:n,dur:2400,back:0,hitA:new Set(),hitB:new Set(),rot:0})}return true}
@@ -121,8 +121,7 @@
   {const f=C.onParry;C.onParry=function(n){const r=f.apply(this,arguments);try{if(n&&on())cage()}catch(e){}return r}}
   {const f=C.onDash;C.onDash=function(){const r=f.apply(this,arguments);try{if(on()&&inFight())thrust()}catch(e){}return r}}}
  if(typeof doParry==='function'){const f=doParry;doParry=function(now){const b=(typeof G!=='undefined'&&G&&G.parrySp||[]).length;const r=f.apply(this,arguments);try{if(mode==='boss'&&on()&&(G.parrySp||[]).length>b)cage()}catch(e){}return r}}
- /* 보스전의 대시는 CB81이 안에서만 onDash를 불러 바깥 감싸기가 못 들음 → doDash를 직접 살핌(맞힘은 180이 CB81.onBossHit을 부름) */
- if(typeof doDash==='function'){const f=doDash;doDash=function(){const d0=P.dash;const r=f.apply(this,arguments);try{if(mode==='boss'&&P.dash&&P.dash!==d0&&on()&&inFight())thrust()}catch(e){}return r}}
+ /* v138: 보스전 대시도 CB81.onDash를 부르므로(9999996) 여기서 따로 살피지 않음 */
  /* 클라비스 결투에서 클라비스의 칼을 패링했을 때도 감옥 */
  const onDuelParry=()=>{try{if(on())cage()}catch(e){}};
  /* 매 프레임: 열쇠 투척 시계 · 날아가는 열쇠 · 그리기 */

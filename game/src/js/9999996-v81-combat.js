@@ -152,14 +152,14 @@
   if(extra>0)setTimeout(()=>bossDmg(extra,(p||b).col),90)}
  if(typeof doParry==='function'){const f=doParry;doParry=function(now){const before=(G.parrySp||[]).length;const r=f.apply(this,arguments);
   try{const p=perk();if(p&&(p.dbl||p.fox)){const add=(G.parrySp||[]).slice(before);for(const s of add.slice(0,p.dbl?add.length:1))G.parrySp.push(Object.assign({},s,{t:s.t+120,side:-s.side*1.3}));if(p.dbl)P.inv=Math.max(P.inv,now+200)}}catch(e){}return r}}
- if(typeof hurtP==='function'){const f=hurtP;hurtP=function(dmg,now){if(mode==='boss'&&!(now<P.inv)){dmg=onHurt(dmg);if(dmg<=0){P.inv=Math.max(P.inv,now+300);return}}const hp0=P.hp;const r=f.call(this,dmg,now);
+ if(typeof hurtP==='function'){const f=hurtP;hurtP=function(dmg,now){if(mode==='boss'&&!(now<P.inv)){/* v138: 바깥에서 감싼 것(신화 스킬 회피 등)도 듣게 CB81.onHurt로 */dmg=(window.CB81&&CB81.onHurt||onHurt)(dmg);if(dmg<=0){P.inv=Math.max(P.inv,now+300);return}}const hp0=P.hp;const r=f.call(this,dmg,now);
   /* 보스의 상태 이상 공격: 보통 15% 중독, 어려움 25% 중독 · 10% 탈진, 익스트림 30% 중독 · 20% 탈진 */
   try{if(mode==='boss'&&P.hp<hp0&&P.hp>0&&G.state==='play'&&diff!=='easy'){const pc={normal:.15,hard:.25,extreme:.3}[diff]||0,dc={hard:.1,extreme:.2}[diff]||0;if(Math.random()<pc)poison(3,'보스의 독');else if(Math.random()<dc)drain(.5)}}catch(e){}return r}}
  /* PERFECT 범위(네온 세트): win은 상수 함수라 감쌀 수 없어서 100 · 999997이 CB81.winMul()을 곱한다 */
  function winMul(){try{const b=setb();return b&&b.win||1}catch(e){return 1}}
  if(typeof stamMax==='function'){const f=stamMax;stamMax=function(){const r=f.apply(this,arguments);try{const b=setb();return r+(b&&b.dash?.2*b.dash:0)}catch(e){return r}}}
  if(typeof stamTick==='function'){const f=stamTick;stamTick=function(dt){let k=1;try{const b=setb();if(b&&b.regen)k*=b.regen;if(ST.drainT>now0())k*=.4}catch(e){}return f.call(this,dt*k)}}
- if(typeof doDash==='function'){const f=doDash;doDash=function(){const d0=P.dash;const r=f.apply(this,arguments);try{if(mode==='boss'&&P.dash&&P.dash!==d0)onDash()}catch(e){}return r}}
+ if(typeof doDash==='function'){const f=doDash;doDash=function(){const d0=P.dash;const r=f.apply(this,arguments);try{if(mode==='boss'&&P.dash&&P.dash!==d0)(window.CB81&&CB81.onDash||onDash)()}catch(e){}return r}}
 
  /* ---------- 상점에 능력 보이기 ---------- */
  try{(window.SKIN58&&SKIN58.list||[]).forEach(s=>{const p=PERK[s.id];if(p&&s.tags&&!s.tags.some(x=>/^⚡/.test(x)))s.tags.unshift('⚡ 능력 · '+p.n)})}catch(e){}
