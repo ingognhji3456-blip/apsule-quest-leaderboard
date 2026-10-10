@@ -29171,7 +29171,18 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(!inside||performance.now()-d.t>1200)return;
   setTimeout(()=>{if(lastClick>=d.t)return;/* 브라우저가 click을 안 만들었으면 */try{if(document.contains(d.b))d.b.click()}catch(_){}},120)},true);
  document.addEventListener('pointercancel',e=>{/* 가장자리 쓸기로 취소돼도 ✕ 위였으면 누름(0.4초 안의 짧은 누름만) */if(!down)return;const d=down;down=null;if(performance.now()-d.t>400)return;setTimeout(()=>{if(lastClick>=d.t)return;try{if(document.contains(d.b))d.b.click()}catch(_){}},120)},true);
- window.MF142={v:1};
+ /* v150: 자리로 찾기 — 손가락을 뗀 곳이 보이는 ✕ 둘레(+14px) 안이면, 그 위를 무엇이 덮고 있어도(투명한 판 · 확대 차이 · 화면 끝 취소) ✕를 눌러 줌.
+    세로 · 가로 똑같이. 이미 ✕가 눌렸으면(click이 왔으면) 다시 누르지 않음 */
+ const XSEL='button.cx77,#bbShop .ssX,#shopClose,#acClose,#more98 .qh150 button';
+ const vis=b=>{if(!b.isConnected)return false;const r=b.getBoundingClientRect();if(r.width<4||r.height<4)return false;for(let e=b;e;e=e.parentElement){if(e.hidden)return false;const cs=getComputedStyle(e);if(cs.display==='none'||cs.visibility==='hidden'||+cs.opacity===0)return false}return true};
+ function xAt(x,y){let best=null,bd=1e9;for(const b of document.querySelectorAll(XSEL)){const r=b.getBoundingClientRect(),pad=14;if(x<r.left-pad||x>r.right+pad||y<r.top-pad||y>r.bottom+pad)continue;if(!vis(b))continue;const d=Math.hypot(x-(r.left+r.width/2),y-(r.top+r.height/2));if(d<bd){bd=d;best=b}}return best}
+ let d2=null;
+ document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'){d2=null;return}const b=xAt(e.clientX,e.clientY);d2=b?{b,t:performance.now(),x:e.clientX,y:e.clientY}:null},true);
+ const fire=(d,x,y)=>{if(!d||performance.now()-d.t>1200)return;if(Math.hypot(x-d.x,y-d.y)>40)return;setTimeout(()=>{if(lastClick>=d.t)return;try{if(vis(d.b))d.b.click()}catch(_){}},140)};
+ document.addEventListener('pointerup',e=>{const d=d2;d2=null;if(d&&xAt(e.clientX,e.clientY)===d.b)fire(d,e.clientX,e.clientY)},true);
+ document.addEventListener('pointercancel',e=>{const d=d2;d2=null;if(d&&performance.now()-d.t<500)fire(d,d.x,d.y)},true);
+ document.addEventListener('click',e=>{if(e.target&&e.target.closest&&e.target.closest(XSEL))lastClick=performance.now()},true);
+ window.MF142={v:2,xAt};
 }catch(e){console.warn('v142',e)}})();
 /* v143: 계정 기록 처음부터 하기 (RS143)
    로그인한 계정 창(☰ · 계정 단추)의 「지금 저장 · 랭킹 · 로그아웃」 아래에 「기록 처음부터」 단추.
@@ -29837,8 +29848,9 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  html.lpP #duo85 .tb149{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 8px}
  html.lpP #duo85 .tb149 button{height:40px;border-radius:12px;border:1px solid #ffffff22;background:#0e1620;color:#cfe;font:inherit;font-weight:900;font-size:14px;cursor:pointer}
  html.lpP #duo85 .tb149 button.on{background:linear-gradient(180deg,#b88cff,#7a4adf);color:#fff;border-color:#d8c0ff}
+ html.lpP #duo85 .dPv .tb149 button.on{background:linear-gradient(180deg,#ff7a9a,#e83a6a);border-color:#ffb0c4}
  html.lpP #duo85 .dCols{grid-template-columns:1fr!important}
- html.lpP #duo85 .dCols.t-mk>.dCol:not(.mk),html.lpP #duo85 .dCols.t-jn>.dCol.mk{display:none!important}
+ html.lpP #duo85 .dCols>.dCol.off149{display:none!important}
  html.lpP #duo85 .dCol>h4{display:none}
  html.lpL #duo85 .dP.wide{width:min(900px,calc(100vw - 24px))!important;max-height:calc(100dvh - 16px)!important}
  html.lpL #duo85 .dPrev{height:70px!important;width:100%!important;object-fit:cover}
@@ -29853,16 +29865,108 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   const g=P.querySelector('#fileGoogle');if(g){const c=g.closest('.acCard');if(c)c.classList.add('g149')}
   let z=P.querySelector('.dz149');if(!z&&(rs||dl)){z=document.createElement('div');z.className='dz149';P.appendChild(z)}
   if(z){if(rs&&rs.parentNode!==z)z.insertBefore(rs,z.firstChild);if(dl&&dl.parentNode!==z)z.appendChild(dl)}}
- /* 듀오: 세로 탭 */
- let duoTab='mk';
+ /* 듀오 · 결투: 세로 탭(칸 제목 h4를 탭 이름으로). v150: 결투 창은 칸에 .mk가 없어서 둘 다 숨던 것 고침 */
+ const TAB={};
  function duoFix(){const box=document.getElementById('duo85');if(!box||box.hidden)return;const cols=box.querySelector('.dCols');if(!cols)return;
-  cols.classList.toggle('t-mk',duoTab==='mk');cols.classList.toggle('t-jn',duoTab==='jn');
-  if(cols.previousElementSibling&&cols.previousElementSibling.classList.contains('tb149')){const t=cols.previousElementSibling;t.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===duoTab));return}
-  const t=document.createElement('div');t.className='tb149';t.innerHTML='<button data-t="mk">방 만들기</button><button data-t="jn">방 들어가기</button>';
-  t.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;e.stopPropagation();duoTab=b.dataset.t;try{window.gmSfx&&gmSfx('move')}catch(_){}duoFix()});
-  cols.parentNode.insertBefore(t,cols);t.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===duoTab))}
+  const cs=[...cols.children].filter(c=>c.classList.contains('dCol'));if(cs.length<2)return;const key=cs.map(c=>(c.querySelector('h4')||{}).textContent||'').join('|');
+  let k=TAB[key]|0;cs.forEach((c,i)=>c.classList.toggle('off149',i!==k));
+  let t=cols.previousElementSibling;if(!(t&&t.classList.contains('tb149'))){t=document.createElement('div');t.className='tb149';cols.parentNode.insertBefore(t,cols);
+   t.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;e.stopPropagation();TAB[t.dataset.key]=+b.dataset.i;try{window.gmSfx&&gmSfx('move')}catch(_){}duoFix()})}
+  const h=cs.map((c,i)=>'<button data-i="'+i+'" class="'+(i===k?'on':'')+'">'+(((c.querySelector('h4')||{}).textContent)||('칸 '+(i+1)))+'</button>').join('');
+  if(t.dataset.key!==key||t.dataset.k!=String(k)){t.dataset.key=key;t.dataset.k=k;t.innerHTML=h}
+  cols.classList.toggle('pv149',!!box.querySelector('.dPv'))}
  function watch(id,fn){const box=document.getElementById(id);if(!box||box.dataset.w149)return;box.dataset.w149=1;const run=()=>{try{fn()}catch(e){}};new MutationObserver(run).observe(box,{childList:true,subtree:true});run()}
  setInterval(()=>{watch('acctBox',acFix);watch('duo85',duoFix);try{acFix()}catch(e){}},700);
  window.SC149={v:1};
 }catch(e){console.warn('v149s',e)}})();
+/* v150: 폰 · 패드 ☰ 빠른 설정 · 결투 창 · 결투 등급표 (QP150) — 사용자가 보내 준 그림을 참고
+   - ☰ 창(#more98): 위에 「빠른 설정」 제목 + ✕. 가로는 왼쪽(켜고 끄기) · 오른쪽(랭킹 · 영상관 같은 이동) 두 칸, 화면 가운데.
+   - 결투 창(#duo85 .dPv): 가로는 왼쪽 빠른 대전(그림 옆에 규칙 · 등급 · 랭킹 · 전적 · 큰 단추) · 오른쪽 친구 대전을 한 화면에.
+     세로는 v149 탭(빠른 대전 | 친구 대전)으로 한쪽씩.
+   - 결투 등급표(#pvLad102): 가로는 왼쪽(브론즈) → 오른쪽(마스터)으로 눕혀서 한 화면에. 아래에 「현재 등급」 막대.
+   - 이 창들 안의 이모지도 도트 그림으로(SO149.iconize). */
+(function(){try{
+ const RT=document.documentElement;
+ const st=document.createElement('style');st.id='qp150css';st.textContent=`
+ /* ── 빠른 설정 ── */
+ #more98 .qh150{display:none}
+ html.lp #more98 .qh150{display:flex;align-items:center;gap:8px;padding:2px 2px 6px;margin-bottom:2px}
+ html.lp #more98 .qh150 b{flex:1;font-size:17px;font-weight:900;color:#e8f4ef}
+ html.lp #more98 .qh150 button{width:32px;height:32px;border-radius:10px;border:1px solid #ffffff22;background:#ffffff0c;color:#cfe;font:inherit;font-size:16px;font-weight:900;cursor:pointer}
+ html.lp #more98{border-radius:18px!important;border:1px solid #7fd8ff55!important;box-shadow:0 0 20px #3fa8ff33,0 14px 40px #000c!important}
+ html.lp #more98 .m98d button.on{box-shadow:0 0 10px var(--dc)}
+ html.lp #more98 .m98{border-radius:13px!important;min-height:48px}
+ html.lpL #more98:not([hidden]){left:50%!important;top:50%!important;transform:translate(-50%,-50%);width:min(620px,calc(100vw - 32px))!important;max-height:calc(100dvh - 20px)!important;
+  display:grid!important;grid-template-columns:1fr 1fr;grid-auto-flow:row dense;align-content:start;column-gap:8px;animation:none!important}
+ html.lpL #more98 .qh150,html.lpL #more98 .m98d{grid-column:1/-1}
+ html.lpL #more98 .m98{min-height:38px!important;padding:3px 10px!important;margin:0 0 5px!important}
+ html.lpL #more98 .m98 small{font-size:10px!important}
+ html.lpL #more98 .m98d>span{display:none!important}
+ html.lpL #more98 .m98d{padding-bottom:6px!important}
+ html.lpL #more98 .qh150{padding-bottom:2px}
+ html.lpL #more98 .m98.t150{grid-column:1}
+ html.lpL #more98 .m98.l150{grid-column:2}
+ /* ── 결투 창 (가로) ── */
+ html.lpL #duo85 .dP.dPv.wide{width:min(940px,calc(100vw - 20px))!important;max-height:calc(100dvh - 12px)!important;overflow-y:auto!important;padding:10px 12px!important}
+ html.lpL #duo85 .dPv .dHd{margin-bottom:6px!important}
+ html.lpL #duo85 .dPv .dCols{grid-template-columns:minmax(0,1.45fr) minmax(0,1fr)!important;gap:10px!important}
+ html.lpL #duo85 .dPv .dCol{padding:8px 10px!important}
+ html.lpL #duo85 .dPv .pvQ{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 10px;align-content:start}
+ html.lpL #duo85 .dPv .pvQ>h4,html.lpL #duo85 .dPv .pvQ>.pvRank,html.lpL #duo85 .dPv .pvQ>.pvGo{grid-column:1/-1}
+ html.lpL #duo85 .dPv .pvArt{grid-column:1;width:100%!important;height:96px!important;object-fit:cover;border-radius:10px}
+ html.lpL #duo85 .dPv .pvRule{grid-column:2;margin:0!important;font-size:11.5px!important;align-self:center}
+ html.lpL #duo85 .dPv .pvTop{grid-column:1;margin:0!important}
+ html.lpL #duo85 .dPv .pvTop small{display:none}
+ html.lpL #duo85 .dPv .pvRec{grid-column:2;margin:0!important}
+ html.lpL #duo85 .dPv .pvGo{height:52px!important;font-size:19px!important}
+ html.lpL #duo85 .dPv .pvTip{font-size:11px!important}
+ /* 결투 큰 단추 */
+ html.lp #duo85 .dPv .pvGo{background:linear-gradient(180deg,#ff8aa8,#f0386a)!important;color:#fff!important;border:2px solid #ffc0d0!important;box-shadow:0 0 16px #ff5a8a66!important}
+ html.lp #duo85 .dPv .pvMk{background:linear-gradient(180deg,#c8a0ff,#8a4ae8)!important;color:#fff!important}
+ html.lp #duo85 .dPv .pvTop{background:linear-gradient(180deg,#ffe07a,#f0b02e)!important;color:#3a2200!important;font-weight:900}
+ /* ── 등급표 ── */
+ #pvLad102 .cur150{display:none}
+ html.lp #pvLad102 .cur150{display:flex;align-items:center;gap:10px;margin:0 12px 10px;padding:8px 12px;border-radius:12px;background:#ffffff08;border:1px solid var(--lc,#ffffff33)}
+ html.lp #pvLad102 .cur150 b{color:var(--lc);font-size:14px;white-space:nowrap}
+ html.lp #pvLad102 .cur150 .pb{flex:1;height:8px;border-radius:5px;background:#ffffff18;overflow:hidden}
+ html.lp #pvLad102 .cur150 .pb i{display:block;height:100%;background:linear-gradient(90deg,var(--lc),#fff)}
+ html.lp #pvLad102 .cur150 small{color:#cfd8e0;white-space:nowrap}
+ html.lpP #pvLad102 .lp{width:calc(100vw - 16px)!important;max-height:calc(100dvh - 16px)!important}
+ html.lpL #pvLad102 .lp{width:calc(100vw - 20px)!important;max-height:calc(100dvh - 12px)!important}
+ html.lpL #pvLad102 .lh{padding:8px 14px!important}
+ html.lpL #pvLad102 .lf{display:none}
+ html.lpL #pvLad102 .ll{flex-direction:row-reverse!important;overflow-x:hidden!important;overflow-y:hidden!important;padding:6px 10px 8px!important;gap:0}
+ html.lpL #pvLad102 .lrow{flex:1 1 0;min-width:0;display:flex!important;flex-direction:column;justify-content:flex-end;min-height:0!important;margin:0!important;position:relative}
+ html.lpL #pvLad102 .lrow .cL:empty,html.lpL #pvLad102 .lrow .cR:empty{display:none}
+ html.lpL #pvLad102 .lrow .cL,html.lpL #pvLad102 .lrow .cR{order:1;min-height:0!important}
+ html.lpL #pvLad102 .lrow .nd{order:2;height:22px;flex:none}
+ html.lpL #pvLad102 .lrow .nd::before{content:'';position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;background:linear-gradient(90deg,#ffffff22,var(--lc),#ffffff22)}
+ html.lpL #pvLad102 .lrow .nd>*{position:relative}
+ /* 계단: 위 등급일수록 높게(DOM은 마스터가 먼저) */
+ html.lpL #pvLad102 .ll{align-items:flex-end}
+ html.lpL #pvLad102 .lrow{padding-bottom:26px}html.lpL #pvLad102 .lrow:nth-child(1){padding-bottom:66px}html.lpL #pvLad102 .lrow:nth-child(2){padding-bottom:58px}html.lpL #pvLad102 .lrow:nth-child(3){padding-bottom:50px}
+ html.lpL #pvLad102 .lrow:nth-child(4){padding-bottom:42px}html.lpL #pvLad102 .lrow:nth-child(5){padding-bottom:34px}
+ html.lpL #pvLad102 .lrow .nd{position:absolute;left:0;right:0;bottom:0}
+ html.lpL #pvLad102 .lr{margin:0 4px!important;padding:6px 8px!important}
+ html.lpL #pvLad102 .lr .rw span{display:none}
+ html.lpL #pvLad102 .lr .tx small{white-space:nowrap;font-size:10px}
+ html.lpL #pvLad102 .lr .em{width:30px!important;height:30px!important}`;
+ document.head.appendChild(st);
+ /* ☰ 창: 제목 · ✕, 켜고 끄는 줄과 이동하는 줄 표시 */
+ function moreFix(){const p=document.getElementById('more98');if(!p||p.hidden||!RT.classList.contains('lp'))return;
+  if(!p.querySelector('.qh150')){const h=document.createElement('div');h.className='qh150';h.innerHTML='<b>빠른 설정</b><button type="button" aria-label="닫기">✕</button>';
+   h.querySelector('button').addEventListener('click',e=>{e.stopPropagation();p.hidden=true});p.insertBefore(h,p.firstChild)}
+  p.querySelectorAll('.m98').forEach(b=>{const t=!!b.querySelector('u');b.classList.toggle('t150',t);b.classList.toggle('l150',!t)});
+  try{window.SO149&&SO149.iconize(p)}catch(e){}}
+ /* 등급표: 현재 등급 막대 */
+ function ladFix(){const el=document.getElementById('pvLad102');if(!el||el.hidden||!RT.classList.contains('lp'))return;const lp=el.querySelector('.lp');if(!lp||lp.querySelector('.cur150'))return;
+  const me=el.querySelector('.lrow.me');if(!me)return;const lc=getComputedStyle(me).getPropertyValue('--lc'),nm=(me.querySelector('.tx b')||{}).textContent||'',pb=me.querySelector('.pb i'),em=(me.querySelector('.lr>em')||{}).textContent||'',pt=(me.querySelector('.lr>u')||{}).textContent||'';
+  const c=document.createElement('div');c.className='cur150';c.style.setProperty('--lc',lc);c.innerHTML='<b>현재 등급 · '+nm+'</b><small>'+pt.replace(/^나 · /,'')+'</small><div class="pb"><i style="width:'+(pb?pb.style.width:'100%')+'"></i></div><small>'+em+'</small>';
+  const lf=lp.querySelector('.lf');lp.insertBefore(c,lf||null);try{window.SO149&&SO149.iconize(lp)}catch(e){}}
+ function duoIcons(){const b=document.getElementById('duo85');if(!b||b.hidden||!RT.classList.contains('lp'))return;const P=b.querySelector('.dP');if(!P||P.dataset.i150)return;P.dataset.i150=1;try{window.SO149&&SO149.iconize(P)}catch(e){}}
+ const W={more98:moreFix,pvLad102:ladFix,duo85:duoIcons};
+ function watch(id){const box=document.getElementById(id);if(!box||box.dataset.w150)return;box.dataset.w150=1;const run=()=>{try{W[id]()}catch(e){}};new MutationObserver(run).observe(box,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});run()}
+ setInterval(()=>{for(const id in W)watch(id)},600);
+ window.QP150={v:1};
+}catch(e){console.warn('v150',e)}})();
 </script></body></html>

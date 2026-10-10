@@ -18,5 +18,16 @@
   if(!inside||performance.now()-d.t>1200)return;
   setTimeout(()=>{if(lastClick>=d.t)return;/* 브라우저가 click을 안 만들었으면 */try{if(document.contains(d.b))d.b.click()}catch(_){}},120)},true);
  document.addEventListener('pointercancel',e=>{/* 가장자리 쓸기로 취소돼도 ✕ 위였으면 누름(0.4초 안의 짧은 누름만) */if(!down)return;const d=down;down=null;if(performance.now()-d.t>400)return;setTimeout(()=>{if(lastClick>=d.t)return;try{if(document.contains(d.b))d.b.click()}catch(_){}},120)},true);
- window.MF142={v:1};
+ /* v150: 자리로 찾기 — 손가락을 뗀 곳이 보이는 ✕ 둘레(+14px) 안이면, 그 위를 무엇이 덮고 있어도(투명한 판 · 확대 차이 · 화면 끝 취소) ✕를 눌러 줌.
+    세로 · 가로 똑같이. 이미 ✕가 눌렸으면(click이 왔으면) 다시 누르지 않음 */
+ const XSEL='button.cx77,#bbShop .ssX,#shopClose,#acClose,#more98 .qh150 button';
+ const vis=b=>{if(!b.isConnected)return false;const r=b.getBoundingClientRect();if(r.width<4||r.height<4)return false;for(let e=b;e;e=e.parentElement){if(e.hidden)return false;const cs=getComputedStyle(e);if(cs.display==='none'||cs.visibility==='hidden'||+cs.opacity===0)return false}return true};
+ function xAt(x,y){let best=null,bd=1e9;for(const b of document.querySelectorAll(XSEL)){const r=b.getBoundingClientRect(),pad=14;if(x<r.left-pad||x>r.right+pad||y<r.top-pad||y>r.bottom+pad)continue;if(!vis(b))continue;const d=Math.hypot(x-(r.left+r.width/2),y-(r.top+r.height/2));if(d<bd){bd=d;best=b}}return best}
+ let d2=null;
+ document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'){d2=null;return}const b=xAt(e.clientX,e.clientY);d2=b?{b,t:performance.now(),x:e.clientX,y:e.clientY}:null},true);
+ const fire=(d,x,y)=>{if(!d||performance.now()-d.t>1200)return;if(Math.hypot(x-d.x,y-d.y)>40)return;setTimeout(()=>{if(lastClick>=d.t)return;try{if(vis(d.b))d.b.click()}catch(_){}},140)};
+ document.addEventListener('pointerup',e=>{const d=d2;d2=null;if(d&&xAt(e.clientX,e.clientY)===d.b)fire(d,e.clientX,e.clientY)},true);
+ document.addEventListener('pointercancel',e=>{const d=d2;d2=null;if(d&&performance.now()-d.t<500)fire(d,d.x,d.y)},true);
+ document.addEventListener('click',e=>{if(e.target&&e.target.closest&&e.target.closest(XSEL))lastClick=performance.now()},true);
+ window.MF142={v:2,xAt};
 }catch(e){console.warn('v142',e)}})();

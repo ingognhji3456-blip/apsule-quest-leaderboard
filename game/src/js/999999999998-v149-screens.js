@@ -57,8 +57,9 @@
  html.lpP #duo85 .tb149{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 8px}
  html.lpP #duo85 .tb149 button{height:40px;border-radius:12px;border:1px solid #ffffff22;background:#0e1620;color:#cfe;font:inherit;font-weight:900;font-size:14px;cursor:pointer}
  html.lpP #duo85 .tb149 button.on{background:linear-gradient(180deg,#b88cff,#7a4adf);color:#fff;border-color:#d8c0ff}
+ html.lpP #duo85 .dPv .tb149 button.on{background:linear-gradient(180deg,#ff7a9a,#e83a6a);border-color:#ffb0c4}
  html.lpP #duo85 .dCols{grid-template-columns:1fr!important}
- html.lpP #duo85 .dCols.t-mk>.dCol:not(.mk),html.lpP #duo85 .dCols.t-jn>.dCol.mk{display:none!important}
+ html.lpP #duo85 .dCols>.dCol.off149{display:none!important}
  html.lpP #duo85 .dCol>h4{display:none}
  html.lpL #duo85 .dP.wide{width:min(900px,calc(100vw - 24px))!important;max-height:calc(100dvh - 16px)!important}
  html.lpL #duo85 .dPrev{height:70px!important;width:100%!important;object-fit:cover}
@@ -73,14 +74,16 @@
   const g=P.querySelector('#fileGoogle');if(g){const c=g.closest('.acCard');if(c)c.classList.add('g149')}
   let z=P.querySelector('.dz149');if(!z&&(rs||dl)){z=document.createElement('div');z.className='dz149';P.appendChild(z)}
   if(z){if(rs&&rs.parentNode!==z)z.insertBefore(rs,z.firstChild);if(dl&&dl.parentNode!==z)z.appendChild(dl)}}
- /* 듀오: 세로 탭 */
- let duoTab='mk';
+ /* 듀오 · 결투: 세로 탭(칸 제목 h4를 탭 이름으로). v150: 결투 창은 칸에 .mk가 없어서 둘 다 숨던 것 고침 */
+ const TAB={};
  function duoFix(){const box=document.getElementById('duo85');if(!box||box.hidden)return;const cols=box.querySelector('.dCols');if(!cols)return;
-  cols.classList.toggle('t-mk',duoTab==='mk');cols.classList.toggle('t-jn',duoTab==='jn');
-  if(cols.previousElementSibling&&cols.previousElementSibling.classList.contains('tb149')){const t=cols.previousElementSibling;t.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===duoTab));return}
-  const t=document.createElement('div');t.className='tb149';t.innerHTML='<button data-t="mk">방 만들기</button><button data-t="jn">방 들어가기</button>';
-  t.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;e.stopPropagation();duoTab=b.dataset.t;try{window.gmSfx&&gmSfx('move')}catch(_){}duoFix()});
-  cols.parentNode.insertBefore(t,cols);t.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===duoTab))}
+  const cs=[...cols.children].filter(c=>c.classList.contains('dCol'));if(cs.length<2)return;const key=cs.map(c=>(c.querySelector('h4')||{}).textContent||'').join('|');
+  let k=TAB[key]|0;cs.forEach((c,i)=>c.classList.toggle('off149',i!==k));
+  let t=cols.previousElementSibling;if(!(t&&t.classList.contains('tb149'))){t=document.createElement('div');t.className='tb149';cols.parentNode.insertBefore(t,cols);
+   t.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;e.stopPropagation();TAB[t.dataset.key]=+b.dataset.i;try{window.gmSfx&&gmSfx('move')}catch(_){}duoFix()})}
+  const h=cs.map((c,i)=>'<button data-i="'+i+'" class="'+(i===k?'on':'')+'">'+(((c.querySelector('h4')||{}).textContent)||('칸 '+(i+1)))+'</button>').join('');
+  if(t.dataset.key!==key||t.dataset.k!=String(k)){t.dataset.key=key;t.dataset.k=k;t.innerHTML=h}
+  cols.classList.toggle('pv149',!!box.querySelector('.dPv'))}
  function watch(id,fn){const box=document.getElementById(id);if(!box||box.dataset.w149)return;box.dataset.w149=1;const run=()=>{try{fn()}catch(e){}};new MutationObserver(run).observe(box,{childList:true,subtree:true});run()}
  setInterval(()=>{watch('acctBox',acFix);watch('duo85',duoFix);try{acFix()}catch(e){}},700);
  window.SC149={v:1};
