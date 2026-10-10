@@ -88,6 +88,8 @@
   /* 가만히 · 걷는 중: 손을 허리 앞에 두고 검을 앞으로 비스듬히 쥠 (걸음에 맞춰 위아래로만 살짝) */
   /* v61 세트 전용 패리 자세: window.__parryPose(진행 0~1, 막았나, 퍼펙트) → {x,y(그림 좌표의 손 위치), a(앞 기준 각도)} */
   {const PP=window.__parryPose;if(k<0&&PP&&P.parryT){const win=(typeof parryWin==='function'?parryWin():160)+180,pt=p.now-P.parryT;if(pt>=0&&pt<win){const r=PP(pt/win,!!P.parryUsed,!!P.parryPerf,side);if(r){const [ix,iy]=toW(r.x,r.y);drawWeaponShape(w,ix,iy,wAng(r.a),L,s,p.now,dirS);return}}}}
+  /* v119 프리미엄 전용 스킨의 검 쥐는 자세: window.__idlePose(시각, 옆모습, 걷는 중) → {x,y(손 위치), a(앞 기준 각도), pre/post(c,손x,손y,화면 각도,검 길이,s)} */
+  {const IP=window.__idlePose;if(k<0&&IP&&!window.__mateDraw){let r=null;try{r=IP(p.now,side,!!P.walkOn)}catch(e){}if(r){const [ix,iy]=toW(r.x,r.y),A=wAng(r.a);if(r.pre)try{r.pre(c,ix,iy,A,L,s,p.now)}catch(e){}drawWeaponShape(w,ix,iy,A,L,s,p.now,dirS);if(r.post)try{r.post(c,ix,iy,A,L,s,p.now)}catch(e){}c.globalAlpha=1;return}}}
   if(k<0){const sx=side?12.5:19.5,ra=1.25,R0=6.2,f=P.walkOn?((Math.floor((P.walkT||0)/(Math.PI/2))%4)+4)%4:0,bob=(f%2?-1:0)+Math.sin(p.now/700)*.25,[ix,iy]=toW(sx+Math.cos(ra)*R0,19.5+Math.sin(ra)*R0+bob);
    const ia=pose.shoulder?pose.idle:pose.thrust?-1.45:.95;drawWeaponShape(w,ix,iy,wAng(ia),L,s,p.now,dirS);return}
   const [qx,qy,a]=handQ(k,side),[hx,hy]=toW(qx,qy);
