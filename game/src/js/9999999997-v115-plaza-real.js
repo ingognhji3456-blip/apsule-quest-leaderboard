@@ -138,20 +138,24 @@
    c.quadraticCurveTo(x+Math.cos(a)*8,y-52,x+Math.cos(a)*14,y-27+Math.sin(a)*4);c.stroke();c.fillStyle='rgba(230,248,255,.7)';const bx=x+Math.cos(a)*14*q,by=y-40-Math.sin(q*Math.PI)*12+q*13+Math.sin(a)*4*q;c.fillRect(bx,by,1.2,1.2)}
   for(let i=0;i<16;i++){const a=i/16*TAU,q=(t*1.5+i*.37)%1,ex=x+Math.cos(a)*16,ey=y-26+Math.sin(a)*4.6;c.strokeStyle='rgba(190,230,255,'+(.3*(1-q*.5))+')';c.beginPath();c.moveTo(ex,ey);c.lineTo(ex+Math.cos(a)*q*3,ey+q*22);c.stroke()}
   for(let i=0;i<20;i++){const q=(t*.9+i*.29)%1,a=i*1.9;c.fillStyle='rgba(220,240,255,'+(.4*(1-q))+')';c.fillRect(x+Math.cos(a)*(16+q*8),y-4+Math.sin(a)*6-q*6,1,1)}c.restore()}
- function lamp(c,x,y,now){const f=.85+.15*Math.sin(now/90+x)*Math.sin(now/37+y);
+ function lamp(c,x,y,now,ff){const f=ff!=null?ff:.85+.15*Math.sin(now/90+x)*Math.sin(now/37+y);
   let g=c.createLinearGradient(x-2,0,x+2,0);g.addColorStop(0,'#141418');g.addColorStop(.5,'#4a4a56');g.addColorStop(1,'#101014');c.fillStyle='#18181e';c.fillRect(x-4,y-3,8,4);c.fillRect(x-3,y-6,6,3);c.fillStyle=g;c.fillRect(x-1.4,y-34,2.8,30);
   c.fillStyle='#18181e';c.fillRect(x-3,y-36,6,2.4);c.beginPath();c.moveTo(x-5,y-48);c.lineTo(x+5,y-48);c.lineTo(x+3,y-36);c.lineTo(x-3,y-36);c.closePath();c.fill();
   g=c.createLinearGradient(0,y-47,0,y-37);g.addColorStop(0,'rgba(255,240,190,'+f+')');g.addColorStop(1,'rgba(255,170,80,'+f+')');c.fillStyle=g;c.beginPath();c.moveTo(x-3.8,y-47);c.lineTo(x+3.8,y-47);c.lineTo(x+2.4,y-38);c.lineTo(x-2.4,y-38);c.closePath();c.fill();
   c.fillStyle='#18181e';c.fillRect(x-.4,y-47,.8,9);c.beginPath();c.moveTo(x-6,y-48);c.lineTo(x,y-53);c.lineTo(x+6,y-48);c.closePath();c.fill();c.beginPath();c.arc(x,y-54,1.2,0,TAU);c.fill()}
  function torch(c,x,y,now){c.fillStyle='#2a2420';c.fillRect(x-1,y,2,8);c.fillStyle='#4a3a2a';c.fillRect(x-2.4,y-1,4.8,2);for(let i=0;i<6;i++){const q=(now/160+i/6)%1;c.fillStyle='rgba(255,'+Math.round(200-q*140)+',60,'+(1-q)+')';c.beginPath();c.arc(x+Math.sin(now/80+i)*1.2*q,y-2-q*8,2.4*(1-q)+.6,0,TAU);c.fill()}}
  function objs(now){const z=Z(),t=now/1000,L=[];const dt=Math.min(.05,Math.max(0,(now-(lastT||now))/1000));lastT=now;birdsInit();birdsTick(dt);
-  L.push({y:z.FOUNT.y,fn:()=>fountain(ctx,now)});
+  const X=window.PXL;/* v158: 도트로 */
+  L.push({y:z.FOUNT.y,fn:()=>{if(!X)return fountain(ctx,now);const F=z.FOUNT,[k,tm]=X.fr(now,20/3,32);X.stamp(ctx,'fo'+k,F.x-64,F.y-64,128,110,0,0,o=>fountain(o,tm))}});
   const ppl=[[P.x,P.y]];for(const k in z.S.O){const M=z.S.O[k];if(M.sx!=null)ppl.push([M.sx,M.sy])}
   const cm=z.S.cam,vis=(x,y,m)=>x>cm.x-m&&x<cm.x+W+m&&y>cm.y-m&&y<cm.y+H+m*1.6;/* v156: 보이는 것만 */
-  z.TREES.forEach(([x,y],i)=>vis(x,y,60)&&L.push({y,fn:()=>{const T=treeImg(i),sw=Math.sin(t*1.1+i)*.6,hid=ppl.some(([px,py])=>py<y-2&&py>y-80&&Math.abs(px-x)<40);/* 뒤에 사람이 있으면 잎을 비치게 */ctx.save();if(hid)ctx.globalAlpha=.55;ctx.translate(x,y);ctx.transform(1,0,sw*.012,1,0,0);ctx.drawImage(T.cv,-T.ax,-T.ay,T.w,T.h);ctx.restore()}}));
-  for(const [x,y] of z.LAMPS)if(vis(x,y,20))L.push({y,fn:()=>lamp(ctx,x,y,now)});
-  L.push({y:176,fn:()=>{torch(ctx,446,138,now);torch(ctx,514,138,now)}});
-  for(const b of BIRDS)if(vis(b.x,b.y,30))L.push({y:b.y,fn:()=>drawBird(ctx,b,now)});
+  z.TREES.forEach(([x,y],i)=>vis(x,y,60)&&L.push({y,fn:()=>{const T=treeImg(i),sw=Math.sin(t*1.1+i)*.6,hid=ppl.some(([px,py])=>py<y-2&&py>y-80&&Math.abs(px-x)<40);/* 뒤에 사람이 있으면 잎을 비치게 */ctx.save();if(hid)ctx.globalAlpha=.55;ctx.translate(x,y);ctx.transform(1,0,sw*.012,1,0,0);const im=X?X.img(T):T.cv;ctx.imageSmoothingEnabled=!X;ctx.drawImage(im,-T.ax,-T.ay,T.w,T.h);ctx.restore()}}));
+  for(const [x,y] of z.LAMPS)if(vis(x,y,20))L.push({y,fn:()=>{if(!X)return lamp(ctx,x,y,now);const f=.85+.15*Math.sin(now/90+x)*Math.sin(now/37+y),q=Math.max(0,Math.min(3,Math.round((f-.7)/.1)));X.stamp(ctx,'lp'+q,-8,-58,16,62,x,y,o=>lamp(o,0,0,0,.7+q*.1))}});
+  L.push({y:176,fn:()=>{if(!X){torch(ctx,446,138,now);torch(ctx,514,138,now);return}const [k,tm]=X.fr(now,.16,6);for(const tx of [446,514])X.stamp(ctx,'to'+k,-5,-13,10,22,tx,138,o=>torch(o,0,0,tm))}});
+  for(const b of BIRDS)if(vis(b.x,b.y,30))L.push({y:b.y,fn:()=>{if(!X)return drawBird(ctx,b,now);const wk=b.st==='walk',TP=Math.PI*2;
+   const pq=wk&&b.peck>0?Math.floor(((now/90)%Math.PI)/Math.PI*3):0,aq=wk?0:Math.floor((((now/45+b.x)%TP)+TP)%TP/TP*4);
+   ctx.fillStyle='rgba(0,0,0,'+(b.h>0?Math.max(.05,.3-b.h/300):.3)+')';ctx.fillRect(Math.round(b.x-5),Math.round(b.y),10,2);
+   X.stamp(ctx,'bd'+(wk?'w':'f')+(b.fx<0?1:0)+pq+aq+(wk&&b.peck>0?1:0),-12,-15,24,17,b.x,b.y-b.h,o=>drawBird(o,{x:0,y:0,h:0,st:wk?'walk':'fly',fx:b.fx,peck:wk&&b.peck>0?1:0,col:0},wk?(pq+.5)/3*Math.PI*90:(aq+.5)/4*TP*45))}});
   return L}
  /* 떨어지는 잎 */const LEAF=[];
  function over(c,now,cam){const z=Z();

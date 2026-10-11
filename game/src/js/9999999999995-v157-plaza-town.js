@@ -144,7 +144,7 @@
   o.fillStyle='#5a4a30';o.fillRect(x-2,y-9.4,4,1);if(c){o.fillStyle=c;o.beginPath();o.ellipse(x,y-9.6,2.6,1,0,0,TAU);o.fill()}}
  function basket(o,x,y,c){o.fillStyle='rgba(0,0,0,.3)';o.beginPath();o.ellipse(x+1,y,6,1.8,0,0,TAU);o.fill();o.fillStyle='#a87a40';o.beginPath();o.moveTo(x-6,y-5);o.lineTo(x+6,y-5);o.lineTo(x+4.4,y);o.lineTo(x-4.4,y);o.closePath();o.fill();o.strokeStyle='#6a4a20';o.lineWidth=.4;for(let k=0;k<3;k++){o.beginPath();o.moveTo(x-5.6+k*.6,y-4+k*1.4);o.lineTo(x+5.6-k*.6,y-4+k*1.4);o.stroke()}
   for(let k=0;k<5;k++){o.fillStyle=c[k%c.length];o.beginPath();o.arc(x-4+k*2,y-5.6-(k%2),1.6,0,TAU);o.fill()}}
- for(const [sx,sy,i] of PB.STALLS){const side=i%2?-1:1,px=sx+side*44;PROP.push({x:px,y:sy,k:i});z.OBST.push({x:px-8,y:sy-6,w:16,h:7})}
+ for(const [sx,sy,i] of PB.STALLS){if(i===3||i===7)continue;const px=sx+60;/* v158: 가게 사이 한가운데에 한 묶음(가게 계산대가 넓어짐) */PROP.push({x:px,y:sy,k:i});z.OBST.push({x:px-8,y:sy-6,w:16,h:7})}
  const WELL={x:-320,y:462};z.OBST.push({x:1444,y:188,r:9,ky:1.6},{x:1490,y:190,r:9,ky:1.6});/* 찻집 탁자 */z.OBST.push({x:WELL.x,y:WELL.y,r:15,ky:1.6});
  function props(o,p){const x=p.x,y=p.y;if(p.k%4===0){barrel(o,x-4,y);barrel(o,x+5,y-1)}else if(p.k%4===1){crate(o,x-3,y,10);crate(o,x+5,y+1,8);sack(o,x,y-9,null)}else if(p.k%4===2){sack(o,x-4,y,'#e8e0c0');sack(o,x+4,y+1,'#c8a060')}else{basket(o,x-4,y,['#d02a2a','#e8a020']);basket(o,x+5,y+1,['#5a8a2a','#c8d040'])}}
  function well(o,now){const {x,y}=WELL;o.fillStyle='rgba(0,0,0,.35)';o.beginPath();o.ellipse(x+3,y+3,17,6,0,0,TAU);o.fill();
@@ -156,9 +156,9 @@
  function propImg(p){const k=p.k;if(PC[k])return PC[k];PC[k]=pre(24,22,o=>props(o,{x:12,y:20,k}));return PC[k]}
  /* ---------- 물체 감싸기 ---------- */
  {const f=A.objs;A.objs=function(now){const L=f.apply(this,arguments)||[];try{const cam=z.S.cam,V=(x,y,m)=>PB.vis(cam,x,y,m);
-   for(const B of BLD){if(!V(B.x,B.y-B.h/2,B.w))continue;if(!B.cv)B.cv=pre(B.w,B.h,B.make);L.push({y:B.y,fn:()=>ctx.drawImage(B.cv,B.x-B.ax,B.y-B.ay,B.w,B.h)})}
-   for(const p of PROP)if(V(p.x,p.y,30))L.push({y:p.y,fn:()=>ctx.drawImage(propImg(p),p.x-12,p.y-20,24,22)});
-   if(V(WELL.x,WELL.y,40))L.push({y:WELL.y,fn:()=>well(ctx,now)})}catch(e){}return L}}
+   for(const B of BLD){if(!V(B.x,B.y-B.h/2,B.w))continue;if(!B.cv)B.cv=pre(B.w,B.h,B.make);L.push({y:B.y,fn:()=>{const X=window.PXL,im=X?X.img(B):B.cv,sm=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=!X;ctx.drawImage(im,B.x-B.ax,B.y-B.ay,B.w,B.h);ctx.imageSmoothingEnabled=sm}})}/* v158 도트 */
+   for(const p of PROP)if(V(p.x,p.y,30))L.push({y:p.y,fn:()=>{const X=window.PXL,T=p.T||(p.T={cv:propImg(p),w:24,h:22}),im=X?X.img(T):T.cv,sm=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=!X;ctx.drawImage(im,p.x-12,p.y-20,24,22);ctx.imageSmoothingEnabled=sm}});
+   if(V(WELL.x,WELL.y,40))L.push({y:WELL.y,fn:()=>{const X=window.PXL;if(!X)return well(ctx,now);const [k,tm]=X.fr(now,Math.PI*2*.7,6);X.stamp(ctx,'wl'+k,WELL.x-22,WELL.y-42,44,50,0,0,o=>well(o,tm))}})}catch(e){}return L}}
  /* ---------- 빛 · 연기 · 대장간 불 ---------- */
  {const f=A.over;A.over=function(c,now,cam){f.apply(this,arguments);try{const t=now/1000,V=(x,y,m)=>PB.vis(cam,x,y,m);c.save();c.globalCompositeOperation='lighter';
    for(const [x,y,r] of WIN){if(!V(x,y,r))continue;const fl=.8+.2*Math.sin(t*2.3+x*.7)*Math.sin(t*1.7+y);const R=r*1.3,g=c.createRadialGradient(x,y,0,x,y,R);g.addColorStop(0,'rgba(255,200,120,'+(.3*fl)+')');g.addColorStop(1,'rgba(255,170,90,0)');c.fillStyle=g;c.fillRect(x-R,y-R,R*2,R*2)}
