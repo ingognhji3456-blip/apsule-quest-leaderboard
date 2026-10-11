@@ -30,6 +30,7 @@ import sqlite3
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from flask import Flask, request, jsonify, g, send_from_directory, render_template_string
 from google.oauth2 import id_token as google_id_token
@@ -220,6 +221,17 @@ def init_db():
             user_id     TEXT NOT NULL,
             dia         BIGINT NOT NULL,
             claimed_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    # v162: 구글 플레이 결제 — 같은 결제를 두 번 넣지 않게 결제 표(token)의 지문을 적는다
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS play_purchases (
+            token_hash  TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            sku         TEXT NOT NULL,
+            product_id  TEXT NOT NULL,
+            order_id    TEXT NOT NULL,
+            created_at  DOUBLE PRECISION NOT NULL
         )
     ''')
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
@@ -624,7 +636,7 @@ def _owned_ids(db, user_id, tester=False):
     테스트 키로 결제한 주문은 지금 서버도 테스트 키일 때만 센다."""
     owned = set(r['product_id'] for r in db.execute(
         'SELECT product_id FROM shop_entitlements WHERE user_id = ?', (user_id,)).fetchall())
-    rows = db.execute("SELECT product_id FROM shop_orders WHERE user_id = ? AND status = 'paid' AND test = ?",
+    rows = db.execute("SELECT product_id FROM shop_orders WHERE user_id = ? AND status = 'paid' AND (test = ? OR method = 'google_play')",
                       (user_id, 1 if TOSS_TEST else 0)).fetchall()
     for r in rows:
         if not _consumable(r['product_id']):
@@ -726,7 +738,7 @@ def shop_dia_claim():
     if not user:
         return _bad('로그인이 필요해요', 401)
     db = get_db()
-    rows = db.execute("SELECT order_id, product_id FROM shop_orders WHERE user_id = ? AND status = 'paid' AND test = ? AND product_id LIKE 'dia%'",
+    rows = db.execute("SELECT order_id, product_id FROM shop_orders WHERE user_id = ? AND status = 'paid' AND (test = ? OR method = 'google_play') AND product_id LIKE 'dia%'",
                       (user['user_id'], 1 if TOSS_TEST else 0)).fetchall()
     total, items = 0, []
     for r in rows:
@@ -747,6 +759,110 @@ def shop_dia_claim():
     resp = jsonify(ok=True, dia=total, items=items)
     resp.headers['Cache-Control'] = 'no-store'
     return resp
+
+
+# ---------------- v162 구글 플레이 결제(앱) ----------------
+# 앱(TWA)에서 Play 결제를 마치면 게임이 (상품 번호, 결제 표)를 보낸다 → 서버가 구글에 직접 물어 진짜 결제인지 확인하고
+# shop_orders 에 'paid'(method='google_play')로 넣는다 → 다이아 받기(/api/shop/dia/claim) · 패스 보유가 그대로 동작.
+# 구글 플레이 콘솔 상품 번호: 다이아 묶음은 dia_<개수>, 프리미엄 패스는 pass_premium(한 상품으로 매달 다시 살 수 있음).
+# Render 환경변수: GOOGLE_PLAY_SERVICE_JSON = 서비스 계정 키(JSON 글 전체), TWA_PACKAGE = 앱 패키지 이름.
+PLAY_SERVICE_JSON = os.environ.get('GOOGLE_PLAY_SERVICE_JSON', '').strip()
+PLAY_API = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/%s/purchases/products/%s/tokens/%s'
+_PLAY_CRED = {}
+
+
+def _play_token():
+    """서비스 계정으로 구글 API 출입증(access token)을 받는다(1시간짜리, 기억해 두고 씀)"""
+    if not PLAY_SERVICE_JSON:
+        return None
+    c = _PLAY_CRED.get('c')
+    if c is None:
+        from google.oauth2 import service_account
+        c = service_account.Credentials.from_service_account_info(
+            json.loads(PLAY_SERVICE_JSON), scopes=['https://www.googleapis.com/auth/androidpublisher'])
+        _PLAY_CRED['c'] = c
+    if not c.valid:
+        c.refresh(GoogleRequest())
+    return c.token
+
+
+def _play_call(sku, token, action=''):
+    """구글 플레이 결제 조회(action='') · 소모 처리(':consume'). (성공여부, 응답 dict)"""
+    url = PLAY_API % (urllib.parse.quote(TWA_PACKAGE), urllib.parse.quote(sku), urllib.parse.quote(token)) + action
+    req = urllib.request.Request(url, data=b'' if action else None, method='POST' if action else 'GET',
+                                 headers={'Authorization': 'Bearer ' + (_play_token() or '')})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            body = r.read().decode() or '{}'
+            return True, json.loads(body)
+    except urllib.error.HTTPError as e:
+        try:
+            return False, json.loads(e.read().decode() or '{}')
+        except Exception:
+            return False, {'error': 'HTTP_%d' % e.code}
+    except Exception as e:
+        return False, {'error': 'NETWORK'}
+
+
+def _play_product(sku, season):
+    """Play 상품 번호 → 우리 상품. pass_premium 은 게임이 알려 준 시즌(YYYY-MM, 서버 달 ±1)의 패스"""
+    if sku.startswith('dia_'):
+        p = PRODUCTS_BY_ID.get(sku)
+        return p if p and p.get('kind') == 'dia' else None
+    if sku == 'pass_premium' and isinstance(season, str) and re.fullmatch(r'\d{4}-\d{2}', season):
+        t = time.gmtime()
+        y, m = int(season[:4]), int(season[5:])
+        if abs((y * 12 + m) - (t.tm_year * 12 + t.tm_mon)) <= 1:
+            return PRODUCTS_BY_ID.get('pass_' + season)
+    return None
+
+
+@app.route('/api/play/verify', methods=['POST'])
+def play_verify():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    if not (PLAY_SERVICE_JSON and TWA_PACKAGE):
+        return _bad('서버에 구글 플레이 결제 설정이 아직 없어요', 503)
+    data = request.get_json(silent=True) or {}
+    sku = data.get('sku') if isinstance(data.get('sku'), str) else ''
+    token = data.get('token') if isinstance(data.get('token'), str) else ''
+    if not sku or not token or len(token) > 1000 or not re.fullmatch(r'[a-z0-9_.]{1,100}', sku):
+        return _bad('결제 정보가 올바르지 않아요', 400)
+    product = _play_product(sku, data.get('season'))
+    if not product:
+        return _bad('판매하지 않는 상품이에요', 404)
+    db = get_db()
+    th = hashlib.sha256(('play:' + token).encode()).hexdigest()
+    row = db.execute('SELECT user_id, product_id FROM play_purchases WHERE token_hash = ?', (th,)).fetchone()
+    if row:
+        if row['user_id'] != user['user_id']:
+            return _bad('다른 계정에서 이미 쓴 결제예요', 409)
+        return jsonify(ok=True, product_id=row['product_id'], again=True)
+    if _too_many('play:' + user['user_id'], 30, 600):
+        return _bad('잠시 뒤 다시 해 주세요', 429)
+    _note('play:' + user['user_id'])
+    ok, res = _play_call(sku, token)
+    if not ok:
+        return _bad('구글 플레이에서 결제를 확인하지 못했어요', 502)
+    if int(res.get('purchaseState', -1)) != 0:
+        return _bad('결제가 아직 끝나지 않았어요', 402)
+    oid = 'gp_' + str(res.get('orderId') or th[:24])[:70]
+    try:
+        db.execute('INSERT INTO play_purchases (token_hash, user_id, sku, product_id, order_id, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                   (th, user['user_id'], sku, product['id'], oid, time.time()))
+        db.execute("INSERT INTO shop_orders (order_id, user_id, product_id, amount, status, test, payment_key, method, created_at, paid_at) "
+                   "VALUES (?, ?, ?, ?, 'paid', ?, ?, 'google_play', ?, ?)",
+                   (oid, user['user_id'], product['id'], int(product.get('price') or 0), 1 if res.get('purchaseType') == 0 else 0,
+                    th[:40], time.time(), time.time()))
+        db.commit()
+    except Exception:
+        db.rollback()
+        return _bad('이미 처리한 결제예요', 409)
+    # 모두 다시 살 수 있는 상품이라 구글에 「소모」로 알린다(실패해도 게임이 다시 소모 처리함)
+    if int(res.get('consumptionState', 0)) == 0:
+        _play_call(sku, token, ':consume')
+    return jsonify(ok=True, product_id=product['id'])
 
 
 PAY_PAGE = r"""<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
