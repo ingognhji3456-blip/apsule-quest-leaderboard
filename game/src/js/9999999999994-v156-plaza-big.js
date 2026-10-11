@@ -121,11 +121,11 @@
   /* 새 나무 · 가로등 그늘 */for(const [x,y] of NT){g=o.createRadialGradient(x+10,y+4,2,x+10,y+4,30);g.addColorStop(0,'rgba(5,5,15,.5)');g.addColorStop(1,'rgba(5,5,15,0)');o.fillStyle=g;o.beginPath();o.ellipse(x+10,y+4,34,12,.15,0,TAU);o.fill()}
   for(const [x,y] of NL){o.fillStyle='rgba(5,5,15,.35)';o.beginPath();o.ellipse(x+3,y+2,5,2,0,0,TAU);o.fill()}
   /* 이음매(가운데 광장 둘레 돌테) */o.fillStyle='#7a7470';o.fillRect(-4,TOPY,4,600-TOPY);o.fillRect(WW,TOPY,4,600-TOPY)}];
-  return {cv,steps}}
+  return {cv,steps,o}}
  function seamCore(core){const o=core.getContext('2d');o.save();o.setTransform(R,0,0,R,0,0);o.fillStyle='#7a7470';o.fillRect(0,596,WW,4);o.fillRect(0,TOPY,3,600-TOPY);o.fillRect(WW-3,TOPY,3,600-TOPY);o.fillStyle='rgba(255,240,220,.25)';o.fillRect(0,596,WW,1);o.restore()}
  function buildMini(core,out){const OW=B.x1-B.x0,mw=Math.round(OW/6),mh=Math.round(B.y1/6),m=document.createElement('canvas');m.width=mw;m.height=mh;const o=m.getContext('2d');o.imageSmoothingEnabled=true;
   o.drawImage(out,0,0,mw,mh);o.drawImage(core,(0-B.x0)/6,0,WW/6,WH/6);return m}
- {const f=A.build;A.build=function(){const core=f.apply(this,arguments);if(!core)return core;try{seamCore(core);const {cv,steps}=buildOut(core);core._out=cv;
+ {const f=A.build;A.build=function(){const core=f.apply(this,arguments);if(!core)return core;try{seamCore(core);const {cv,steps,o}=buildOut(core);core._out=cv;for(const f of ((window.PB156&&PB156.extra)||[]))steps.push(()=>f(o));/* v157 건물 등 덧그림 */
    /* 바깥 그림은 조각마다 다음 차례에(첫 화면은 가운데 광장이라 바로 보임) */let i=0;const run=()=>{try{steps[i++]()}catch(e){console.warn('v156 step',e)}if(i<steps.length)setTimeout(run,0);else{try{core._mini=buildMini(core,cv)}catch(e){}}};setTimeout(run,0)}catch(e){console.warn('v156 build',e)}return core}}
  /* ---------- 움직이는 물 · 빛 웅덩이 (under 대신) ---------- */
  const vis=(cam,x,y,m)=>x>cam.x-m&&x<cam.x+W+m&&y>cam.y-m&&y<cam.y+H+m;
@@ -280,5 +280,5 @@
    /* 구역 이름: 들어갈 때 잠깐 */const Zn=ZONES.find(q=>P.x>=q.x0&&P.x<q.x1&&P.y>=q.y0&&P.y<q.y1);const nm=Zn?Zn.n:'';if(nm!==zoneNow){zoneNow=nm;zoneT=now}
    const ag=now-zoneT;if(nm&&ag<2600&&zoneT>0){const a=ag<300?ag/300:ag>2100?(2600-ag)/500:1;c.save();c.globalAlpha=a;const cr=z.S.crop,fs=cr?8:13,bh=cr?15:22;/* 폰 세로는 크게 확대돼 보이므로 작게 · 잘라 낸 띠 가운데 */c.font='900 '+fs+'px sans-serif';c.textAlign='center';const cx=cam.x+(cr?cr.x0+cr.w/2:W/2),cy=cam.y+(cr?40:52)-(ag<300?(1-a)*6:0),tw=c.measureText(nm).width+fs*2.4;
     c.fillStyle='rgba(8,12,24,.72)';c.beginPath();c.roundRect?c.roundRect(cx-tw/2,cy-bh*.64,tw,bh,bh/2):c.rect(cx-tw/2,cy-bh*.64,tw,bh);c.fill();c.strokeStyle='rgba(255,209,102,.6)';c.lineWidth=1;c.stroke();c.fillStyle='#ffd166';c.fillText(nm,cx,cy+fs*.12);c.restore()}}catch(e){}}}
- window.PB156={v:1,ZONES,STALLS,LAKE,POND};
+ window.PB156={v:1,ZONES,STALLS,LAKE,POND,FIRE,TENTS,CARO,MILL,GAZ,STAGE,vis,extra:[]};
 }catch(e){console.error('v156 plaza big',e)}})();
