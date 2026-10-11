@@ -1,13 +1,13 @@
 # BEAT BLADE · MACHINA — 전체 정리 (한 장으로 보기)
 
-> 작성일 2026-10-10 · 최신 게임 파일 **BeatBlade-153.html**
+> 작성일 2026-10-10 · 최신 게임 파일 **BeatBlade-154.html**
 > 버전별 자세한 내용은 `game/BeatBlade_작업요약.md`, 서버 올리는 방법은 `game/서버_로그인_안내.md`에 있어요.
 
 ---
 
 ## 0. 지금 꼭 알아야 할 것 3가지
 
-1. **v153까지 모두 main에 합쳤어요** (PR #49 ~ #92). 최신 게임 파일은 `game/BeatBlade-153.html`이에요. v153은 서버(app.py)도 바뀌었어요(패스 상품) — ₩ 결제를 쓰려면 Render에 새로 배포해 주세요.
+1. **v153까지 main에 합쳤어요** (PR #49 ~ #92). v154는 아직 브랜치에만 있어요. 최신 게임 파일은 `game/BeatBlade-154.html`이에요. v153 서버(app.py, 패스 상품)는 Render 배포가 필요해요.
 2. **Render에서 최신 커밋을 한 번 배포해 주세요** (「Manual Deploy → Deploy latest commit」, 상태가 초록색 「Live」가 되면 끝).
    서버(`app.py`)가 바뀐 버전은 v102 · v103 · v111 · v113 · v114 · v114.1 · v119 · v122 · v125 · v140이에요. 최신 커밋 하나에 모두 들어 있어서 **한 번만** 배포하면 돼요.
    배포해야 동작하는 것: 랭킹 장비 표시 · 1~3위 관전 · 새 스킨 30개 · 채팅 · 친구 추천 · 「n분 전 접속」 · **광장 · 광장 결투/듀오 신청 · 새 시즌 보상 · 말풍선 채팅 · 나쁜 말 거르기 · 전용 스킨 · 펫 묶음 상품 · 캐릭터 전용 스킨 40종 · 설정에서 이름 바꾸기 · 네온 세트 ₩8,900**.
@@ -98,6 +98,7 @@
 | v151 | 가로 ✕ 화면 끝에서 떼기 · 도트 아이콘 다듬기 · 단추 크기 |
 | v152 | 클라비스 얻으면 공방 맨 앞에 |
 | v153 | 출석 · 일일/주간 미션 · 시즌 패스 (서버: 패스 상품) |
+| v154 | 레벨 기능: 특성 포인트 · 콘텐츠 열림 |
 
 ---
 
@@ -204,6 +205,7 @@
 | v151 | MF142 v3 `nudge()`: 가로(lpL)에서 보이는 ✕를 위 14px · 양옆 30px(safe-area+10) 안쪽으로 `translate`(0.4초 · resize · DOM 변화 때). 9999999999991 `PX151`: --sp-* 도트를 4배로 다시 그림(빛 · 그림자 · 반 칸 테두리), `i.px149`는 `all:unset`으로 고정(.dCard i{font-size:40px}를 물려받아 부풀던 것), 폰 로비 카드 · 단추 축소 |
 | v152 | SEC127 `hideCard`: style.display 대신 클래스 `.lk152`(숨김) · `.sc152`(order:-1 + 「✪ 비밀」), 조건 `unlocked()`=sec127.clear 또는 보유. 처음 한 번 `seen152`로 공방에서 골라 줌 |
 | v153 | 9999999999992 `DP153`: saveData.dp153 {att,day,wk,ps}. 출석은 로비(mode menu)에서 자동 `claimAtt` + `#att153` 창(금고 `--pile-coin` · 보물 상자 `--chest-dia` · 더미 `--pile-dia` 도트). 미션은 `ev(키,n)`(CB81.onKill · fightEnd · doAttack 박자 · PLZ111.enter · frame에서 탑 층 · 보스 G.shots jd · PVP92.M 끝 · enh94 합). 패스 40×1000, 프리미엄 pid `pass_YYYY-MM`(💎 DIA80.buy / ₩ PAY58.buy). app.py `PASS_PRICE`=5500 · 2026~2030 상품 |
+| v154 | 9999999999993 `LV154`: saveData.lv154 {pt:{hp,atk,crit,def,gold},grand,seen}. 점수 = 레벨-1, `fit()`이 넘치면 덜어냄. 효과는 charStats · CB81.dmgMul/critAdd/onHurt · addCoins(전투 모드 + 양수만) 감싸기, PvP(`PVP92.on()`/`M.on`)면 0. 잠금 `GATE`(rush 2 · plaza 3 · duo 5 · pvp 7): document click 가로채기(`SEL`) + gmShow(rush) · PLZ111.enter 감싸기, 표시 `.lk154`+`.lkb154`. 예전 사람(tw71.best≥20 또는 Lv≥7)은 `grand`. 레벨업 알림 `#nw154` |
 | v117 | PLZ111 `emote`(`me.emo`='번호|순번') · `feed`의 사람별 `gap`→`off`(0.2~0.7초, 천천히만 바뀜) · 새로 연 페이지 감지(`lastTs`/`lastN`) |
 | v116 | FR94 `duel/duo`가 `D.autoGo`, 수락 쪽 `F.autoReady` → 자동 준비 · 자동 시작. 펫 K: 탑 · 광장 1.0, 보스 .95 |
 | v115 | 9999999997 `PLZART`(build · under · objs · over), PLZ111이 있으면 사용 |
