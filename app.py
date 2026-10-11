@@ -289,6 +289,18 @@ def init_db():
             why         TEXT NOT NULL
         )
     ''')
+    # v165: 보스 러시 타임어택 최고 기록(코스 · 난이도마다 한 줄)
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS ta_records (
+            user_id     TEXT NOT NULL,
+            course      TEXT NOT NULL,
+            diff        TEXT NOT NULL,
+            ms          BIGINT NOT NULL,
+            splits      TEXT NOT NULL,
+            created_at  DOUBLE PRECISION NOT NULL,
+            PRIMARY KEY (user_id, course, diff)
+        )
+    ''')
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
     db.execute('''
         CREATE TABLE IF NOT EXISTS player_look (
@@ -2499,6 +2511,66 @@ def admin_reports():
                       'LEFT JOIN users b ON b.user_id = r.target_id ORDER BY r.created_at DESC LIMIT 200').fetchall()
     return jsonify(ok=True, reports=[{'from': r['rname'], 'target': r['tname'], 'reason': REPORT_REASONS.get(r['reason'], r['reason']), 'place': r['place'],
                                       'detail': r['detail'], 't': r['created_at']} for r in rows])
+
+
+# ---------------- v165 보스 러시 타임어택 ----------------
+TA_COURSES = {'c%d' % i: 10 for i in range(1, 8)}  # 챕터 1~7, 보스 10마리씩
+TA_DIFFS = ('easy', 'normal', 'hard', 'extreme')
+TA_MIN_MS = 7000  # 보스 한 마리 최소 7초(등장 연출만 해도 그 이상) — 말도 안 되는 기록은 안 받음
+
+
+@app.route('/api/ta/submit', methods=['POST'])
+def ta_submit():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    course, diff = body.get('course'), body.get('diff')
+    if course not in TA_COURSES or diff not in TA_DIFFS:
+        return _bad('코스가 올바르지 않아요', 400)
+    n = TA_COURSES[course]
+    splits = body.get('splits') if isinstance(body.get('splits'), list) else []
+    try:
+        splits = [int(x) for x in splits][:n]
+    except (TypeError, ValueError):
+        return _bad('기록이 올바르지 않아요', 400)
+    ms = clamp_int(body.get('ms'), 0, 10 ** 9, 0)
+    if len(splits) != n or any(x < TA_MIN_MS or x > 3600000 for x in splits) or abs(sum(splits) - ms) > 50:
+        return _bad('기록이 올바르지 않아요', 400)
+    uid = user['user_id']
+    db = get_db()
+    row = db.execute('SELECT ms FROM ta_records WHERE user_id = ? AND course = ? AND diff = ?', (uid, course, diff)).fetchone()
+    best = row is None or ms < int(row['ms'])
+    if best:
+        db.execute('DELETE FROM ta_records WHERE user_id = ? AND course = ? AND diff = ?', (uid, course, diff))
+        db.execute('INSERT INTO ta_records (user_id, course, diff, ms, splits, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                   (uid, course, diff, ms, json.dumps(splits), time.time()))
+        db.commit()
+    rank = db.execute('SELECT COUNT(*) AS c FROM ta_records WHERE course = ? AND diff = ? AND ms < ?', (course, diff, min(ms, int(row['ms']) if row else ms))).fetchone()['c'] + 1
+    return jsonify(ok=True, best=best, prev=int(row['ms']) if row else None, rank=rank)
+
+
+@app.route('/api/ta/board', methods=['POST'])
+def ta_board():
+    user = _duo_user()
+    body = request.get_json(silent=True) or {}
+    course, diff = body.get('course'), body.get('diff')
+    if course not in TA_COURSES or diff not in TA_DIFFS:
+        return _bad('코스가 올바르지 않아요', 400)
+    db = get_db()
+    rows = db.execute('SELECT t.user_id, t.ms, t.created_at, u.username FROM ta_records t JOIN users u ON u.user_id = t.user_id '
+                      'WHERE t.course = ? AND t.diff = ? ORDER BY t.ms ASC, t.created_at ASC LIMIT 50', (course, diff)).fetchall()
+    me = None
+    mine = {}
+    if user:
+        r = db.execute('SELECT ms FROM ta_records WHERE user_id = ? AND course = ? AND diff = ?', (user['user_id'], course, diff)).fetchone()
+        if r:
+            me = {'ms': int(r['ms']), 'rank': db.execute('SELECT COUNT(*) AS c FROM ta_records WHERE course = ? AND diff = ? AND ms < ?',
+                                                          (course, diff, int(r['ms']))).fetchone()['c'] + 1}
+        for r in db.execute('SELECT course, ms FROM ta_records WHERE user_id = ? AND diff = ?', (user['user_id'], diff)).fetchall():
+            mine[r['course']] = int(r['ms'])
+    return jsonify(ok=True, top=[{'name': r['username'], 'ms': int(r['ms']), 't': r['created_at'], 'me': bool(user) and r['user_id'] == user['user_id']} for r in rows],
+                   me=me, mine=mine)
 
 
 @app.route('/api/plaza/sync', methods=['POST'])
