@@ -533,6 +533,15 @@ for _i, _ch, _nm, _g in _EX122:
                           'description': _ch + '의 전용 스킨(전용 휘두르기 · 검 쥐는 자세 · 걷기 · 대시 · 능력 · 궁극기).', 'status': 'on_sale',
                           'price': _EX122_PRICE[_g], 'currency': 'KRW'})
 
+# v153: 시즌 패스 프리미엄(한 달). 상품 번호 pass_YYYY-MM — 게임 9999999999992 DP153의 PRICE_KRW와 같게
+PASS_PRICE = 5500
+for _y in range(2026, 2031):
+    for _m in range(1, 13):
+        _s = '%d-%02d' % (_y, _m)
+        SHOP_PRODUCTS.append({'id': 'pass_' + _s, 'kind': 'pass', 'name': '시즌 패스 ' + _s + ' 프리미엄', 'tier': '패스',
+                              'description': '시즌 ' + _s + ' 동안 시즌 패스 프리미엄 줄 보상을 모두 받아요.', 'status': 'on_sale',
+                              'price': PASS_PRICE, 'currency': 'KRW'})
+
 PRODUCTS_BY_ID = {p['id']: p for p in SHOP_PRODUCTS}
 
 
