@@ -234,6 +234,61 @@ def init_db():
             created_at  DOUBLE PRECISION NOT NULL
         )
     ''')
+    # v163: 우편함(보상 · 공지) · 전체 우편 · 차단 · 신고 · 자동 채팅 금지
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS mail (
+            id          TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            sender      TEXT NOT NULL,
+            title       TEXT NOT NULL,
+            body        TEXT NOT NULL,
+            gold        BIGINT NOT NULL DEFAULT 0,
+            dia         BIGINT NOT NULL DEFAULT 0,
+            created_at  DOUBLE PRECISION NOT NULL,
+            expire_at   DOUBLE PRECISION NOT NULL,
+            read_at     DOUBLE PRECISION,
+            claimed_at  DOUBLE PRECISION,
+            deleted     INTEGER NOT NULL DEFAULT 0
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS mail_broadcast (
+            id          TEXT PRIMARY KEY,
+            title       TEXT NOT NULL,
+            body        TEXT NOT NULL,
+            gold        BIGINT NOT NULL DEFAULT 0,
+            dia         BIGINT NOT NULL DEFAULT 0,
+            created_at  DOUBLE PRECISION NOT NULL,
+            expire_at   DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS user_blocks (
+            user_id     TEXT NOT NULL,
+            blocked_id  TEXT NOT NULL,
+            created_at  DOUBLE PRECISION NOT NULL,
+            PRIMARY KEY (user_id, blocked_id)
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS user_reports (
+            id          TEXT PRIMARY KEY,
+            reporter_id TEXT NOT NULL,
+            target_id   TEXT NOT NULL,
+            reason      TEXT NOT NULL,
+            place       TEXT NOT NULL,
+            detail      TEXT NOT NULL,
+            created_at  DOUBLE PRECISION NOT NULL,
+            status      TEXT NOT NULL DEFAULT 'new'
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS user_mute (
+            user_id     TEXT PRIMARY KEY,
+            until_at    DOUBLE PRECISION NOT NULL,
+            why         TEXT NOT NULL
+        )
+    ''')
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
     db.execute('''
         CREATE TABLE IF NOT EXISTS player_look (
@@ -1989,6 +2044,8 @@ def friends_request():
         return _bad('그런 이름의 플레이어가 없어요', 404)
     if fid == uid:
         return _bad('나 자신은 친구로 추가할 수 없어요', 400)
+    if _is_blocked_by(db, fid, uid) or _is_blocked_by(db, uid, fid):  # v163 차단 사이에는 신청 안 됨
+        return _bad('이 사람에게는 친구 신청을 보낼 수 없어요', 403)
     if db.execute('SELECT COUNT(*) AS c FROM friends WHERE user_id=? AND status=?', (uid, 'accepted')).fetchone()['c'] >= FRIEND_MAX:
         return _bad('친구는 %d명까지예요' % FRIEND_MAX, 400)
     mine = db.execute('SELECT status FROM friends WHERE user_id=? AND friend_id=?', (uid, fid)).fetchone()
@@ -2058,6 +2115,8 @@ def friends_invite():
     fid, fname = _uid_by_name(db, body.get('name'))
     if not fid:
         return _bad('그런 이름이 없어요', 404)
+    if _is_blocked_by(db, fid, uid):  # v163
+        return _bad('지금은 신청을 받지 않는 사람이에요', 403)
     is_friend = bool(db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (uid, fid, 'accepted')).fetchone())
     if not is_friend:
         # v111 광장: 둘 다 광장에 있으면 친구가 아니어도 신청할 수 있다(10초에 한 번, 「신청 받지 않기」면 막힘)
@@ -2157,6 +2216,217 @@ def _bad_filter(text):
     return ''.join('*' if i in hide else ch for i, ch in enumerate(text))
 
 
+# ---------------- v163 우편함 · 차단 · 신고 ----------------
+MAIL_DAYS = 30
+ADMIN_KEY = os.environ.get('ADMIN_KEY', '').strip()
+_BLK_CACHE = {}
+
+
+def _blocked_set(db, uid):
+    return set(r['blocked_id'] for r in db.execute('SELECT blocked_id FROM user_blocks WHERE user_id = ?', (uid,)).fetchall())
+
+
+def _blocked_cached(db, uid):
+    """광장은 자주 불리니 차단 목록을 20초 기억"""
+    hit = _BLK_CACHE.get(uid)
+    if hit and time.time() - hit[0] < 20:
+        return hit[1]
+    v = _blocked_set(db, uid)
+    if len(_BLK_CACHE) > 3000:
+        _BLK_CACHE.clear()
+    _BLK_CACHE[uid] = (time.time(), v)
+    return v
+
+
+def _is_blocked_by(db, target_uid, me_uid):
+    return bool(db.execute('SELECT 1 FROM user_blocks WHERE user_id = ? AND blocked_id = ?', (target_uid, me_uid)).fetchone())
+
+
+def _muted(db, uid):
+    r = db.execute('SELECT until_at FROM user_mute WHERE user_id = ?', (uid,)).fetchone()
+    return r['until_at'] if r and r['until_at'] > time.time() else 0
+
+
+def mail_send(db, uid, title, body, gold=0, dia=0, sender='운영팀', days=MAIL_DAYS, mid=None):
+    """우편 보내기(다른 기능에서도 씀: 내기 정산 · 대회 보상 …). 커밋은 부르는 쪽에서"""
+    now = time.time()
+    db.execute('INSERT INTO mail (id, user_id, sender, title, body, gold, dia, created_at, expire_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+               (mid or ('m' + secrets.token_hex(8)), uid, clamp_text(sender, 20), clamp_text(title, 40), clamp_text(body, 400),
+                max(0, int(gold)), max(0, int(dia)), now, now + days * 86400))
+
+
+def _mail_bc_fill(db, uid):
+    """전체 우편 중 아직 이 계정 우편함에 안 넣은 것을 넣는다(가입보다 나중에 보낸 것만이 아니라 기간 안의 모든 것)"""
+    now = time.time()
+    for b in db.execute('SELECT * FROM mail_broadcast WHERE expire_at > ?', (now,)).fetchall():
+        mid = 'b' + b['id'] + ':' + uid
+        if not db.execute('SELECT 1 FROM mail WHERE id = ?', (mid,)).fetchone():
+            try:
+                db.execute('INSERT INTO mail (id, user_id, sender, title, body, gold, dia, created_at, expire_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                           (mid, uid, '운영팀', b['title'], b['body'], b['gold'], b['dia'], b['created_at'], b['expire_at']))
+                db.commit()
+            except Exception:
+                db.rollback()
+
+
+def _mail_rows(db, uid):
+    now = time.time()
+    rows = db.execute('SELECT * FROM mail WHERE user_id = ? AND deleted = 0 AND expire_at > ? ORDER BY created_at DESC LIMIT 100', (uid, now)).fetchall()
+    return [{'id': r['id'], 'from': r['sender'], 'title': r['title'], 'body': r['body'], 'gold': int(r['gold']), 'dia': int(r['dia']),
+             't': r['created_at'], 'exp': r['expire_at'], 'read': bool(r['read_at']), 'got': bool(r['claimed_at'])} for r in rows]
+
+
+@app.route('/api/mail/list', methods=['POST'])
+def mail_list():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    _mail_bc_fill(db, user['user_id'])
+    L = _mail_rows(db, user['user_id'])
+    return jsonify(ok=True, mails=L, unread=sum(1 for m in L if not m['read'] or ((m['gold'] or m['dia']) and not m['got'])))
+
+
+@app.route('/api/mail/act', methods=['POST'])
+def mail_act():
+    """read(읽음) · claim(받기, id 또는 all) · delete(지우기: 보상을 받았거나 보상이 없는 것만)"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    act, mid = body.get('act'), body.get('id')
+    db = get_db()
+    now = time.time()
+    gold = dia = 0
+    got = []
+    if act == 'read' and isinstance(mid, str):
+        db.execute('UPDATE mail SET read_at = ? WHERE id = ? AND user_id = ? AND read_at IS NULL', (now, mid, uid))
+    elif act == 'claim':
+        q = 'SELECT id, gold, dia FROM mail WHERE user_id = ? AND deleted = 0 AND claimed_at IS NULL AND expire_at > ? AND (gold > 0 OR dia > 0)'
+        args = [uid, now]
+        if mid != 'all':
+            q += ' AND id = ?'
+            args.append(str(mid))
+        for r in db.execute(q, args).fetchall():
+            cur = db.execute('UPDATE mail SET claimed_at = ?, read_at = COALESCE(read_at, ?) WHERE id = ? AND claimed_at IS NULL', (now, now, r['id']))
+            if getattr(cur, 'rowcount', 1):
+                gold += int(r['gold'])
+                dia += int(r['dia'])
+                got.append(r['id'])
+    elif act == 'delete':
+        ids = [mid] if isinstance(mid, str) else []
+        if mid == 'read':
+            ids = [r['id'] for r in db.execute('SELECT id FROM mail WHERE user_id = ? AND deleted = 0 AND read_at IS NOT NULL AND (claimed_at IS NOT NULL OR (gold = 0 AND dia = 0))', (uid,)).fetchall()]
+        for i in ids:
+            db.execute('UPDATE mail SET deleted = 1 WHERE id = ? AND user_id = ? AND (claimed_at IS NOT NULL OR (gold = 0 AND dia = 0))', (i, uid))
+    else:
+        return _bad('알 수 없는 요청이에요', 400)
+    db.commit()
+    L = _mail_rows(db, uid)
+    return jsonify(ok=True, gold=gold, dia=dia, got=got, mails=L, unread=sum(1 for m in L if not m['read'] or ((m['gold'] or m['dia']) and not m['got'])))
+
+
+@app.route('/api/admin/mail', methods=['POST'])
+def admin_mail():
+    """운영자 우편 보내기: 헤더 X-Admin-Key = Render 환경변수 ADMIN_KEY. to='*'이면 모두에게(전체 우편)"""
+    if not ADMIN_KEY or not secrets.compare_digest(request.headers.get('X-Admin-Key', ''), ADMIN_KEY):
+        return _bad('권한이 없어요', 403)
+    body = request.get_json(silent=True) or {}
+    title, text = clamp_text(body.get('title'), 40).strip(), clamp_text(body.get('body'), 400).strip()
+    gold, dia = clamp_int(body.get('gold'), 0, 10 ** 9, 0), clamp_int(body.get('dia'), 0, 10 ** 8, 0)
+    days = clamp_int(body.get('days'), 1, 365, MAIL_DAYS)
+    if not title:
+        return _bad('제목을 적어 주세요', 400)
+    db = get_db()
+    if body.get('to') == '*':
+        now = time.time()
+        db.execute('INSERT INTO mail_broadcast (id, title, body, gold, dia, created_at, expire_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                   (secrets.token_hex(6), title, text, gold, dia, now, now + days * 86400))
+    else:
+        uid, _ = _uid_by_name(db, body.get('to') or '')
+        if not uid:
+            return _bad('그런 이름이 없어요', 404)
+        mail_send(db, uid, title, text, gold, dia, days=days)
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/block', methods=['POST'])
+def block_set():
+    """차단: {name, on} — on이 빠지면 목록만. 차단하면 친구도 끊는다"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    db = get_db()
+    if body.get('name'):
+        tid, tname = _uid_by_name(db, body.get('name'))
+        if not tid or tid == uid:
+            return _bad('그런 이름이 없어요', 404)
+        if body.get('on'):
+            if db.execute('SELECT COUNT(*) AS c FROM user_blocks WHERE user_id = ?', (uid,)).fetchone()['c'] >= 200:
+                return _bad('차단은 200명까지예요', 400)
+            if not db.execute('SELECT 1 FROM user_blocks WHERE user_id = ? AND blocked_id = ?', (uid, tid)).fetchone():
+                db.execute('INSERT INTO user_blocks (user_id, blocked_id, created_at) VALUES (?, ?, ?)', (uid, tid, time.time()))
+            db.execute('DELETE FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)', (uid, tid, tid, uid))
+        else:
+            db.execute('DELETE FROM user_blocks WHERE user_id = ? AND blocked_id = ?', (uid, tid))
+        db.commit()
+        _BLK_CACHE.pop(uid, None)
+    rows = db.execute('SELECT b.blocked_id, u.username, b.created_at FROM user_blocks b JOIN users u ON u.user_id = b.blocked_id WHERE b.user_id = ? ORDER BY b.created_at DESC',
+                      (uid,)).fetchall()
+    return jsonify(ok=True, blocked=[{'name': r['username'], 't': r['created_at']} for r in rows])
+
+
+REPORT_REASONS = {'abuse': '욕설 · 비방', 'spam': '도배 · 광고', 'name': '나쁜 이름', 'cheat': '핵 · 버그 악용', 'etc': '기타'}
+
+
+@app.route('/api/report', methods=['POST'])
+def report_user():
+    """신고: 같은 사람은 하루 한 번. 24시간 안에 서로 다른 5명이 욕설 · 도배로 신고하면 24시간 채팅 금지(자동)"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    db = get_db()
+    tid, tname = _uid_by_name(db, body.get('name') or '')
+    if not tid or tid == uid:
+        return _bad('그런 이름이 없어요', 404)
+    reason = body.get('reason') if body.get('reason') in REPORT_REASONS else 'etc'
+    place = clamp_text(body.get('place'), 20) or '기타'
+    detail = _chat_clean(body.get('detail'))[:300]
+    now = time.time()
+    if db.execute('SELECT 1 FROM user_reports WHERE reporter_id = ? AND target_id = ? AND created_at > ?', (uid, tid, now - 86400)).fetchone():
+        return _bad('이 사람은 오늘 이미 신고했어요', 409)
+    if db.execute('SELECT COUNT(*) AS c FROM user_reports WHERE reporter_id = ? AND created_at > ?', (uid, now - 86400)).fetchone()['c'] >= 20:
+        return _bad('오늘은 신고를 너무 많이 했어요', 429)
+    db.execute('INSERT INTO user_reports (id, reporter_id, target_id, reason, place, detail, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+               ('r' + secrets.token_hex(8), uid, tid, reason, place, detail, now))
+    n = db.execute("SELECT COUNT(DISTINCT reporter_id) AS c FROM user_reports WHERE target_id = ? AND created_at > ? AND reason IN ('abuse', 'spam')",
+                   (tid, now - 86400)).fetchone()['c']
+    if n >= 5 and not _muted(db, tid):
+        db.execute('DELETE FROM user_mute WHERE user_id = ?', (tid,))
+        db.execute('INSERT INTO user_mute (user_id, until_at, why) VALUES (?, ?, ?)', (tid, now + 86400, 'reports'))
+        mail_send(db, tid, '채팅이 잠시 막혔어요', '여러 사람의 신고가 쌓여 24시간 동안 채팅 · 말풍선을 쓸 수 없어요. 서로 존중하며 즐겨 주세요.', sender='운영팀')
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/admin/reports', methods=['GET'])
+def admin_reports():
+    """운영자 신고 보기(헤더 X-Admin-Key). 최근 200개"""
+    if not ADMIN_KEY or not secrets.compare_digest(request.headers.get('X-Admin-Key', ''), ADMIN_KEY):
+        return _bad('권한이 없어요', 403)
+    db = get_db()
+    rows = db.execute('SELECT r.*, a.username AS rname, b.username AS tname FROM user_reports r LEFT JOIN users a ON a.user_id = r.reporter_id '
+                      'LEFT JOIN users b ON b.user_id = r.target_id ORDER BY r.created_at DESC LIMIT 200').fetchall()
+    return jsonify(ok=True, reports=[{'from': r['rname'], 'target': r['tname'], 'reason': REPORT_REASONS.get(r['reason'], r['reason']), 'place': r['place'],
+                                      'detail': r['detail'], 't': r['created_at']} for r in rows])
+
+
 @app.route('/api/plaza/sync', methods=['POST'])
 def plaza_sync():
     """내 위치 · 모습을 올리고 같은 광장 사람들을 받는다. 처음엔 자리가 있는 광장으로, 꽉 차면 새 광장"""
@@ -2179,6 +2449,12 @@ def plaza_sync():
         m['tr'] = tr
     want = clamp_int(body.get('room'), 0, 999, 0)
     now = time.time()
+    try:
+        _blocked_cached(get_db(), uid)
+        if me.get('say') and _muted(get_db(), uid):
+            me = dict(me, say='')
+    except Exception:
+        pass
     with _plaza_lock:
         _plaza_prune(now)
         ch = _plaza_find(uid)
@@ -2200,8 +2476,9 @@ def plaza_sync():
             ent.update(say=say, sid=sid, sayT=now)
         room[uid] = ent
         others = []
+        blk = _BLK_CACHE.get(uid, (0, set()))[1]  # v163 차단한 사람은 광장에서 안 보임
         for u, p in room.items():
-            if u == uid:
+            if u == uid or u in blk:
                 continue
             o = dict(p['m'], name=p['name'], age=round(now - p['t'], 2))
             if p.get('say') and now - p['sayT'] < 8:
@@ -2763,6 +3040,9 @@ def chat_send():
         return _bad('보낼 말을 적어 주세요', 400)
     now = time.time()
     db = get_db()
+    mu = _muted(db, uid)  # v163 신고가 많이 쌓이면 잠시 채팅 금지
+    if mu:
+        return _bad('신고가 쌓여 %d분 동안 채팅을 쓸 수 없어요' % max(1, int((mu - now) / 60)), 403)
     room = 'world'
     if body.get('to'):
         fid, _ = _uid_by_name(db, body.get('to'))
@@ -2816,8 +3096,9 @@ def chat_pull():
         rows = list(reversed(db.execute('SELECT id, user_id, username, text, created_at FROM chat_msgs WHERE room=? ORDER BY id DESC LIMIT 60', (room,)).fetchall()))
     now = time.time()
     online = sum(1 for t in _SEEN.values() if now - t[0] < 40)
+    blk = _blocked_set(db, uid)  # v163 차단한 사람의 말은 안 보냄
     return jsonify(ok=True, online=online, msgs=[{'id': int(r['id']), 'name': r['username'], 'me': r['user_id'] == uid,
-                                                  'text': r['text'], 't': r['created_at']} for r in rows])
+                                                  'text': r['text'], 't': r['created_at']} for r in rows if r['user_id'] not in blk])
 
 
 if __name__ == '__main__':

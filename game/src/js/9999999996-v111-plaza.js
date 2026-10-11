@@ -210,14 +210,15 @@
  const gcol={'일반':'#c8d0dc','희귀':'#6ab8ff','영웅':'#c08aff','전설':'#ffb040','프리미엄':'#ff6ad5','유물':'#ff8a5a','신화':'#ff4d6d','초월':'#7dffe0'};
  function renderInfo(){const j=S.info;if(!j)return;const L=j.look||{};const row=(ic,n,g)=>n?'<li><i>'+ic+'</i><span>'+esc(n)+'</span>'+(g?'<em style="color:'+(gcol[g]||'#c8d0dc')+'">'+esc(g)+'</em>':'')+'</li>':'';
   const fr=j.friend==='accepted'?'<button disabled>✓ 친구</button>':j.friend==='pending'?'<button disabled>친구 신청 보냄</button>':'<button class="af">➕ 친구 추가</button>';
-  const acts=j.me?'<p class="me">나예요</p>':('<div class="ac">'+fr+'<button class="du2"'+(j.noinv?' disabled':'')+'>⚔ 결투 신청</button><button class="co"'+(j.noinv?' disabled':'')+'>🤝 듀오 신청</button></div>'+(j.noinv?'<p class="ni">지금 신청을 받지 않는 사람이에요</p>':'<p class="ni">결투는 친선(골드 없음)이에요</p>'));
+  const acts=j.me?'<p class="me">나예요</p>':('<div class="ac">'+fr+'<button class="du2"'+(j.noinv?' disabled':'')+'>⚔ 결투 신청</button><button class="co"'+(j.noinv?' disabled':'')+'>🤝 듀오 신청</button></div>'+(j.noinv?'<p class="ni">지금 신청을 받지 않는 사람이에요</p>':'<p class="ni">결투는 친선(골드 없음)이에요</p>')+(window.MR163?'<div class="mr163"><button class="bk">🚫 차단</button><button class="rp">🚨 신고</button></div>':''));/* v163 */
   box.innerHTML='<div class="pc"><button class="x">닫기</button><h3>'+esc(j.name)+'</h3><div class="st"><span><b>Lv '+(j.level||1)+'</b>레벨</span><span><b>'+(j.floor||1)+'F</b>탑 최고 층</span><span><b>'+(j.pvp?esc(j.pvp.tier):'-')+'</b>'+(j.pvp?j.pvp.wins+'승 '+j.pvp.losses+'패':'결투 기록 없음')+'</span></div>'+
    '<ul>'+row('🧑',L.cn,L.cg)+row('🗡',L.wn,L.wg)+row('🐾',L.pn,L.pg)+'</ul>'+acts+'<p class="msg"></p></div>';
   const q=s=>box.querySelector(s),msg=t=>{const m=q('.msg');if(m)m.textContent=t};q('.x').onclick=hideInfo;
   if(q('.af'))q('.af').onclick=async()=>{q('.af').disabled=true;const r=await api('/api/friends/request','POST',{name:j.name});
    if(r.s===200){j.friend=r.j.status==='friends'?'accepted':'pending';renderInfo();msg(r.j.status==='friends'?'✓ 친구가 됐어요!':'✓ 친구 신청을 보냈어요')}else{q('.af').disabled=false;msg(r.j.error||'보내지 못했어요')}};
   if(q('.du2'))q('.du2').onclick=()=>{hideInfo();try{FR94.duel(j.name)}catch(e){msg('결투를 열지 못했어요')}};
-  if(q('.co'))q('.co').onclick=()=>{hideInfo();try{FR94.duo(j.name,j.floor)}catch(e){msg('듀오를 열지 못했어요')}}}
+  if(q('.co'))q('.co').onclick=()=>{hideInfo();try{FR94.duo(j.name,j.floor)}catch(e){msg('듀오를 열지 못했어요')}}
+  if(q('.mr163 .bk'))q('.mr163 .bk').onclick=async()=>{hideInfo();await MR163.block(j.name,true);delete S.O[j.name]};if(q('.mr163 .rp'))q('.mr163 .rp').onclick=()=>{hideInfo();MR163.report(j.name,'광장',(S.O[j.name]&&S.O[j.name].say)||'')}}
  /* ---------- 로비 메뉴 ---------- */
  try{GM_ITEMS.push({id:'plaza',ic:'⛲',t:'광장',sub:'다른 플레이어와 만나기 · 결투 · 듀오 신청'});if(typeof LV_ITEM_EN!=='undefined')LV_ITEM_EN.push('PLAZA');if(window.LB_COL&&LB_COL.length<7)LB_COL.push('#7dd8ff')}catch(e){}
  {const f=gmMainGo;gmMainGo=function(){const it=GM_ITEMS[GM.sel];if(it&&it.id==='plaza'){try{gmSfx('ok')}catch(e){}enter();return}return f.apply(this,arguments)}}
@@ -246,6 +247,7 @@
  #plzInfo ul{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:4px}#plzInfo li{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:9px;background:#ffffff08;font-size:12.5px}#plzInfo li i{font-style:normal}#plzInfo li span{flex:1}#plzInfo li em{font-style:normal;font-size:11px;font-weight:900}
  #plzInfo .ac{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}#plzInfo .ac button,#plzInfo .x{font:inherit;font-weight:900;font-size:12px;padding:9px 4px;border-radius:10px;border:0;cursor:pointer;background:#24324c;color:#e8f4ef}
  #plzInfo .ac .du2{background:#5a1a2a;color:#ffd0d8}#plzInfo .ac .co{background:#1a4a3a;color:#c8ffe4}#plzInfo .ac .af{background:#1a3a5a;color:#cfe8ff}#plzInfo button:disabled{opacity:.5;cursor:default}
+ #plzInfo .mr163{display:flex;gap:6px;margin-top:8px}#plzInfo .mr163 button{flex:1;font:inherit;font-weight:900;font-size:11.5px;padding:7px 4px;border-radius:9px;border:0;cursor:pointer;background:#2a2f4a;color:#c8d0ff}#plzInfo .mr163 .rp{background:#4a1420;color:#ffc0c8}
  #plzInfo .ni,#plzInfo .me,#plzInfo .msg,#plzInfo .ld{margin:8px 0 0;font-size:11px;color:#9fb0c8;text-align:center}#plzInfo .msg{color:#a6f5c6}
  #plzChat{position:fixed;left:8px;bottom:8px;z-index:9300;width:min(380px,62vw);display:flex;flex-direction:column;gap:4px;pointer-events:none}#plzChat[hidden]{display:none}
  #plzChat .lg div{font-size:12px;line-height:1.35;color:#e8f4ef;text-shadow:0 1px 2px #000,0 0 4px #000;word-break:break-all}#plzChat .lg b{color:#a6f5c6}#plzChat .lg .me b{color:#ffd166}

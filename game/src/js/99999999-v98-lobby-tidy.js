@@ -36,13 +36,14 @@
    ($('mbFs')?row('⛶','전체 화면',fsOn()?'켜짐':'꺼짐','fs',fsOn()):'')+
    row('✨','조명 쇼','로비 무대 조명 바꾸기','lt',H.classList.contains('lt98'))+
    ($('gmRank')?row('🏆','랭킹','점수 · 레벨 · 탑 · 골드 · 결투','rk'):'')+
-   ($('rplBtn')?row('🎬','영상관','보스전 다시 보기','rpl'):'');
+   ($('rplBtn')?row('🎬','영상관','보스전 다시 보기','rpl'):'')+
+   (window.MR163?row('✉','우편함','보상 · 공지 받기','mail')+row('🚫','차단 목록','차단한 사람 보기 · 풀기','blk'):'');/* v163 */
   panel.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const v=b.dataset.df;try{gmSfx('ok')}catch(e){}try{$('diffSel').value=v;updDiff()}catch(e){}try{gmHud()}catch(e){}draw()});
   panel.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
    if(a==='snd'){click('gmSound');setTimeout(draw,30);return}
    if(a==='fs'){click('mbFs');setTimeout(draw,300);return}
    if(a==='lt'){const on=!H.classList.contains('lt98');H.classList.toggle('lt98',on);ls('bb-lt98',on?'1':'0');try{gmSfx('ok')}catch(e){}draw();return}
-   close();if(a==='rk')click('gmRank');else if(a==='rpl')click('rplBtn')})}
+   close();if(a==='rk')click('gmRank');else if(a==='rpl')click('rplBtn');else if(a==='mail')MR163.open();else if(a==='blk')MR163.blockList()})}
  addEventListener('resize',()=>{if(!panel.hidden)place()});
  /* 메뉴 화면을 바꾸면 닫기 */
  {const f=gmShow;gmShow=function(){close();return f.apply(this,arguments)}}
