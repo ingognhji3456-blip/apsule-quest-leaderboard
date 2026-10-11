@@ -31727,8 +31727,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
      반짝임은 매 순간 점으로 다시 찍는다. */
 (()=>{try{
  const $=id=>document.getElementById(id);
- const GOLD=[[1000,100],[10000,200],[50000,350],[150000,500],[400000,750],[1000000,1000]];
- const DIA_PACKS=[[500,1000],[3000,3000],[20000,5000],[100000,10000],[1000000,30000],[5000000,50000]];
+ const GOLD=[[1000,100],[10000,200],[50000,350],[150000,500],[400000,750],[1000000,800,1000]];/* v160: 셋째 값 = 원래 가격(할인 중) */
+ const DIA_PACKS=[[500,1000],[3000,3000],[20000,5000],[100000,10000],[1000000,30000],[5000000,40000,50000]];/* 할인 값은 app.py DIA_PACKS와 같게 */
  const TIERS=[{n:'',c:'#b07a4a'},{n:'',c:'#c8d0dc'},{n:'인기',c:'#ffd166'},{n:'',c:'#5ad8a0'},{n:'추천',c:'#c08aff'},{n:'최고 가치',c:'#ff6ad5'}];
  const fmt=n=>Number(n).toLocaleString('ko-KR');
  const dia=()=>{try{return DIA80.get()}catch(e){return 0}},gold=()=>Math.floor(saveData.coins||0);
@@ -31832,7 +31832,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    '<div class="bal"><span class="g"></span><span class="d"></span></div></div>'+
    '<div class="gr" style="--wood:url('+wood()+');--plank:url('+plank()+')">'+packs.map((p,i)=>{const mul=Math.round(p[0]/p[1]/base);
      return '<div class="cd t'+i+'" style="--fr:url('+frame(i)+');--tc:'+TIERS[i].c+'">'+(TIERS[i].n?'<em>'+TIERS[i].n+'</em>':'')+'<div class="nm">'+nm[i]+'</div>'+
-      '<div class="cv"><canvas class="ar" width="'+(A?A.W*2:144)+'" height="'+(A?A.H*2:104)+'"></canvas>'+(mul>1?'<u>가성비 ×'+fmt(mul)+'</u>':'')+'</div>'+
+      '<div class="cv">'+(p[2]?'<b class="dc"><span>'+Math.round((1-p[1]/p[2])*100)+'%</span>할인</b>':'')+'<canvas class="ar" width="'+(A?A.W*2:144)+'" height="'+(A?A.H*2:104)+'"></canvas>'+(mul>1?'<u>가성비 ×'+fmt(mul)+'</u>':'')+'</div>'+
       '<div class="am"><i class="'+(ig?'ig':'id')+'"></i>'+fmt(p[0])+'</div><button class="by'+(ig?' bd':'')+'" data-i="'+i+'"></button></div>'}).join('')+'</div>'+
    '<div class="ft">'+(ig?'다이아로 골드를 사요. 가격 단추를 한 번 더 누르면 사져요.':'결제가 끝나면 다이아가 바로 들어와요. 창을 닫아도 다음에 상점을 열면 받아요.'+(window.BB_APP?'<br>앱에서는 아직 살 수 없어요.':window.BB_FREE?'<br>지금은 무료 버전이라 판매하지 않아요.':''))+'</div><div class="ms"></div></div>';
   box.querySelector('.x').onclick=close;box.querySelectorAll('.tb button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;arm=-1;try{gmSfx('ok')}catch(e){}render()});
@@ -31845,7 +31845,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   const bc=box.querySelector('canvas.bc');if(bc){const c=BWK.getContext('2d');c.drawImage(bannerBase(),0,0);keeper(K(c),t);const o=bc.getContext('2d');o.imageSmoothingEnabled=false;o.drawImage(BWK,0,0,bc.width,bc.height)}
   if(arm>=0&&performance.now()-armT>3000){arm=-1;paintBtns()}}
  let tmr=0;function loop(){if(box.hidden)return;draw();paintBal();tmr=setTimeout(()=>requestAnimationFrame(loop),110)}
- function paintBtns(){box.querySelectorAll('.by').forEach(b=>{const i=+b.dataset.i,p=(tab==='gold'?GOLD:DIA_PACKS)[i];b.classList.toggle('ask',arm===i);b.innerHTML=arm===i?'한 번 더 누르면 구매':(tab==='gold'?'':'₩'+fmt(p[1]));if(arm!==i&&tab==='gold'){b.appendChild(icon(GEM,gemPal(200)));b.append(fmt(p[1]))}})}
+ function paintBtns(){box.querySelectorAll('.by').forEach(b=>{const i=+b.dataset.i,p=(tab==='gold'?GOLD:DIA_PACKS)[i];b.classList.toggle('ask',arm===i);b.innerHTML=arm===i?'한 번 더 누르면 구매':(p[2]?'<s>'+(tab==='gold'?'':'₩')+fmt(p[2])+'</s>':'')+(tab==='gold'?'':'₩'+fmt(p[1]));if(arm!==i&&tab==='gold'){b.appendChild(icon(GEM,gemPal(200)));b.append(fmt(p[1]))}})}
  function burst(i,cls){const cd=box.querySelectorAll('.cd')[i];if(!cd)return;cd.classList.remove('got');void cd.offsetWidth;cd.classList.add('got')}
  async function buy(i){if(tab==='gold'){const [g,cost]=GOLD[i];if(dia()<cost){toast('다이아가 모자라요 — 다이아 탭에서 살 수 있어요','bad');try{gmSfx('no')}catch(e){}return}
    if(arm!==i){arm=i;armT=performance.now();paintBtns();try{gmSfx('ok')}catch(e){}return}
@@ -31900,6 +31900,11 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  #cs159 .cv{position:relative;line-height:0;box-shadow:0 0 0 2px #000,inset 0 0 0 1px #ffffff22}
  #cs159 .ar{width:100%;height:auto;display:block}
  #cs159 .cv u{position:absolute;left:4px;bottom:4px;line-height:1;text-decoration:none;padding:3px 6px;background:#ff3a5a;color:#fff;font-size:10.5px;font-weight:900;box-shadow:0 0 0 2px #000,inset 0 1px 0 #ff9aaa;text-shadow:1px 1px 0 #0008}
+ #cs159 .dc{position:absolute;right:3px;top:3px;z-index:2;display:flex;flex-direction:column;align-items:center;line-height:1;padding:4px 6px 5px;background:#e8102e;color:#fff;font-size:10px;font-weight:900;
+  box-shadow:0 0 0 2px #000,inset 0 2px 0 #ff7a8a,inset 0 -3px 0 #8a0014,2px 3px 0 #0009;transform:rotate(8deg);animation:cs159d 1s steps(2) infinite;text-shadow:1px 1px 0 #6a0010}
+ #cs159 .dc span{font-size:18px;letter-spacing:-.5px}@keyframes cs159d{50%{transform:rotate(8deg) scale(1.08)}}
+ #cs159 .by s{font-size:11px;font-weight:800;opacity:.8;margin-right:4px;text-decoration-thickness:2px;text-decoration-color:#ff3a5a}
+ html.lpL:not(.lpPad) #cs159 .dc{font-size:7px;padding:2px 3px}html.lpL:not(.lpPad) #cs159 .dc span{font-size:11px}html.lpL:not(.lpPad) #cs159 .by s{font-size:8.5px;margin-right:2px}
  #cs159 .am{display:flex;align-items:center;justify-content:center;gap:6px;font-size:19px;font-weight:900;color:#fff;text-shadow:2px 2px 0 #000;margin-top:1px}
  #cs159 .am canvas.ic159{width:22px;height:22px}
  #cs159 .by{display:flex;align-items:center;justify-content:center;gap:5px;padding:7px 6px 8px;border:0;font:inherit;font-weight:900;font-size:16px;cursor:pointer;color:#fff;text-shadow:1px 2px 0 #0009;

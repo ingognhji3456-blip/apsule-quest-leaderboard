@@ -552,10 +552,14 @@ for _y in range(2026, 2031):
                               'price': PASS_PRICE, 'currency': 'KRW'})
 
 # v159: 다이아 묶음(현금, 여러 번 살 수 있음). 게임 9999999999999 CS159의 DIA_PACKS와 같게
-DIA_PACKS = [(500, 1000), (3000, 3000), (20000, 5000), (100000, 10000), (1000000, 30000), (5000000, 50000)]
-for _n, _w in DIA_PACKS:
+# 셋째 값 = 원래 가격(할인 중일 때만). v160: 5,000,000개 묶음 20% 할인 ₩50,000 → ₩40,000
+DIA_PACKS = [(500, 1000), (3000, 3000), (20000, 5000), (100000, 10000), (1000000, 30000), (5000000, 40000, 50000)]
+for _n, _w, *_o in DIA_PACKS:
     SHOP_PRODUCTS.append({'id': 'dia_%d' % _n, 'kind': 'dia', 'name': '다이아 %s개' % format(_n, ','), 'tier': '다이아', 'dia': _n,
                           'description': '💎 다이아 %s개를 바로 받아요.' % format(_n, ','), 'status': 'on_sale', 'price': _w, 'currency': 'KRW'})
+    if _o:
+        SHOP_PRODUCTS[-1]['list_price'] = _o[0]
+        SHOP_PRODUCTS[-1]['name'] += ' (%d%% 할인)' % round((1 - _w / _o[0]) * 100)
 
 PRODUCTS_BY_ID = {p['id']: p for p in SHOP_PRODUCTS}
 
