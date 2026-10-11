@@ -409,6 +409,16 @@ def init_db():
     db.execute("""CREATE TABLE IF NOT EXISTS rogue_runs (scope TEXT NOT NULL, user_id TEXT NOT NULL, name TEXT NOT NULL, score BIGINT NOT NULL, rooms INTEGER NOT NULL,
         ms BIGINT NOT NULL, clear INTEGER NOT NULL, cards TEXT NOT NULL, diff TEXT NOT NULL, created_at DOUBLE PRECISION NOT NULL, PRIMARY KEY (scope, user_id))""")
     db.execute("""CREATE TABLE IF NOT EXISTS rogue_clear (week TEXT NOT NULL, user_id TEXT NOT NULL, PRIMARY KEY (week, user_id))""")
+    # v175: 내 집(배치 · 방문 · 좋아요 · 방명록) · 낚시 기록
+    for ddl in (
+        """CREATE TABLE IF NOT EXISTS houses (user_id TEXT PRIMARY KEY, name TEXT NOT NULL, data TEXT NOT NULL, likes INTEGER NOT NULL DEFAULT 0,
+           visits INTEGER NOT NULL DEFAULT 0, updated_at DOUBLE PRECISION NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS house_likes (user_id TEXT NOT NULL, owner_id TEXT NOT NULL, PRIMARY KEY (user_id, owner_id))""",
+        """CREATE TABLE IF NOT EXISTS house_book (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, user_id TEXT NOT NULL, name TEXT NOT NULL, text TEXT NOT NULL, at DOUBLE PRECISION NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS fish_best (user_id TEXT NOT NULL, fish TEXT NOT NULL, name TEXT NOT NULL, size INTEGER NOT NULL, at DOUBLE PRECISION NOT NULL,
+           PRIMARY KEY (user_id, fish))""",
+    ):
+        db.execute(ddl)
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
     db.execute('''
         CREATE TABLE IF NOT EXISTS player_look (
@@ -5369,6 +5379,143 @@ def rogue_top():
         r = db.execute('SELECT score, rooms, clear FROM rogue_runs WHERE scope=? AND user_id=?', ('all', user['user_id'])).fetchone()
         me = {'score': int(r['score']), 'rooms': r['rooms'], 'clear': bool(r['clear'])} if r else None
     return jsonify(ok=True, week_id=wk, me=me, cleared_week=bool(user and db.execute('SELECT 1 FROM rogue_clear WHERE week=? AND user_id=?', (wk, user['user_id'])).fetchone()), **out)
+
+
+# ---------------- v175 내 집 · 낚시 ----------------
+# 집: 게임이 배치(가구 목록 · 벽지 · 바닥 · 크기)를 JSON으로 올림(8천 자까지). 친구 · 아무나 이름으로 구경(방문 수), 좋아요, 방명록(40자, 집마다 최근 50개).
+# 낚시: 종마다 가장 큰 기록(fish_best). 크기는 종마다 정해진 범위 안이어야 받음(FISH_SIZE, 게임 FISH와 같게).
+FISH_SIZE = {'f01': (8, 22), 'f02': (10, 26), 'f03': (6, 14), 'f04': (12, 30), 'f05': (15, 34), 'f06': (9, 20), 'f07': (18, 40), 'f08': (14, 32), 'f09': (20, 46),
+             'f10': (10, 24), 'f11': (22, 52), 'f12': (16, 36), 'f13': (25, 60), 'f14': (12, 28), 'f15': (30, 70), 'f16': (18, 44), 'f17': (35, 80),
+             'f18': (20, 48), 'f19': (40, 95), 'f20': (28, 66), 'f21': (45, 110), 'f22': (24, 58), 'f23': (50, 130), 'f24': (32, 78), 'f25': (60, 150),
+             'f26': (38, 90), 'f27': (70, 180), 'f28': (80, 200), 'f29': (90, 240), 'f30': (100, 300)}
+
+
+@app.route('/api/house/save', methods=['POST'])
+def house_save():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    d = (request.get_json(silent=True) or {}).get('data')
+    if not isinstance(d, dict):
+        return _bad('집 정보가 이상해요', 400)
+    raw = json.dumps(d, ensure_ascii=False)
+    if len(raw) > 8000:
+        return _bad('가구가 너무 많아요', 400)
+    db = get_db()
+    uid = user['user_id']
+    if db.execute('SELECT 1 FROM houses WHERE user_id=?', (uid,)).fetchone():
+        db.execute('UPDATE houses SET name=?, data=?, updated_at=? WHERE user_id=?', (user['username'], raw, time.time(), uid))
+    else:
+        db.execute('INSERT INTO houses (user_id, name, data, updated_at) VALUES (?, ?, ?, ?)', (uid, user['username'], raw, time.time()))
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/house/get', methods=['POST'])
+def house_get():
+    user = _duo_user()
+    b = request.get_json(silent=True) or {}
+    db = get_db()
+    oid, oname = _uid_by_name(db, b.get('name') or '')
+    if not oid:
+        return _bad('그 이름의 사람이 없어요', 404)
+    h = db.execute('SELECT * FROM houses WHERE user_id=?', (oid,)).fetchone()
+    if not h:
+        return _bad('아직 집을 꾸미지 않았어요', 404)
+    uid = user['user_id'] if user else ''
+    if uid and uid != oid and b.get('visit'):
+        db.execute('UPDATE houses SET visits=visits+1 WHERE user_id=?', (oid,))
+        db.commit()
+    book = [{'name': r['name'], 'text': r['text'], 't': r['at']} for r in db.execute('SELECT name, text, at FROM house_book WHERE owner_id=? ORDER BY at DESC LIMIT 20', (oid,)).fetchall()]
+    liked = bool(uid and db.execute('SELECT 1 FROM house_likes WHERE user_id=? AND owner_id=?', (uid, oid)).fetchone())
+    h = db.execute('SELECT * FROM houses WHERE user_id=?', (oid,)).fetchone()
+    return jsonify(ok=True, name=oname, data=json.loads(h['data']), likes=h['likes'], visits=h['visits'], book=book, liked=liked, mine=uid == oid)
+
+
+@app.route('/api/house/top', methods=['POST'])
+def house_top():
+    db = get_db()
+    return jsonify(ok=True, top=[{'name': r['name'], 'likes': r['likes'], 'visits': r['visits']} for r in db.execute(
+        'SELECT name, likes, visits FROM houses ORDER BY likes DESC, visits DESC LIMIT 20').fetchall()])
+
+
+@app.route('/api/house/like', methods=['POST'])
+def house_like():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    oid, _ = _uid_by_name(db, (request.get_json(silent=True) or {}).get('name') or '')
+    if not oid or oid == user['user_id'] or not db.execute('SELECT 1 FROM houses WHERE user_id=?', (oid,)).fetchone():
+        return _bad('좋아요를 누를 수 없어요', 400)
+    on = db.execute('SELECT 1 FROM house_likes WHERE user_id=? AND owner_id=?', (user['user_id'], oid)).fetchone()
+    if on:
+        db.execute('DELETE FROM house_likes WHERE user_id=? AND owner_id=?', (user['user_id'], oid))
+        db.execute('UPDATE houses SET likes=likes-1 WHERE user_id=?', (oid,))
+    else:
+        db.execute('INSERT INTO house_likes (user_id, owner_id) VALUES (?, ?)', (user['user_id'], oid))
+        db.execute('UPDATE houses SET likes=likes+1 WHERE user_id=?', (oid,))
+    db.commit()
+    return jsonify(ok=True, liked=not on)
+
+
+@app.route('/api/house/book', methods=['POST'])
+def house_book():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    db = get_db()
+    oid, _ = _uid_by_name(db, b.get('name') or '')
+    if not oid or not db.execute('SELECT 1 FROM houses WHERE user_id=?', (oid,)).fetchone():
+        return _bad('집을 찾지 못했어요', 404)
+    if _muted(db, user['user_id']) or _is_blocked_by(db, oid, user['user_id']):
+        return _bad('지금은 남길 수 없어요', 403)
+    text = _bad_filter(_chat_clean(b.get('text'))[:40].strip())
+    if not text:
+        return _bad('한마디를 써 주세요', 400)
+    now = time.time()
+    if db.execute('SELECT 1 FROM house_book WHERE user_id=? AND owner_id=? AND at>?', (user['user_id'], oid, now - 60)).fetchone():
+        return _bad('1분에 한 번만 남길 수 있어요', 429)
+    db.execute('INSERT INTO house_book (id, owner_id, user_id, name, text, at) VALUES (?, ?, ?, ?, ?, ?)', ('b' + secrets.token_hex(8), oid, user['user_id'], user['username'], text, now))
+    old = db.execute('SELECT at FROM house_book WHERE owner_id=? ORDER BY at DESC LIMIT 1 OFFSET 50', (oid,)).fetchone()
+    if old:
+        db.execute('DELETE FROM house_book WHERE owner_id=? AND at<=?', (oid, old['at']))
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/fish/catch', methods=['POST'])
+def fish_catch():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    fid = clamp_text(b.get('fish'), 4)
+    size = clamp_int(b.get('size'), 0, 1000, 0)
+    rng = FISH_SIZE.get(fid)
+    if not rng or not (rng[0] <= size <= rng[1]):
+        return _bad('물고기 정보가 이상해요', 400)
+    db = get_db()
+    uid = user['user_id']
+    old = db.execute('SELECT size FROM fish_best WHERE user_id=? AND fish=?', (uid, fid)).fetchone()
+    best = not old or size > old['size']
+    if not old:
+        db.execute('INSERT INTO fish_best (user_id, fish, name, size, at) VALUES (?, ?, ?, ?, ?)', (uid, fid, user['username'], size, time.time()))
+    elif best:
+        db.execute('UPDATE fish_best SET size=?, name=?, at=? WHERE user_id=? AND fish=?', (size, user['username'], time.time(), uid, fid))
+    db.commit()
+    rec = db.execute('SELECT MAX(size) AS m FROM fish_best WHERE fish=?', (fid,)).fetchone()['m']
+    return jsonify(ok=True, best=best, record=size >= rec)
+
+
+@app.route('/api/fish/top', methods=['POST'])
+def fish_top():
+    db = get_db()
+    recs = {r['fish']: {'name': r['name'], 'size': r['size']} for r in db.execute(
+        'SELECT f.fish, f.name, f.size FROM fish_best f JOIN (SELECT fish, MAX(size) AS m FROM fish_best GROUP BY fish) t ON t.fish=f.fish AND t.m=f.size').fetchall()}
+    col = [{'name': r['name'], 'n': r['n']} for r in db.execute('SELECT MAX(name) AS name, COUNT(*) AS n FROM fish_best GROUP BY user_id ORDER BY n DESC LIMIT 20').fetchall()]
+    return jsonify(ok=True, records=recs, collectors=col)
 
 
 if __name__ == '__main__':
