@@ -11,6 +11,7 @@
  if(!window.DUO85||!window.TW71)return;
  const DU=DUO85,D=DU.state,api=DU.api,acc=DU.acc,esc=DU.esc,$=id=>document.getElementById(id);
  const WW=960,WH=600,SPD=92;
+ const B={x0:0,x1:WW,y1:WH};/* v156: 걸을 수 있는 온 세상 크기(PB156이 넓힘). WW · WH는 가운데 원래 광장 */
  const S={on:false,room:0,want:0,O:{},n:0,busy:0,last:0,cnt:0,rooms:[],tgt:null,cam:{x:0,y:0},clickT:0,clickN:'',info:null,pet:{x:null,y:null,t:0},bg:null,err:''};
  const sv=()=>saveData.plz111||(saveData.plz111={noinv:false});
  /* ---------- 맵: 탑 아래 광장 ---------- */
@@ -93,14 +94,14 @@
    if(p.say&&p.sid&&p.sid!==M.sid){M.sid=p.sid;M.say=p.say;M.sayT=now-(p.sayAge||0)*1000;if(p.sayAge==null||p.sayAge<6)logAdd(p.name,p.say)}}
   for(const k in S.O)if(!seen.has(k)){const M=S.O[k];M.gone=M.gone||now;if(now-M.gone>2500)delete S.O[k]}else S.O[k].gone=0}
  /* ---------- 움직이기 ---------- */
- function blocked(x,y){if(x<16||x>WW-16||y<TOPY+8||y>WH-8)return true;for(const b of OBST){const dx=x-b.x,dy=(y-b.y)*b.ky;if(dx*dx+dy*dy<b.r*b.r)return true}return false}
+ function blocked(x,y){if(x<B.x0+16||x>B.x1-16||y<TOPY+8||y>B.y1-8)return true;for(const b of OBST){if(b.fn){if(b.fn(x,y))return true;continue}if(b.w){if(x>b.x&&x<b.x+b.w&&y>b.y&&y<b.y+b.h)return true;continue}const dx=x-b.x,dy=(y-b.y)*b.ky;if(dx*dx+dy*dy<b.r*b.r)return true}return false}
  function update(now,dt){let [ix,iy]=moveInput();let vx=0,vy=0;
   if(ix||iy){S.tgt=null;const l=Math.hypot(ix,iy)||1;vx=ix/l*SPD;vy=iy/l*SPD;P.face={x:ix,y:iy}}
   else if(S.tgt){const dx=S.tgt.x-P.x,dy=S.tgt.y-P.y,d=Math.hypot(dx,dy);if(d<3)S.tgt=null;else{vx=dx/d*SPD;vy=dy/d*SPD;P.face={x:Math.abs(dx)>4?Math.sign(dx):0,y:Math.abs(dy)>Math.abs(dx)?Math.sign(dy):0};if(!P.face.x&&!P.face.y)P.face={x:0,y:1}}}
   const moving=Math.hypot(vx,vy)>1;P.walkT=(P.walkT||0)+(moving?dt*9:0);P.walkOn=moving;
   if(moving){const nx=P.x+vx*dt,ny=P.y+vy*dt;if(!blocked(nx,ny)){P.x=nx;P.y=ny}else if(!blocked(nx,P.y))P.x=nx;else if(!blocked(P.x,ny))P.y=ny;else S.tgt=null}
   /* v140: 걸은 길을 0.05초마다 적어 둠(남들에게 0.7초치 길을 함께 보냄) */{const L=S.trl||(S.trl=[]);if(!L.length||now-L[L.length-1].t>=50)L.push({t:now,x:P.x,y:P.y});while(L.length&&now-L[0].t>800)L.shift()}
-  S.cam.x=Math.max(0,Math.min(WW-W,P.x-W/2));S.cam.y=Math.max(0,Math.min(WH-H,P.y-H/2-10))}
+  S.cam.x=Math.max(B.x0,Math.min(B.x1-W,P.x-W/2));S.cam.y=Math.max(0,Math.min(B.y1-H,P.y-H/2-10))}
  /* ---------- 그리기 ---------- */
  function drawMe(now){const c=ctx;c.globalAlpha=.4;c.fillStyle='#000';c.beginPath();c.ellipse(P.x,P.y+2,9,3,0,0,6.28);c.fill();c.globalAlpha=1;
   const fl=P.face.x<0,om=mode;mode='village';try{drawSword(P.x-12,P.y-19,2,fl,now);drawKnight(c,P.x-12,P.y-19,2,fl,P.walkOn?P.walkT:null,P.walkOn?null:now/430)}catch(e){}finally{mode=om}
@@ -121,9 +122,9 @@
   /* 고른 사람 표시 */if(S.info&&S.O[S.info.name]){const M=S.O[S.info.name];c.strokeStyle='#ffd166';c.lineWidth=1.5;c.globalAlpha=.6+.4*Math.sin(t*6);c.beginPath();c.ellipse(M.sx,M.sy+2,14,5,0,0,6.28);c.stroke();c.globalAlpha=1}
   c.restore();
   if(portrait())return;
-  /* 작은 지도 */const mw=72,mh=45,mx=W-mw-6,my=H-mh-6;c.globalAlpha=.75;c.fillStyle='#05070a';c.fillRect(mx-1,my-1,mw+2,mh+2);c.globalAlpha=.9;c.drawImage(S.bg,mx,my,mw,mh);c.globalAlpha=1;
-  for(const k in S.O){const M=S.O[k];if(M.sx==null)continue;c.fillStyle='#a6f5c6';c.fillRect(mx+M.sx/WW*mw-1,my+M.sy/WH*mh-1,2,2)}c.fillStyle='#ffd166';c.fillRect(mx+P.x/WW*mw-1.5,my+P.y/WH*mh-1.5,3,3);
-  c.strokeStyle='#ffffff55';c.strokeRect(mx+S.cam.x/WW*mw,my+S.cam.y/WH*mh,W/WW*mw,H/WH*mh)}
+  /* 작은 지도(v156: 넓어진 온 세상) */const BW=B.x1-B.x0,mw=BW>WW?96:72,mh=Math.round(mw*B.y1/BW),mx=W-mw-6,my=H-mh-6,qx=x=>mx+(x-B.x0)/BW*mw,qy=y=>my+y/B.y1*mh;c.globalAlpha=.75;c.fillStyle='#05070a';c.fillRect(mx-1,my-1,mw+2,mh+2);c.globalAlpha=.9;if(S.bg._mini||BW===WW)c.drawImage(S.bg._mini||S.bg,mx,my,mw,mh);c.globalAlpha=1;
+  for(const k in S.O){const M=S.O[k];if(M.sx==null)continue;c.fillStyle='#a6f5c6';c.fillRect(qx(M.sx)-1,qy(M.sy)-1,2,2)}c.fillStyle='#ffd166';c.fillRect(qx(P.x)-1.5,qy(P.y)-1.5,3,3);
+  c.strokeStyle='#ffffff55';c.strokeRect(qx(S.cam.x),qy(S.cam.y),W/BW*mw,H/B.y1*mh)}
  {const _f=frame;frame=function(){if(mode!=='plaza')return _f.apply(this,arguments);const now=performance.now(),dt=Math.min((now-last)/1000,.05)||0;last=now;
   try{if(!paused)update(now,dt);draw(paused?pauseAtMs:now);paintPortrait()}catch(e){console.error('plaza',e)}requestAnimationFrame(frame)}}
  /* 광장에서는 싸움 동작 없음 */
@@ -141,10 +142,10 @@
   const cw0=Math.min(W,H*vw/vh),want=Math.round(W*vw/cw0);if(S.hiW!==want){S.hiW=want;try{applyHiRes(want)}catch(e){}}/* 확대해도 또렷하게 */
   const cv=$('game'),k=cv.width/W,cw=cw0,cx=Math.max(cw/2,Math.min(W-cw/2,P.x-S.cam.x)),x0=cx-cw/2;S.crop={x0,w:cw};
   const o=pv.getContext('2d');o.imageSmoothingEnabled=true;o.drawImage(cv,x0*k,0,cw*k,H*k,0,0,ww,hh);
-  /* 작은 지도(오른쪽 아래, 단추 줄 위) */const mw=Math.round(ww*.3),mh=Math.round(mw*WH/WW),mx=ww-mw-Math.round(10*dpr),my=hh-mh-Math.round(14*dpr);
-  o.globalAlpha=.8;o.fillStyle='#05070a';o.fillRect(mx-2,my-2,mw+4,mh+4);o.globalAlpha=.9;o.imageSmoothingEnabled=false;o.drawImage(S.bg,mx,my,mw,mh);o.globalAlpha=1;
-  const d=Math.max(2,Math.round(2*dpr));for(const nm in S.O){const M=S.O[nm];if(M.sx==null)continue;o.fillStyle='#a6f5c6';o.fillRect(mx+M.sx/WW*mw-d/2,my+M.sy/WH*mh-d/2,d,d)}
-  o.fillStyle='#ffd166';o.fillRect(mx+P.x/WW*mw-d,my+P.y/WH*mh-d,d*2,d*2);o.strokeStyle='#ffffff66';o.lineWidth=dpr;o.strokeRect(mx+(S.cam.x+x0)/WW*mw,my+S.cam.y/WH*mh,cw/WW*mw,H/WH*mh)}
+  /* 작은 지도(오른쪽 아래, 단추 줄 위) */const BW=B.x1-B.x0,mw=Math.round(ww*.3),mh=Math.round(mw*B.y1/BW),mx=ww-mw-Math.round(10*dpr),my=hh-mh-Math.round((BW>WW?64:14)*dpr)/* v156: 채팅 칸 위로 */,qx=x=>mx+(x-B.x0)/BW*mw,qy=y=>my+y/B.y1*mh;
+  o.globalAlpha=.8;o.fillStyle='#05070a';o.fillRect(mx-2,my-2,mw+4,mh+4);o.globalAlpha=.9;o.imageSmoothingEnabled=!!S.bg._mini;if(S.bg._mini||BW===WW)o.drawImage(S.bg._mini||S.bg,mx,my,mw,mh);o.globalAlpha=1;
+  const d=Math.max(2,Math.round(2*dpr));for(const nm in S.O){const M=S.O[nm];if(M.sx==null)continue;o.fillStyle='#a6f5c6';o.fillRect(qx(M.sx)-d/2,qy(M.sy)-d/2,d,d)}
+  o.fillStyle='#ffd166';o.fillRect(qx(P.x)-d,qy(P.y)-d,d*2,d*2);o.strokeStyle='#ffffff66';o.lineWidth=dpr;o.strokeRect(qx(S.cam.x+x0),qy(S.cam.y),cw/BW*mw,H/B.y1*mh)}
  /* ---------- 누르기: 땅 = 걸어가기, 사람 = 정보(컴퓨터는 두 번, 폰은 한 번) ---------- */
  function toWorld(e){if(e.target===pv&&S.crop){const r=pv.getBoundingClientRect();return {x:S.crop.x0+(e.clientX-r.left)/r.width*S.crop.w+S.cam.x,y:(e.clientY-r.top)/r.height*H+S.cam.y}}
   const cv=$('game'),r=cv.getBoundingClientRect();if(!r.width)return null;return {x:(e.clientX-r.left)/r.width*W+S.cam.x,y:(e.clientY-r.top)/r.height*H+S.cam.y}}
@@ -153,7 +154,7 @@
  document.addEventListener('pointerdown',e=>{if(mode!=='plaza'||paused)return;const cv=$('game');if(!cv||(e.target!==cv&&e.target!==pv))return;const w=toWorld(e);if(!w)return;
   const p=pick(w),touch=e.pointerType==='touch'||e.pointerType==='pen';
   if(p){const nm=p.name||'';const now=performance.now();if(touch||(S.clickN===nm&&now-S.clickT<400)){S.clickT=0;openInfo(nm)}else{S.clickN=nm;S.clickT=now}return}
-  S.clickN='';const x=Math.max(16,Math.min(WW-16,w.x)),y=Math.max(TOPY+8,Math.min(WH-8,w.y));S.tgt={x,y}},true);
+  S.clickN='';const x=Math.max(B.x0+16,Math.min(B.x1-16,w.x)),y=Math.max(TOPY+8,Math.min(B.y1-8,w.y));S.tgt={x,y}},true);
  /* ---------- v113 말풍선 채팅 ----------
     보낼 말은 다음 sync에 실어 보내고(me.say · me.sid), 서버가 받아 준 번호(r.j.sid)가 오면 내 머리 위에 띄움. 남의 말은 sync 답의 say/sid. */
  S.log=[];S.say=null;S.mySay=null;let sidN=Date.now()%1e6;
@@ -255,5 +256,5 @@
  html.ph #plzChat{width:min(300px,64vw)}html.ph #plzChat .lg div{font-size:11px}html.ph #plzChat input{font-size:16px;padding:6px 8px}
  #plzView{position:fixed;inset:0;width:100vw;height:100vh;z-index:60;touch-action:none;background:#141a2a}#plzView[hidden]{display:none}
  html.plz111 #touch .tbtn,html.plz111 #btnP,html.plz111 #btnU{display:none!important}`;document.head.appendChild(st);
- window.PLZ111={enter,leave,S,openInfo,feed,WW,WH,FOUNT,TREES,LAMPS,BENCH,TOPY};
+ window.PLZ111={enter,leave,S,openInfo,feed,WW,WH,FOUNT,TREES,LAMPS,BENCH,TOPY,B,OBST,blocked};
 }catch(e){console.error('v111 plaza',e)}})();
