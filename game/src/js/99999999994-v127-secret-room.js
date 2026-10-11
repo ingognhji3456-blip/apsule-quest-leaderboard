@@ -27,8 +27,15 @@
  if(NG&&NG.paintChar)CH2DEF[IDX]={__v44:1,paint:NG.paintChar(S)};
 
  /* 상점: 쓰러뜨리기 전에는 진열대에 없음 */
- const hideCard=()=>{try{if(SV().clear)return;/* v129: 던전 20층을 깨야 상점에 나타남 */const cv=document.querySelector('#shopGrid canvas[data-k="ch"][data-i="'+IDX+'"]');if(!cv)return;let el=cv;while(el.parentElement&&el.parentElement.id!=='shopGrid')el=el.parentElement;if(el.style.display!=='none')el.style.display='none'}catch(e){}};
- {const f=renderShop;renderShop=function(){const r=f.apply(this,arguments);hideCard();return r}}
+ /* v152: 얻었으면(던전 정복 · 이미 보유) 캐릭터 목록 맨 앞에 「비밀」 표시로, 아니면 숨김. 예전엔 style.display로 숨겨서
+    v148 폰 공방 배치(display:grid!important)가 덮어써 얻기 전에도 보였고, 얻은 뒤엔 맨 끝(43번째)이라 찾기 어려웠음 */
+ const unlocked=()=>{try{if(SV().clear)return true;const inv=shopInv();return !!(inv&&inv.inv&&inv.inv.ch&&inv.inv.ch.includes(IDX))}catch(e){return false}};
+ {const st=document.createElement('style');st.textContent='html body #shopModal #shopGrid .wsItem.lk152.lk152{display:none!important}html body #shopModal #shopGrid .wsItem.sc152{order:-1;position:relative}'+
+  'html body #shopModal #shopGrid .wsItem.sc152::before{content:"✪ 비밀";position:absolute;top:6px;left:6px;z-index:3;font-size:10px;font-weight:900;padding:2px 7px;border-radius:999px;background:linear-gradient(180deg,#ff8ab0,#c03a7a);color:#fff;box-shadow:0 0 8px #ff4d8d88;pointer-events:none}';document.head.appendChild(st)}
+ const hideCard=()=>{try{const cv=document.querySelector('#shopGrid canvas[data-k="ch"][data-i="'+IDX+'"]');if(!cv)return;let el=cv;while(el.parentElement&&el.parentElement.id!=='shopGrid')el=el.parentElement;
+  const u=unlocked();el.classList.toggle('lk152',!u);el.classList.toggle('sc152',u);if(el.style.display==='none')el.style.display='';
+  /* 처음 얻은 뒤 공방을 열면 한 번은 클라비스를 골라 보여 줌 */
+  if(u&&!SV().seen152&&typeof shopTab!=='undefined'&&shopTab==='ch'){SV().seen152=1;save();try{WS.sel.ch=IDX;renderShop()}catch(e){}}}catch(e){}};
  setInterval(hideCard,700);
 
  /* 비밀 도감에 두 줄 */

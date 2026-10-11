@@ -29,5 +29,24 @@
  document.addEventListener('pointerup',e=>{const d=d2;d2=null;if(d&&xAt(e.clientX,e.clientY)===d.b)fire(d,e.clientX,e.clientY)},true);
  document.addEventListener('pointercancel',e=>{const d=d2;d2=null;if(d&&performance.now()-d.t<500)fire(d,d.x,d.y)},true);
  document.addEventListener('click',e=>{if(e.target&&e.target.closest&&e.target.closest(XSEL))lastClick=performance.now()},true);
- window.MF142={v:2,xAt};
+ /* v151: 가로 화면에서 ✕가 화면 끝(위 3~9px · 왼쪽 13~20px)에 붙어 있었음 — 폰은 전체 화면일 때 위 끝 누름을 알림줄 내리기로,
+    왼쪽 끝을 「뒤로」 쓸기로 가져가서 ✕가 안 눌렸음(세로는 ✕가 위에서 100px쯤이라 괜찮았음).
+    → 폰 · 패드 가로에서는 보이는 ✕를 위 14px · 양옆 30px(또는 안전 여백) 안쪽으로 밀어 둔다(translate, 매 0.4초 확인) */
+ const MT=14,ML=30;
+ function sa(side){try{const d=document.createElement('div');d.style.cssText='position:fixed;visibility:hidden;'+side+':0;width:0;height:0;padding-'+side+':env(safe-area-inset-'+side+')';document.body.appendChild(d);const v=parseFloat(getComputedStyle(d)['padding'+side[0].toUpperCase()+side.slice(1)])||0;d.remove();return v}catch(e){return 0}}
+ let SA={left:0,right:0,top:0,t:0};
+ function nudge(){const R=document.documentElement,on=R.classList.contains('lpL')||(R.classList.contains('ph')&&innerWidth>innerHeight);
+  const all=document.querySelectorAll(XSEL);
+  if(!on){for(const b of all)if(b.dataset.n151){b.style.translate='';delete b.dataset.n151}return}
+  if(Date.now()-SA.t>3000)SA={left:sa('left'),right:sa('right'),top:sa('top'),t:Date.now()};
+  const L=Math.max(ML,SA.left+10),Rr=Math.max(ML,SA.right+10),T=Math.max(MT,SA.top+6);
+  for(const b of all){if(!vis(b))continue;const r=b.getBoundingClientRect(),k=(b.offsetWidth?r.width/b.offsetWidth:1)||1;
+   const o=(b.dataset.n151||'0,0').split(',').map(Number);let dx=0,dy=0;
+   if(r.left<L)dx=L-r.left;else if(innerWidth-r.right<Rr)dx=-(Rr-(innerWidth-r.right));
+   if(r.top<T)dy=T-r.top;
+   if(Math.abs(dx)<1&&Math.abs(dy)<1)continue;
+   const nx=o[0]+dx/k,ny=o[1]+dy/k;b.dataset.n151=nx.toFixed(1)+','+ny.toFixed(1);b.style.translate=nx.toFixed(1)+'px '+ny.toFixed(1)+'px'}}
+ setInterval(()=>{try{nudge()}catch(e){}},400);addEventListener('resize',()=>setTimeout(()=>{try{nudge()}catch(e){}},80));
+ new MutationObserver(()=>{clearTimeout(nudge._t);nudge._t=setTimeout(()=>{try{nudge()}catch(e){}},30)}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
+ window.MF142={v:3,xAt,nudge};
 }catch(e){console.warn('v142',e)}})();
