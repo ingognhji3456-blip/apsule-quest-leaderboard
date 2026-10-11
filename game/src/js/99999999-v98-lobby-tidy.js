@@ -38,13 +38,13 @@
    ($('gmRank')?row('🏆','랭킹','점수 · 레벨 · 탑 · 골드 · 결투','rk'):'')+
    ($('rplBtn')?row('🎬','영상관','보스전 다시 보기','rpl'):'')+
    (window.MR163?row('✉','우편함','보상 · 공지 받기','mail')+row('🚫','차단 목록','차단한 사람 보기 · 풀기','blk'):'')+/* v163 */
-   (window.CP170?row('🏆','기록 센터','주간 리그 · 업적 · 스피드런 · 친구 랭킹','cp'):'')+(window.CR171?row('🎨','작업실','층 · 음악 · 잡몹 · 도전 과제 만들기 · 게시판','cr'):'')+(window.WG173?row('🐉','월드 보스','오늘의 월드 보스 · 서버 모두 함께','wb')+row('🏰','길드','길드 만들기 · 출석 · 기부 · 채팅','gd'):'')+(window.CV172?row('🎁','혜택 · 편의',(window.CV172.PK.info&&!CV172.PK.info.spun?'🎡 오늘 룰렛을 아직 안 돌렸어요':'룰렛 · 초대 · 은행 · 연습장 · 접근성'),'cv'):'')+(window.BE168?row('🛠','보스 만들기','나만의 보스 · 인기 보스 도전','be'):'')+(window.TA165?row('⏱','타임어택','보스 10명 연속 · 기록 순위','ta'):'');/* v169 */
+   (window.CP170?row('🏆','기록 센터','주간 리그 · 업적 · 스피드런 · 친구 랭킹','cp'):'')+(window.CR171?row('🎨','작업실','층 · 음악 · 잡몹 · 도전 과제 만들기 · 게시판','cr'):'')+(window.RG174?row('🗺','로그라이크 원정','방 15개 · 능력 카드 · 쓰러지면 처음부터','rg'):'')+(window.WG173?row('🐉','월드 보스','오늘의 월드 보스 · 서버 모두 함께','wb')+row('🏰','길드','길드 만들기 · 출석 · 기부 · 채팅','gd'):'')+(window.CV172?row('🎁','혜택 · 편의',(window.CV172.PK.info&&!CV172.PK.info.spun?'🎡 오늘 룰렛을 아직 안 돌렸어요':'룰렛 · 초대 · 은행 · 연습장 · 접근성'),'cv'):'')+(window.BE168?row('🛠','보스 만들기','나만의 보스 · 인기 보스 도전','be'):'')+(window.TA165?row('⏱','타임어택','보스 10명 연속 · 기록 순위','ta'):'');/* v169 */
   panel.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const v=b.dataset.df;try{gmSfx('ok')}catch(e){}try{$('diffSel').value=v;updDiff()}catch(e){}try{gmHud()}catch(e){}draw()});
   panel.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
    if(a==='snd'){click('gmSound');setTimeout(draw,30);return}
    if(a==='fs'){click('mbFs');setTimeout(draw,300);return}
    if(a==='lt'){const on=!H.classList.contains('lt98');H.classList.toggle('lt98',on);ls('bb-lt98',on?'1':'0');try{gmSfx('ok')}catch(e){}draw();return}
-   close();if(a==='rk')click('gmRank');else if(a==='rpl')click('rplBtn');else if(a==='mail')MR163.open();else if(a==='blk')MR163.blockList();else if(a==='cp')CP170.open('league');else if(a==='cr')CR171.open('map');else if(a==='cv')CV172.open('gift');else if(a==='wb')WG173.openWB();else if(a==='gd')WG173.openGD();else if(a==='be')BE168.open('hot');else if(a==='ta')TA165.open()})}
+   close();if(a==='rk')click('gmRank');else if(a==='rpl')click('rplBtn');else if(a==='mail')MR163.open();else if(a==='blk')MR163.blockList();else if(a==='cp')CP170.open('league');else if(a==='cr')CR171.open('map');else if(a==='cv')CV172.open('gift');else if(a==='wb')WG173.openWB();else if(a==='rg')RG174.open();else if(a==='gd')WG173.openGD();else if(a==='be')BE168.open('hot');else if(a==='ta')TA165.open()})}
  addEventListener('resize',()=>{if(!panel.hidden)place()});
  /* 메뉴 화면을 바꾸면 닫기 */
  {const f=gmShow;gmShow=function(){close();return f.apply(this,arguments)}}

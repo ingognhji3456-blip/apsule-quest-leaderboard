@@ -29,7 +29,7 @@
     const dmg=Math.max(0,(G.wbMax||G.maxHp)-G.hp),tx='🐉 월드 보스 · 남은 시간 '+Math.ceil(WB_SEC-el)+'초 · 내 피해 '+num(Math.round(dmg)),c=ctx;c.save();try{c.setTransform(SS,0,0,SS,0,0)}catch(e){}
     c.font='bold 9px sans-serif';const w=c.measureText(tx).width+14;c.globalAlpha=.88;c.fillStyle='#2a0608';c.fillRect(W/2-w/2,AY+30,w,14);c.globalAlpha=1;c.fillStyle=WB_SEC-el<10?'#ff5a6a':'#ffd0a0';c.textAlign='center';c.fillText(tx,W/2,AY+40);c.restore()}}}catch(e){}return r}}
  if(typeof fightEnd==='function'){const f=fightEnd;fightEnd=function(won){if(G&&G.wb173&&G.state!=='result'){wbEnd();return}return f.apply(this,arguments)}}
- async function wbEnd(){G.state='result';try{stopMusic()}catch(e){}WB.on=false;const dmg=Math.round(Math.max(0,(G.wbMax||G.maxHp)-Math.max(0,G.hp)));
+ async function wbEnd(){G.state='result';G.won=true;/* 마지막 피격 복기(850)가 안 붙게 */try{stopMusic()}catch(e){}WB.on=false;const dmg=Math.round(Math.max(0,(G.wbMax||G.maxHp)-Math.max(0,G.hp)));
   let res=null;if(acc().token){const r=await api('/api/wb/hit',{day:G.wb173.day,dmg});res=r.s===200?r.j:{err:(r.j&&r.j.error)||'올리지 못했어요'}}
   const I=await wbInfo(),hp=I?I.hp_left/I.hp_max:0;
   const html='<div class="wb173r"><b>🐉 '+esc((BOSSES[(I||{}).boss|0]||{}).name||'')+'</b><div class="dm">내 피해 <b>'+num(res&&!res.err?res.dmg:dmg)+'</b>'+(res&&res.bonus?' <em>(길드 +'+res.bonus+'%)</em>':'')+'</div>'+

@@ -405,6 +405,10 @@ def init_db():
         """CREATE TABLE IF NOT EXISTS guild_msgs (id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL, name TEXT NOT NULL, text TEXT NOT NULL, at DOUBLE PRECISION NOT NULL)""",
     ):
         db.execute(ddl)
+    # v174: 로그라이크 원정 기록(주마다 · 전체 최고) · 주간 첫 완주 보상
+    db.execute("""CREATE TABLE IF NOT EXISTS rogue_runs (scope TEXT NOT NULL, user_id TEXT NOT NULL, name TEXT NOT NULL, score BIGINT NOT NULL, rooms INTEGER NOT NULL,
+        ms BIGINT NOT NULL, clear INTEGER NOT NULL, cards TEXT NOT NULL, diff TEXT NOT NULL, created_at DOUBLE PRECISION NOT NULL, PRIMARY KEY (scope, user_id))""")
+    db.execute("""CREATE TABLE IF NOT EXISTS rogue_clear (week TEXT NOT NULL, user_id TEXT NOT NULL, PRIMARY KEY (week, user_id))""")
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
     db.execute('''
         CREATE TABLE IF NOT EXISTS player_look (
@@ -5301,6 +5305,70 @@ def guild_chat():
         db.execute('DELETE FROM guild_msgs WHERE guild_id=? AND at<=?', (g['id'], old['at']))
     db.commit()
     return jsonify(ok=True)
+
+
+# ---------------- v174 로그라이크 원정 ----------------
+# 15방(14방 + 보스) 기록. 점수 = 방 × 1000 + (완주면 5000 + 시간 보너스). 이번 주(scope=주) · 전체(scope='all') 최고만 남김.
+# 이번 주 첫 완주는 🪙5,000 · 💎30 우편.
+ROGUE_ROOMS = 15
+
+
+def _rogue_score(rooms, clear, ms):
+    return rooms * 1000 + ((5000 + max(0, 1_800_000 - ms) // 100) if clear else 0)
+
+
+@app.route('/api/rogue/submit', methods=['POST'])
+def rogue_submit():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    rooms = clamp_int(b.get('rooms'), 0, ROGUE_ROOMS, 0)
+    clear = bool(b.get('clear')) and rooms == ROGUE_ROOMS
+    ms = clamp_int(b.get('ms'), 0, 36_000_000, 0)
+    if ms < rooms * 8000:
+        return _bad('기록이 이상해요', 400)
+    cards = ','.join(c for c in (b.get('cards') or [])[:40] if isinstance(c, str) and re.match(r'^[a-z_]{2,16}$', c))
+    diff = b.get('diff') if b.get('diff') in LEAGUE_DM else 'normal'
+    score = _rogue_score(rooms, clear, ms)
+    db = get_db()
+    uid = user['user_id']
+    wk = _week()
+    best = {}
+    for scope in (wk, 'all'):
+        old = db.execute('SELECT score FROM rogue_runs WHERE scope=? AND user_id=?', (scope, uid)).fetchone()
+        if not old or score > old['score']:
+            best[scope] = True
+            if old:
+                db.execute('UPDATE rogue_runs SET name=?, score=?, rooms=?, ms=?, clear=?, cards=?, diff=?, created_at=? WHERE scope=? AND user_id=?',
+                           (user['username'], score, rooms, ms, 1 if clear else 0, cards, diff, time.time(), scope, uid))
+            else:
+                db.execute('INSERT INTO rogue_runs (scope, user_id, name, score, rooms, ms, clear, cards, diff, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                           (scope, uid, user['username'], score, rooms, ms, 1 if clear else 0, cards, diff, time.time()))
+    first = False
+    if clear and not db.execute('SELECT 1 FROM rogue_clear WHERE week=? AND user_id=?', (wk, uid)).fetchone():
+        first = True
+        db.execute('INSERT INTO rogue_clear (week, user_id) VALUES (?, ?)', (wk, uid))
+        mail_send(db, uid, '🗺 원정 완주!', '이번 주 첫 로그라이크 원정 완주를 축하해요!', gold=5000, dia=30, sender='운영팀')
+    db.commit()
+    rank = db.execute('SELECT COUNT(*) AS c FROM rogue_runs WHERE scope=? AND score>?', (wk, score)).fetchone()['c'] + 1
+    return jsonify(ok=True, score=score, best_week=bool(best.get(wk)), best_all=bool(best.get('all')), rank=rank, first_clear=first)
+
+
+@app.route('/api/rogue/top', methods=['POST'])
+def rogue_top():
+    user = _duo_user()
+    db = get_db()
+    wk = _week()
+    out = {}
+    for key, scope in (('week', wk), ('all', 'all')):
+        out[key] = [{'name': r['name'], 'score': int(r['score']), 'rooms': r['rooms'], 'ms': int(r['ms']), 'clear': bool(r['clear']), 'cards': r['cards'].split(',') if r['cards'] else [],
+                     'diff': r['diff']} for r in db.execute('SELECT * FROM rogue_runs WHERE scope=? ORDER BY score DESC LIMIT 20', (scope,)).fetchall()]
+    me = None
+    if user:
+        r = db.execute('SELECT score, rooms, clear FROM rogue_runs WHERE scope=? AND user_id=?', ('all', user['user_id'])).fetchone()
+        me = {'score': int(r['score']), 'rooms': r['rooms'], 'clear': bool(r['clear'])} if r else None
+    return jsonify(ok=True, week_id=wk, me=me, cleared_week=bool(user and db.execute('SELECT 1 FROM rogue_clear WHERE week=? AND user_id=?', (wk, user['user_id'])).fetchone()), **out)
 
 
 if __name__ == '__main__':
