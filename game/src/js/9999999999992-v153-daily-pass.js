@@ -395,12 +395,77 @@
  html.lpL #dp153[data-tab=pass] .bd>.all,html.lpL #dp153[data-tab=pass] .bd>.trk,html.lpL #dp153[data-tab=pass] .bd>.msg{grid-column:1/-1}
  html.lpL #dp153[data-tab=pass] .all{height:36px;font-size:14px}
  html.lpL #dp153 .pp2 small{display:none}
+
+ /* ── v153 3차: 사용자 그림대로 ── */
+ #dp153 .hd{flex-wrap:wrap;row-gap:8px}
+ #dp153 .hd .ttl{display:flex;flex-direction:column;min-width:0}
+ #dp153 .hd .ttl small{font-size:11px}
+ #dp153 .hd .tabs{flex:1 1 100%;padding:0;order:5}
+ html.lpL #dp153 .hd{flex-wrap:nowrap}
+ html.lpL #dp153 .hd .ttl small{display:none}
+ html.lpL #dp153 .hd .tabs{flex:0 0 300px;order:0;margin-left:14px}
+ html.lpL #dp153 .hd .tabs button{height:34px;border-radius:12px}
+ #dp153 .more{text-align:center;font-size:11px;color:#a898d0;padding:4px 0}
+ #dp153[data-tab=mis] .more{display:none}
+ /* 미션 가로: 왼쪽 옆칸(일일/주간 · 상자) + 오른쪽 목록 */
+ html.lpL #dp153[data-tab=mis] .bd{display:grid!important;grid-template-columns:220px minmax(0,1fr);grid-auto-rows:min-content;column-gap:12px;row-gap:7px;align-items:start}
+ html.lpL #dp153 .bd .qsub{display:grid!important;grid-column:1;grid-row:1/span 2;grid-template-columns:1fr;gap:6px;background:none;border:0;padding:0}
+ html.lpL #dp153 .bd .qsub button{height:36px;border:1px solid #5ef0d044;background:#0a1a1c}
+ html.lpL #dp153 .bd .qsub button.on{background:linear-gradient(180deg,#7ff0d8,#2ab89a);color:#04241c}
+ html.lpL #dp153[data-tab=mis] .qcols{display:contents!important}
+ html.lpL #dp153 .qcols:not(.sw)>.qs:nth-child(1),html.lpL #dp153 .qcols.sw>.qs:nth-child(2){display:contents!important}
+ html.lpL #dp153 .qcols.sw>.qs:nth-child(1),html.lpL #dp153 .qcols:not(.sw)>.qs:nth-child(2){display:none!important}
+ html.lpL #dp153 .qs>.qh{grid-column:1;grid-row:3;flex-direction:column;align-items:flex-start;gap:0}
+ html.lpL #dp153 .qs>.qh small{margin-left:0;color:#5ef0d0}
+ html.lpL #dp153 .qs>.qch{grid-column:1;grid-row:4/span 2;flex-direction:column-reverse;align-items:stretch}
+ html.lpL #dp153 .qs>.qch .qbox{grid-template-columns:52px auto}
+ html.lpL #dp153 .qs>.qch .qcimg{width:52px;height:36px}
+ html.lpL #dp153 .qs>.qc{grid-column:2;grid-template-columns:40px minmax(0,1fr) auto auto;grid-template-rows:auto auto;padding:6px 10px}
+ html.lpL #dp153 .qs>.qc .qi{width:40px;height:40px}
+ html.lpL #dp153 .qs>.qc .qr{grid-column:3;grid-row:1/3}
+ html.lpL #dp153 .qs>.qc .qbtn{grid-column:4;height:36px}
+ html.lpL #dp153 .qs>.qc .qst{right:92px}
+ html.lpL #dp153[data-tab=mis] .msg{grid-column:1/-1}
+ /* 패스 세로: 아래로 내려가는 길(왼쪽 무료 · 가운데 단계 · 오른쪽 프리미엄) */
+ html.lpP #dp153 .tlab,html:not(.lp) #dp153 .tlab{display:grid!important;grid-template-columns:1fr 44px 1fr;grid-template-rows:auto;writing-mode:horizontal-tb;gap:6px;margin-bottom:6px;font-size:13px;letter-spacing:0}
+ html.lpP #dp153 .tlab span,html:not(.lp) #dp153 .tlab span{height:34px;display:flex;align-items:center;justify-content:center;gap:5px;border-radius:10px;background:#141c34;border:1px solid #5ec8ff55;color:#bfefff}
+ html.lpP #dp153 .tlab span:nth-child(2),html:not(.lp) #dp153 .tlab span:nth-child(2){visibility:hidden}
+ html.lpP #dp153 .tlab span.g,html:not(.lp) #dp153 .tlab span.g{background:#2a1e06;border-color:#ffd84a88;color:#ffe2a0}
+ html.lpP #dp153 .tlab i.px149,html:not(.lp) #dp153 .tlab i.px149{width:16px!important;height:16px!important}
+ html.lpP #dp153 .tsc,html:not(.lp) #dp153 .tsc{overflow:visible;padding:0}
+ html.lpP #dp153 .tin,html:not(.lp) #dp153 .tin{grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:1fr;gap:8px}
+ html.lpP #dp153 .tc,html:not(.lp) #dp153 .tc{grid-template-rows:auto;grid-template-columns:1fr 44px 1fr;gap:6px;min-height:64px}
+ html.lpP #dp153 .pc,html:not(.lp) #dp153 .pc{flex-direction:row;justify-content:flex-start;align-items:center;gap:6px;padding:6px 8px;min-height:64px;text-align:left}
+ html.lpP #dp153 .pc .pimg,html:not(.lp) #dp153 .pc .pimg{position:relative;inset:auto;flex:0 0 54px;height:46px}
+ html.lpP #dp153 .pc .plb,html:not(.lp) #dp153 .pc .plb{position:absolute;left:68px;top:10px;font-size:10.5px;color:#a8b0d0}
+ html.lpP #dp153 .pc b,html:not(.lp) #dp153 .pc b{background:none;padding:12px 0 0;font-size:16px}
+ html.lpP #dp153 .pc.p::before,html:not(.lp) #dp153 .pc.p::before{display:none}
+ html.lpP #dp153 .nd .ln,html:not(.lp) #dp153 .nd .ln{left:50%;right:auto;top:-8px;bottom:-8px;width:6px;height:auto;margin:0 0 0 -3px}
+ html.lpP #dp153 .tc.big .nd span,html:not(.lp) #dp153 .tc.big .nd span{width:34px;height:34px}
+ html.lpP #dp153 .tc.cur .nd span,html:not(.lp) #dp153 .tc.cur .nd span{width:40px;height:40px;font-size:16px}
+ #dp153 .pc .plb{display:none}
+ html.lpP #dp153 .pc .plb,html:not(.lp) #dp153 .pc .plb{display:block}
+ /* 패스 가로: 왼쪽 옆칸(단계 방패 · 시즌 · 프리미엄) + 오른쪽(모두 받기 · 가로 길) */
+ html.lpL #dp153[data-tab=pass] .bd{grid-template-columns:200px minmax(0,1fr)!important;grid-auto-rows:min-content;align-items:start;column-gap:10px}
+ html.lpL #dp153[data-tab=pass] .ph{grid-column:1;grid-row:1;flex-direction:column;text-align:center;gap:4px;padding:8px}
+ html.lpL #dp153[data-tab=pass] .ph .phm small{display:none}
+ html.lpL #dp153[data-tab=pass] .pp2{grid-column:1;grid-row:2;flex-direction:column;align-items:stretch;text-align:center}
+ html.lpL #dp153[data-tab=pass] .pp2>i.px149{align-self:center}
+ html.lpL #dp153[data-tab=pass] .ppb{flex-direction:column!important}
+ html.lpL #dp153[data-tab=pass] .bd>.all{grid-column:2!important;grid-row:1}
+ html.lpL #dp153[data-tab=pass] .bd>.trk{grid-column:2!important;grid-row:1/4;margin-top:44px;display:grid;grid-template-columns:62px minmax(0,1fr);gap:6px}
+ html.lpL #dp153[data-tab=pass] .bd>.more{display:none}
+ html.lpL #dp153 .tlab{display:grid!important;writing-mode:horizontal-tb;grid-template-rows:64px 30px 64px;gap:0;font-size:11px;letter-spacing:0}
+ html.lpL #dp153 .tlab span{flex-direction:column;display:flex;align-items:center;justify-content:center;gap:2px;border-radius:10px;background:#141c34;border:1px solid #5ec8ff55;color:#bfefff}
+ html.lpL #dp153 .tlab span:nth-child(2){visibility:hidden}
+ html.lpL #dp153 .tlab span.g{background:#2a1e06;border-color:#ffd84a88;color:#ffe2a0}
+ html.lpL #dp153 .tlab i.px149{width:18px!important;height:18px!important}
  #dpToast153{white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis;position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:9400;padding:9px 16px;border-radius:999px;background:linear-gradient(180deg,#b8a8ff,#7a62ee);color:#fff;font-weight:900;font-size:14px;box-shadow:0 6px 20px #000a;pointer-events:none;transition:opacity .3s}`;
  document.head.appendChild(st);
  const box=document.createElement('div');box.id='dp153';box.hidden=true;document.body.appendChild(box);
  box.addEventListener('pointerdown',e=>{e.stopPropagation();if(e.target===box)close()});box.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape')close()});
  let tab='mis',SUB='d',msg='',lastH='';
- function open(t){if(t)tab=t;msg='';box.hidden=false;lastH='';draw()}
+ function open(t){if(t)tab=t;msg='';box.hidden=false;lastH='';draw._vs=0;draw._sl=null;draw()}
  function close(){box.hidden=true;dot()}
  function toast(t){let el=$('dpToast153');if(!el){el=document.createElement('div');el.id='dpToast153';document.body.appendChild(el)}el.textContent=t;el.style.opacity=1;clearTimeout(toast._t);toast._t=setTimeout(()=>el.style.opacity=0,1800)}
  const sfx=k=>{try{gmSfx(k)}catch(e){}};
@@ -426,22 +491,23 @@
    body='<div class="qsub"><button data-sub="d" class="'+(showW?'':'on')+'">일일 <small>'+dn+'/'+dl.length+'</small></button><button data-sub="w" class="'+(showW?'on':'')+'">주간 <small>'+wn+'/'+wl.length+'</small></button></div>'+
     '<div class="qcols'+(showW?' sw':'')+'">'+col('일일 미션',hr+'시간 뒤 새 미션',dl,D,D.got,'md',chest(dn,dl.length,D.box,'dbox',10,200))+col('주간 미션',wkLeft+'일 뒤 새 미션',wl,W,W.got,'mw',chest(wn,wl.length,W.box,'wbox',50,500))+'</div><div class="msg">'+E(msg)+'</div>'}
   else{const xp=o.ps.xp,L=lvOf(xp),pm=hasPrem(),inLv=L>=LV?XPL:xp%XPL;
-   const rc=(r,cls,act,l,st)=>'<button class="pc '+cls+' '+st+'" data-a="'+act+'" data-l="'+l+'" style="--pile:var(--'+(r.dia?'chest-dia':'pile-coin')+')"><span class="pimg"></span><b>'+(r.dia?ic('dia153'):ic('coin'))+num(r.dia||r.gold)+'</b></button>';
+   const rc=(r,cls,act,l,st)=>'<button class="pc '+cls+' '+st+'" data-a="'+act+'" data-l="'+l+'" style="--pile:var(--'+(r.dia?'chest-dia':'pile-coin')+')"><span class="pimg"></span><span class="plb">'+(r.dia?'보석':'골드')+'</span><b>'+(r.dia?ic('dia153'):ic('coin'))+num(r.dia||r.gold)+'</b></button>';
    body='<div class="ph"><div class="phl"><span class="shd">'+L+'</span><small>단계</small></div><div class="phm"><b>SEASON '+E(o.ps.s)+'</b><small>'+daysLeft()+'일 남음 · 미션 · 출석으로 경험치</small><div class="pxb"><u style="width:'+Math.round(inLv/XPL*100)+'%"></u><span>'+(L>=LV?'최고 단계!':num(inLv)+' / '+num(XPL)+' XP')+'</span></div></div></div>'+
     (pm?'<div class="pp2 own">'+ic('crown')+'<b>프리미엄 패스 사용 중</b><small>금색 줄 보상도 모두 받을 수 있어요</small></div>':
      '<div class="pp2">'+ic('crown')+'<div><b>프리미엄 패스</b><small>금색 줄 보상 · 💎 총 '+num(PREM.reduce((a,r)=>a+(r.dia||0),0))+' · 지난 단계도 바로 받기</small></div><div class="ppb"><button class="d" data-a="buyd">'+ic('dia153')+num(diaPrice())+'</button>'+((window.BB_APP||window.BB_FREE)?'':'<button class="w" data-a="buyw">₩ '+num(PRICE_KRW)+'</button>')+'</div></div>')+
     (passReady()?'<button class="all" data-a="all">받을 수 있는 보상 모두 받기</button>':'')+
-    '<div class="trk"><div class="tlab"><span>무료</span><span></span><span class="g">프리미엄</span></div><div class="tsc"><div class="tin" style="--n:'+LV+'">'+
+    '<div class="trk"><div class="tlab"><span>'+ic('gift')+'무료</span><span></span><span class="g">'+ic('crown')+'프리미엄'+(pm?'':ic('lock'))+'</span></div><div class="tsc"><div class="tin" style="--n:'+LV+'">'+
     Array.from({length:LV},(_,i)=>{const l=i+1,r=l<=L,fg=o.ps.f[l],pg=o.ps.p[l],big=l%5===0;
      return '<div class="tc'+(r?' reach':'')+(l===Math.min(LV,L+1)?' cur':'')+(big?' big':'')+'" data-lv="'+l+'">'+rc(FREE[i],'f',('pf'),l,fg?'got':r?'ok':'')+
       '<div class="nd"><i class="ln"></i><span>'+l+'</span></div>'+rc(PREM[i],'p','pp',l,pg?'got':(r&&pm)?'ok':(!pm?'lk':''))+'</div>'}).join('')+'</div></div></div>'+
-    '<div class="msg">'+E(msg)+'</div>'}
+    '<div class="more">더 많은 보상이 기다리고 있어요!</div><div class="msg">'+E(msg)+'</div>'}
   box.dataset.tab=tab;
   const tb=(k,icn,n,d)=>'<button data-t="'+k+'" class="'+(tab===k?'on':'')+'">'+ic(icn)+n+(d?'<i class="dt"></i>':'')+'</button>';
-  const h='<div class="pn"><div class="hd"><button class="x153">닫기</button><div><b>미션 · 패스</b><br><small>미션을 깨고 패스 단계를 올려요</small></div><div class="sp"></div></div>'+
-   '<div class="tabs">'+tb('mis','target','미션',misReady())+tb('pass','ticket','패스',passReady())+'</div><div class="bd">'+body+'</div></div>';
+  const h='<div class="pn"><div class="hd"><button class="x153">닫기</button><div class="ttl"><b>미션 · 패스</b><small>미션을 깨고 패스 단계를 올려요</small></div>'+
+   '<div class="tabs">'+tb('mis','target','미션',misReady())+tb('pass','ticket','패스',passReady())+'</div></div><div class="bd">'+body+'</div></div>';
   if(h===lastH)return;const sc=box.querySelector('.bd'),top=sc?sc.scrollTop:0;lastH=h;box.innerHTML=h;const sc2=box.querySelector('.bd');if(sc2)sc2.scrollTop=top;
-  const ts=box.querySelector('.tsc'),cur=box.querySelector('.tc.cur');if(ts){if(draw._sl!=null)ts.scrollLeft=draw._sl;else if(cur)ts.scrollLeft=Math.max(0,cur.offsetLeft-ts.clientWidth/2+cur.offsetWidth/2);ts.onscroll=()=>{draw._sl=ts.scrollLeft}}else draw._sl=null;
+  const ts=box.querySelector('.tsc'),cur=box.querySelector('.tc.cur');if(ts&&RT.classList.contains('lpP')&&!draw._vs&&cur&&sc2){draw._vs=1;sc2.scrollTop=Math.max(0,cur.offsetTop-sc2.clientHeight/2)}
+  if(ts){if(draw._sl!=null)ts.scrollLeft=draw._sl;else if(cur)ts.scrollLeft=Math.max(0,cur.offsetLeft-ts.clientWidth/2+cur.offsetWidth/2);ts.onscroll=()=>{draw._sl=ts.scrollLeft}}else draw._sl=null;
   try{window.SO149&&SO149.iconize(box)}catch(e){}}
  box.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;e.stopPropagation();const o=S();
   if(b.classList.contains('x153')||b.classList.contains('cx77')&&b.closest('.hd')){close();return}
