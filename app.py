@@ -1809,9 +1809,203 @@ def _pvp_settle(r, winner, loser, note):
             else:
                 db.execute('INSERT INTO pvp_stats (user_id, wins, losses, gold_won, updated_at) VALUES (?, ?, ?, ?, ?)',
                            (uid, w, 1 - w, delta if w else 0, now))
+        _arena_settle(db, r, winner)  # v166 관객 내기 정산(우편)
         db.commit()
     finally:
         db.close()
+
+
+# ---------------- v166 결투장 관객: 응원 · 내기 ----------------
+# 진행 중인 빠른 대전(순위전)은 누구나 관람할 수 있다(/api/arena/list → 관전). 관객은 한쪽을 골라 응원(이모티콘)하고,
+# 경기 시작 30초 안에 골드를 건다(50~5,000, 서버 기록 골드 안에서 · 선수는 못 검). 결과가 확정되면 이긴 쪽에 건 사람들이
+# 진 쪽 판돈을 건 금액 비율로 나눠 가진다(원금 + 몫, 우편). 상대편에 아무도 안 걸었거나 무효 · 중단이면 원금을 우편으로 돌려준다.
+# 판돈은 게임이 걸 때 바로 골드에서 빼고(내기 기록은 서버), 돌려받는 건 우편.
+_ARENA = {}  # code → {'seq', 'cheers': [], 'n': [0, 0], 'bets': {uid: {...}}, 'viewers': {uid: t}, 'done': False}
+ARENA_BET_MIN, ARENA_BET_MAX, ARENA_BET_WINDOW = 50, 5000, 30
+ARENA_EMO = 8
+
+
+def _arena_of(code):
+    return _ARENA.setdefault(code, {'seq': 0, 'cheers': [], 'n': [0, 0], 'bets': {}, 'viewers': {}, 'done': False, 'ct': {}})
+
+
+def _arena_pay(db, bets, winner_side, why):
+    """bets: {uid: {side, amt}} — 이긴 쪽이 진 쪽 판돈을 나눔. winner_side None이면 모두 돌려줌"""
+    win = {u: b for u, b in bets.items() if winner_side is not None and b['side'] == winner_side}
+    lose_pool = sum(b['amt'] for u, b in bets.items() if winner_side is not None and b['side'] != winner_side)
+    win_pool = sum(b['amt'] for b in win.values())
+    if winner_side is None or not win or not lose_pool:
+        for u, b in bets.items():
+            mail_send(db, u, '결투 내기 돌려받기', '%s — 건 골드를 그대로 돌려드려요.' % why, gold=b['amt'], sender='결투장')
+        return
+    for u, b in win.items():
+        share = b['amt'] * lose_pool // win_pool
+        mail_send(db, u, '결투 내기 적중!', '%s님이 이겼어요! 건 %s골드 + 몫 %s골드' % (b.get('pick', ''), format(b['amt'], ','), format(share, ',')),
+                  gold=b['amt'] + share, sender='결투장')
+
+
+def _arena_settle(db, r, winner_uid):
+    a = _ARENA.get(r['code'])
+    if not a or a['done']:
+        return
+    a['done'] = True
+    a['winner'] = next((i for i, p in enumerate(r['players']) if p['uid'] == winner_uid), None)
+    if a['bets']:
+        _arena_pay(db, a['bets'], a['winner'], '결투')
+
+
+def _arena_refund_room(r, why):
+    a = _ARENA.get(r['code'])
+    if not a or a['done']:
+        return
+    a['done'] = True
+    if a['bets']:
+        db = DB()
+        try:
+            _arena_pay(db, a['bets'], None, why)
+            db.commit()
+        finally:
+            db.close()
+
+
+def _arena_sweep(now):
+    """(락 안) 방이 사라졌는데 정산 안 된 내기는 돌려줌 · 오래된 기록 정리"""
+    for code in list(_ARENA):
+        a = _ARENA[code]
+        r = _DUO.get(code)
+        if not a['done'] and (not r or r.get('state') == 'closed'):
+            _arena_refund_room(r or {'code': code}, '경기가 중간에 끝나')
+        if a['done'] and now - a.get('dt', now) > 600:
+            del _ARENA[code]
+        elif a['done']:
+            a.setdefault('dt', now)
+
+
+def _arena_room_ok(r):
+    return r and r.get('kind') == 'pvp' and r.get('ranked') and r.get('state') == 'play' and len(r['players']) == 2
+
+
+def _arena_target_ok(uid):
+    """(락 안) 이 사람이 지금 공개 결투(빠른 대전) 중이면 누구나 관전 가능"""
+    return any(_arena_room_ok(r) and any(p['uid'] == uid for p in r['players']) for r in _DUO.values())
+
+
+def _arena_view(r, a, uid, since):
+    now = time.time()
+    pool = [sum(b['amt'] for b in a['bets'].values() if b['side'] == i) for i in (0, 1)]
+    t0 = r.get('t_play', now) if r else now
+    mb = a['bets'].get(uid)
+    return {'code': r['code'] if r else '', 'players': [{'name': p['name'], 'lv': p.get('lv', 1), 'ch': p.get('ch', 0)} for p in (r['players'] if r else [])],
+            'cheers': [c for c in a['cheers'] if c['seq'] > since], 'seq': a['seq'], 'n': a['n'], 'pool': pool,
+            'bettors': [sum(1 for b in a['bets'].values() if b['side'] == i) for i in (0, 1)],
+            'viewers': sum(1 for t in a['viewers'].values() if now - t < 8), 'betOpen': (not a['done']) and now - t0 < ARENA_BET_WINDOW,
+            'betLeft': max(0, round(ARENA_BET_WINDOW - (now - t0))), 'myBet': {'side': mb['side'], 'amt': mb['amt']} if mb else None,
+            'done': a['done'], 'winner': a.get('winner'), 'age': round(now - t0)}
+
+
+@app.route('/api/arena/list', methods=['POST'])
+def arena_list():
+    user = _duo_user()
+    now = time.time()
+    with _duo_lock:
+        _duo_clean(now)
+        _arena_sweep(now)
+        out = []
+        for r in _DUO.values():
+            if not _arena_room_ok(r):
+                continue
+            r.setdefault('t_play', now)
+            a = _arena_of(r['code'])
+            v = _arena_view(r, a, user and user['user_id'], 10 ** 12)
+            v.pop('cheers', None)
+            out.append(v)
+    out.sort(key=lambda x: -x['viewers'])
+    return jsonify(ok=True, matches=out[:30])
+
+
+@app.route('/api/arena/state', methods=['POST'])
+def arena_state():
+    """관객 · 선수가 1초마다: 응원 · 판돈 · 결과"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    since = clamp_int(body.get('since'), 0, 2 ** 62, 0)
+    now = time.time()
+    with _duo_lock:
+        _arena_sweep(now)
+        r = _DUO.get(code)
+        a = _ARENA.get(code)
+        if not a and not _arena_room_ok(r):
+            return _bad('끝난 경기예요', 404)
+        a = a or _arena_of(code)
+        if r and _arena_room_ok(r):
+            r.setdefault('t_play', now)
+        if not (r and any(p['uid'] == user['user_id'] for p in r['players'])):
+            a['viewers'][user['user_id']] = now
+        return jsonify(ok=True, **_arena_view(r, a, user['user_id'], since))
+
+
+@app.route('/api/arena/cheer', methods=['POST'])
+def arena_cheer():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    side = 1 if body.get('side') == 1 else 0
+    e = clamp_int(body.get('e'), 0, ARENA_EMO - 1, 0)
+    now = time.time()
+    with _duo_lock:
+        r = _DUO.get(code)
+        if not _arena_room_ok(r):
+            return _bad('끝난 경기예요', 404)
+        a = _arena_of(code)
+        if a['done']:
+            return _bad('끝난 경기예요', 404)
+        if now - a['ct'].get(user['user_id'], 0) < 0.6:
+            return jsonify(ok=True, slow=True)
+        a['ct'][user['user_id']] = now
+        a['seq'] += 1
+        a['n'][side] += 1
+        a['cheers'].append({'seq': a['seq'], 'side': side, 'e': e, 'name': user['username']})
+        a['cheers'] = a['cheers'][-60:]
+    return jsonify(ok=True)
+
+
+@app.route('/api/arena/bet', methods=['POST'])
+def arena_bet():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    side = 1 if body.get('side') == 1 else 0
+    amt = clamp_int(body.get('amt'), 0, 10 ** 9, 0)
+    if amt < ARENA_BET_MIN or amt > ARENA_BET_MAX:
+        return _bad('%d ~ %s골드까지 걸 수 있어요' % (ARENA_BET_MIN, format(ARENA_BET_MAX, ',')), 400)
+    uid = user['user_id']
+    db = get_db()
+    gold = _pvp_gold(db, uid)
+    if amt > gold:
+        return _bad('가진 골드(서버 기록 %s)보다 많이 걸 수 없어요' % format(gold, ','), 400)
+    now = time.time()
+    with _duo_lock:
+        r = _DUO.get(code)
+        if not _arena_room_ok(r):
+            return _bad('끝난 경기예요', 404)
+        if any(p['uid'] == uid for p in r['players']):
+            return _bad('선수는 자기 경기에 걸 수 없어요', 403)
+        a = _arena_of(code)
+        t0 = r.setdefault('t_play', now)
+        if a['done'] or now - t0 >= ARENA_BET_WINDOW:
+            return _bad('내기는 경기 시작 %d초 안에만 걸 수 있어요' % ARENA_BET_WINDOW, 409)
+        if uid in a['bets']:
+            return _bad('이 경기에는 이미 걸었어요', 409)
+        a['bets'][uid] = {'side': side, 'amt': amt, 'name': user['username'], 'pick': r['players'][side]['name']}
+        pool = [sum(b['amt'] for b in a['bets'].values() if b['side'] == i) for i in (0, 1)]
+    return jsonify(ok=True, pool=pool)
 
 
 def _pvp_room(code, owner, players, ranked, stake, state):
@@ -1992,6 +2186,7 @@ def pvp_result():
                     _pvp_settle(r, uid if win else other['uid'], other['uid'] if win else uid, '결투')
                 else:
                     r['settled'] = {'void': True}
+                    _arena_refund_room(r, '결과가 엇갈려 무효')  # v166
             elif other and win and now - other['seen'] > 20:
                 _pvp_settle(r, uid, other['uid'], '상대 연결 끊김')
         st = r.get('settled') or {}
@@ -2714,7 +2909,10 @@ def watch_pull():
     fid, fname = _uid_by_name(db, body.get('name'))
     if not fid or (not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (user['user_id'], fid, 'accepted')).fetchone()
                    and fid not in _top3_ids(db)):
-        return _bad('친구나 순위 1~3위만 관전할 수 있어요', 403)
+        with _duo_lock:
+            ok = bool(fid) and _arena_target_ok(fid)  # v166 공개 결투(빠른 대전)는 누구나 관람
+        if not ok:
+            return _bad('친구나 순위 1~3위만 관전할 수 있어요', 403)
     since = clamp_int(body.get('since'), 0, 2 ** 62, 0)
     now = time.time()
     with _duo_lock:
@@ -2750,7 +2948,10 @@ def watch_sig():
     fid, fname = _uid_by_name(db, body.get('to'))
     if not fid or (not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (user['user_id'], fid, 'accepted')).fetchone()
                    and fid not in _top3_ids(db) and user['user_id'] not in _top3_ids(db)):
-        return _bad('친구에게만 보낼 수 있어요', 403)
+        with _duo_lock:
+            ok = bool(fid) and (_arena_target_ok(fid) or _arena_target_ok(user['user_id']))  # v166 결투장 관람
+        if not ok:
+            return _bad('친구에게만 보낼 수 있어요', 403)
     with _duo_lock:
         lst = _SIG.setdefault(fid, [])
         lst.append({'from': user['username'], 'd': d, 't': time.time()})

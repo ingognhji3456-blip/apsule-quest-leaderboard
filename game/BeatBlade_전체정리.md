@@ -1,13 +1,13 @@
 # BEAT BLADE · MACHINA — 전체 정리 (한 장으로 보기)
 
-> 작성일 2026-10-10 · 최신 게임 파일 **BeatBlade-165.html**
+> 작성일 2026-10-10 · 최신 게임 파일 **BeatBlade-166.html**
 > 버전별 자세한 내용은 `game/BeatBlade_작업요약.md`, 서버 올리는 방법은 `game/서버_로그인_안내.md`에 있어요.
 
 ---
 
 ## 0. 지금 꼭 알아야 할 것 3가지
 
-1. **v163 ~ v165를 만들었어요** (v162까지는 main에 합쳤어요, PR #49 ~ #98). 최신 게임 파일은 `game/BeatBlade-165.html`이에요. **서버(app.py)가 바뀌었으니 Render 배포가 필요해요.** 우편을 보내려면 Render 환경변수 `ADMIN_KEY`.
+1. **v163 ~ v166을 만들었어요** (v162까지는 main에 합쳤어요, PR #49 ~ #98). 최신 게임 파일은 `game/BeatBlade-166.html`이에요. **서버(app.py)가 바뀌었으니 Render 배포가 필요해요.** 우편을 보내려면 Render 환경변수 `ADMIN_KEY`.
 2. **Render에서 최신 커밋을 한 번 배포해 주세요** (「Manual Deploy → Deploy latest commit」, 상태가 초록색 「Live」가 되면 끝).
    서버(`app.py`)가 바뀐 버전은 v102 · v103 · v111 · v113 · v114 · v114.1 · v119 · v122 · v125 · v140이에요. 최신 커밋 하나에 모두 들어 있어서 **한 번만** 배포하면 돼요.
    배포해야 동작하는 것: 랭킹 장비 표시 · 1~3위 관전 · 새 스킨 30개 · 채팅 · 친구 추천 · 「n분 전 접속」 · **광장 · 광장 결투/듀오 신청 · 새 시즌 보상 · 말풍선 채팅 · 나쁜 말 거르기 · 전용 스킨 · 펫 묶음 상품 · 캐릭터 전용 스킨 40종 · 설정에서 이름 바꾸기 · 네온 세트 ₩8,900**.
@@ -110,6 +110,7 @@
 | v163 | 우편함 · 신고 · 차단 |
 | v164 | 듀오 탑 자동 매칭 |
 | v165 | 보스 러시 타임어택 |
+| v166 | 결투장 관객 응원 · 내기 |
 
 ---
 
@@ -228,6 +229,7 @@
 | v163 | MR163(99999999999993) 우편함 창 · 신고 창 · 차단 목록 · 이름 메뉴, app.py `mail` · `mail_broadcast` · `user_blocks` · `user_reports` · `user_mute` 표, `/api/mail/list|act` · `/api/admin/mail` · `/api/block` · `/api/report` · `/api/admin/reports`, `mail_send()` |
 | v164 | MM164(99999999999994) 듀오 창 「자동 매칭」 · 찾는 중 카드, app.py `/api/duo/queue` · `/api/duo/qcancel`(`_DUOQ` 난이도별 줄, `_DUOMATCH`, 방에 `matched` 표시 → 열린 방 목록에서 숨김) |
 | v165 | TA165(99999999999995) 코스 창 · 시간 표시 · 구간 카드 · 결과, `fightEnd` 감싸기 · `TW71.bossStart`, app.py `ta_records` · `/api/ta/submit|board`(`TA_MIN_MS` 보스당 7초 아래는 안 받음) |
+| v166 | AR166(99999999999996) 결투장 목록 · 응원판 · 선수 띠, app.py `_ARENA`(메모리) · `/api/arena/list|state|cheer|bet`, `_pvp_settle`에서 `_arena_settle`(우편 정산), 공개 결투는 `watch_pull` · `watch_sig` 허용(`_arena_target_ok`) |
 | v117 | PLZ111 `emote`(`me.emo`='번호|순번') · `feed`의 사람별 `gap`→`off`(0.2~0.7초, 천천히만 바뀜) · 새로 연 페이지 감지(`lastTs`/`lastN`) |
 | v116 | FR94 `duel/duo`가 `D.autoGo`, 수락 쪽 `F.autoReady` → 자동 준비 · 자동 시작. 펫 K: 탑 · 광장 1.0, 보스 .95 |
 | v115 | 9999999997 `PLZART`(build · under · objs · over), PLZ111이 있으면 사용 |
