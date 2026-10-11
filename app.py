@@ -312,6 +312,39 @@ def init_db():
             updated_at  DOUBLE PRECISION NOT NULL
         )
     ''')
+    # v168: 내가 만든 보스(코드 6자리) · 도전 기록 · 좋아요 · 첫 클리어 보상 횟수
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS cboss (
+            code        TEXT PRIMARY KEY,
+            owner       TEXT NOT NULL,
+            owner_name  TEXT NOT NULL,
+            name        TEXT NOT NULL,
+            data        TEXT NOT NULL,
+            plays       INTEGER NOT NULL DEFAULT 0,
+            clears      INTEGER NOT NULL DEFAULT 0,
+            likes       INTEGER NOT NULL DEFAULT 0,
+            best_ms     BIGINT NOT NULL DEFAULT 0,
+            best_name   TEXT NOT NULL DEFAULT '',
+            created_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS cboss_play (
+            user_id     TEXT NOT NULL,
+            code        TEXT NOT NULL,
+            cleared     INTEGER NOT NULL DEFAULT 0,
+            best_ms     BIGINT NOT NULL DEFAULT 0,
+            liked       INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, code)
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS cboss_reward (
+            user_id     TEXT PRIMARY KEY,
+            day         TEXT NOT NULL,
+            n           INTEGER NOT NULL DEFAULT 0
+        )
+    ''')
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
     db.execute('''
         CREATE TABLE IF NOT EXISTS player_look (
@@ -3692,6 +3725,215 @@ def chat_pull():
     blk = _blocked_set(db, uid)  # v163 차단한 사람의 말은 안 보냄
     return jsonify(ok=True, online=online, msgs=[{'id': int(r['id']), 'name': r['username'], 'me': r['user_id'] == uid,
                                                   'text': r['text'], 't': r['created_at']} for r in rows if r['user_id'] not in blk])
+
+
+# ---------------- v168 보스 직접 만들기 ----------------
+# 몸(1·2장 보스 20명 중 하나) · 색 · 체력 · 공격 3~6개를 골라 저장하면 코드 6자리를 준다. 누구나 코드로 도전 · 인기순 목록.
+# 남의 보스를 처음 깨면 🪙CBOSS_GOLD(하루 CBOSS_DAY번, 장부 pvp_ledger). 친구에게 도전장(우편, 본문에 [보스 코드 XXXXXX]).
+CBOSS_MAX, CBOSS_GOLD, CBOSS_DAY, CBOSS_MIN_MS = 12, 50, 10, 8000
+_CB_CODE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+_CB_ATK = re.compile(r'^[A-Za-z][A-Za-z0-9]{1,30}$')
+
+
+def _cb_row(x, mine=None):
+    try:
+        d = json.loads(x['data'])
+    except Exception:
+        d = {}
+    o = {'code': x['code'], 'name': x['name'], 'owner': x['owner_name'], 'plays': x['plays'], 'clears': x['clears'], 'likes': x['likes'],
+         'best_ms': int(x['best_ms']), 'best_name': x['best_name'], 'created': x['created_at'],
+         'body': d.get('body', 0), 'hue': d.get('hue', 0), 'hp': d.get('hp', 1), 'atks': d.get('atks', [])}
+    if mine is not None:
+        o['cleared'] = bool(mine['cleared']) if mine else False
+        o['liked'] = bool(mine['liked']) if mine else False
+        o['my_ms'] = int(mine['best_ms']) if mine else 0
+    return o
+
+
+@app.route('/api/cboss/save', methods=['POST'])
+def cboss_save():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    name = _bad_filter(clamp_text(b.get('name'), 12).strip())
+    if len(name) < 2:
+        return _bad('이름을 2글자 이상 써 주세요', 400)
+    atks = [a for a in (b.get('atks') if isinstance(b.get('atks'), list) else []) if isinstance(a, str) and _CB_ATK.match(a)]
+    atks = list(dict.fromkeys(atks))[:6]
+    if len(atks) < 3:
+        return _bad('공격을 3개 이상 골라 주세요', 400)
+    data = {'body': clamp_int(b.get('body'), 0, 19, 0), 'hue': clamp_int(b.get('hue'), 0, 8, 0), 'hp': clamp_int(b.get('hp'), 0, 4, 1), 'atks': atks}
+    db = get_db()
+    uid = user['user_id']
+    now = time.time()
+    code = clamp_text(b.get('code'), 8).upper()
+    if code:
+        row = db.execute('SELECT owner FROM cboss WHERE code=?', (code,)).fetchone()
+        if not row or row['owner'] != uid:
+            return _bad('내가 만든 보스만 고칠 수 있어요', 403)
+        # 고치면 기록(최고 시간 · 깬 사람)은 처음부터
+        db.execute('UPDATE cboss SET name=?, data=?, clears=0, best_ms=0, best_name=? WHERE code=?', (name, json.dumps(data), '', code))
+        db.execute('UPDATE cboss_play SET cleared=0, best_ms=0 WHERE code=?', (code,))
+    else:
+        if db.execute('SELECT COUNT(*) AS c FROM cboss WHERE owner=?', (uid,)).fetchone()['c'] >= CBOSS_MAX:
+            return _bad('보스는 %d개까지 만들 수 있어요. 안 쓰는 보스를 지워 주세요' % CBOSS_MAX, 409)
+        for _ in range(60):
+            code = ''.join(secrets.choice(_CB_CODE) for _ in range(6))
+            if not db.execute('SELECT 1 FROM cboss WHERE code=?', (code,)).fetchone():
+                break
+        db.execute('INSERT INTO cboss (code, owner, owner_name, name, data, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                   (code, uid, user['username'], name, json.dumps(data), now))
+    db.commit()
+    return jsonify(ok=True, code=code, boss=_cb_row(db.execute('SELECT * FROM cboss WHERE code=?', (code,)).fetchone()))
+
+
+@app.route('/api/cboss/list', methods=['POST'])
+def cboss_list():
+    """by: hot(인기) · new(새로) · mine(내 보스) · code(코드 하나)"""
+    user = _duo_user()
+    b = request.get_json(silent=True) or {}
+    by = b.get('by') if b.get('by') in ('hot', 'new', 'mine', 'code') else 'hot'
+    db = get_db()
+    uid = user['user_id'] if user else ''
+    if by == 'code':
+        rows = db.execute('SELECT * FROM cboss WHERE code=?', (clamp_text(b.get('code'), 8).upper(),)).fetchall()
+    elif by == 'mine':
+        rows = db.execute('SELECT * FROM cboss WHERE owner=? ORDER BY created_at DESC', (uid,)).fetchall()
+    elif by == 'new':
+        rows = db.execute('SELECT * FROM cboss ORDER BY created_at DESC LIMIT 40').fetchall()
+    else:  # 좋아요 ×5 + 깬 사람 ×2 + 도전 수, 최근 것 조금 더
+        rows = db.execute('SELECT * FROM cboss ORDER BY (likes * 5 + clears * 2 + plays) DESC, created_at DESC LIMIT 40').fetchall()
+    mine = {}
+    if uid and rows:
+        q = ','.join('?' * len(rows))
+        for x in db.execute('SELECT * FROM cboss_play WHERE user_id=? AND code IN (%s)' % q, [uid] + [r['code'] for r in rows]).fetchall():
+            mine[x['code']] = x
+    out = []
+    for i, r in enumerate(rows):
+        o = _cb_row(r, mine.get(r['code']) if uid else None)
+        o['rank'] = i + 1
+        o['own'] = r['owner'] == uid
+        out.append(o)
+    if by == 'code' and not out:
+        return _bad('그 코드의 보스가 없어요', 404)
+    return jsonify(ok=True, items=out, max=CBOSS_MAX)
+
+
+def _cb_play_row(db, uid, code):
+    row = db.execute('SELECT * FROM cboss_play WHERE user_id=? AND code=?', (uid, code)).fetchone()
+    if not row:
+        db.execute('INSERT INTO cboss_play (user_id, code) VALUES (?, ?)', (uid, code))
+        row = db.execute('SELECT * FROM cboss_play WHERE user_id=? AND code=?', (uid, code)).fetchone()
+    return row
+
+
+@app.route('/api/cboss/result', methods=['POST'])
+def cboss_result():
+    """도전 결과(win, ms). 처음 깨면 깬 사람 수 +1 · 남의 보스면 골드(하루 CBOSS_DAY번)"""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    code = clamp_text(b.get('code'), 8).upper()
+    win = bool(b.get('win'))
+    ms = clamp_int(b.get('ms'), 0, 3_600_000, 0)
+    db = get_db()
+    uid = user['user_id']
+    boss = db.execute('SELECT * FROM cboss WHERE code=?', (code,)).fetchone()
+    if not boss:
+        return _bad('그 코드의 보스가 없어요', 404)
+    if win and ms < CBOSS_MIN_MS:
+        return _bad('기록이 이상해요', 400)
+    row = _cb_play_row(db, uid, code)
+    db.execute('UPDATE cboss SET plays=plays+1 WHERE code=?', (code,))
+    first, gold, rec = False, 0, False
+    if win:
+        if not row['cleared']:
+            first = True
+            db.execute('UPDATE cboss SET clears=clears+1 WHERE code=?', (code,))
+            if boss['owner'] != uid:
+                day = time.strftime('%Y-%m-%d', time.gmtime())
+                rw = db.execute('SELECT day, n FROM cboss_reward WHERE user_id=?', (uid,)).fetchone()
+                n = rw['n'] if rw and rw['day'] == day else 0
+                if n < CBOSS_DAY:
+                    gold = CBOSS_GOLD
+                    if rw:
+                        db.execute('UPDATE cboss_reward SET day=?, n=? WHERE user_id=?', (day, n + 1, uid))
+                    else:
+                        db.execute('INSERT INTO cboss_reward (user_id, day, n) VALUES (?, ?, ?)', (uid, day, 1))
+                    db.execute('INSERT INTO pvp_ledger (id, user_id, delta, note, created_at) VALUES (?, ?, ?, ?, ?)',
+                               (secrets.token_hex(8), uid, gold, '만든 보스 첫 클리어', time.time()))
+        db.execute('UPDATE cboss_play SET cleared=1, best_ms=? WHERE user_id=? AND code=?',
+                   (ms if not row['best_ms'] or ms < row['best_ms'] else row['best_ms'], uid, code))
+        if not boss['best_ms'] or ms < boss['best_ms']:
+            rec = True
+            db.execute('UPDATE cboss SET best_ms=?, best_name=? WHERE code=?', (ms, user['username'], code))
+    db.commit()
+    return jsonify(ok=True, first=first, gold=gold, record=rec, boss=_cb_row(db.execute('SELECT * FROM cboss WHERE code=?', (code,)).fetchone(),
+                                                                         db.execute('SELECT * FROM cboss_play WHERE user_id=? AND code=?', (uid, code)).fetchone()))
+
+
+@app.route('/api/cboss/like', methods=['POST'])
+def cboss_like():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    code = clamp_text((request.get_json(silent=True) or {}).get('code'), 8).upper()
+    db = get_db()
+    boss = db.execute('SELECT owner FROM cboss WHERE code=?', (code,)).fetchone()
+    if not boss:
+        return _bad('그 코드의 보스가 없어요', 404)
+    if boss['owner'] == user['user_id']:
+        return _bad('내 보스에는 좋아요를 누를 수 없어요', 400)
+    row = _cb_play_row(db, user['user_id'], code)
+    v = 0 if row['liked'] else 1
+    db.execute('UPDATE cboss_play SET liked=? WHERE user_id=? AND code=?', (v, user['user_id'], code))
+    db.execute('UPDATE cboss SET likes=likes+? WHERE code=?', (1 if v else -1, code))
+    db.commit()
+    return jsonify(ok=True, liked=bool(v), likes=db.execute('SELECT likes FROM cboss WHERE code=?', (code,)).fetchone()['likes'])
+
+
+@app.route('/api/cboss/delete', methods=['POST'])
+def cboss_delete():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    code = clamp_text((request.get_json(silent=True) or {}).get('code'), 8).upper()
+    db = get_db()
+    db.execute('DELETE FROM cboss WHERE code=? AND owner=?', (code, user['user_id']))
+    db.execute('DELETE FROM cboss_play WHERE code=? AND NOT EXISTS (SELECT 1 FROM cboss WHERE code=?)', (code, code))
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/cboss/challenge', methods=['POST'])
+def cboss_challenge():
+    """친구에게 도전장(우편)"""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    code = clamp_text(b.get('code'), 8).upper()
+    db = get_db()
+    boss = db.execute('SELECT name FROM cboss WHERE code=?', (code,)).fetchone()
+    if not boss:
+        return _bad('그 코드의 보스가 없어요', 404)
+    to, to_name = _uid_by_name(db, clamp_text(b.get('to'), 40))
+    if not to:
+        return _bad('그 이름의 사람이 없어요', 404)
+    fr = db.execute('SELECT status FROM friends WHERE user_id=? AND friend_id=?', (user['user_id'], to)).fetchone()
+    if not fr or fr['status'] != 'accepted':
+        return _bad('친구에게만 보낼 수 있어요', 403)
+    if _is_blocked_by(db, to, user['user_id']):
+        return _bad('보낼 수 없어요', 403)
+    key = 'c' + hashlib.sha256(('%s|%s|%s' % (user['user_id'], to, code)).encode()).hexdigest()[:16]
+    if db.execute('SELECT 1 FROM mail WHERE id=?', (key,)).fetchone():
+        return _bad('이 친구에게는 이미 이 보스 도전장을 보냈어요', 409)
+    mail_send(db, to, '⚔ 도전장 · ' + boss['name'], '%s님이 직접 만든 보스 「%s」에 도전해 보세요! [보스 코드 %s]' % (user['username'], boss['name'], code),
+              sender=user['username'], mid=key)
+    db.commit()
+    return jsonify(ok=True, to=to_name)
 
 
 if __name__ == '__main__':

@@ -30,7 +30,7 @@
   box.innerHTML='<div class="mp"><div class="mh"><button class="x">닫기</button><i class="env"></i><div><b>우편함</b><small>받은 우편은 30일 동안 보관돼요</small></div></div>'+
    (!logged()?'<div class="me">로그인하면 우편을 받을 수 있어요</div>':!M.loaded?'<div class="me">불러오는 중…</div>':!L.length?'<div class="me"><i class="env big"></i>우편함이 비어 있어요</div>':
    '<div class="ml">'+L.map((m,i)=>{const has=m.gold||m.dia,on=M.open===i;return '<div class="mi'+(m.read?'':' new')+(has&&!m.got?' rw':'')+(on?' on':'')+'" data-i="'+i+'"><i class="env'+(m.read?' op':'')+'"></i>'+
-     '<div class="mt"><b>'+esc(m.title)+'</b><small>'+esc(m.from)+' · '+ago(m.t)+' · '+left(m.exp)+'</small>'+(has?'<div class="mr">'+rw(m)+'</div>':'')+(on?'<p>'+esc(m.body||'(내용 없음)').replace(/\n/g,'<br>')+'</p>':'')+'</div>'+
+     '<div class="mt"><b>'+esc(m.title)+'</b><small>'+esc(m.from)+' · '+ago(m.t)+' · '+left(m.exp)+'</small>'+(has?'<div class="mr">'+rw(m)+'</div>':'')+(on?'<p>'+esc(m.body||'(내용 없음)').replace(/\n/g,'<br>').replace(/\[보스 코드 ([A-Z0-9]{6})\]/g,'<button class="cb168" data-cb="$1">⚔ 보스 코드 $1 · 도전하기</button>')/* v168 도전장 */+'</p>':'')+'</div>'+
      (has?(m.got?'<span class="ok">받음</span>':'<button class="cl" data-c="'+esc(m.id)+'">받기</button>'):'')+'</div>'}).join('')+'</div>')+
    '<div class="mf"><button class="all"'+(can?'':' disabled')+'>모두 받기</button><button class="del">읽은 우편 지우기</button></div><div class="mm">'+esc(M.msg)+'</div></div>';
   box.querySelector('.x').onclick=close;
