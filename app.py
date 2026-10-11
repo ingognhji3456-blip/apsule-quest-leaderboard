@@ -379,6 +379,17 @@ def init_db():
         """CREATE TABLE IF NOT EXISTS board_likes (user_id TEXT NOT NULL, post_id TEXT NOT NULL, PRIMARY KEY (user_id, post_id))""",
     ):
         db.execute(ddl)
+    # v172: 편의 · 보상 — 복귀 · 초대 · 생일 · 룰렛 · 은행 · 투표함
+    for ddl in (
+        """CREATE TABLE IF NOT EXISTS perks (user_id TEXT PRIMARY KEY, last_check DOUBLE PRECISION NOT NULL, birth TEXT NOT NULL DEFAULT '',
+           bday_year TEXT NOT NULL DEFAULT '', anniv_year TEXT NOT NULL DEFAULT '', spin_day TEXT NOT NULL DEFAULT '', birth_set DOUBLE PRECISION NOT NULL DEFAULT 0)""",
+        """CREATE TABLE IF NOT EXISTS invites (user_id TEXT PRIMARY KEY, inviter_id TEXT NOT NULL, at DOUBLE PRECISION NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS bank (user_id TEXT PRIMARY KEY, amt BIGINT NOT NULL, since DOUBLE PRECISION NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS polls (id TEXT PRIMARY KEY, title TEXT NOT NULL, opts TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at DOUBLE PRECISION NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS poll_votes (poll_id TEXT NOT NULL, user_id TEXT NOT NULL, opt INTEGER NOT NULL, PRIMARY KEY (poll_id, user_id))""",
+        """CREATE TABLE IF NOT EXISTS suggestions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, text TEXT NOT NULL, created_at DOUBLE PRECISION NOT NULL)""",
+    ):
+        db.execute(ddl)
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
     db.execute('''
         CREATE TABLE IF NOT EXISTS player_look (
@@ -4625,6 +4636,255 @@ def board_delete():
     pid = clamp_text((request.get_json(silent=True) or {}).get('id'), 24)
     db = get_db()
     db.execute('DELETE FROM board_posts WHERE id=? AND user_id=?', (pid, user['user_id']))
+    db.commit()
+    return jsonify(ok=True)
+
+
+# ---------------- v172 편의 · 보상 ----------------
+# /api/perks/check(로그인 뒤 한 번): 7일 넘게 쉬다 오면 복귀 선물, 생일 · 가입 기념일이면 선물(해마다 한 번) — 모두 우편.
+# 초대: 내 초대 코드 = 아이디에서 만든 6자리. 가입 7일 안의 새 계정이 코드를 넣으면 둘 다 우편(초대한 사람은 20명까지).
+# 룰렛: 하루 한 번(UTC), 골드는 장부(pvp_ledger) · 다이아는 우편. 은행: 서버 기록 골드 안에서 맡기기(게임이 골드를 뺌), 하루 1% 이자(최대 30일), 찾으면 장부로.
+INVITE_GIFT = (3000, 20)
+INVITE_MAX = 20
+ROULETTE = [(300, 0, 30), (800, 0, 24), (1500, 0, 16), (3000, 0, 9), (0, 5, 10), (0, 15, 6), (8000, 0, 3), (0, 50, 2)]
+BANK_MAX, BANK_RATE, BANK_DAYS = 1_000_000, 0.01, 30
+POLL_DEFAULT = ('다음 업데이트로 무엇을 만들까요?', ['길드 전쟁', '8인 배틀로얄', '펫 진화', '새 챕터 8', '광장 항구 · 숲속 마을', '탈것', '칭호 시스템', '4인 레이드 보스'])
+
+
+def _inv_code(uid):
+    return ''.join(_CB_CODE[b % len(_CB_CODE)] for b in hashlib.sha256(('inv|' + uid).encode()).digest()[:6])
+
+
+def _perks_row(db, uid):
+    r = db.execute('SELECT * FROM perks WHERE user_id=?', (uid,)).fetchone()
+    if not r:
+        db.execute('INSERT INTO perks (user_id, last_check) VALUES (?, ?)', (uid, time.time()))
+        r = db.execute('SELECT * FROM perks WHERE user_id=?', (uid,)).fetchone()
+    return r
+
+
+@app.route('/api/perks/check', methods=['POST'])
+def perks_check():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    uid = user['user_id']
+    now = time.time()
+    fresh = not db.execute('SELECT 1 FROM perks WHERE user_id=?', (uid,)).fetchone()
+    r = _perks_row(db, uid)
+    got = []
+    seen = db.execute('SELECT seen_at FROM user_seen WHERE user_id=?', (uid,)).fetchone()
+    last = min(r['last_check'], seen['seen_at']) if seen and not fresh else r['last_check']
+    gap = (now - last) / 86400 if not fresh else 0
+    if gap >= 7:
+        days = min(30, int(gap))
+        gold, dia = 2000 + days * 300, 10 + days
+        mail_send(db, uid, '🎁 돌아온 걸 환영해요!', '%d일 만이에요! 다시 와 줘서 고마워요. 작은 선물을 준비했어요.' % int(gap), gold=gold, dia=dia, sender='운영팀')
+        got.append('return')
+    y = time.strftime('%Y', time.gmtime(now))
+    md = time.strftime('%m-%d', time.gmtime(now + 9 * 3600))  # 생일은 한국 날짜 기준
+    if r['birth'] and r['birth'] == md and r['bday_year'] != y:
+        mail_send(db, uid, '🎂 생일 축하해요!', '오늘은 %s님의 생일! BEAT BLADE가 축하해요 🎉' % user['username'], gold=10000, dia=50, sender='운영팀')
+        db.execute('UPDATE perks SET bday_year=? WHERE user_id=?', (y, uid))
+        got.append('birthday')
+    u = db.execute('SELECT created_at FROM users WHERE user_id=?', (uid,)).fetchone()
+    if u and now - u['created_at'] > 300 * 86400 and time.strftime('%m-%d', time.gmtime(u['created_at'])) == time.strftime('%m-%d', time.gmtime(now)) and r['anniv_year'] != y:
+        yrs = int((now - u['created_at']) // (365 * 86400)) or 1
+        mail_send(db, uid, '🎉 함께한 지 %d년!' % yrs, 'BEAT BLADE와 함께한 지 %d년이 되었어요. 늘 고마워요!' % yrs, gold=5000 * yrs, dia=30 * yrs, sender='운영팀')
+        db.execute('UPDATE perks SET anniv_year=? WHERE user_id=?', (y, uid))
+        got.append('anniv')
+    db.execute('UPDATE perks SET last_check=? WHERE user_id=?', (now, uid))
+    db.commit()
+    r = _perks_row(db, uid)
+    inv = db.execute('SELECT inviter_id FROM invites WHERE user_id=?', (uid,)).fetchone()
+    n_inv = db.execute('SELECT COUNT(*) AS c FROM invites WHERE inviter_id=?', (uid,)).fetchone()['c']
+    b = db.execute('SELECT amt, since FROM bank WHERE user_id=?', (uid,)).fetchone()
+    return jsonify(ok=True, got=got, invite_code=_inv_code(uid), invited=bool(inv), can_invite=bool(u and now - u['created_at'] < 7 * 86400 and not inv),
+                   invites=n_inv, invite_max=INVITE_MAX, birth=r['birth'], can_birth=(now - r['birth_set']) > 300 * 86400,
+                   spun=r['spin_day'] == time.strftime('%Y-%m-%d', time.gmtime(now)), bank=_bank_view(b, now))
+
+
+@app.route('/api/perks/birthday', methods=['POST'])
+def perks_birthday():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    md = clamp_text((request.get_json(silent=True) or {}).get('md'), 5)
+    try:
+        time.strptime('2024-' + md, '%Y-%m-%d')
+    except Exception:
+        return _bad('날짜가 이상해요', 400)
+    db = get_db()
+    r = _perks_row(db, user['user_id'])
+    if time.time() - r['birth_set'] < 300 * 86400:
+        return _bad('생일은 1년에 한 번만 바꿀 수 있어요', 409)
+    db.execute('UPDATE perks SET birth=?, birth_set=? WHERE user_id=?', (md, time.time(), user['user_id']))
+    db.commit()
+    return jsonify(ok=True, birth=md)
+
+
+@app.route('/api/invite/use', methods=['POST'])
+def invite_use():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    code = clamp_text((request.get_json(silent=True) or {}).get('code'), 8).upper()
+    db = get_db()
+    uid = user['user_id']
+    u = db.execute('SELECT created_at FROM users WHERE user_id=?', (uid,)).fetchone()
+    if not u or time.time() - u['created_at'] > 7 * 86400:
+        return _bad('초대 코드는 가입하고 7일 안에만 넣을 수 있어요', 409)
+    if db.execute('SELECT 1 FROM invites WHERE user_id=?', (uid,)).fetchone():
+        return _bad('이미 초대 코드를 넣었어요', 409)
+    inviter = None
+    for r in db.execute('SELECT user_id, username FROM users WHERE created_at < ?', (u['created_at'],)).fetchall():
+        if _inv_code(r['user_id']) == code:
+            inviter = r
+            break
+    if not inviter or inviter['user_id'] == uid:
+        return _bad('그 초대 코드를 찾지 못했어요', 404)
+    n = db.execute('SELECT COUNT(*) AS c FROM invites WHERE inviter_id=?', (inviter['user_id'],)).fetchone()['c']
+    db.execute('INSERT INTO invites (user_id, inviter_id, at) VALUES (?, ?, ?)', (uid, inviter['user_id'], time.time()))
+    g, d = INVITE_GIFT
+    mail_send(db, uid, '🤝 초대 선물', '%s님의 초대로 왔군요! 환영 선물이에요.' % inviter['username'], gold=g, dia=d, sender='운영팀')
+    if n < INVITE_MAX:
+        mail_send(db, inviter['user_id'], '🤝 친구 초대 선물', '%s님이 초대 코드로 들어왔어요! 고마워요.' % user['username'], gold=g, dia=d, sender='운영팀')
+    db.commit()
+    return jsonify(ok=True, inviter=inviter['username'])
+
+
+@app.route('/api/roulette/spin', methods=['POST'])
+def roulette_spin():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    uid = user['user_id']
+    r = _perks_row(db, uid)
+    day = time.strftime('%Y-%m-%d', time.gmtime())
+    if r['spin_day'] == day:
+        return _bad('오늘은 이미 돌렸어요. 내일 또 만나요!', 409)
+    tot = sum(w for _, _, w in ROULETTE)
+    x = secrets.randbelow(tot)
+    idx = 0
+    for i, (_, _, w) in enumerate(ROULETTE):
+        if x < w:
+            idx = i
+            break
+        x -= w
+    gold, dia, _ = ROULETTE[idx]
+    db.execute('UPDATE perks SET spin_day=? WHERE user_id=?', (day, uid))
+    if gold:
+        db.execute('INSERT INTO pvp_ledger (id, user_id, delta, note, created_at) VALUES (?, ?, ?, ?, ?)', (secrets.token_hex(8), uid, gold, '행운 룰렛', time.time()))
+    if dia:
+        mail_send(db, uid, '🎡 행운 룰렛 당첨!', '룰렛에서 다이아가 나왔어요!', dia=dia, sender='운영팀')
+    db.commit()
+    return jsonify(ok=True, idx=idx, gold=gold, dia=dia, table=[{'gold': g, 'dia': d} for g, d, _ in ROULETTE])
+
+
+def _bank_view(b, now):
+    if not b:
+        return {'amt': 0, 'interest': 0, 'days': 0, 'rate': BANK_RATE, 'max_days': BANK_DAYS, 'max': BANK_MAX}
+    days = min(BANK_DAYS, (now - b['since']) / 86400)
+    return {'amt': int(b['amt']), 'interest': int(b['amt'] * BANK_RATE * int(days)), 'days': round(days, 2), 'rate': BANK_RATE, 'max_days': BANK_DAYS, 'max': BANK_MAX}
+
+
+@app.route('/api/bank', methods=['POST'])
+def bank_act():
+    """act: deposit(amt) · withdraw. 맡기면 이자 계산이 처음부터(쌓인 이자는 원금에 더함)"""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    act = b.get('act')
+    db = get_db()
+    uid = user['user_id']
+    now = time.time()
+    row = db.execute('SELECT amt, since FROM bank WHERE user_id=?', (uid,)).fetchone()
+    view = _bank_view(row, now)
+    if act == 'deposit':
+        amt = clamp_int(b.get('amt'), 0, BANK_MAX, 0)
+        if amt < 100:
+            return _bad('100골드부터 맡길 수 있어요', 400)
+        g = db.execute('SELECT gold FROM player_stats WHERE user_id=?', (uid,)).fetchone()
+        if not g or g['gold'] < amt:
+            return _bad('서버에 기록된 골드가 모자라요. 잠시 뒤 다시 해 주세요', 409)
+        total = view['amt'] + view['interest'] + amt
+        if total > BANK_MAX:
+            return _bad('은행에는 %s골드까지만 맡길 수 있어요' % format(BANK_MAX, ','), 409)
+        if row:
+            db.execute('UPDATE bank SET amt=?, since=? WHERE user_id=?', (total, now, uid))
+        else:
+            db.execute('INSERT INTO bank (user_id, amt, since) VALUES (?, ?, ?)', (uid, total, now))
+        db.execute('UPDATE player_stats SET gold=gold-? WHERE user_id=?', (amt, uid))
+        db.commit()
+        return jsonify(ok=True, took=amt, bank=_bank_view(db.execute('SELECT amt, since FROM bank WHERE user_id=?', (uid,)).fetchone(), now))
+    if act == 'withdraw':
+        if not row:
+            return _bad('맡긴 골드가 없어요', 400)
+        total = view['amt'] + view['interest']
+        db.execute('DELETE FROM bank WHERE user_id=?', (uid,))
+        db.execute('INSERT INTO pvp_ledger (id, user_id, delta, note, created_at) VALUES (?, ?, ?, ?, ?)', (secrets.token_hex(8), uid, total, '골드 은행', now))
+        db.commit()
+        return jsonify(ok=True, got=total, interest=view['interest'], bank=_bank_view(None, now))
+    return jsonify(ok=True, bank=view)
+
+
+def _poll_active(db):
+    p = db.execute('SELECT * FROM polls WHERE active=1 ORDER BY created_at DESC LIMIT 1').fetchone()
+    if not p:
+        pid = 'q' + secrets.token_hex(6)
+        db.execute('INSERT INTO polls (id, title, opts, active, created_at) VALUES (?, ?, ?, 1, ?)', (pid, POLL_DEFAULT[0], json.dumps(POLL_DEFAULT[1], ensure_ascii=False), time.time()))
+        db.commit()
+        p = db.execute('SELECT * FROM polls WHERE id=?', (pid,)).fetchone()
+    return p
+
+
+@app.route('/api/poll', methods=['POST'])
+def poll_view():
+    user = _duo_user()
+    db = get_db()
+    b = request.get_json(silent=True) or {}
+    p = _poll_active(db)
+    opts = json.loads(p['opts'])
+    uid = user['user_id'] if user else ''
+    if b.get('vote') is not None and uid:
+        v = clamp_int(b.get('vote'), 0, len(opts) - 1, 0)
+        if db.execute('SELECT 1 FROM poll_votes WHERE poll_id=? AND user_id=?', (p['id'], uid)).fetchone():
+            db.execute('UPDATE poll_votes SET opt=? WHERE poll_id=? AND user_id=?', (v, p['id'], uid))
+        else:
+            db.execute('INSERT INTO poll_votes (poll_id, user_id, opt) VALUES (?, ?, ?)', (p['id'], uid, v))
+        db.commit()
+    if b.get('suggest') and uid:
+        t = _bad_filter(_chat_clean(b.get('suggest'))[:200].strip())
+        if t:
+            if db.execute('SELECT COUNT(*) AS c FROM suggestions WHERE user_id=? AND created_at>?', (uid, time.time() - 86400)).fetchone()['c'] >= 3:
+                return _bad('의견은 하루에 3번까지 보낼 수 있어요', 429)
+            db.execute('INSERT INTO suggestions (id, user_id, name, text, created_at) VALUES (?, ?, ?, ?, ?)', ('s' + secrets.token_hex(8), uid, user['username'], t, time.time()))
+            db.commit()
+    counts = [0] * len(opts)
+    for r in db.execute('SELECT opt, COUNT(*) AS c FROM poll_votes WHERE poll_id=? GROUP BY opt', (p['id'],)).fetchall():
+        if 0 <= r['opt'] < len(counts):
+            counts[r['opt']] = r['c']
+    mine = db.execute('SELECT opt FROM poll_votes WHERE poll_id=? AND user_id=?', (p['id'], uid)).fetchone() if uid else None
+    return jsonify(ok=True, id=p['id'], title=p['title'], opts=opts, counts=counts, mine=mine['opt'] if mine else None)
+
+
+@app.route('/api/admin/poll', methods=['POST'])
+def admin_poll():
+    if not ADMIN_KEY or request.headers.get('X-Admin-Key') != ADMIN_KEY:
+        return _bad('권한이 없어요', 403)
+    b = request.get_json(silent=True) or {}
+    db = get_db()
+    if b.get('list_suggestions'):
+        return jsonify(ok=True, items=[dict(r) for r in db.execute('SELECT name, text, created_at FROM suggestions ORDER BY created_at DESC LIMIT 200').fetchall()])
+    title = clamp_text(b.get('title'), 60)
+    opts = [clamp_text(o, 30) for o in (b.get('opts') or []) if isinstance(o, str) and o.strip()][:10]
+    if not title or len(opts) < 2:
+        return _bad('제목과 보기 2개 이상', 400)
+    db.execute('UPDATE polls SET active=0')
+    db.execute('INSERT INTO polls (id, title, opts, active, created_at) VALUES (?, ?, ?, 1, ?)', ('q' + secrets.token_hex(6), title, json.dumps(opts, ensure_ascii=False), time.time()))
     db.commit()
     return jsonify(ok=True)
 
