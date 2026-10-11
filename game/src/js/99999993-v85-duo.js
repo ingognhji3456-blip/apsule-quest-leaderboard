@@ -42,7 +42,7 @@
    ffx:r1((P.face&&P.face.x)||0),ffy:r1((P.face&&P.face.y)||1),ev,pl:(mode==='boss'?'b':'t')+((t&&t.f)||0)+(D.plX||'')};
   if(D.started&&typeof mode!=='undefined'){
    if(mode==='tower'&&t&&t.duo){send({...ex,t:'p',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,w:!!P.walkOn});
-    if(D.role==='host'&&!(window.PVP92&&PVP92.on()))send(snap())}
+    if(D.role==='host'&&!(window.PVP92&&PVP92.on())&&!(window.TD167&&TD167.isRoom()))send(snap())}
    else if(mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo){const d=Math.round(D.bAcc);D.bAcc-=d;send({...ex,t:'b',x:r1(P.x),y:r1(P.y),fx:P.face&&P.face.x<0?-1:1,hp:P.hp,mx:P.maxhp,ch:myCh(),down:!!P.downDuo,d,lt:P.lungeT?Math.round(performance.now()-P.lungeT):9999});if(D.role==='host')send({t:'bh',hp:Math.round(G.hp)})}}
   const msgs=D.out.splice(0,20),code=D.code;
   const rt0=performance.now();
@@ -51,7 +51,7 @@
   if(r.s===404||r.s===403){const was=D.started;end('방이 사라졌어요.');if(!was){msgTx='방이 사라졌어요. 다시 만들어 주세요.';openUI('duo');loadRooms()}return}
   if(r.s!==200){D.fail=(D.fail||0)+1;if(D.wantStart&&!D.started&&D.fail>=3){msgTx='서버 응답을 기다리는 중… ('+(r.s?'오류 '+r.s:'연결 안 됨')+') 계속 시도해요';renderRoom()}return}
   D.fail=0;{const rt=performance.now()-rt0;D.rtt=D.rtt==null?rt:D.rtt*.85+rt*.15}/* v95 왕복 시간(결투 지연 보정용) */D.room=r.j.room;{const mp=(D.room.players||[]).find(p=>p.me);if(mp&&D.wantReady!=null&&!!mp.ready===!!D.wantReady)D.wantReady=null}if(D.wantDiff&&D.room.diff===D.wantDiff)D.wantDiff=null;
-  if(D.wantStart&&!D.started&&D.room.state!=='play'){const n=(D.room.players||[]).length;if(r.j.start_err)msgTx=r.j.start_err;else if(n<2)msgTx='동료가 방에 없어요. 동료를 기다려 주세요.';if(n<2)D.wantStart=false}
+  if(D.wantStart&&!D.started&&D.room.state!=='play'){const n=(D.room.players||[]).length;D.startErr=r.j.start_err||'';if(r.j.start_err)msgTx=r.j.start_err;else if(n<2)msgTx='동료가 방에 없어요. 동료를 기다려 주세요.';if(n<2)D.wantStart=false}
   if(D.room.state==='play')D.wantStart=false;
   /* 여러 답이 겹쳐 와도 메시지는 한 번씩만, 방장 화면(s)은 가장 새 것만 */
   const fresh=(r.j.msgs||[]).filter(x=>x.seq>D.since);let lastS=null;for(const x of fresh)if(x.m&&x.m.t==='s')lastS=x;
@@ -61,13 +61,13 @@
   if(!D.started&&D.room.state==='play')begin();
   if(!D.started)renderRoom();
   if(D.started&&D.room.state==='closed'){mateLeft('방이 닫혔어요. 혼자 계속해요.');return}
-  if(D.started){const mp=(D.room.players||[]).find(p=>!p.me);if(!mp){mateLeft('동료가 나갔어요. 혼자 계속해요.');return}
+  if(D.started&&!(window.TD167&&TD167.isRoom())){/* v167 팀 결투는 TD167이 나간 사람을 따로 처리 */const mp=(D.room.players||[]).find(p=>!p.me);if(!mp){mateLeft('동료가 나갔어요. 혼자 계속해요.');return}
    if(mp.online)D.mateOff=0;else if(!D.mateOff)D.mateOff=performance.now();else if(performance.now()-D.mateOff>20000){mateLeft('동료와 연결이 끊겼어요. 혼자 계속해요.');return}}
  }finally{D.fly=Math.max(0,(D.fly||1)-1)}}
  setInterval(()=>{try{tick()}catch(e){}},50);/* v109: 0.05초마다 */
 
  /* ---------- 받은 메시지 ---------- */
- function onMsg(m){const t=T();
+ function onMsg(m){const t=T();if((window.TD167&&TD167.isRoom())&&TD167.msg(m))return;/* v167 팀 결투 메시지 */
   switch(m.t){
    case 'join':renderRoom();try{sfx(880,.12,'triangle',.04,1320)}catch(e){}break;
    case 'leave':if(D.started&&window.PVP92&&PVP92.on()){PVP92.oppLeft();break}if(D.started)mateLeft((m.name||'동료')+'님이 나갔어요. 혼자 계속해요.');else renderRoom();break;
@@ -124,9 +124,9 @@
  function startTower(f){const t=T();P.downDuo=false;TW71.start(f);const tt=T();tt.duo={role:D.role,mate:D.mate};}
  function goFloor(f){const t=T();if(!t)return;$('overlay').hidden=true;if(mode!=='tower'){startTower(f);return}
   if(P.downDuo)revive();t._doorSent=0;if(f%10===0){TW71.goBoss(f)}else{TW71.buildFloor(f);t.queue=[];try{$('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F · 듀오'}catch(e){}}}
- function begin(){if(D.started)return;D.started=true;closeUI();if(D.room&&D.room.kind==='pvp'&&window.PVP92){PVP92.begin();return}const f=D.room.floor;try{if(D.room.diff&&D.room.diff!==diff){$('diffSel').value=D.room.diff;updDiff()}}catch(e){}
+ function begin(){if(D.started)return;D.started=true;closeUI();if(D.room&&D.room.kind==='team'&&window.TD167){TD167.begin();return}if(D.room&&D.room.kind==='pvp'&&window.PVP92){PVP92.begin();return}const f=D.room.floor;try{if(D.room.diff&&D.room.diff!==diff){$('diffSel').value=D.room.diff;updDiff()}}catch(e){}
   startTower(f);note('듀오 시작! '+f+'F · 함께 올라가요');try{$('bvTitle').textContent='BEAT BLADE · 탑 '+f+'F · 듀오'}catch(e){}}
- function end(msg){const was=D.started;try{window.PVP92&&PVP92.reset()}catch(e){}D.plX='';if(D.code)api('/api/duo/leave','POST',{code:D.code});Object.assign(D,{on:false,code:null,role:null,room:null,started:false,since:0,out:[],mate:{},wantReady:null});
+ function end(msg){const was=D.started;try{window.PVP92&&PVP92.reset()}catch(e){}try{window.TD167&&TD167.reset()}catch(e){}D.plX='';if(D.code)api('/api/duo/leave','POST',{code:D.code});Object.assign(D,{on:false,code:null,role:null,room:null,started:false,since:0,out:[],mate:{},wantReady:null});
   const t=T();if(t)t.duo=null;if(typeof G!=='undefined'&&G)G.duo=null;const wasDown=P.downDuo;P.downDuo=false;if(P.inv>performance.now()+1e6)P.inv=0;D.mateOff=0;if(msg&&was)note(msg);closeUI();return wasDown}
  /* v86: 게임 중에 동료가 나가거나 연결이 끊김 → 방을 정리하고 혼자 계속. 내가 쓰러져 있었다면 그대로 쓰러짐 처리 */
  function mateLeft(msg){const wasDown=end(msg);if(!wasDown)return;const t=T(),now=performance.now();
@@ -137,7 +137,7 @@
 
  /* ---------- 쓰러짐 · 부활 ---------- */
  function mateAlive(){return D.mate&&!D.mate.down&&!(D.mate.hp!=null&&D.mate.hp<=0)&&performance.now()-(D.mate.at||0)<6000}
- function onDie(){const t=T();if(!t.duo)return false;if(window.PVP92&&PVP92.on())return PVP92.ko();if(mateAlive()){P.downDuo=true;P.hp=0;t.dead=true;send({t:'p',down:true,x:P.x,y:P.y,hp:0,mx:P.maxhp,ch:myCh()});note('쓰러졌어요 · 동료가 이 층을 깨면 다시 일어나요');return true}
+ function onDie(){const t=T();if(!t.duo)return false;if(window.TD167&&TD167.on())return TD167.ko();if(window.PVP92&&PVP92.on())return PVP92.ko();if(mateAlive()){P.downDuo=true;P.hp=0;t.dead=true;send({t:'p',down:true,x:P.x,y:P.y,hp:0,mx:P.maxhp,ch:myCh()});note('쓰러졌어요 · 동료가 이 층을 깨면 다시 일어나요');return true}
   send({t:'fail'});setTimeout(failBoth,50);return true}
  function revive(){const t=T();P.downDuo=false;P.hp=Math.max(1,Math.round(P.maxhp*.3));if(t)t.dead=false;P.inv=performance.now()+1500;note('다시 일어났어요!')}
  /* v88 보스전에서 둘 다 쓰러짐 → 나도 보통처럼 쓰러져서 결과창(방장: 둘이 다시 도전)으로 */
@@ -152,7 +152,7 @@
     if(P.downDuo)return;if(P.hp-pred<=0&&mateAlive()){P.downDuo=true;P.inv=now+1e9;P.hp=1;send({t:'b',down:true,x:P.x,y:P.y,hp:0,mx:P.maxhp,ch:myCh(),d:0});note('쓰러졌어요 · 동료가 보스를 쓰러뜨리면 함께 이겨요');return}}}catch(e){}return f.apply(this,arguments)}}
  {const f=doAttack;doAttack=function(){if(P.downDuo&&D.started)return;return f.apply(this,arguments)}}
  /* v88: 내가 쓰러져 기다리는데 동료가 살아 있지 않으면(쓰러짐 · 보통 죽음 · 6초 넘게 연결 없음) 바로 실패 — 체력 1 무적으로 남던 문제 */
- setInterval(()=>{try{if(!D.started||!P.downDuo||mateAlive())return;
+ setInterval(()=>{try{if(!D.started||!P.downDuo||mateAlive()||(window.TD167&&TD167.isRoom()))return;
   if(mode==='boss'&&G&&G.state==='play'){send({t:'fail'});bossLose()}
   else if(mode==='tower'){const t=T();if(t&&t.clear)return;send({t:'fail'});failBoth()}}catch(e){}},300);
  /* 보스전에서 내가 보통으로 쓰러지면(동료가 이미 쓰러진 상태) 동료에게 알림 */
@@ -167,7 +167,7 @@
  {const f=frame;frame=function(){const r=f.apply(this,arguments);try{bossTrack()}catch(e){}try{watchMe()}catch(e){}try{downBanner()}catch(e){}return r}}
  {const f=drawScene;drawScene=function(now){const r=f.apply(this,arguments);try{if(D.started&&mode==='boss'&&G&&G.duo)drawMate(now,true)}catch(e){}return r}}
  /* 쓰러져 있는 동안 화면 가운데 안내 */
- function downBanner(){if(!D.started||!P.downDuo||!(mode==='tower'||mode==='boss'))return;ctx.save();try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}
+ function downBanner(){if(window.TD167&&TD167.on())return;if(!D.started||!P.downDuo||!(mode==='tower'||mode==='boss'))return;ctx.save();try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}
   const y=AY+AH/2-14,a=.75+.2*Math.sin(performance.now()/300);ctx.globalAlpha=.7;ctx.fillStyle='#05070a';ctx.fillRect(W/2-120,y,240,30);ctx.globalAlpha=a;ctx.fillStyle='#ff8a9a';ctx.font='900 11px sans-serif';ctx.textAlign='center';
   ctx.fillText('💤 쓰러졌어요',W/2,y+13);ctx.fillStyle='#cfe8f0';ctx.font='800 8px sans-serif';ctx.fillText(mode==='boss'?'동료가 보스를 쓰러뜨리면 함께 이겨요':'동료가 이 층을 깨면 다시 일어나요',W/2,y+25);ctx.restore()}
  /* v88 일시정지: 듀오에서는 게임을 멈추지 않고(동료는 계속 싸우니까) 작은 창만 띄움 — 뒤 화면은 계속 움직임 */
@@ -255,9 +255,9 @@
   if(hurt){c.save();c.globalAlpha=.55*(1-(rt-hurt.t)/160);c.fillStyle='#ff3a4a';c.beginPath();c.ellipse(x,y-10,12,15,0,0,6.28);c.fill();c.restore()}
   c.globalAlpha=1;const nm=m.nm||(D.room&&(D.room.players.find(p=>!p.me)||{}).name)||'동료';c.save();c.font='900 7px sans-serif';c.textAlign='center';c.fillStyle='#000';c.fillText(nm,x+.5,y-37.5);c.fillStyle=m.down?'#ff8a9a':(m.nmc||'#8de4ff');c.fillText(m.down?nm+' (쓰러짐)':nm,x,y-38);if(m.noHp){c.restore();return}/* v111 광장: 체력 막대 없음 */
   const q=Math.max(0,Math.min(1,(m.hp||0)/(m.mx||1)));c.fillStyle='#05070ae6';c.fillRect(x-12,y-35,24,4);c.fillStyle='#3a0a14';c.fillRect(x-11,y-34,22,2);c.fillStyle='#7dffa8';c.fillRect(x-11,y-34,22*q,2);c.restore()}
- function drawList(list,now){if(window.WATCH95&&WATCH95.specOn()){for(const M of WATCH95.objs())if(M.x!=null)list.push({y:M.sy||M.y||0,fn:()=>drawMate(now,false,M)});return}list.push({y:(D.mate&&D.mate.sy)||0,fn:()=>drawMate(now,false)})}
+ function drawList(list,now){if(window.TD167&&TD167.on()){TD167.list(list,now);return}if(window.WATCH95&&WATCH95.specOn()){for(const M of WATCH95.objs())if(M.x!=null)list.push({y:M.sy||M.y||0,fn:()=>drawMate(now,false,M)});return}list.push({y:(D.mate&&D.mate.sy)||0,fn:()=>drawMate(now,false)})}
  /* 동료 칸(위 오른쪽): 이름 · 레벨 · 체력 */
- {const f=frame;frame=function(){const r=f.apply(this,arguments);try{const tt=T();if(!(window.PVP92&&PVP92.on())&&D.started&&D.on&&(mode==='tower'&&tt&&tt.duo||mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo)){const m=D.mate||{},pl=(D.room&&D.room.players.find(p=>!p.me))||{};ctx.save();try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}
+ {const f=frame;frame=function(){const r=f.apply(this,arguments);try{const tt=T();if(!(window.PVP92&&PVP92.on())&&!(window.TD167&&TD167.isRoom())&&D.started&&D.on&&(mode==='tower'&&tt&&tt.duo||mode==='boss'&&typeof G!=='undefined'&&G&&G.tw71&&G.duo)){const m=D.mate||{},pl=(D.room&&D.room.players.find(p=>!p.me))||{};ctx.save();try{ctx.setTransform(SS,0,0,SS,0,0)}catch(e){}
    const x=W-118,y=AY+4;ctx.globalAlpha=.85;ctx.fillStyle='#05070a';ctx.fillRect(x,y,112,22);ctx.globalAlpha=1;ctx.fillStyle='#8de4ff';ctx.fillRect(x,y,2,22);ctx.font='900 8px sans-serif';ctx.fillStyle='#e8f8ff';ctx.fillText('🤝 '+(pl.name||'동료')+' · Lv.'+(pl.lv||1)+(m.down?' · 쓰러짐':''),x+6,y+9);
    const q=Math.max(0,Math.min(1,(m.hp||0)/(m.mx||1)));ctx.fillStyle='#3a0a14';ctx.fillRect(x+6,y+13,100,4);ctx.fillStyle=m.down?'#6a6a7a':'#7dffa8';ctx.fillRect(x+6,y+13,100*q,4);ctx.restore()}}catch(e){}return r}}
 

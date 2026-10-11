@@ -48,7 +48,7 @@
   fl.appendChild(d);setTimeout(()=>d.remove(),2600);if(fl.children.length>40)fl.firstChild.remove()}
  /* ---------- 선수 화면: 관객 · 응원 ---------- */
  const pb=document.createElement('div');pb.id='pb166';pb.hidden=true;document.body.appendChild(pb);const P={since:0,code:null};
- setInterval(async()=>{try{const on=window.PVP92&&PVP92.on&&PVP92.on()&&!(window.WATCH95&&WATCH95.specOn()),code=on&&DUO85.state.code;
+ setInterval(async()=>{try{const on=window.PVP92&&PVP92.on&&PVP92.on()&&!(window.TD167&&TD167.on())&&!(window.WATCH95&&WATCH95.specOn()),code=on&&DUO85.state.code;
   if(!on||!code){pb.hidden=true;P.code=null;return}if(P.code!==code){P.code=code;P.since=0}
   const r=await api('/api/arena/state',{code,since:P.since});if(r.s!==200){pb.hidden=true;return}const j=r.j,me=(saveData.name||''),mi=j.players.findIndex(p=>p.name===me),my=mi<0?0:mi;
   (j.cheers||[]).forEach(c=>{if(P.since)float(c.side===my?0:1,EMO[c.e],c.name)});P.since=j.seq;
