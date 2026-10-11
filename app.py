@@ -1547,7 +1547,7 @@ def duo_rooms():
     now = time.time()
     with _duo_lock:
         _duo_clean(now)
-        rooms = [_duo_view(r, user and user['user_id']) for r in _DUO.values() if r['state'] == 'wait' and len(r['players']) < 2 and r.get('kind', 'coop') == 'coop']
+        rooms = [_duo_view(r, user and user['user_id']) for r in _DUO.values() if r['state'] == 'wait' and len(r['players']) < 2 and r.get('kind', 'coop') == 'coop' and not r.get('matched')]
     rooms.sort(key=lambda x: x['floor'])
     return jsonify(ok=True, rooms=rooms[:50])
 
@@ -1848,6 +1848,80 @@ def pvp_queue():
         r = _pvp_room(_new_code(), other, [other, me], True, stake, 'play')
         _PVPMATCH[other['uid']] = r['code']
         return jsonify(ok=True, room=_duo_view(r, uid))
+
+
+# ---------------- v164 듀오 탑 자동 매칭 ----------------
+# 같은 난이도를 고른 두 사람을 짝지어 준다. 먼저 기다린 사람이 방장(방을 만들어 둠), 나중 사람은 그 방에 들어가 자동 「준비 완료」.
+# 시작 층 = 두 사람 최고 층(방 들어가기와 같은 기준) 중 낮은 쪽의 구역 첫 층.
+_DUOQ = {}      # 난이도 → {uid: 기다리는 사람}
+_DUOMATCH = {}  # uid → {'code', 'role', 'partner'}
+
+
+@app.route('/api/duo/queue', methods=['POST'])
+def duo_queue():
+    """듀오 상대 찾기(1초마다). 짝이 생기면 match = {code, role(host|guest), partner, floor}"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    uid = user['user_id']
+    now = time.time()
+    diff = body.get('diff') if body.get('diff') in ('easy', 'normal', 'hard', 'extreme') else 'normal'
+    db = get_db()
+    me = {'uid': uid, 'name': user['username'], 'lv': clamp_int(body.get('lv'), 1, 9999, 1), 'ch': clamp_int(body.get('ch'), 0, 999, 0),
+          'best': max(clamp_int(body.get('best'), 1, 1_000_000, 1), _duo_best(db, uid)), 'seen': now, 'since': now}
+    blk = _blocked_set(db, uid)
+    with _duo_lock:
+        _duo_clean(now)
+        m = _DUOMATCH.pop(uid, None)
+        if m and m['code'] in _DUO:
+            return jsonify(ok=True, match=m, room=_duo_view(_DUO[m['code']], uid))
+        for q in _DUOQ.values():
+            for k in [k for k, w in q.items() if now - w['seen'] > 6]:
+                del q[k]
+        for q in _DUOQ.values():  # 다른 난이도 줄에 있으면 빼기
+            if uid in q and q is not _DUOQ.get(diff):
+                del q[uid]
+        Q = _DUOQ.setdefault(diff, {})
+        other = next((w for k, w in sorted(Q.items(), key=lambda kv: kv[1]['since']) if k != uid and k not in blk
+                      and not _is_blocked_by(db, k, uid)), None)
+        if not other:
+            prev = Q.get(uid)
+            if prev:
+                me['since'] = prev['since']
+            Q[uid] = me
+            n = sum(len(x) for x in _DUOQ.values())
+            return jsonify(ok=True, waiting=True, queue=len(Q), total=n, wait=round(now - me['since']))
+        del Q[other['uid']]
+        Q.pop(uid, None)
+        f0 = max(1, min(other['best'], me['best']))
+        floor = max(1, (f0 - 1) // 10 * 10 + 1)
+        host = {k: other[k] for k in ('uid', 'name', 'lv', 'ch')}
+        host['seen'] = now
+        for r in list(_DUO.values()):  # 한 사람은 방 하나만
+            r['players'] = [p for p in r['players'] if p['uid'] not in (uid, other['uid'])]
+            if not r['players'] or r['owner'] in (uid, other['uid']):
+                r['state'] = 'closed'
+        code = None
+        for _ in range(50):
+            code = ''.join(secrets.choice(_DUO_CODE) for _ in range(4))
+            if code not in _DUO:
+                break
+        _DUO[code] = {'code': code, 'owner': other['uid'], 'owner_name': other['name'], 'floor': floor, 'diff': diff,
+                      'state': 'wait', 'players': [host], 'msgs': [], 'seq': 0, 'touched': now, 'matched': True}
+        _DUOMATCH[other['uid']] = {'code': code, 'role': 'host', 'partner': me['name'], 'floor': floor, 'diff': diff}
+        return jsonify(ok=True, match={'code': code, 'role': 'guest', 'partner': other['name'], 'floor': floor, 'diff': diff})
+
+
+@app.route('/api/duo/qcancel', methods=['POST'])
+def duo_qcancel():
+    user = _duo_user()
+    if user:
+        with _duo_lock:
+            for q in _DUOQ.values():
+                q.pop(user['user_id'], None)
+            _DUOMATCH.pop(user['user_id'], None)
+    return jsonify(ok=True)
 
 
 @app.route('/api/pvp/cancel', methods=['POST'])
