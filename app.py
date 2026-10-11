@@ -213,6 +213,15 @@ def init_db():
             paid_at     DOUBLE PRECISION
         )
     ''')
+    # v159: 다이아 묶음(현금) — 결제가 끝난 주문을 게임이 받아 가면 여기에 적는다(두 번 받지 않게)
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS dia_claims (
+            order_id    TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            dia         BIGINT NOT NULL,
+            claimed_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
     db.execute('''
         CREATE TABLE IF NOT EXISTS player_look (
@@ -542,7 +551,17 @@ for _y in range(2026, 2031):
                               'description': '시즌 ' + _s + ' 동안 시즌 패스 프리미엄 줄 보상을 모두 받아요.', 'status': 'on_sale',
                               'price': PASS_PRICE, 'currency': 'KRW'})
 
+# v159: 다이아 묶음(현금, 여러 번 살 수 있음). 게임 9999999999999 CS159의 DIA_PACKS와 같게
+DIA_PACKS = [(500, 1000), (3000, 3000), (20000, 5000), (100000, 10000), (1000000, 30000), (5000000, 50000)]
+for _n, _w in DIA_PACKS:
+    SHOP_PRODUCTS.append({'id': 'dia_%d' % _n, 'kind': 'dia', 'name': '다이아 %s개' % format(_n, ','), 'tier': '다이아', 'dia': _n,
+                          'description': '💎 다이아 %s개를 바로 받아요.' % format(_n, ','), 'status': 'on_sale', 'price': _w, 'currency': 'KRW'})
+
 PRODUCTS_BY_ID = {p['id']: p for p in SHOP_PRODUCTS}
+
+
+def _consumable(pid):
+    return (PRODUCTS_BY_ID.get(pid) or {}).get('kind') == 'dia'
 
 
 def _expand(product_id):
@@ -596,7 +615,7 @@ def _note_tester_email(db, user_id, info):
 
 def _owned_ids(db, user_id, tester=False):
     if tester:
-        return set(x for p in SHOP_PRODUCTS for x in _expand(p['id']))
+        return set(x for p in SHOP_PRODUCTS if p.get('kind') != 'dia' for x in _expand(p['id']))
     """보유 상품: 직접 지급(shop_entitlements) + 결제 완료 주문.
     테스트 키로 결제한 주문은 지금 서버도 테스트 키일 때만 센다."""
     owned = set(r['product_id'] for r in db.execute(
@@ -604,7 +623,8 @@ def _owned_ids(db, user_id, tester=False):
     rows = db.execute("SELECT product_id FROM shop_orders WHERE user_id = ? AND status = 'paid' AND test = ?",
                       (user_id, 1 if TOSS_TEST else 0)).fetchall()
     for r in rows:
-        owned.update(_expand(r['product_id']))
+        if not _consumable(r['product_id']):
+            owned.update(_expand(r['product_id']))
     return owned
 
 
@@ -667,7 +687,7 @@ def shop_order_create():
     _note(key)
     db = get_db()
     owned = _owned_ids(db, user['user_id'])
-    if all(x in owned for x in _expand(pid)):
+    if not _consumable(pid) and all(x in owned for x in _expand(pid)):
         return _bad('이미 가지고 있는 상품이에요', 409)
     order_id = 'bb' + secrets.token_urlsafe(18).replace('-', 'x').replace('_', 'y')
     db.execute('INSERT INTO shop_orders (order_id, user_id, product_id, amount, status, test, created_at) '
@@ -691,6 +711,36 @@ def shop_order_status(order_id):
     if not row:
         return _bad('주문을 찾지 못했어요', 404)
     resp = jsonify(ok=True, status=row['status'], product_id=row['product_id'], amount=row['amount'])
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
+@app.route('/api/shop/dia/claim', methods=['POST'])
+def shop_dia_claim():
+    """v159: 결제가 끝났지만 아직 게임에 넣지 않은 다이아 묶음을 받아 간다(주문마다 한 번만)"""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    rows = db.execute("SELECT order_id, product_id FROM shop_orders WHERE user_id = ? AND status = 'paid' AND test = ? AND product_id LIKE 'dia%'",
+                      (user['user_id'], 1 if TOSS_TEST else 0)).fetchall()
+    total, items = 0, []
+    for r in rows:
+        p = PRODUCTS_BY_ID.get(r['product_id'])
+        if not p or p.get('kind') != 'dia':
+            continue
+        if db.execute('SELECT 1 FROM dia_claims WHERE order_id = ?', (r['order_id'],)).fetchone():
+            continue
+        try:
+            db.execute('INSERT INTO dia_claims (order_id, user_id, dia, claimed_at) VALUES (?, ?, ?, ?)',
+                       (r['order_id'], user['user_id'], int(p['dia']), time.time()))
+            db.commit()
+        except Exception:
+            db.rollback()
+            continue
+        total += int(p['dia'])
+        items.append({'order_id': r['order_id'], 'dia': int(p['dia'])})
+    resp = jsonify(ok=True, dia=total, items=items)
     resp.headers['Cache-Control'] = 'no-store'
     return resp
 
@@ -802,6 +852,8 @@ def pay_success():
                    (payment_key, str(res.get('method') or '')[:40], time.time(), order_id))
         db.commit()
         name = PRODUCTS_BY_ID.get(row['product_id'], {}).get('name', '')
+        if _consumable(row['product_id']):
+            return _pay_result(True, '결제 완료!', name + ' — 게임으로 돌아가면 바로 들어가요.', order_id)
         return _pay_result(True, '결제 완료!', name + ' — 보관함에 들어갔어요.\n게임으로 돌아가 장착해 보세요.', order_id)
     if res.get('code') == 'NETWORK':
         # 승인 결과를 모르면 'ready'로 되돌려 다시 시도할 수 있게 한다 (같은 Idempotency-Key라 두 번 결제되지 않음)
