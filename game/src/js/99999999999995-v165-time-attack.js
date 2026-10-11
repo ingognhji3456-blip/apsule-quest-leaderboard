@@ -72,7 +72,7 @@
   win.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{W.c=+b.dataset.c;load()});
   const s=win.querySelector('.st');if(s)s.onclick=()=>{if(W.diff!==curDiff()){try{$('diffSel').value=W.diff;updDiff()}catch(e){}}startRun(W.c)}}
  /* 보스 러시 화면에 단추 */
- setInterval(()=>{try{const s=$('gmRush');if(!s||$('ta165Open'))return;const b=document.createElement('button');b.id='ta165Open';b.className='gmBtn';b.textContent='⏱ 타임어택';b.onclick=e=>{e.stopPropagation();openWin()};s.appendChild(b)}catch(e){}},700);
+ /* 보스 러시 화면 단추는 v169부터 168 파일의 #rx168 줄에 함께 있음 */
  const st=document.createElement('style');st.textContent=`
  #ta165,#tam165{position:fixed;inset:0;z-index:9430;display:flex;align-items:center;justify-content:center;background:#000b;font-family:inherit;color:#eef0ff}#ta165[hidden],#tam165[hidden]{display:none}
  #ta165 .tp,#tam165 .mc{width:min(860px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow-y:auto;border-radius:8px;background:linear-gradient(180deg,#1a1430,#0c0a1a);box-shadow:0 0 0 3px #000,0 0 0 5px #ffb04a,0 0 0 7px #000,0 20px 60px #000d}
