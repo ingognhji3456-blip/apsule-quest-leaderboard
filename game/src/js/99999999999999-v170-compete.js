@@ -124,7 +124,7 @@
 
  /* ================= 스피드런(탑 1층부터) ================= */
  const SR={on:false,ms:0,last:0,done:{},diff:'normal'};
- if(window.TW71&&TW71.start){const f=TW71.start;TW71.start=function(fl){const r=f.apply(this,arguments);try{const solo=!(DUO85.state.started)&&!(window.PVP92&&PVP92.on())&&!(window.WATCH95&&WATCH95.specOn());
+ if(window.TW71&&TW71.start){const f=TW71.start;TW71.start=function(fl){const r=f.apply(this,arguments);try{const solo=!window.__nosr&&!(DUO85.state.started)&&!(window.PVP92&&PVP92.on())&&!(window.WATCH95&&WATCH95.specOn());
    if(+fl===1&&solo){SR.on=true;SR.ms=0;SR.last=performance.now();SR.done={};SR.diff=diff}else if(SR.on&&+fl!==1)SR.on=false}catch(e){}return r}}
  {const f=toLobby;toLobby=function(){SR.on=false;return f.apply(this,arguments)}}
  {const f=frame;frame=function(){const r=f.apply(this,arguments);try{if(SR.on){const now=performance.now(),dt=Math.min(250,now-SR.last);SR.last=now;

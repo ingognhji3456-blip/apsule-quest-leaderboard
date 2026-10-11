@@ -32,7 +32,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from flask import Flask, request, jsonify, g, send_from_directory, render_template_string
+from flask import Flask, request, jsonify, g, send_from_directory, render_template_string, abort
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport.requests import Request as GoogleRequest
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -361,6 +361,22 @@ def init_db():
            created_at DOUBLE PRECISION NOT NULL, PRIMARY KEY (user_id, cat))""",
         """CREATE TABLE IF NOT EXISTS predict (week TEXT NOT NULL, user_id TEXT NOT NULL, pick TEXT NOT NULL, done INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (week, user_id))""",
         """CREATE TABLE IF NOT EXISTS honor (user_id TEXT PRIMARY KEY, pts INTEGER NOT NULL, got TEXT NOT NULL DEFAULT '', updated_at DOUBLE PRECISION NOT NULL)""",
+    ):
+        db.execute(ddl)
+    # v171: 만들기 · 나누기 — 내가 만든 층(map) · 도전 과제(chal) · 게시판 · 이달의 작품(좋아요 기록)
+    for ddl in (
+        """CREATE TABLE IF NOT EXISTS ugc (kind TEXT NOT NULL, code TEXT NOT NULL, owner TEXT NOT NULL, owner_name TEXT NOT NULL, name TEXT NOT NULL,
+           data TEXT NOT NULL, plays INTEGER NOT NULL DEFAULT 0, clears INTEGER NOT NULL DEFAULT 0, likes INTEGER NOT NULL DEFAULT 0,
+           best_ms BIGINT NOT NULL DEFAULT 0, best_name TEXT NOT NULL DEFAULT '', created_at DOUBLE PRECISION NOT NULL, PRIMARY KEY (kind, code))""",
+        """CREATE TABLE IF NOT EXISTS ugc_play (user_id TEXT NOT NULL, kind TEXT NOT NULL, code TEXT NOT NULL, cleared INTEGER NOT NULL DEFAULT 0,
+           best_ms BIGINT NOT NULL DEFAULT 0, liked INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, kind, code))""",
+        """CREATE TABLE IF NOT EXISTS ugc_reward (user_id TEXT PRIMARY KEY, day TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0)""",
+        """CREATE TABLE IF NOT EXISTS likes_log (kind TEXT NOT NULL, code TEXT NOT NULL, user_id TEXT NOT NULL, at DOUBLE PRECISION NOT NULL,
+           PRIMARY KEY (kind, code, user_id))""",
+        """CREATE TABLE IF NOT EXISTS works_done (month TEXT PRIMARY KEY, at DOUBLE PRECISION NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS board_posts (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, text TEXT NOT NULL, art TEXT NOT NULL,
+           likes INTEGER NOT NULL DEFAULT 0, created_at DOUBLE PRECISION NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS board_likes (user_id TEXT NOT NULL, post_id TEXT NOT NULL, PRIMARY KEY (user_id, post_id))""",
     ):
         db.execute(ddl)
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
@@ -3915,6 +3931,7 @@ def cboss_like():
     v = 0 if row['liked'] else 1
     db.execute('UPDATE cboss_play SET liked=? WHERE user_id=? AND code=?', (v, user['user_id'], code))
     db.execute('UPDATE cboss SET likes=likes+? WHERE code=?', (1 if v else -1, code))
+    _like_log(db, 'boss', code, user['user_id'], v)  # v171 이달의 작품
     db.commit()
     return jsonify(ok=True, liked=bool(v), likes=db.execute('SELECT likes FROM cboss WHERE code=?', (code,)).fetchone()['likes'])
 
@@ -4302,6 +4319,314 @@ def ranking_friends():
     out = [{'name': r['username'], 'me': r['user_id'] == uid, 'level': r['level'] or 1, 'floor': r['floor'] or 1, 'gold': int(r['gold'] or 0),
             'ach': r['ach'] or 0, 'league': int(r['lg'] or 0), 'honor': r['hon'] or 0} for r in rows]
     return jsonify(ok=True, rows=out)
+
+
+# ---------------- v171 만들기 · 나누기 ----------------
+# 내가 만든 층(map: 구역 색 · 잡몹 무리 · 내 잡몹 · 내 곡)과 도전 과제(chal: 보스 + 규칙)를 코드 6자리로 나눈다. 저장 · 목록 · 결과 · 좋아요는 cboss와 같은 모양.
+# 남의 것을 처음 깨면 🪙UGC_GOLD(하루 UGC_DAY번). 좋아요는 likes_log에도 적어 「이달의 작품」(이달 받은 좋아요 순) — 지난달 1~3위 만든 사람에게 우편.
+UGC_KINDS = {'map': '층', 'chal': '도전 과제'}
+UGC_MAX, UGC_GOLD, UGC_DAY = 12, 30, 10
+BOARD_MAX_TEXT = 60
+
+
+def _like_log(db, kind, code, uid, on):
+    db.execute('DELETE FROM likes_log WHERE kind=? AND code=? AND user_id=?', (kind, code, uid))
+    if on:
+        db.execute('INSERT INTO likes_log (kind, code, user_id, at) VALUES (?, ?, ?, ?)', (kind, code, uid, time.time()))
+
+
+def _ugc_row(x, mine=None):
+    try:
+        d = json.loads(x['data'])
+    except Exception:
+        d = {}
+    o = {'kind': x['kind'], 'code': x['code'], 'name': x['name'], 'owner': x['owner_name'], 'plays': x['plays'], 'clears': x['clears'], 'likes': x['likes'],
+         'best_ms': int(x['best_ms']), 'best_name': x['best_name'], 'created': x['created_at'], 'data': d}
+    if mine is not None:
+        o['cleared'] = bool(mine['cleared']) if mine else False
+        o['liked'] = bool(mine['liked']) if mine else False
+        o['my_ms'] = int(mine['best_ms']) if mine else 0
+    return o
+
+
+def _ugc_kind(kind):
+    if kind not in UGC_KINDS:
+        abort(404)
+    return kind
+
+
+@app.route('/api/ugc/<kind>/save', methods=['POST'])
+def ugc_save(kind):
+    _ugc_kind(kind)
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    name = _bad_filter(clamp_text(b.get('name'), 14).strip())
+    if len(name) < 2:
+        return _bad('이름을 2글자 이상 써 주세요', 400)
+    data = b.get('data') if isinstance(b.get('data'), dict) else {}
+    raw = json.dumps(data, ensure_ascii=False)
+    if len(raw) > 12000:
+        return _bad('너무 커요', 400)
+    db = get_db()
+    uid = user['user_id']
+    code = clamp_text(b.get('code'), 8).upper()
+    if code:
+        row = db.execute('SELECT owner FROM ugc WHERE kind=? AND code=?', (kind, code)).fetchone()
+        if not row or row['owner'] != uid:
+            return _bad('내가 만든 것만 고칠 수 있어요', 403)
+        db.execute("UPDATE ugc SET name=?, data=?, clears=0, best_ms=0, best_name='' WHERE kind=? AND code=?", (name, raw, kind, code))
+        db.execute('UPDATE ugc_play SET cleared=0, best_ms=0 WHERE kind=? AND code=?', (kind, code))
+    else:
+        if db.execute('SELECT COUNT(*) AS c FROM ugc WHERE kind=? AND owner=?', (kind, uid)).fetchone()['c'] >= UGC_MAX:
+            return _bad('%s은(는) %d개까지 만들 수 있어요' % (UGC_KINDS[kind], UGC_MAX), 409)
+        for _ in range(60):
+            code = ''.join(secrets.choice(_CB_CODE) for _ in range(6))
+            if not db.execute('SELECT 1 FROM ugc WHERE kind=? AND code=?', (kind, code)).fetchone():
+                break
+        db.execute('INSERT INTO ugc (kind, code, owner, owner_name, name, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                   (kind, code, uid, user['username'], name, raw, time.time()))
+    db.commit()
+    return jsonify(ok=True, code=code, item=_ugc_row(db.execute('SELECT * FROM ugc WHERE kind=? AND code=?', (kind, code)).fetchone()))
+
+
+@app.route('/api/ugc/<kind>/list', methods=['POST'])
+def ugc_list(kind):
+    _ugc_kind(kind)
+    user = _duo_user()
+    b = request.get_json(silent=True) or {}
+    by = b.get('by') if b.get('by') in ('hot', 'new', 'mine', 'code') else 'hot'
+    db = get_db()
+    uid = user['user_id'] if user else ''
+    if by == 'code':
+        rows = db.execute('SELECT * FROM ugc WHERE kind=? AND code=?', (kind, clamp_text(b.get('code'), 8).upper())).fetchall()
+    elif by == 'mine':
+        rows = db.execute('SELECT * FROM ugc WHERE kind=? AND owner=? ORDER BY created_at DESC', (kind, uid)).fetchall()
+    elif by == 'new':
+        rows = db.execute('SELECT * FROM ugc WHERE kind=? ORDER BY created_at DESC LIMIT 40', (kind,)).fetchall()
+    else:
+        rows = db.execute('SELECT * FROM ugc WHERE kind=? ORDER BY (likes * 5 + clears * 2 + plays) DESC, created_at DESC LIMIT 40', (kind,)).fetchall()
+    mine = {}
+    if uid and rows:
+        q = ','.join('?' * len(rows))
+        for x in db.execute('SELECT * FROM ugc_play WHERE user_id=? AND kind=? AND code IN (%s)' % q, [uid, kind] + [r['code'] for r in rows]).fetchall():
+            mine[x['code']] = x
+    out = []
+    for i, r in enumerate(rows):
+        o = _ugc_row(r, mine.get(r['code']) if uid else None)
+        o['rank'] = i + 1
+        o['own'] = r['owner'] == uid
+        out.append(o)
+    if by == 'code' and not out:
+        return _bad('그 코드가 없어요', 404)
+    return jsonify(ok=True, items=out, max=UGC_MAX)
+
+
+def _ugc_play_row(db, uid, kind, code):
+    row = db.execute('SELECT * FROM ugc_play WHERE user_id=? AND kind=? AND code=?', (uid, kind, code)).fetchone()
+    if not row:
+        db.execute('INSERT INTO ugc_play (user_id, kind, code) VALUES (?, ?, ?)', (uid, kind, code))
+        row = db.execute('SELECT * FROM ugc_play WHERE user_id=? AND kind=? AND code=?', (uid, kind, code)).fetchone()
+    return row
+
+
+@app.route('/api/ugc/<kind>/result', methods=['POST'])
+def ugc_result(kind):
+    _ugc_kind(kind)
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    code = clamp_text(b.get('code'), 8).upper()
+    win = bool(b.get('win'))
+    ms = clamp_int(b.get('ms'), 0, 3_600_000, 0)
+    db = get_db()
+    uid = user['user_id']
+    it = db.execute('SELECT * FROM ugc WHERE kind=? AND code=?', (kind, code)).fetchone()
+    if not it:
+        return _bad('그 코드가 없어요', 404)
+    if win and ms < 3000:
+        return _bad('기록이 이상해요', 400)
+    row = _ugc_play_row(db, uid, kind, code)
+    db.execute('UPDATE ugc SET plays=plays+1 WHERE kind=? AND code=?', (kind, code))
+    first, gold, rec = False, 0, False
+    if win:
+        if not row['cleared']:
+            first = True
+            db.execute('UPDATE ugc SET clears=clears+1 WHERE kind=? AND code=?', (kind, code))
+            if it['owner'] != uid:
+                day = time.strftime('%Y-%m-%d', time.gmtime())
+                rw = db.execute('SELECT day, n FROM ugc_reward WHERE user_id=?', (uid,)).fetchone()
+                n = rw['n'] if rw and rw['day'] == day else 0
+                if n < UGC_DAY:
+                    gold = UGC_GOLD
+                    if rw:
+                        db.execute('UPDATE ugc_reward SET day=?, n=? WHERE user_id=?', (day, n + 1, uid))
+                    else:
+                        db.execute('INSERT INTO ugc_reward (user_id, day, n) VALUES (?, ?, ?)', (uid, day, 1))
+                    db.execute('INSERT INTO pvp_ledger (id, user_id, delta, note, created_at) VALUES (?, ?, ?, ?, ?)',
+                               (secrets.token_hex(8), uid, gold, '만든 %s 첫 클리어' % UGC_KINDS[kind], time.time()))
+        db.execute('UPDATE ugc_play SET cleared=1, best_ms=? WHERE user_id=? AND kind=? AND code=?',
+                   (ms if not row['best_ms'] or ms < row['best_ms'] else row['best_ms'], uid, kind, code))
+        if not it['best_ms'] or ms < it['best_ms']:
+            rec = True
+            db.execute('UPDATE ugc SET best_ms=?, best_name=? WHERE kind=? AND code=?', (ms, user['username'], kind, code))
+    db.commit()
+    return jsonify(ok=True, first=first, gold=gold, record=rec,
+                   item=_ugc_row(db.execute('SELECT * FROM ugc WHERE kind=? AND code=?', (kind, code)).fetchone(),
+                                 db.execute('SELECT * FROM ugc_play WHERE user_id=? AND kind=? AND code=?', (uid, kind, code)).fetchone()))
+
+
+@app.route('/api/ugc/<kind>/like', methods=['POST'])
+def ugc_like(kind):
+    _ugc_kind(kind)
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    code = clamp_text((request.get_json(silent=True) or {}).get('code'), 8).upper()
+    db = get_db()
+    it = db.execute('SELECT owner FROM ugc WHERE kind=? AND code=?', (kind, code)).fetchone()
+    if not it:
+        return _bad('그 코드가 없어요', 404)
+    if it['owner'] == user['user_id']:
+        return _bad('내가 만든 것에는 좋아요를 누를 수 없어요', 400)
+    row = _ugc_play_row(db, user['user_id'], kind, code)
+    v = 0 if row['liked'] else 1
+    db.execute('UPDATE ugc_play SET liked=? WHERE user_id=? AND kind=? AND code=?', (v, user['user_id'], kind, code))
+    db.execute('UPDATE ugc SET likes=likes+? WHERE kind=? AND code=?', (1 if v else -1, kind, code))
+    _like_log(db, kind, code, user['user_id'], v)
+    db.commit()
+    return jsonify(ok=True, liked=bool(v), likes=db.execute('SELECT likes FROM ugc WHERE kind=? AND code=?', (kind, code)).fetchone()['likes'])
+
+
+@app.route('/api/ugc/<kind>/delete', methods=['POST'])
+def ugc_delete(kind):
+    _ugc_kind(kind)
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    code = clamp_text((request.get_json(silent=True) or {}).get('code'), 8).upper()
+    db = get_db()
+    db.execute('DELETE FROM ugc WHERE kind=? AND code=? AND owner=?', (kind, code, user['user_id']))
+    db.commit()
+    return jsonify(ok=True)
+
+
+def _month_bounds(month):
+    t0 = time.mktime(time.strptime(month + '-01', '%Y-%m-%d'))
+    y, m = map(int, month.split('-'))
+    t1 = time.mktime(time.strptime('%04d-%02d-01' % (y + (m == 12), 1 if m == 12 else m + 1), '%Y-%m-%d'))
+    return t0, t1
+
+
+def _works_top(db, month, n=5):
+    t0, t1 = _month_bounds(month)
+    out = {}
+    for kind in ('boss', 'map', 'chal'):
+        rows = db.execute('SELECT code, COUNT(*) AS c FROM likes_log WHERE kind=? AND at>=? AND at<? GROUP BY code ORDER BY c DESC LIMIT ?',
+                          (kind, t0, t1, n)).fetchall()
+        lst = []
+        for r in rows:
+            it = (db.execute('SELECT code, name, owner, owner_name FROM cboss WHERE code=?', (r['code'],)).fetchone() if kind == 'boss' else
+                  db.execute('SELECT code, name, owner, owner_name FROM ugc WHERE kind=? AND code=?', (kind, r['code'])).fetchone())
+            if it:
+                lst.append({'code': it['code'], 'name': it['name'], 'owner': it['owner_name'], 'uid': it['owner'], 'likes': r['c']})
+        out[kind] = lst
+    return out
+
+
+@app.route('/api/works/month', methods=['POST'])
+def works_month():
+    db = get_db()
+    month = time.strftime('%Y-%m', time.gmtime())
+    last = time.strftime('%Y-%m', time.gmtime(time.time() - 86400 * time.gmtime().tm_mday))
+    if not db.execute('SELECT 1 FROM works_done WHERE month=?', (last,)).fetchone():
+        db.execute('INSERT INTO works_done (month, at) VALUES (?, ?)', (last, time.time()))
+        for kind, lst in _works_top(db, last, 3).items():
+            for i, w in enumerate(lst):
+                gold, dia = ((10000, 50), (5000, 20), (3000, 10))[i]
+                mail_send(db, w['uid'], '🎨 %s 이달의 작품 %d위!' % (last, i + 1),
+                          '「%s」이(가) 지난달 가장 사랑받은 %s %d위가 되었어요. 고마워요!' % (w['name'], {'boss': '보스', 'map': '층', 'chal': '도전 과제'}[kind], i + 1),
+                          gold=gold, dia=dia, sender='운영팀')
+        db.commit()
+    strip = lambda d: {k: [{x: y for x, y in w.items() if x != 'uid'} for w in v] for k, v in d.items()}
+    return jsonify(ok=True, month=month, now=strip(_works_top(db, month)), last_month=last, last=strip(_works_top(db, last, 3)))
+
+
+@app.route('/api/board/list', methods=['POST'])
+def board_list():
+    user = _duo_user()
+    db = get_db()
+    uid = user['user_id'] if user else ''
+    blk = _blocked_set(db, uid) if uid else set()
+    rows = db.execute('SELECT * FROM board_posts ORDER BY created_at DESC LIMIT 60').fetchall()
+    liked = set()
+    if uid and rows:
+        q = ','.join('?' * len(rows))
+        liked = {r['post_id'] for r in db.execute('SELECT post_id FROM board_likes WHERE user_id=? AND post_id IN (%s)' % q, [uid] + [r['id'] for r in rows]).fetchall()}
+    return jsonify(ok=True, posts=[{'id': r['id'], 'name': r['name'], 'text': r['text'], 'art': r['art'], 'likes': r['likes'], 't': r['created_at'],
+                                     'mine': r['user_id'] == uid, 'liked': r['id'] in liked} for r in rows if r['user_id'] not in blk])
+
+
+@app.route('/api/board/post', methods=['POST'])
+def board_post():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    text = _bad_filter(_chat_clean(b.get('text'))[:BOARD_MAX_TEXT].strip())
+    art = clamp_text(b.get('art'), 256)
+    if not re.match(r'^[0-7]{256}$', art or ''):
+        art = ''
+    if not text and not art.strip('0'):
+        return _bad('글이나 그림을 넣어 주세요', 400)
+    db = get_db()
+    uid = user['user_id']
+    if _muted(db, uid):
+        return _bad('지금은 글을 쓸 수 없어요', 403)
+    now = time.time()
+    if db.execute('SELECT 1 FROM board_posts WHERE user_id=? AND created_at>?', (uid, now - 60)).fetchone():
+        return _bad('1분에 한 번만 쓸 수 있어요', 429)
+    db.execute('INSERT INTO board_posts (id, user_id, name, text, art, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+               ('p' + secrets.token_hex(8), uid, user['username'], text, art or '0' * 256, now))
+    old = db.execute('SELECT id FROM board_posts ORDER BY created_at DESC LIMIT 1 OFFSET 500').fetchone()
+    if old:
+        db.execute('DELETE FROM board_posts WHERE created_at < (SELECT created_at FROM board_posts WHERE id=?)', (old['id'],))
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/board/like', methods=['POST'])
+def board_like():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    pid = clamp_text((request.get_json(silent=True) or {}).get('id'), 24)
+    db = get_db()
+    if not db.execute('SELECT 1 FROM board_posts WHERE id=?', (pid,)).fetchone():
+        return _bad('글이 없어요', 404)
+    on = db.execute('SELECT 1 FROM board_likes WHERE user_id=? AND post_id=?', (user['user_id'], pid)).fetchone()
+    if on:
+        db.execute('DELETE FROM board_likes WHERE user_id=? AND post_id=?', (user['user_id'], pid))
+        db.execute('UPDATE board_posts SET likes=likes-1 WHERE id=?', (pid,))
+    else:
+        db.execute('INSERT INTO board_likes (user_id, post_id) VALUES (?, ?)', (user['user_id'], pid))
+        db.execute('UPDATE board_posts SET likes=likes+1 WHERE id=?', (pid,))
+    db.commit()
+    return jsonify(ok=True, liked=not on)
+
+
+@app.route('/api/board/delete', methods=['POST'])
+def board_delete():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    pid = clamp_text((request.get_json(silent=True) or {}).get('id'), 24)
+    db = get_db()
+    db.execute('DELETE FROM board_posts WHERE id=? AND user_id=?', (pid, user['user_id']))
+    db.commit()
+    return jsonify(ok=True)
 
 
 if __name__ == '__main__':
