@@ -62,7 +62,7 @@
    body=head+'<div class="chLog" id="chLog">'+(lines||'<div class="chEmpty">'+(C.tab==='dm'?'첫 인사를 건네 보세요 👋':'아직 대화가 없어요. 첫 마디를 남겨 보세요!')+'</div>')+'</div>';
    foot='<div class="chFoot"><input id="chIn" maxlength="120" placeholder="'+(C.tab==='dm'?esc(C.peer)+'님에게 보내기':'모두에게 보내기')+'" autocomplete="off" spellcheck="false"><button id="chGo">보내기</button></div>';
   }
-  const pick=C.pick?'<div class="chPick"><b>'+esc(C.pick)+'</b>'+(fn.has(C.pick)?'<button data-pk="dm">💬 대화하기</button>':'<button data-pk="add">＋ 친구 신청</button>')+'<button data-pk="x" class="x">취소</button></div>':'';
+  const pick=C.pick?'<div class="chPick"><b>'+esc(C.pick)+'</b>'+(fn.has(C.pick)?'<button data-pk="dm">💬 대화하기</button>':'<button data-pk="add">＋ 친구 신청</button>')+(window.MR163?'<button data-pk="blk" class="bk">'+(MR163.isBlocked(C.pick)?'차단 풀기':'차단')+'</button><button data-pk="rep" class="rp">신고</button>':'')+'<button data-pk="x" class="x">취소</button></div>':'';/* v163 차단 · 신고 */
   const h='<div class="chP"><div class="chHd"><i>💬</i><div><b>채팅</b><small>'+(me?esc(me)+'(으)로 대화 중':'')+'</small></div><button class="chX">닫기</button></div>'+tabs+body+(C.err?'<div class="chErr'+(C.err[0]==='✓'?' ok':'')+'">'+esc(C.err)+'</div>':'')+foot+pick+'</div>';
   if(h===lastH)return;const log0=$('chLog'),atEnd=!log0||log0.scrollHeight-log0.scrollTop-log0.clientHeight<40,keep=log0?log0.scrollTop:0;
   const inp=$('chIn'),v=inp?inp.value:'',foc=document.activeElement&&document.activeElement.id==='chIn';lastH=h;box.innerHTML=h;
@@ -74,6 +74,8 @@
   if(q('#chGo'))q('#chGo').onclick=send;if(q('#chIn'))q('#chIn').onkeydown=e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();send()}};
   box.querySelectorAll('[data-nm]').forEach(b=>b.onclick=()=>{C.pick=b.dataset.nm;draw()});
   box.querySelectorAll('[data-pk]').forEach(b=>b.onclick=async()=>{const n=C.pick,k=b.dataset.pk;C.pick=null;
+   if(k==='blk'){await MR163.block(n,!MR163.isBlocked(n));if(MR163.isBlocked(n))C.msgs=C.msgs.filter(m=>m.name!==n);lastH='';draw();return}
+   if(k==='rep'){const last=(C.msgs.filter(m=>m.name===n).slice(-3).map(m=>m.text).join(' / '));draw();MR163.report(n,C.tab==='dm'?'친구 대화':'서버 채팅',last);return}
    if(k==='dm'){C.tab='dm';C.peer=n;reset();lastH='';draw();pull();return}
    if(k==='add'){const r=await api('/api/friends/request','POST',{name:n});C.err=r.s===200?(r.j.status==='friends'?'✓ '+n+'님과 친구가 됐어요!':'✓ '+n+'님에게 친구 신청을 보냈어요'):(r.j.error||'보내지 못했어요');C.errT=Date.now();FR94.refresh()}
    draw()})}
@@ -123,7 +125,7 @@
  #ch103 .chPeerHd{display:flex;align-items:center;gap:8px;margin-bottom:6px}#ch103 .chBack{padding:6px 10px;border-radius:9px;border:1px solid #ffffff22;background:#1a140c;color:#e8dcc8;font-weight:800;font-size:12px}
  #ch103 .chPeerHd b{font-size:15px}#ch103 .chPeerHd small{font-size:11px;color:#9aa8b0}#ch103 .chPeerHd em{font-style:normal;color:#7dffa8}
  #ch103 .chPick{position:absolute;left:14px;right:14px;bottom:70px;display:flex;align-items:center;gap:6px;padding:10px 12px;border-radius:14px;background:#1e1810;border:2px solid #ffb84a;box-shadow:0 10px 30px #000c;animation:chIn .15s ease-out}
- #ch103 .chPick b{flex:1;font-size:14px}#ch103 .chPick button{padding:7px 11px;border-radius:10px;border:0;font-weight:900;font-size:12.5px;background:linear-gradient(180deg,#e6dcff,#a98aff);color:#14082a}#ch103 .chPick [data-pk=dm]{background:linear-gradient(180deg,#d8f6ff,#5ab8e8);color:#04121a}#ch103 .chPick .x{background:#2a3436;color:#e8f4ef}
+ #ch103 .chPick b{flex:1;font-size:14px}#ch103 .chPick button{padding:7px 11px;border-radius:10px;border:0;font-weight:900;font-size:12.5px;background:linear-gradient(180deg,#e6dcff,#a98aff);color:#14082a}#ch103 .chPick [data-pk=dm]{background:linear-gradient(180deg,#d8f6ff,#5ab8e8);color:#04121a}#ch103 .chPick .x{background:#2a3436;color:#e8f4ef}#ch103 .chPick .bk{background:#3a3f5a;color:#c8d0ff}#ch103 .chPick .rp{background:#8a1a2a;color:#ffd0d8}
  .frT.ch{border-color:#ffb84a;box-shadow:0 10px 30px #000c,0 0 20px #ffb84a44}
  @keyframes chIn{from{transform:translateY(10px);opacity:0}}`;document.head.appendChild(st);
  window.CHAT103={open,close,dm,dmNote,C};

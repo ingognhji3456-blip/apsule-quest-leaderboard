@@ -234,6 +234,117 @@ def init_db():
             created_at  DOUBLE PRECISION NOT NULL
         )
     ''')
+    # v163: 우편함(보상 · 공지) · 전체 우편 · 차단 · 신고 · 자동 채팅 금지
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS mail (
+            id          TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            sender      TEXT NOT NULL,
+            title       TEXT NOT NULL,
+            body        TEXT NOT NULL,
+            gold        BIGINT NOT NULL DEFAULT 0,
+            dia         BIGINT NOT NULL DEFAULT 0,
+            created_at  DOUBLE PRECISION NOT NULL,
+            expire_at   DOUBLE PRECISION NOT NULL,
+            read_at     DOUBLE PRECISION,
+            claimed_at  DOUBLE PRECISION,
+            deleted     INTEGER NOT NULL DEFAULT 0
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS mail_broadcast (
+            id          TEXT PRIMARY KEY,
+            title       TEXT NOT NULL,
+            body        TEXT NOT NULL,
+            gold        BIGINT NOT NULL DEFAULT 0,
+            dia         BIGINT NOT NULL DEFAULT 0,
+            created_at  DOUBLE PRECISION NOT NULL,
+            expire_at   DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS user_blocks (
+            user_id     TEXT NOT NULL,
+            blocked_id  TEXT NOT NULL,
+            created_at  DOUBLE PRECISION NOT NULL,
+            PRIMARY KEY (user_id, blocked_id)
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS user_reports (
+            id          TEXT PRIMARY KEY,
+            reporter_id TEXT NOT NULL,
+            target_id   TEXT NOT NULL,
+            reason      TEXT NOT NULL,
+            place       TEXT NOT NULL,
+            detail      TEXT NOT NULL,
+            created_at  DOUBLE PRECISION NOT NULL,
+            status      TEXT NOT NULL DEFAULT 'new'
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS user_mute (
+            user_id     TEXT PRIMARY KEY,
+            until_at    DOUBLE PRECISION NOT NULL,
+            why         TEXT NOT NULL
+        )
+    ''')
+    # v165: 보스 러시 타임어택 최고 기록(코스 · 난이도마다 한 줄)
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS ta_records (
+            user_id     TEXT NOT NULL,
+            course      TEXT NOT NULL,
+            diff        TEXT NOT NULL,
+            ms          BIGINT NOT NULL,
+            splits      TEXT NOT NULL,
+            created_at  DOUBLE PRECISION NOT NULL,
+            PRIMARY KEY (user_id, course, diff)
+        )
+    ''')
+    # v167: 2:2 팀 결투 전적(오늘 보상 받은 판 수 day_n — 하루 TEAM_DAY_CAP판까지만 골드)
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS team_stats (
+            user_id     TEXT PRIMARY KEY,
+            wins        INTEGER NOT NULL DEFAULT 0,
+            losses      INTEGER NOT NULL DEFAULT 0,
+            day         TEXT NOT NULL DEFAULT '',
+            day_n       INTEGER NOT NULL DEFAULT 0,
+            updated_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    # v168: 내가 만든 보스(코드 6자리) · 도전 기록 · 좋아요 · 첫 클리어 보상 횟수
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS cboss (
+            code        TEXT PRIMARY KEY,
+            owner       TEXT NOT NULL,
+            owner_name  TEXT NOT NULL,
+            name        TEXT NOT NULL,
+            data        TEXT NOT NULL,
+            plays       INTEGER NOT NULL DEFAULT 0,
+            clears      INTEGER NOT NULL DEFAULT 0,
+            likes       INTEGER NOT NULL DEFAULT 0,
+            best_ms     BIGINT NOT NULL DEFAULT 0,
+            best_name   TEXT NOT NULL DEFAULT '',
+            created_at  DOUBLE PRECISION NOT NULL
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS cboss_play (
+            user_id     TEXT NOT NULL,
+            code        TEXT NOT NULL,
+            cleared     INTEGER NOT NULL DEFAULT 0,
+            best_ms     BIGINT NOT NULL DEFAULT 0,
+            liked       INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, code)
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS cboss_reward (
+            user_id     TEXT PRIMARY KEY,
+            day         TEXT NOT NULL,
+            n           INTEGER NOT NULL DEFAULT 0
+        )
+    ''')
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
     db.execute('''
         CREATE TABLE IF NOT EXISTS player_look (
@@ -1478,7 +1589,8 @@ def _duo_view(r, uid=None):
     return {'code': r['code'], 'owner': r['owner_name'], 'floor': r['floor'], 'diff': r['diff'], 'state': r['state'],
             'kind': r.get('kind', 'coop'), 'ranked': bool(r.get('ranked')), 'stake': r.get('stake', 0),
             'players': [{'name': p['name'], 'lv': p['lv'], 'ch': p['ch'], 'owner': p['uid'] == r['owner'], 'me': p['uid'] == uid,
-                         'online': time.time() - p['seen'] < 8, 'ready': bool(p.get('ready')) or p['uid'] == r['owner']} for p in r['players']]}
+                         'online': time.time() - p['seen'] < 8, 'ready': bool(p.get('ready')) or p['uid'] == r['owner'],
+                         'sl': p.get('sl', 0)} for p in r['players']]}
 
 
 def _duo_best(db, uid):
@@ -1492,7 +1604,7 @@ def duo_rooms():
     now = time.time()
     with _duo_lock:
         _duo_clean(now)
-        rooms = [_duo_view(r, user and user['user_id']) for r in _DUO.values() if r['state'] == 'wait' and len(r['players']) < 2 and r.get('kind', 'coop') == 'coop']
+        rooms = [_duo_view(r, user and user['user_id']) for r in _DUO.values() if r['state'] == 'wait' and len(r['players']) < 2 and r.get('kind', 'coop') == 'coop' and not r.get('matched')]
     rooms.sort(key=lambda x: x['floor'])
     return jsonify(ok=True, rooms=rooms[:50])
 
@@ -1542,12 +1654,15 @@ def duo_join():
             return _bad('방을 찾지 못했어요. 코드를 확인해 주세요', 404)
         if any(p['uid'] == user['user_id'] for p in r['players']):
             return jsonify(ok=True, room=_duo_view(r, user['user_id']))
-        if len(r['players']) >= 2 or r['state'] != 'wait':
+        cap = 4 if r.get('kind') == 'team' else 2  # v167 팀 결투 방은 4명
+        if len(r['players']) >= cap or r['state'] != 'wait':
             return _bad('이미 꽉 찬 방이에요', 409)
         if best < r['floor'] and r.get('kind', 'coop') == 'coop':
             return _bad('%d층까지 올라가 본 사람만 들어올 수 있어요 (내 최고 %d층)' % (r['floor'], best), 403)
+        used = {p.get('sl') for p in r['players']}
         r['players'].append({'uid': user['user_id'], 'name': user['username'], 'lv': clamp_int(body.get('lv'), 1, 9999, 1),
-                             'ch': clamp_int(body.get('ch'), 0, 999, 0), 'seen': now})
+                             'ch': clamp_int(body.get('ch'), 0, 999, 0), 'seen': now,
+                             'sl': next((i for i in (2, 1, 3, 0) if i not in used), 1) if r.get('kind') == 'team' else 1})
         r['touched'] = now
         r['seq'] += 1
         r['msgs'].append({'seq': r['seq'], 'from': '#', 'm': {'t': 'join', 'name': user['username']}})
@@ -1567,10 +1682,13 @@ def duo_leave():
                 other = next((p['uid'] for p in r['players'] if p['uid'] != user['user_id']), None)
                 if other:
                     _pvp_settle(r, other, user['user_id'], '상대 기권')
+            gone = next((p for p in r['players'] if p['uid'] == user['user_id']), None)
             r['players'] = [p for p in r['players'] if p['uid'] != user['user_id']]
             r['seq'] += 1
-            r['msgs'].append({'seq': r['seq'], 'from': '#', 'm': {'t': 'leave', 'name': user['username']}})
-            if r['owner'] == user['user_id'] or not r['players']:
+            r['msgs'].append({'seq': r['seq'], 'from': '#', 'm': {'t': 'leave', 'name': user['username'], 'sl': gone.get('sl') if gone else None}})
+            if r.get('kind') == 'team' and r['players']:
+                _team_left(r, user['user_id'])  # v167: 방장이 나가도 남은 사람이 이어서(방장 넘김)
+            elif r['owner'] == user['user_id'] or not r['players']:
                 r['state'] = 'closed'
             r['touched'] = time.time()
     return jsonify(ok=True)
@@ -1618,7 +1736,9 @@ def duo_sync():
         if body.get('start') and r['state'] == 'wait':
             if r['owner'] != user['user_id']:
                 start_err = '방장만 시작할 수 있어요'
-            elif len(r['players']) != 2:
+            elif r.get('kind') == 'team' and (len(r['players']) != 4 or sorted(p.get('sl', 0) // 2 for p in r['players']) != [0, 0, 1, 1]):
+                start_err = '네 명이 모두 들어와야 해요 (팀마다 2명)'
+            elif r.get('kind') != 'team' and len(r['players']) != 2:
                 start_err = '동료가 방에 없어요'
             elif not all(p.get('ready') or p['uid'] == r['owner'] for p in r['players']):
                 start_err = '상대가 아직 「준비 완료」를 누르지 않았어요'  # v94
@@ -1633,6 +1753,8 @@ def duo_sync():
             me['ready'] = bool(body.get('ready'))
         for m in msgs[:20]:
             if isinstance(m, dict) and len(json.dumps(m)) < 20000:
+                if r.get('kind') == 'team':
+                    m['_s'] = me.get('sl', 0)  # v167: 누가 보냈는지(자리 번호)
                 r['seq'] += 1
                 r['msgs'].append({'seq': r['seq'], 'from': user['user_id'][:6], 'm': m})
         if len(r['msgs']) > _DUO_KEEP:
@@ -1742,9 +1864,203 @@ def _pvp_settle(r, winner, loser, note):
             else:
                 db.execute('INSERT INTO pvp_stats (user_id, wins, losses, gold_won, updated_at) VALUES (?, ?, ?, ?, ?)',
                            (uid, w, 1 - w, delta if w else 0, now))
+        _arena_settle(db, r, winner)  # v166 관객 내기 정산(우편)
         db.commit()
     finally:
         db.close()
+
+
+# ---------------- v166 결투장 관객: 응원 · 내기 ----------------
+# 진행 중인 빠른 대전(순위전)은 누구나 관람할 수 있다(/api/arena/list → 관전). 관객은 한쪽을 골라 응원(이모티콘)하고,
+# 경기 시작 30초 안에 골드를 건다(50~5,000, 서버 기록 골드 안에서 · 선수는 못 검). 결과가 확정되면 이긴 쪽에 건 사람들이
+# 진 쪽 판돈을 건 금액 비율로 나눠 가진다(원금 + 몫, 우편). 상대편에 아무도 안 걸었거나 무효 · 중단이면 원금을 우편으로 돌려준다.
+# 판돈은 게임이 걸 때 바로 골드에서 빼고(내기 기록은 서버), 돌려받는 건 우편.
+_ARENA = {}  # code → {'seq', 'cheers': [], 'n': [0, 0], 'bets': {uid: {...}}, 'viewers': {uid: t}, 'done': False}
+ARENA_BET_MIN, ARENA_BET_MAX, ARENA_BET_WINDOW = 50, 5000, 30
+ARENA_EMO = 8
+
+
+def _arena_of(code):
+    return _ARENA.setdefault(code, {'seq': 0, 'cheers': [], 'n': [0, 0], 'bets': {}, 'viewers': {}, 'done': False, 'ct': {}})
+
+
+def _arena_pay(db, bets, winner_side, why):
+    """bets: {uid: {side, amt}} — 이긴 쪽이 진 쪽 판돈을 나눔. winner_side None이면 모두 돌려줌"""
+    win = {u: b for u, b in bets.items() if winner_side is not None and b['side'] == winner_side}
+    lose_pool = sum(b['amt'] for u, b in bets.items() if winner_side is not None and b['side'] != winner_side)
+    win_pool = sum(b['amt'] for b in win.values())
+    if winner_side is None or not win or not lose_pool:
+        for u, b in bets.items():
+            mail_send(db, u, '결투 내기 돌려받기', '%s — 건 골드를 그대로 돌려드려요.' % why, gold=b['amt'], sender='결투장')
+        return
+    for u, b in win.items():
+        share = b['amt'] * lose_pool // win_pool
+        mail_send(db, u, '결투 내기 적중!', '%s님이 이겼어요! 건 %s골드 + 몫 %s골드' % (b.get('pick', ''), format(b['amt'], ','), format(share, ',')),
+                  gold=b['amt'] + share, sender='결투장')
+
+
+def _arena_settle(db, r, winner_uid):
+    a = _ARENA.get(r['code'])
+    if not a or a['done']:
+        return
+    a['done'] = True
+    a['winner'] = next((i for i, p in enumerate(r['players']) if p['uid'] == winner_uid), None)
+    if a['bets']:
+        _arena_pay(db, a['bets'], a['winner'], '결투')
+
+
+def _arena_refund_room(r, why):
+    a = _ARENA.get(r['code'])
+    if not a or a['done']:
+        return
+    a['done'] = True
+    if a['bets']:
+        db = DB()
+        try:
+            _arena_pay(db, a['bets'], None, why)
+            db.commit()
+        finally:
+            db.close()
+
+
+def _arena_sweep(now):
+    """(락 안) 방이 사라졌는데 정산 안 된 내기는 돌려줌 · 오래된 기록 정리"""
+    for code in list(_ARENA):
+        a = _ARENA[code]
+        r = _DUO.get(code)
+        if not a['done'] and (not r or r.get('state') == 'closed'):
+            _arena_refund_room(r or {'code': code}, '경기가 중간에 끝나')
+        if a['done'] and now - a.get('dt', now) > 600:
+            del _ARENA[code]
+        elif a['done']:
+            a.setdefault('dt', now)
+
+
+def _arena_room_ok(r):
+    return r and r.get('kind') == 'pvp' and r.get('ranked') and r.get('state') == 'play' and len(r['players']) == 2
+
+
+def _arena_target_ok(uid):
+    """(락 안) 이 사람이 지금 공개 결투(빠른 대전) 중이면 누구나 관전 가능"""
+    return any(_arena_room_ok(r) and any(p['uid'] == uid for p in r['players']) for r in _DUO.values())
+
+
+def _arena_view(r, a, uid, since):
+    now = time.time()
+    pool = [sum(b['amt'] for b in a['bets'].values() if b['side'] == i) for i in (0, 1)]
+    t0 = r.get('t_play', now) if r else now
+    mb = a['bets'].get(uid)
+    return {'code': r['code'] if r else '', 'players': [{'name': p['name'], 'lv': p.get('lv', 1), 'ch': p.get('ch', 0)} for p in (r['players'] if r else [])],
+            'cheers': [c for c in a['cheers'] if c['seq'] > since], 'seq': a['seq'], 'n': a['n'], 'pool': pool,
+            'bettors': [sum(1 for b in a['bets'].values() if b['side'] == i) for i in (0, 1)],
+            'viewers': sum(1 for t in a['viewers'].values() if now - t < 8), 'betOpen': (not a['done']) and now - t0 < ARENA_BET_WINDOW,
+            'betLeft': max(0, round(ARENA_BET_WINDOW - (now - t0))), 'myBet': {'side': mb['side'], 'amt': mb['amt']} if mb else None,
+            'done': a['done'], 'winner': a.get('winner'), 'age': round(now - t0)}
+
+
+@app.route('/api/arena/list', methods=['POST'])
+def arena_list():
+    user = _duo_user()
+    now = time.time()
+    with _duo_lock:
+        _duo_clean(now)
+        _arena_sweep(now)
+        out = []
+        for r in _DUO.values():
+            if not _arena_room_ok(r):
+                continue
+            r.setdefault('t_play', now)
+            a = _arena_of(r['code'])
+            v = _arena_view(r, a, user and user['user_id'], 10 ** 12)
+            v.pop('cheers', None)
+            out.append(v)
+    out.sort(key=lambda x: -x['viewers'])
+    return jsonify(ok=True, matches=out[:30])
+
+
+@app.route('/api/arena/state', methods=['POST'])
+def arena_state():
+    """관객 · 선수가 1초마다: 응원 · 판돈 · 결과"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    since = clamp_int(body.get('since'), 0, 2 ** 62, 0)
+    now = time.time()
+    with _duo_lock:
+        _arena_sweep(now)
+        r = _DUO.get(code)
+        a = _ARENA.get(code)
+        if not a and not _arena_room_ok(r):
+            return _bad('끝난 경기예요', 404)
+        a = a or _arena_of(code)
+        if r and _arena_room_ok(r):
+            r.setdefault('t_play', now)
+        if not (r and any(p['uid'] == user['user_id'] for p in r['players'])):
+            a['viewers'][user['user_id']] = now
+        return jsonify(ok=True, **_arena_view(r, a, user['user_id'], since))
+
+
+@app.route('/api/arena/cheer', methods=['POST'])
+def arena_cheer():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    side = 1 if body.get('side') == 1 else 0
+    e = clamp_int(body.get('e'), 0, ARENA_EMO - 1, 0)
+    now = time.time()
+    with _duo_lock:
+        r = _DUO.get(code)
+        if not _arena_room_ok(r):
+            return _bad('끝난 경기예요', 404)
+        a = _arena_of(code)
+        if a['done']:
+            return _bad('끝난 경기예요', 404)
+        if now - a['ct'].get(user['user_id'], 0) < 0.6:
+            return jsonify(ok=True, slow=True)
+        a['ct'][user['user_id']] = now
+        a['seq'] += 1
+        a['n'][side] += 1
+        a['cheers'].append({'seq': a['seq'], 'side': side, 'e': e, 'name': user['username']})
+        a['cheers'] = a['cheers'][-60:]
+    return jsonify(ok=True)
+
+
+@app.route('/api/arena/bet', methods=['POST'])
+def arena_bet():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    side = 1 if body.get('side') == 1 else 0
+    amt = clamp_int(body.get('amt'), 0, 10 ** 9, 0)
+    if amt < ARENA_BET_MIN or amt > ARENA_BET_MAX:
+        return _bad('%d ~ %s골드까지 걸 수 있어요' % (ARENA_BET_MIN, format(ARENA_BET_MAX, ',')), 400)
+    uid = user['user_id']
+    db = get_db()
+    gold = _pvp_gold(db, uid)
+    if amt > gold:
+        return _bad('가진 골드(서버 기록 %s)보다 많이 걸 수 없어요' % format(gold, ','), 400)
+    now = time.time()
+    with _duo_lock:
+        r = _DUO.get(code)
+        if not _arena_room_ok(r):
+            return _bad('끝난 경기예요', 404)
+        if any(p['uid'] == uid for p in r['players']):
+            return _bad('선수는 자기 경기에 걸 수 없어요', 403)
+        a = _arena_of(code)
+        t0 = r.setdefault('t_play', now)
+        if a['done'] or now - t0 >= ARENA_BET_WINDOW:
+            return _bad('내기는 경기 시작 %d초 안에만 걸 수 있어요' % ARENA_BET_WINDOW, 409)
+        if uid in a['bets']:
+            return _bad('이 경기에는 이미 걸었어요', 409)
+        a['bets'][uid] = {'side': side, 'amt': amt, 'name': user['username'], 'pick': r['players'][side]['name']}
+        pool = [sum(b['amt'] for b in a['bets'].values() if b['side'] == i) for i in (0, 1)]
+    return jsonify(ok=True, pool=pool)
 
 
 def _pvp_room(code, owner, players, ranked, stake, state):
@@ -1793,6 +2109,304 @@ def pvp_queue():
         r = _pvp_room(_new_code(), other, [other, me], True, stake, 'play')
         _PVPMATCH[other['uid']] = r['code']
         return jsonify(ok=True, room=_duo_view(r, uid))
+
+
+# ---------------- v164 듀오 탑 자동 매칭 ----------------
+# 같은 난이도를 고른 두 사람을 짝지어 준다. 먼저 기다린 사람이 방장(방을 만들어 둠), 나중 사람은 그 방에 들어가 자동 「준비 완료」.
+# 시작 층 = 두 사람 최고 층(방 들어가기와 같은 기준) 중 낮은 쪽의 구역 첫 층.
+_DUOQ = {}      # 난이도 → {uid: 기다리는 사람}
+_DUOMATCH = {}  # uid → {'code', 'role', 'partner'}
+
+
+@app.route('/api/duo/queue', methods=['POST'])
+def duo_queue():
+    """듀오 상대 찾기(1초마다). 짝이 생기면 match = {code, role(host|guest), partner, floor}"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    uid = user['user_id']
+    now = time.time()
+    diff = body.get('diff') if body.get('diff') in ('easy', 'normal', 'hard', 'extreme') else 'normal'
+    db = get_db()
+    me = {'uid': uid, 'name': user['username'], 'lv': clamp_int(body.get('lv'), 1, 9999, 1), 'ch': clamp_int(body.get('ch'), 0, 999, 0),
+          'best': max(clamp_int(body.get('best'), 1, 1_000_000, 1), _duo_best(db, uid)), 'seen': now, 'since': now}
+    blk = _blocked_set(db, uid)
+    with _duo_lock:
+        _duo_clean(now)
+        m = _DUOMATCH.pop(uid, None)
+        if m and m['code'] in _DUO:
+            return jsonify(ok=True, match=m, room=_duo_view(_DUO[m['code']], uid))
+        for q in _DUOQ.values():
+            for k in [k for k, w in q.items() if now - w['seen'] > 6]:
+                del q[k]
+        for q in _DUOQ.values():  # 다른 난이도 줄에 있으면 빼기
+            if uid in q and q is not _DUOQ.get(diff):
+                del q[uid]
+        Q = _DUOQ.setdefault(diff, {})
+        other = next((w for k, w in sorted(Q.items(), key=lambda kv: kv[1]['since']) if k != uid and k not in blk
+                      and not _is_blocked_by(db, k, uid)), None)
+        if not other:
+            prev = Q.get(uid)
+            if prev:
+                me['since'] = prev['since']
+            Q[uid] = me
+            n = sum(len(x) for x in _DUOQ.values())
+            return jsonify(ok=True, waiting=True, queue=len(Q), total=n, wait=round(now - me['since']))
+        del Q[other['uid']]
+        Q.pop(uid, None)
+        f0 = max(1, min(other['best'], me['best']))
+        floor = max(1, (f0 - 1) // 10 * 10 + 1)
+        host = {k: other[k] for k in ('uid', 'name', 'lv', 'ch')}
+        host['seen'] = now
+        for r in list(_DUO.values()):  # 한 사람은 방 하나만
+            r['players'] = [p for p in r['players'] if p['uid'] not in (uid, other['uid'])]
+            if not r['players'] or r['owner'] in (uid, other['uid']):
+                r['state'] = 'closed'
+        code = None
+        for _ in range(50):
+            code = ''.join(secrets.choice(_DUO_CODE) for _ in range(4))
+            if code not in _DUO:
+                break
+        _DUO[code] = {'code': code, 'owner': other['uid'], 'owner_name': other['name'], 'floor': floor, 'diff': diff,
+                      'state': 'wait', 'players': [host], 'msgs': [], 'seq': 0, 'touched': now, 'matched': True}
+        _DUOMATCH[other['uid']] = {'code': code, 'role': 'host', 'partner': me['name'], 'floor': floor, 'diff': diff}
+        return jsonify(ok=True, match={'code': code, 'role': 'guest', 'partner': other['name'], 'floor': floor, 'diff': diff})
+
+
+@app.route('/api/duo/qcancel', methods=['POST'])
+def duo_qcancel():
+    user = _duo_user()
+    if user:
+        with _duo_lock:
+            for q in _DUOQ.values():
+                q.pop(user['user_id'], None)
+            _DUOMATCH.pop(user['user_id'], None)
+    return jsonify(ok=True)
+
+
+# ---------------- v167 2:2 팀 결투 ----------------
+# 빠른 대전: 4명이 모이면 레벨이 고르게 두 팀으로 나눠 바로 시작(state='play'). 친구 방: 코드로 4명 → 자리(0·1 = 파랑 팀, 2·3 = 빨강 팀) 고르기 → 모두 준비 → 방장이 시작.
+# 주고받기는 듀오 방(/api/duo/sync)을 그대로 쓰고, 서버가 메시지마다 보낸 사람 자리(_s)를 붙여 준다.
+# 결과: 서로 다른 팀의 두 사람이 같은 이긴 팀을 보내거나, 세 사람이 같으면 확정 → 빠른 대전만 골드(장부 pvp_ledger). 하루 TEAM_DAY_CAP판까지.
+_TEAMQ = {}      # uid → 기다리는 사람
+_TEAMMATCH = {}  # uid → 방 코드
+TEAM_WIN_GOLD, TEAM_LOSE_GOLD, TEAM_DAY_CAP = 300, 60, 20
+
+
+def _team_room(code, players, ranked, state):
+    now = time.time()
+    _DUO[code] = {'code': code, 'owner': players[0]['uid'], 'owner_name': players[0]['name'], 'floor': 10 * secrets.randbelow(70) + 5,
+                  'diff': 'normal', 'state': state, 'players': players, 'msgs': [], 'seq': 0, 'touched': now,
+                  'kind': 'team', 'ranked': ranked, 'stake': 0, 'claims': {}}
+    return _DUO[code]
+
+
+def _team_left(r, uid):
+    """(락 안) 팀 방에서 한 명이 나감: 방장이면 남은 사람에게 넘김. 경기 중 한 팀이 다 나가면 남은 팀 승리로 확정"""
+    if r['owner'] == uid:
+        r['owner'] = r['players'][0]['uid']
+        r['owner_name'] = r['players'][0]['name']
+    if r['state'] == 'play' and r.get('ranked') and not r.get('settled'):
+        left = {p.get('sl', 0) // 2 for p in r['players']}
+        if len(left) == 1:
+            _team_settle(r, left.pop(), '상대 팀 기권')
+
+
+def _team_settle(r, wt, note):
+    """(락 안) 한 번만: 이긴 팀(0 또는 1) 확정 → 전적 · 골드 장부"""
+    if r.get('settled'):
+        return
+    r['settled'] = {'wt': wt, 'gold': {}}
+    if not r.get('ranked'):
+        return
+    now = time.time()
+    day = time.strftime('%Y-%m-%d', time.gmtime(now))
+    db = DB()
+    try:
+        here = {p['uid'] for p in r['players']}
+        for p in r.get('roster') or r['players']:
+            uid, w = p['uid'], 1 if p.get('sl', 0) // 2 == wt else 0
+            if uid not in here:
+                w = 0  # 도중에 나간 사람은 패배 · 골드 없음
+            row = db.execute('SELECT day, day_n FROM team_stats WHERE user_id=?', (uid,)).fetchone()
+            n = (row['day_n'] if row and row['day'] == day else 0)
+            gold = (TEAM_WIN_GOLD if w else TEAM_LOSE_GOLD) if n < TEAM_DAY_CAP and uid in here else 0
+            if row:
+                db.execute('UPDATE team_stats SET wins=wins+?, losses=losses+?, day=?, day_n=?, updated_at=? WHERE user_id=?',
+                           (w, 1 - w, day, n + 1, now, uid))
+            else:
+                db.execute('INSERT INTO team_stats (user_id, wins, losses, day, day_n, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+                           (uid, w, 1 - w, day, n + 1, now))
+            if gold:
+                db.execute('INSERT INTO pvp_ledger (id, user_id, delta, note, created_at) VALUES (?, ?, ?, ?, ?)',
+                           (secrets.token_hex(8), uid, gold, '팀 결투 ' + ('승리' if w else '참가') + (' · ' + note if note else ''), now))
+            r['settled']['gold'][uid] = gold
+        db.commit()
+    finally:
+        db.close()
+
+
+def _team_me(user, body, now):
+    return {'uid': user['user_id'], 'name': user['username'], 'lv': clamp_int(body.get('lv'), 1, 9999, 1),
+            'ch': clamp_int(body.get('ch'), 0, 999, 0), 'seen': now, 'since': now}
+
+
+def _team_leave_all(uids):
+    for r in list(_DUO.values()):  # 한 사람은 방 하나만
+        if any(p['uid'] in uids for p in r['players']):
+            r['players'] = [p for p in r['players'] if p['uid'] not in uids]
+            if not r['players'] or (r['owner'] in uids and r.get('kind') != 'team'):
+                r['state'] = 'closed'
+            elif r['owner'] in uids:
+                r['owner'], r['owner_name'] = r['players'][0]['uid'], r['players'][0]['name']
+
+
+@app.route('/api/team/queue', methods=['POST'])
+def team_queue():
+    """팀 결투 빠른 대전 찾기(1초마다). 4명이 모이면 room을 돌려준다"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    uid = user['user_id']
+    now = time.time()
+    db = get_db()
+    me = _team_me(user, body, now)
+    with _duo_lock:
+        _duo_clean(now)
+        code = _TEAMMATCH.pop(uid, None)
+        if code and code in _DUO:
+            return jsonify(ok=True, room=_duo_view(_DUO[code], uid))
+        for k in [k for k, q in _TEAMQ.items() if now - q['seen'] > 6]:
+            del _TEAMQ[k]
+        if uid in _TEAMQ:
+            me['since'] = _TEAMQ[uid]['since']
+        _TEAMQ[uid] = me
+        blk = _blocked_set(db, uid)
+        group = [me] + [q for k, q in sorted(_TEAMQ.items(), key=lambda kv: kv[1]['since'])
+                        if k != uid and k not in blk and not _is_blocked_by(db, k, uid)][:3]
+        if len(group) < 4:
+            return jsonify(ok=True, waiting=True, queue=len(_TEAMQ), wait=round(now - me['since']))
+        for q in group:
+            _TEAMQ.pop(q['uid'], None)
+        _team_leave_all({q['uid'] for q in group})
+        g = sorted(group, key=lambda q: -q['lv'])  # 레벨 1·4등 대 2·3등
+        players = []
+        for q, sl in zip((g[0], g[3], g[1], g[2]), (0, 1, 2, 3)):
+            players.append(dict({k: q[k] for k in ('uid', 'name', 'lv', 'ch')}, seen=now, sl=sl))
+        r = _team_room(_new_code(), players, True, 'play')
+        r['roster'] = [dict(p) for p in players]
+        for q in group:
+            if q['uid'] != uid:
+                _TEAMMATCH[q['uid']] = r['code']
+        return jsonify(ok=True, room=_duo_view(r, uid))
+
+
+@app.route('/api/team/qcancel', methods=['POST'])
+def team_qcancel():
+    user = _duo_user()
+    if user:
+        with _duo_lock:
+            _TEAMQ.pop(user['user_id'], None)
+    return jsonify(ok=True)
+
+
+@app.route('/api/team/create', methods=['POST'])
+def team_create():
+    """친구끼리 팀 결투 방(코드). 골드는 없음"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    now = time.time()
+    me = _team_me(user, request.get_json(silent=True) or {}, now)
+    me.pop('since')
+    me['sl'] = 0
+    with _duo_lock:
+        _duo_clean(now)
+        _TEAMQ.pop(user['user_id'], None)
+        _team_leave_all({user['user_id']})
+        r = _team_room(_new_code(), [me], False, 'wait')
+        return jsonify(ok=True, room=_duo_view(r, user['user_id']))
+
+
+@app.route('/api/team/seat', methods=['POST'])
+def team_seat():
+    """출발 전 빈자리로 옮기기(0·1 파랑 팀, 2·3 빨강 팀)"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    sl = clamp_int(body.get('sl'), 0, 3, 0)
+    with _duo_lock:
+        r = _DUO.get(code)
+        if not r or r.get('kind') != 'team':
+            return _bad('방을 찾지 못했어요', 404)
+        me = next((p for p in r['players'] if p['uid'] == user['user_id']), None)
+        if not me:
+            return _bad('이 방에 없어요', 403)
+        if r['state'] != 'wait':
+            return _bad('이미 시작했어요', 409)
+        if any(p.get('sl') == sl for p in r['players'] if p is not me):
+            return _bad('그 자리에는 이미 사람이 있어요', 409)
+        me['sl'] = sl
+        me['ready'] = False
+        r['seq'] += 1
+        r['msgs'].append({'seq': r['seq'], 'from': '#', 'm': {'t': 'join', 'name': user['username']}})
+        return jsonify(ok=True, room=_duo_view(r, user['user_id']))
+
+
+@app.route('/api/team/result', methods=['POST'])
+def team_result():
+    """내 화면의 이긴 팀(wt: 0 · 1). 서로 다른 팀 두 사람 또는 세 사람이 같으면 확정. 남은 사람이 모두 같다고 해도 확정"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    code = clamp_text(body.get('code'), 8).upper()
+    wt = clamp_int(body.get('wt'), 0, 1, 0)
+    uid = user['user_id']
+    now = time.time()
+    with _duo_lock:
+        r = _DUO.get(code)
+        if not r or r.get('kind') != 'team':
+            return _bad('방이 사라졌어요', 404)
+        roster = r.get('roster') or r['players']
+        mine = next((p for p in roster if p['uid'] == uid), None)
+        if not mine:
+            return _bad('이 방에 없어요', 403)
+        cl = r.setdefault('claims', {})
+        cl[uid] = wt
+        if not r.get('settled'):
+            team_of = {p['uid']: p.get('sl', 0) // 2 for p in roster}
+            for w in (0, 1):
+                who = [u for u, x in cl.items() if x == w]
+                if len(who) >= 3 or len({team_of.get(u) for u in who}) == 2:
+                    _team_settle(r, w, '')
+                    break
+            else:
+                live = [p['uid'] for p in r['players'] if now - p['seen'] < 15]
+                if live and all(cl.get(u) == wt for u in live) and len(set(cl.values())) == 1:
+                    _team_settle(r, wt, '')
+        st = r.get('settled') or {}
+        row = get_db().execute('SELECT wins, losses FROM team_stats WHERE user_id=?', (uid,)).fetchone()
+        return jsonify(ok=True, settled=bool(st), wt=st.get('wt'), gold=(st.get('gold') or {}).get(uid, 0), ranked=bool(r.get('ranked')),
+                       stats={'wins': row['wins'], 'losses': row['losses']} if row else {'wins': 0, 'losses': 0})
+
+
+@app.route('/api/team/stats', methods=['GET'])
+def team_stats():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    row = get_db().execute('SELECT wins, losses, day, day_n FROM team_stats WHERE user_id=?', (user['user_id'],)).fetchone()
+    day = time.strftime('%Y-%m-%d', time.gmtime())
+    with _duo_lock:
+        q = len(_TEAMQ)
+    return jsonify(ok=True, wins=row['wins'] if row else 0, losses=row['losses'] if row else 0,
+                   today=(row['day_n'] if row and row['day'] == day else 0), cap=TEAM_DAY_CAP, queue=q,
+                   win_gold=TEAM_WIN_GOLD, lose_gold=TEAM_LOSE_GOLD)
 
 
 @app.route('/api/pvp/cancel', methods=['POST'])
@@ -1851,6 +2465,7 @@ def pvp_result():
                     _pvp_settle(r, uid if win else other['uid'], other['uid'] if win else uid, '결투')
                 else:
                     r['settled'] = {'void': True}
+                    _arena_refund_room(r, '결과가 엇갈려 무효')  # v166
             elif other and win and now - other['seen'] > 20:
                 _pvp_settle(r, uid, other['uid'], '상대 연결 끊김')
         st = r.get('settled') or {}
@@ -1989,6 +2604,8 @@ def friends_request():
         return _bad('그런 이름의 플레이어가 없어요', 404)
     if fid == uid:
         return _bad('나 자신은 친구로 추가할 수 없어요', 400)
+    if _is_blocked_by(db, fid, uid) or _is_blocked_by(db, uid, fid):  # v163 차단 사이에는 신청 안 됨
+        return _bad('이 사람에게는 친구 신청을 보낼 수 없어요', 403)
     if db.execute('SELECT COUNT(*) AS c FROM friends WHERE user_id=? AND status=?', (uid, 'accepted')).fetchone()['c'] >= FRIEND_MAX:
         return _bad('친구는 %d명까지예요' % FRIEND_MAX, 400)
     mine = db.execute('SELECT status FROM friends WHERE user_id=? AND friend_id=?', (uid, fid)).fetchone()
@@ -2058,6 +2675,8 @@ def friends_invite():
     fid, fname = _uid_by_name(db, body.get('name'))
     if not fid:
         return _bad('그런 이름이 없어요', 404)
+    if _is_blocked_by(db, fid, uid):  # v163
+        return _bad('지금은 신청을 받지 않는 사람이에요', 403)
     is_friend = bool(db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (uid, fid, 'accepted')).fetchone())
     if not is_friend:
         # v111 광장: 둘 다 광장에 있으면 친구가 아니어도 신청할 수 있다(10초에 한 번, 「신청 받지 않기」면 막힘)
@@ -2157,6 +2776,277 @@ def _bad_filter(text):
     return ''.join('*' if i in hide else ch for i, ch in enumerate(text))
 
 
+# ---------------- v163 우편함 · 차단 · 신고 ----------------
+MAIL_DAYS = 30
+ADMIN_KEY = os.environ.get('ADMIN_KEY', '').strip()
+_BLK_CACHE = {}
+
+
+def _blocked_set(db, uid):
+    return set(r['blocked_id'] for r in db.execute('SELECT blocked_id FROM user_blocks WHERE user_id = ?', (uid,)).fetchall())
+
+
+def _blocked_cached(db, uid):
+    """광장은 자주 불리니 차단 목록을 20초 기억"""
+    hit = _BLK_CACHE.get(uid)
+    if hit and time.time() - hit[0] < 20:
+        return hit[1]
+    v = _blocked_set(db, uid)
+    if len(_BLK_CACHE) > 3000:
+        _BLK_CACHE.clear()
+    _BLK_CACHE[uid] = (time.time(), v)
+    return v
+
+
+def _is_blocked_by(db, target_uid, me_uid):
+    return bool(db.execute('SELECT 1 FROM user_blocks WHERE user_id = ? AND blocked_id = ?', (target_uid, me_uid)).fetchone())
+
+
+def _muted(db, uid):
+    r = db.execute('SELECT until_at FROM user_mute WHERE user_id = ?', (uid,)).fetchone()
+    return r['until_at'] if r and r['until_at'] > time.time() else 0
+
+
+def mail_send(db, uid, title, body, gold=0, dia=0, sender='운영팀', days=MAIL_DAYS, mid=None):
+    """우편 보내기(다른 기능에서도 씀: 내기 정산 · 대회 보상 …). 커밋은 부르는 쪽에서"""
+    now = time.time()
+    db.execute('INSERT INTO mail (id, user_id, sender, title, body, gold, dia, created_at, expire_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+               (mid or ('m' + secrets.token_hex(8)), uid, clamp_text(sender, 20), clamp_text(title, 40), clamp_text(body, 400),
+                max(0, int(gold)), max(0, int(dia)), now, now + days * 86400))
+
+
+def _mail_bc_fill(db, uid):
+    """전체 우편 중 아직 이 계정 우편함에 안 넣은 것을 넣는다(가입보다 나중에 보낸 것만이 아니라 기간 안의 모든 것)"""
+    now = time.time()
+    for b in db.execute('SELECT * FROM mail_broadcast WHERE expire_at > ?', (now,)).fetchall():
+        mid = 'b' + b['id'] + ':' + uid
+        if not db.execute('SELECT 1 FROM mail WHERE id = ?', (mid,)).fetchone():
+            try:
+                db.execute('INSERT INTO mail (id, user_id, sender, title, body, gold, dia, created_at, expire_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                           (mid, uid, '운영팀', b['title'], b['body'], b['gold'], b['dia'], b['created_at'], b['expire_at']))
+                db.commit()
+            except Exception:
+                db.rollback()
+
+
+def _mail_rows(db, uid):
+    now = time.time()
+    rows = db.execute('SELECT * FROM mail WHERE user_id = ? AND deleted = 0 AND expire_at > ? ORDER BY created_at DESC LIMIT 100', (uid, now)).fetchall()
+    return [{'id': r['id'], 'from': r['sender'], 'title': r['title'], 'body': r['body'], 'gold': int(r['gold']), 'dia': int(r['dia']),
+             't': r['created_at'], 'exp': r['expire_at'], 'read': bool(r['read_at']), 'got': bool(r['claimed_at'])} for r in rows]
+
+
+@app.route('/api/mail/list', methods=['POST'])
+def mail_list():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    _mail_bc_fill(db, user['user_id'])
+    L = _mail_rows(db, user['user_id'])
+    return jsonify(ok=True, mails=L, unread=sum(1 for m in L if not m['read'] or ((m['gold'] or m['dia']) and not m['got'])))
+
+
+@app.route('/api/mail/act', methods=['POST'])
+def mail_act():
+    """read(읽음) · claim(받기, id 또는 all) · delete(지우기: 보상을 받았거나 보상이 없는 것만)"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    act, mid = body.get('act'), body.get('id')
+    db = get_db()
+    now = time.time()
+    gold = dia = 0
+    got = []
+    if act == 'read' and isinstance(mid, str):
+        db.execute('UPDATE mail SET read_at = ? WHERE id = ? AND user_id = ? AND read_at IS NULL', (now, mid, uid))
+    elif act == 'claim':
+        q = 'SELECT id, gold, dia FROM mail WHERE user_id = ? AND deleted = 0 AND claimed_at IS NULL AND expire_at > ? AND (gold > 0 OR dia > 0)'
+        args = [uid, now]
+        if mid != 'all':
+            q += ' AND id = ?'
+            args.append(str(mid))
+        for r in db.execute(q, args).fetchall():
+            cur = db.execute('UPDATE mail SET claimed_at = ?, read_at = COALESCE(read_at, ?) WHERE id = ? AND claimed_at IS NULL', (now, now, r['id']))
+            if getattr(cur, 'rowcount', 1):
+                gold += int(r['gold'])
+                dia += int(r['dia'])
+                got.append(r['id'])
+    elif act == 'delete':
+        ids = [mid] if isinstance(mid, str) else []
+        if mid == 'read':
+            ids = [r['id'] for r in db.execute('SELECT id FROM mail WHERE user_id = ? AND deleted = 0 AND read_at IS NOT NULL AND (claimed_at IS NOT NULL OR (gold = 0 AND dia = 0))', (uid,)).fetchall()]
+        for i in ids:
+            db.execute('UPDATE mail SET deleted = 1 WHERE id = ? AND user_id = ? AND (claimed_at IS NOT NULL OR (gold = 0 AND dia = 0))', (i, uid))
+    else:
+        return _bad('알 수 없는 요청이에요', 400)
+    db.commit()
+    L = _mail_rows(db, uid)
+    return jsonify(ok=True, gold=gold, dia=dia, got=got, mails=L, unread=sum(1 for m in L if not m['read'] or ((m['gold'] or m['dia']) and not m['got'])))
+
+
+@app.route('/api/admin/mail', methods=['POST'])
+def admin_mail():
+    """운영자 우편 보내기: 헤더 X-Admin-Key = Render 환경변수 ADMIN_KEY. to='*'이면 모두에게(전체 우편)"""
+    if not ADMIN_KEY or not secrets.compare_digest(request.headers.get('X-Admin-Key', ''), ADMIN_KEY):
+        return _bad('권한이 없어요', 403)
+    body = request.get_json(silent=True) or {}
+    title, text = clamp_text(body.get('title'), 40).strip(), clamp_text(body.get('body'), 400).strip()
+    gold, dia = clamp_int(body.get('gold'), 0, 10 ** 9, 0), clamp_int(body.get('dia'), 0, 10 ** 8, 0)
+    days = clamp_int(body.get('days'), 1, 365, MAIL_DAYS)
+    if not title:
+        return _bad('제목을 적어 주세요', 400)
+    db = get_db()
+    if body.get('to') == '*':
+        now = time.time()
+        db.execute('INSERT INTO mail_broadcast (id, title, body, gold, dia, created_at, expire_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                   (secrets.token_hex(6), title, text, gold, dia, now, now + days * 86400))
+    else:
+        uid, _ = _uid_by_name(db, body.get('to') or '')
+        if not uid:
+            return _bad('그런 이름이 없어요', 404)
+        mail_send(db, uid, title, text, gold, dia, days=days)
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/block', methods=['POST'])
+def block_set():
+    """차단: {name, on} — on이 빠지면 목록만. 차단하면 친구도 끊는다"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    db = get_db()
+    if body.get('name'):
+        tid, tname = _uid_by_name(db, body.get('name'))
+        if not tid or tid == uid:
+            return _bad('그런 이름이 없어요', 404)
+        if body.get('on'):
+            if db.execute('SELECT COUNT(*) AS c FROM user_blocks WHERE user_id = ?', (uid,)).fetchone()['c'] >= 200:
+                return _bad('차단은 200명까지예요', 400)
+            if not db.execute('SELECT 1 FROM user_blocks WHERE user_id = ? AND blocked_id = ?', (uid, tid)).fetchone():
+                db.execute('INSERT INTO user_blocks (user_id, blocked_id, created_at) VALUES (?, ?, ?)', (uid, tid, time.time()))
+            db.execute('DELETE FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)', (uid, tid, tid, uid))
+        else:
+            db.execute('DELETE FROM user_blocks WHERE user_id = ? AND blocked_id = ?', (uid, tid))
+        db.commit()
+        _BLK_CACHE.pop(uid, None)
+    rows = db.execute('SELECT b.blocked_id, u.username, b.created_at FROM user_blocks b JOIN users u ON u.user_id = b.blocked_id WHERE b.user_id = ? ORDER BY b.created_at DESC',
+                      (uid,)).fetchall()
+    return jsonify(ok=True, blocked=[{'name': r['username'], 't': r['created_at']} for r in rows])
+
+
+REPORT_REASONS = {'abuse': '욕설 · 비방', 'spam': '도배 · 광고', 'name': '나쁜 이름', 'cheat': '핵 · 버그 악용', 'etc': '기타'}
+
+
+@app.route('/api/report', methods=['POST'])
+def report_user():
+    """신고: 같은 사람은 하루 한 번. 24시간 안에 서로 다른 5명이 욕설 · 도배로 신고하면 24시간 채팅 금지(자동)"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    db = get_db()
+    tid, tname = _uid_by_name(db, body.get('name') or '')
+    if not tid or tid == uid:
+        return _bad('그런 이름이 없어요', 404)
+    reason = body.get('reason') if body.get('reason') in REPORT_REASONS else 'etc'
+    place = clamp_text(body.get('place'), 20) or '기타'
+    detail = _chat_clean(body.get('detail'))[:300]
+    now = time.time()
+    if db.execute('SELECT 1 FROM user_reports WHERE reporter_id = ? AND target_id = ? AND created_at > ?', (uid, tid, now - 86400)).fetchone():
+        return _bad('이 사람은 오늘 이미 신고했어요', 409)
+    if db.execute('SELECT COUNT(*) AS c FROM user_reports WHERE reporter_id = ? AND created_at > ?', (uid, now - 86400)).fetchone()['c'] >= 20:
+        return _bad('오늘은 신고를 너무 많이 했어요', 429)
+    db.execute('INSERT INTO user_reports (id, reporter_id, target_id, reason, place, detail, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+               ('r' + secrets.token_hex(8), uid, tid, reason, place, detail, now))
+    n = db.execute("SELECT COUNT(DISTINCT reporter_id) AS c FROM user_reports WHERE target_id = ? AND created_at > ? AND reason IN ('abuse', 'spam')",
+                   (tid, now - 86400)).fetchone()['c']
+    if n >= 5 and not _muted(db, tid):
+        db.execute('DELETE FROM user_mute WHERE user_id = ?', (tid,))
+        db.execute('INSERT INTO user_mute (user_id, until_at, why) VALUES (?, ?, ?)', (tid, now + 86400, 'reports'))
+        mail_send(db, tid, '채팅이 잠시 막혔어요', '여러 사람의 신고가 쌓여 24시간 동안 채팅 · 말풍선을 쓸 수 없어요. 서로 존중하며 즐겨 주세요.', sender='운영팀')
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/admin/reports', methods=['GET'])
+def admin_reports():
+    """운영자 신고 보기(헤더 X-Admin-Key). 최근 200개"""
+    if not ADMIN_KEY or not secrets.compare_digest(request.headers.get('X-Admin-Key', ''), ADMIN_KEY):
+        return _bad('권한이 없어요', 403)
+    db = get_db()
+    rows = db.execute('SELECT r.*, a.username AS rname, b.username AS tname FROM user_reports r LEFT JOIN users a ON a.user_id = r.reporter_id '
+                      'LEFT JOIN users b ON b.user_id = r.target_id ORDER BY r.created_at DESC LIMIT 200').fetchall()
+    return jsonify(ok=True, reports=[{'from': r['rname'], 'target': r['tname'], 'reason': REPORT_REASONS.get(r['reason'], r['reason']), 'place': r['place'],
+                                      'detail': r['detail'], 't': r['created_at']} for r in rows])
+
+
+# ---------------- v165 보스 러시 타임어택 ----------------
+TA_COURSES = {'c%d' % i: 10 for i in range(1, 8)}  # 챕터 1~7, 보스 10마리씩
+TA_DIFFS = ('easy', 'normal', 'hard', 'extreme')
+TA_MIN_MS = 7000  # 보스 한 마리 최소 7초(등장 연출만 해도 그 이상) — 말도 안 되는 기록은 안 받음
+
+
+@app.route('/api/ta/submit', methods=['POST'])
+def ta_submit():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    body = request.get_json(silent=True) or {}
+    course, diff = body.get('course'), body.get('diff')
+    if course not in TA_COURSES or diff not in TA_DIFFS:
+        return _bad('코스가 올바르지 않아요', 400)
+    n = TA_COURSES[course]
+    splits = body.get('splits') if isinstance(body.get('splits'), list) else []
+    try:
+        splits = [int(x) for x in splits][:n]
+    except (TypeError, ValueError):
+        return _bad('기록이 올바르지 않아요', 400)
+    ms = clamp_int(body.get('ms'), 0, 10 ** 9, 0)
+    if len(splits) != n or any(x < TA_MIN_MS or x > 3600000 for x in splits) or abs(sum(splits) - ms) > 50:
+        return _bad('기록이 올바르지 않아요', 400)
+    uid = user['user_id']
+    db = get_db()
+    row = db.execute('SELECT ms FROM ta_records WHERE user_id = ? AND course = ? AND diff = ?', (uid, course, diff)).fetchone()
+    best = row is None or ms < int(row['ms'])
+    if best:
+        db.execute('DELETE FROM ta_records WHERE user_id = ? AND course = ? AND diff = ?', (uid, course, diff))
+        db.execute('INSERT INTO ta_records (user_id, course, diff, ms, splits, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                   (uid, course, diff, ms, json.dumps(splits), time.time()))
+        db.commit()
+    rank = db.execute('SELECT COUNT(*) AS c FROM ta_records WHERE course = ? AND diff = ? AND ms < ?', (course, diff, min(ms, int(row['ms']) if row else ms))).fetchone()['c'] + 1
+    return jsonify(ok=True, best=best, prev=int(row['ms']) if row else None, rank=rank)
+
+
+@app.route('/api/ta/board', methods=['POST'])
+def ta_board():
+    user = _duo_user()
+    body = request.get_json(silent=True) or {}
+    course, diff = body.get('course'), body.get('diff')
+    if course not in TA_COURSES or diff not in TA_DIFFS:
+        return _bad('코스가 올바르지 않아요', 400)
+    db = get_db()
+    rows = db.execute('SELECT t.user_id, t.ms, t.created_at, u.username FROM ta_records t JOIN users u ON u.user_id = t.user_id '
+                      'WHERE t.course = ? AND t.diff = ? ORDER BY t.ms ASC, t.created_at ASC LIMIT 50', (course, diff)).fetchall()
+    me = None
+    mine = {}
+    if user:
+        r = db.execute('SELECT ms FROM ta_records WHERE user_id = ? AND course = ? AND diff = ?', (user['user_id'], course, diff)).fetchone()
+        if r:
+            me = {'ms': int(r['ms']), 'rank': db.execute('SELECT COUNT(*) AS c FROM ta_records WHERE course = ? AND diff = ? AND ms < ?',
+                                                          (course, diff, int(r['ms']))).fetchone()['c'] + 1}
+        for r in db.execute('SELECT course, ms FROM ta_records WHERE user_id = ? AND diff = ?', (user['user_id'], diff)).fetchall():
+            mine[r['course']] = int(r['ms'])
+    return jsonify(ok=True, top=[{'name': r['username'], 'ms': int(r['ms']), 't': r['created_at'], 'me': bool(user) and r['user_id'] == user['user_id']} for r in rows],
+                   me=me, mine=mine)
+
+
 @app.route('/api/plaza/sync', methods=['POST'])
 def plaza_sync():
     """내 위치 · 모습을 올리고 같은 광장 사람들을 받는다. 처음엔 자리가 있는 광장으로, 꽉 차면 새 광장"""
@@ -2179,6 +3069,12 @@ def plaza_sync():
         m['tr'] = tr
     want = clamp_int(body.get('room'), 0, 999, 0)
     now = time.time()
+    try:
+        _blocked_cached(get_db(), uid)
+        if me.get('say') and _muted(get_db(), uid):
+            me = dict(me, say='')
+    except Exception:
+        pass
     with _plaza_lock:
         _plaza_prune(now)
         ch = _plaza_find(uid)
@@ -2200,8 +3096,9 @@ def plaza_sync():
             ent.update(say=say, sid=sid, sayT=now)
         room[uid] = ent
         others = []
+        blk = _BLK_CACHE.get(uid, (0, set()))[1]  # v163 차단한 사람은 광장에서 안 보임
         for u, p in room.items():
-            if u == uid:
+            if u == uid or u in blk:
                 continue
             o = dict(p['m'], name=p['name'], age=round(now - p['t'], 2))
             if p.get('say') and now - p['sayT'] < 8:
@@ -2291,7 +3188,10 @@ def watch_pull():
     fid, fname = _uid_by_name(db, body.get('name'))
     if not fid or (not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (user['user_id'], fid, 'accepted')).fetchone()
                    and fid not in _top3_ids(db)):
-        return _bad('친구나 순위 1~3위만 관전할 수 있어요', 403)
+        with _duo_lock:
+            ok = bool(fid) and _arena_target_ok(fid)  # v166 공개 결투(빠른 대전)는 누구나 관람
+        if not ok:
+            return _bad('친구나 순위 1~3위만 관전할 수 있어요', 403)
     since = clamp_int(body.get('since'), 0, 2 ** 62, 0)
     now = time.time()
     with _duo_lock:
@@ -2327,7 +3227,10 @@ def watch_sig():
     fid, fname = _uid_by_name(db, body.get('to'))
     if not fid or (not db.execute('SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status=?', (user['user_id'], fid, 'accepted')).fetchone()
                    and fid not in _top3_ids(db) and user['user_id'] not in _top3_ids(db)):
-        return _bad('친구에게만 보낼 수 있어요', 403)
+        with _duo_lock:
+            ok = bool(fid) and (_arena_target_ok(fid) or _arena_target_ok(user['user_id']))  # v166 결투장 관람
+        if not ok:
+            return _bad('친구에게만 보낼 수 있어요', 403)
     with _duo_lock:
         lst = _SIG.setdefault(fid, [])
         lst.append({'from': user['username'], 'd': d, 't': time.time()})
@@ -2763,6 +3666,9 @@ def chat_send():
         return _bad('보낼 말을 적어 주세요', 400)
     now = time.time()
     db = get_db()
+    mu = _muted(db, uid)  # v163 신고가 많이 쌓이면 잠시 채팅 금지
+    if mu:
+        return _bad('신고가 쌓여 %d분 동안 채팅을 쓸 수 없어요' % max(1, int((mu - now) / 60)), 403)
     room = 'world'
     if body.get('to'):
         fid, _ = _uid_by_name(db, body.get('to'))
@@ -2816,8 +3722,218 @@ def chat_pull():
         rows = list(reversed(db.execute('SELECT id, user_id, username, text, created_at FROM chat_msgs WHERE room=? ORDER BY id DESC LIMIT 60', (room,)).fetchall()))
     now = time.time()
     online = sum(1 for t in _SEEN.values() if now - t[0] < 40)
+    blk = _blocked_set(db, uid)  # v163 차단한 사람의 말은 안 보냄
     return jsonify(ok=True, online=online, msgs=[{'id': int(r['id']), 'name': r['username'], 'me': r['user_id'] == uid,
-                                                  'text': r['text'], 't': r['created_at']} for r in rows])
+                                                  'text': r['text'], 't': r['created_at']} for r in rows if r['user_id'] not in blk])
+
+
+# ---------------- v168 보스 직접 만들기 ----------------
+# 몸(1·2장 보스 20명 중 하나) · 색 · 체력 · 공격 3~6개를 골라 저장하면 코드 6자리를 준다. 누구나 코드로 도전 · 인기순 목록.
+# 남의 보스를 처음 깨면 🪙CBOSS_GOLD(하루 CBOSS_DAY번, 장부 pvp_ledger). 친구에게 도전장(우편, 본문에 [보스 코드 XXXXXX]).
+CBOSS_MAX, CBOSS_GOLD, CBOSS_DAY, CBOSS_MIN_MS = 12, 50, 10, 8000
+_CB_CODE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+_CB_ATK = re.compile(r'^[A-Za-z][A-Za-z0-9]{1,30}$')
+
+
+def _cb_row(x, mine=None):
+    try:
+        d = json.loads(x['data'])
+    except Exception:
+        d = {}
+    o = {'code': x['code'], 'name': x['name'], 'owner': x['owner_name'], 'plays': x['plays'], 'clears': x['clears'], 'likes': x['likes'],
+         'best_ms': int(x['best_ms']), 'best_name': x['best_name'], 'created': x['created_at'],
+         'body': d.get('body', 0), 'hue': d.get('hue', 0), 'hp': d.get('hp', 1), 'atks': d.get('atks', [])}
+    if mine is not None:
+        o['cleared'] = bool(mine['cleared']) if mine else False
+        o['liked'] = bool(mine['liked']) if mine else False
+        o['my_ms'] = int(mine['best_ms']) if mine else 0
+    return o
+
+
+@app.route('/api/cboss/save', methods=['POST'])
+def cboss_save():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    name = _bad_filter(clamp_text(b.get('name'), 12).strip())
+    if len(name) < 2:
+        return _bad('이름을 2글자 이상 써 주세요', 400)
+    atks = [a for a in (b.get('atks') if isinstance(b.get('atks'), list) else []) if isinstance(a, str) and _CB_ATK.match(a)]
+    atks = list(dict.fromkeys(atks))[:6]
+    if len(atks) < 3:
+        return _bad('공격을 3개 이상 골라 주세요', 400)
+    data = {'body': clamp_int(b.get('body'), 0, 19, 0), 'hue': clamp_int(b.get('hue'), 0, 8, 0), 'hp': clamp_int(b.get('hp'), 0, 4, 1), 'atks': atks}
+    db = get_db()
+    uid = user['user_id']
+    now = time.time()
+    code = clamp_text(b.get('code'), 8).upper()
+    if code:
+        row = db.execute('SELECT owner FROM cboss WHERE code=?', (code,)).fetchone()
+        if not row or row['owner'] != uid:
+            return _bad('내가 만든 보스만 고칠 수 있어요', 403)
+        # 고치면 기록(최고 시간 · 깬 사람)은 처음부터
+        db.execute('UPDATE cboss SET name=?, data=?, clears=0, best_ms=0, best_name=? WHERE code=?', (name, json.dumps(data), '', code))
+        db.execute('UPDATE cboss_play SET cleared=0, best_ms=0 WHERE code=?', (code,))
+    else:
+        if db.execute('SELECT COUNT(*) AS c FROM cboss WHERE owner=?', (uid,)).fetchone()['c'] >= CBOSS_MAX:
+            return _bad('보스는 %d개까지 만들 수 있어요. 안 쓰는 보스를 지워 주세요' % CBOSS_MAX, 409)
+        for _ in range(60):
+            code = ''.join(secrets.choice(_CB_CODE) for _ in range(6))
+            if not db.execute('SELECT 1 FROM cboss WHERE code=?', (code,)).fetchone():
+                break
+        db.execute('INSERT INTO cboss (code, owner, owner_name, name, data, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                   (code, uid, user['username'], name, json.dumps(data), now))
+    db.commit()
+    return jsonify(ok=True, code=code, boss=_cb_row(db.execute('SELECT * FROM cboss WHERE code=?', (code,)).fetchone()))
+
+
+@app.route('/api/cboss/list', methods=['POST'])
+def cboss_list():
+    """by: hot(인기) · new(새로) · mine(내 보스) · code(코드 하나)"""
+    user = _duo_user()
+    b = request.get_json(silent=True) or {}
+    by = b.get('by') if b.get('by') in ('hot', 'new', 'mine', 'code') else 'hot'
+    db = get_db()
+    uid = user['user_id'] if user else ''
+    if by == 'code':
+        rows = db.execute('SELECT * FROM cboss WHERE code=?', (clamp_text(b.get('code'), 8).upper(),)).fetchall()
+    elif by == 'mine':
+        rows = db.execute('SELECT * FROM cboss WHERE owner=? ORDER BY created_at DESC', (uid,)).fetchall()
+    elif by == 'new':
+        rows = db.execute('SELECT * FROM cboss ORDER BY created_at DESC LIMIT 40').fetchall()
+    else:  # 좋아요 ×5 + 깬 사람 ×2 + 도전 수, 최근 것 조금 더
+        rows = db.execute('SELECT * FROM cboss ORDER BY (likes * 5 + clears * 2 + plays) DESC, created_at DESC LIMIT 40').fetchall()
+    mine = {}
+    if uid and rows:
+        q = ','.join('?' * len(rows))
+        for x in db.execute('SELECT * FROM cboss_play WHERE user_id=? AND code IN (%s)' % q, [uid] + [r['code'] for r in rows]).fetchall():
+            mine[x['code']] = x
+    out = []
+    for i, r in enumerate(rows):
+        o = _cb_row(r, mine.get(r['code']) if uid else None)
+        o['rank'] = i + 1
+        o['own'] = r['owner'] == uid
+        out.append(o)
+    if by == 'code' and not out:
+        return _bad('그 코드의 보스가 없어요', 404)
+    return jsonify(ok=True, items=out, max=CBOSS_MAX)
+
+
+def _cb_play_row(db, uid, code):
+    row = db.execute('SELECT * FROM cboss_play WHERE user_id=? AND code=?', (uid, code)).fetchone()
+    if not row:
+        db.execute('INSERT INTO cboss_play (user_id, code) VALUES (?, ?)', (uid, code))
+        row = db.execute('SELECT * FROM cboss_play WHERE user_id=? AND code=?', (uid, code)).fetchone()
+    return row
+
+
+@app.route('/api/cboss/result', methods=['POST'])
+def cboss_result():
+    """도전 결과(win, ms). 처음 깨면 깬 사람 수 +1 · 남의 보스면 골드(하루 CBOSS_DAY번)"""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    code = clamp_text(b.get('code'), 8).upper()
+    win = bool(b.get('win'))
+    ms = clamp_int(b.get('ms'), 0, 3_600_000, 0)
+    db = get_db()
+    uid = user['user_id']
+    boss = db.execute('SELECT * FROM cboss WHERE code=?', (code,)).fetchone()
+    if not boss:
+        return _bad('그 코드의 보스가 없어요', 404)
+    if win and ms < CBOSS_MIN_MS:
+        return _bad('기록이 이상해요', 400)
+    row = _cb_play_row(db, uid, code)
+    db.execute('UPDATE cboss SET plays=plays+1 WHERE code=?', (code,))
+    first, gold, rec = False, 0, False
+    if win:
+        if not row['cleared']:
+            first = True
+            db.execute('UPDATE cboss SET clears=clears+1 WHERE code=?', (code,))
+            if boss['owner'] != uid:
+                day = time.strftime('%Y-%m-%d', time.gmtime())
+                rw = db.execute('SELECT day, n FROM cboss_reward WHERE user_id=?', (uid,)).fetchone()
+                n = rw['n'] if rw and rw['day'] == day else 0
+                if n < CBOSS_DAY:
+                    gold = CBOSS_GOLD
+                    if rw:
+                        db.execute('UPDATE cboss_reward SET day=?, n=? WHERE user_id=?', (day, n + 1, uid))
+                    else:
+                        db.execute('INSERT INTO cboss_reward (user_id, day, n) VALUES (?, ?, ?)', (uid, day, 1))
+                    db.execute('INSERT INTO pvp_ledger (id, user_id, delta, note, created_at) VALUES (?, ?, ?, ?, ?)',
+                               (secrets.token_hex(8), uid, gold, '만든 보스 첫 클리어', time.time()))
+        db.execute('UPDATE cboss_play SET cleared=1, best_ms=? WHERE user_id=? AND code=?',
+                   (ms if not row['best_ms'] or ms < row['best_ms'] else row['best_ms'], uid, code))
+        if not boss['best_ms'] or ms < boss['best_ms']:
+            rec = True
+            db.execute('UPDATE cboss SET best_ms=?, best_name=? WHERE code=?', (ms, user['username'], code))
+    db.commit()
+    return jsonify(ok=True, first=first, gold=gold, record=rec, boss=_cb_row(db.execute('SELECT * FROM cboss WHERE code=?', (code,)).fetchone(),
+                                                                         db.execute('SELECT * FROM cboss_play WHERE user_id=? AND code=?', (uid, code)).fetchone()))
+
+
+@app.route('/api/cboss/like', methods=['POST'])
+def cboss_like():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    code = clamp_text((request.get_json(silent=True) or {}).get('code'), 8).upper()
+    db = get_db()
+    boss = db.execute('SELECT owner FROM cboss WHERE code=?', (code,)).fetchone()
+    if not boss:
+        return _bad('그 코드의 보스가 없어요', 404)
+    if boss['owner'] == user['user_id']:
+        return _bad('내 보스에는 좋아요를 누를 수 없어요', 400)
+    row = _cb_play_row(db, user['user_id'], code)
+    v = 0 if row['liked'] else 1
+    db.execute('UPDATE cboss_play SET liked=? WHERE user_id=? AND code=?', (v, user['user_id'], code))
+    db.execute('UPDATE cboss SET likes=likes+? WHERE code=?', (1 if v else -1, code))
+    db.commit()
+    return jsonify(ok=True, liked=bool(v), likes=db.execute('SELECT likes FROM cboss WHERE code=?', (code,)).fetchone()['likes'])
+
+
+@app.route('/api/cboss/delete', methods=['POST'])
+def cboss_delete():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    code = clamp_text((request.get_json(silent=True) or {}).get('code'), 8).upper()
+    db = get_db()
+    db.execute('DELETE FROM cboss WHERE code=? AND owner=?', (code, user['user_id']))
+    db.execute('DELETE FROM cboss_play WHERE code=? AND NOT EXISTS (SELECT 1 FROM cboss WHERE code=?)', (code, code))
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/cboss/challenge', methods=['POST'])
+def cboss_challenge():
+    """친구에게 도전장(우편)"""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    code = clamp_text(b.get('code'), 8).upper()
+    db = get_db()
+    boss = db.execute('SELECT name FROM cboss WHERE code=?', (code,)).fetchone()
+    if not boss:
+        return _bad('그 코드의 보스가 없어요', 404)
+    to, to_name = _uid_by_name(db, clamp_text(b.get('to'), 40))
+    if not to:
+        return _bad('그 이름의 사람이 없어요', 404)
+    fr = db.execute('SELECT status FROM friends WHERE user_id=? AND friend_id=?', (user['user_id'], to)).fetchone()
+    if not fr or fr['status'] != 'accepted':
+        return _bad('친구에게만 보낼 수 있어요', 403)
+    if _is_blocked_by(db, to, user['user_id']):
+        return _bad('보낼 수 없어요', 403)
+    key = 'c' + hashlib.sha256(('%s|%s|%s' % (user['user_id'], to, code)).encode()).hexdigest()[:16]
+    if db.execute('SELECT 1 FROM mail WHERE id=?', (key,)).fetchone():
+        return _bad('이 친구에게는 이미 이 보스 도전장을 보냈어요', 409)
+    mail_send(db, to, '⚔ 도전장 · ' + boss['name'], '%s님이 직접 만든 보스 「%s」에 도전해 보세요! [보스 코드 %s]' % (user['username'], boss['name'], code),
+              sender=user['username'], mid=key)
+    db.commit()
+    return jsonify(ok=True, to=to_name)
 
 
 if __name__ == '__main__':
