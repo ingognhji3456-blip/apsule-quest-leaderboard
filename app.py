@@ -390,6 +390,21 @@ def init_db():
         """CREATE TABLE IF NOT EXISTS suggestions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, text TEXT NOT NULL, created_at DOUBLE PRECISION NOT NULL)""",
     ):
         db.execute(ddl)
+    # v173: 월드 보스(하루 하나, 서버 전체가 함께 깎음) · 길드
+    for ddl in (
+        """CREATE TABLE IF NOT EXISTS wb_days (day TEXT PRIMARY KEY, boss INTEGER NOT NULL, hp_max BIGINT NOT NULL, hp_left BIGINT NOT NULL,
+           killed_at DOUBLE PRECISION NOT NULL DEFAULT 0, killer TEXT NOT NULL DEFAULT '', done INTEGER NOT NULL DEFAULT 0)""",
+        """CREATE TABLE IF NOT EXISTS wb_hits (day TEXT NOT NULL, user_id TEXT NOT NULL, name TEXT NOT NULL, dmg BIGINT NOT NULL, tries INTEGER NOT NULL,
+           guild_id TEXT NOT NULL DEFAULT '', PRIMARY KEY (day, user_id))""",
+        """CREATE TABLE IF NOT EXISTS guilds (id TEXT PRIMARY KEY, name TEXT NOT NULL, name_key TEXT NOT NULL UNIQUE, emblem TEXT NOT NULL, color TEXT NOT NULL,
+           descr TEXT NOT NULL DEFAULT '', leader TEXT NOT NULL, open INTEGER NOT NULL DEFAULT 1, xp BIGINT NOT NULL DEFAULT 0, gold BIGINT NOT NULL DEFAULT 0,
+           created_at DOUBLE PRECISION NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS guild_members (user_id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, role TEXT NOT NULL, joined_at DOUBLE PRECISION NOT NULL,
+           last_att TEXT NOT NULL DEFAULT '', donated BIGINT NOT NULL DEFAULT 0)""",
+        """CREATE TABLE IF NOT EXISTS guild_req (user_id TEXT NOT NULL, guild_id TEXT NOT NULL, at DOUBLE PRECISION NOT NULL, PRIMARY KEY (user_id, guild_id))""",
+        """CREATE TABLE IF NOT EXISTS guild_msgs (id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL, name TEXT NOT NULL, text TEXT NOT NULL, at DOUBLE PRECISION NOT NULL)""",
+    ):
+        db.execute(ddl)
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
     db.execute('''
         CREATE TABLE IF NOT EXISTS player_look (
@@ -4885,6 +4900,405 @@ def admin_poll():
         return _bad('제목과 보기 2개 이상', 400)
     db.execute('UPDATE polls SET active=0')
     db.execute('INSERT INTO polls (id, title, opts, active, created_at) VALUES (?, ?, ?, 1, ?)', ('q' + secrets.token_hex(6), title, json.dumps(opts, ensure_ascii=False), time.time()))
+    db.commit()
+    return jsonify(ok=True)
+
+
+# ---------------- v173 월드 보스 ----------------
+# 하루(UTC)에 하나. 체력 = max(WB_MIN_HP, 어제 참가자 수 × WB_PER_PLAYER). 한 사람 하루 WB_TRIES번, 한 번에 90초 동안 넣은 피해를 보냄
+# (길드 레벨 1마다 +1%). 다 깎이면(또는 날이 바뀌면) 참가자 모두에게 기여 비율만큼 우편 보상(못 잡으면 절반), 마지막 한 방 · 1~3위는 더.
+WB_MIN_HP, WB_PER_PLAYER, WB_TRIES, WB_MAX_HIT = 40000, 12000, 3, 400000
+
+
+def _wb_today(db, day=None):
+    day = day or time.strftime('%Y-%m-%d', time.gmtime())
+    r = db.execute('SELECT * FROM wb_days WHERE day=?', (day,)).fetchone()
+    if not r:
+        prev = time.strftime('%Y-%m-%d', time.gmtime(time.mktime(time.strptime(day, '%Y-%m-%d')) - 43200))
+        n = db.execute('SELECT COUNT(*) AS c FROM wb_hits WHERE day=?', (prev,)).fetchone()['c']
+        hp = max(WB_MIN_HP, n * WB_PER_PLAYER)
+        boss = int(hashlib.sha256(('wb|' + day).encode()).hexdigest(), 16) % 20
+        try:
+            db.execute('INSERT INTO wb_days (day, boss, hp_max, hp_left) VALUES (?, ?, ?, ?)', (day, boss, hp, hp))
+            db.commit()
+        except Exception:
+            db.rollback()
+        r = db.execute('SELECT * FROM wb_days WHERE day=?', (day,)).fetchone()
+    return r
+
+
+def _wb_finalize(db):
+    """끝난 날(잡았거나 날이 지난 날)의 보상을 한 번 보냄"""
+    today = time.strftime('%Y-%m-%d', time.gmtime())
+    for d in db.execute("SELECT * FROM wb_days WHERE done=0 AND (hp_left<=0 OR day<?)", (today,)).fetchall():
+        db.execute('UPDATE wb_days SET done=1 WHERE day=?', (d['day'],))
+        killed = d['hp_left'] <= 0
+        rows = db.execute('SELECT user_id, name, dmg FROM wb_hits WHERE day=? ORDER BY dmg DESC', (d['day'],)).fetchall()
+        for i, r in enumerate(rows):
+            share = r['dmg'] / max(1, d['hp_max'])
+            gold = int((2000 + share * 30000) * (1 if killed else .5))
+            dia = int((10 + min(40, share * 200)) * (1 if killed else .5))
+            if i < 3:
+                gold += (5000, 3000, 2000)[i]
+                dia += (30, 20, 10)[i]
+            if killed and r['user_id'] == d['killer']:
+                gold += 3000
+                dia += 15
+            mail_send(db, r['user_id'], '🐉 월드 보스 %s' % ('토벌 성공!' if killed else '보상'),
+                      '%s 월드 보스에 %s%d위 · 피해 %s(%.1f%%)' % (d['day'], '함께 이겼어요! ' if killed else '', i + 1, format(r['dmg'], ','), share * 100),
+                      gold=gold, dia=dia, sender='운영팀')
+    db.commit()
+
+
+def _guild_of(db, uid):
+    m = db.execute('SELECT g.* , gm.role FROM guild_members gm JOIN guilds g ON g.id=gm.guild_id WHERE gm.user_id=?', (uid,)).fetchone()
+    return m
+
+
+def _guild_lv(xp):
+    return min(20, int((max(0, xp) / 100) ** 0.5) + 1)
+
+
+@app.route('/api/wb/info', methods=['POST'])
+def wb_info():
+    user = _duo_user()
+    db = get_db()
+    try:
+        _wb_finalize(db)
+    except Exception:
+        db.rollback()
+    d = _wb_today(db)
+    uid = user['user_id'] if user else ''
+    top = [{'name': r['name'], 'dmg': int(r['dmg'])} for r in db.execute('SELECT name, dmg FROM wb_hits WHERE day=? ORDER BY dmg DESC LIMIT 10', (d['day'],)).fetchall()]
+    gtop = [{'name': r['name'], 'emblem': r['emblem'], 'color': r['color'], 'dmg': int(r['s'])} for r in db.execute(
+        "SELECT g.name, g.emblem, g.color, SUM(h.dmg) AS s FROM wb_hits h JOIN guilds g ON g.id=h.guild_id WHERE h.day=? AND h.guild_id!='' GROUP BY g.id, g.name, g.emblem, g.color ORDER BY s DESC LIMIT 10",
+        (d['day'],)).fetchall()]
+    me = db.execute('SELECT dmg, tries FROM wb_hits WHERE day=? AND user_id=?', (d['day'], uid)).fetchone() if uid else None
+    n = db.execute('SELECT COUNT(*) AS c FROM wb_hits WHERE day=?', (d['day'],)).fetchone()['c']
+    g = _guild_of(db, uid) if uid else None
+    t = time.time()
+    return jsonify(ok=True, day=d['day'], boss=d['boss'], hp_max=int(d['hp_max']), hp_left=max(0, int(d['hp_left'])), killer=d['killer'],
+                   ends=t - (t % 86400) + 86400, players=n, top=top, guilds=gtop, tries_max=WB_TRIES,
+                   me={'dmg': int(me['dmg']), 'tries': me['tries']} if me else {'dmg': 0, 'tries': 0},
+                   bonus=(_guild_lv(g['xp']) if g else 0))
+
+
+@app.route('/api/wb/hit', methods=['POST'])
+def wb_hit():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    day = clamp_text(b.get('day'), 10)
+    dmg = clamp_int(b.get('dmg'), 0, WB_MAX_HIT, 0)
+    db = get_db()
+    d = _wb_today(db)
+    if day != d['day']:
+        return _bad('날이 바뀌어 새 월드 보스가 나타났어요', 409)
+    uid = user['user_id']
+    me = db.execute('SELECT tries FROM wb_hits WHERE day=? AND user_id=?', (day, uid)).fetchone()
+    if me and me['tries'] >= WB_TRIES:
+        return _bad('오늘은 %d번 모두 도전했어요' % WB_TRIES, 409)
+    if d['hp_left'] <= 0:
+        return _bad('이미 쓰러졌어요! 보상은 우편으로 가요', 409)
+    g = _guild_of(db, uid)
+    lv = _guild_lv(g['xp']) if g else 0
+    dmg = int(dmg * (1 + lv * 0.01))
+    real = min(dmg, int(d['hp_left']))
+    if me:
+        db.execute('UPDATE wb_hits SET dmg=dmg+?, tries=tries+1, name=?, guild_id=? WHERE day=? AND user_id=?', (real, user['username'], g['id'] if g else '', day, uid))
+    else:
+        db.execute('INSERT INTO wb_hits (day, user_id, name, dmg, tries, guild_id) VALUES (?, ?, ?, ?, 1, ?)', (day, uid, user['username'], real, g['id'] if g else ''))
+    db.execute('UPDATE wb_days SET hp_left=hp_left-? WHERE day=?', (real, day))
+    left = db.execute('SELECT hp_left FROM wb_days WHERE day=?', (day,)).fetchone()['hp_left']
+    killed = False
+    if left <= 0 and not d['killer']:
+        db.execute('UPDATE wb_days SET killer=?, killed_at=? WHERE day=?', (uid, time.time(), day))
+        killed = True
+    if g:
+        db.execute('UPDATE guilds SET xp=xp+? WHERE id=?', (max(1, real // 200), g['id']))
+    db.commit()
+    if killed:
+        _wb_finalize(db)
+    return jsonify(ok=True, dmg=real, bonus=lv, left=max(0, int(left)), killed=killed)
+
+
+# ---------------- v173 길드 ----------------
+GUILD_COST, GUILD_NAME_MAX = 3000, 10
+GUILD_EMBLEMS = ['⚔', '🛡', '🐉', '🔥', '❄', '⚡', '🌙', '☀', '🌸', '🍀', '👑', '💀', '🦊', '🐺', '🦅', '🎵']
+GUILD_COLORS = ['#ff5a6a', '#ff9a3a', '#ffd166', '#7dffa8', '#5ad8ff', '#5a8aff', '#c86aff', '#ff6ad5', '#e8f4ff', '#a0a8b8']
+
+
+def _guild_cap(xp):
+    return min(50, 10 + _guild_lv(xp) * 2)
+
+
+def _guild_view(db, g, uid=None, full=False):
+    n = db.execute('SELECT COUNT(*) AS c FROM guild_members WHERE guild_id=?', (g['id'],)).fetchone()['c']
+    lead = db.execute('SELECT username FROM users WHERE user_id=?', (g['leader'],)).fetchone()
+    lv = _guild_lv(g['xp'])
+    o = {'id': g['id'], 'name': g['name'], 'emblem': g['emblem'], 'color': g['color'], 'descr': g['descr'], 'open': bool(g['open']),
+         'xp': int(g['xp']), 'lv': lv, 'next': (lv ** 2) * 100 if lv < 20 else None, 'cur': ((lv - 1) ** 2) * 100, 'gold': int(g['gold']),
+         'members': n, 'cap': _guild_cap(g['xp']), 'leader': lead['username'] if lead else ''}
+    if full:
+        now = time.time()
+        rows = db.execute('SELECT gm.user_id, gm.role, gm.donated, gm.last_att, u.username, s.level, s.floor FROM guild_members gm JOIN users u ON u.user_id=gm.user_id '
+                          'LEFT JOIN player_stats s ON s.user_id=gm.user_id WHERE gm.guild_id=? ORDER BY (CASE WHEN gm.role=\'leader\' THEN 0 ELSE 1 END), gm.donated DESC', (g['id'],)).fetchall()
+        seen = {r['user_id']: r['seen_at'] for r in db.execute('SELECT user_id, seen_at FROM user_seen WHERE user_id IN (%s)' % ','.join('?' * len(rows)),
+                                                                   [r['user_id'] for r in rows]).fetchall()} if rows else {}
+        o['list'] = [{'name': r['username'], 'role': r['role'], 'donated': int(r['donated']), 'lv': r['level'] or 1, 'floor': r['floor'] or 1,
+                      'me': r['user_id'] == uid, 'att': r['last_att'] == time.strftime('%Y-%m-%d', time.gmtime()),
+                      'online': (_SEEN.get(r['user_id'], (0, ''))[0] > now - 60) or (now - seen.get(r['user_id'], 0) < 120)} for r in rows]
+    return o
+
+
+@app.route('/api/guild/me', methods=['POST'])
+def guild_me():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    uid = user['user_id']
+    b = request.get_json(silent=True) or {}
+    g = _guild_of(db, uid)
+    if not g:
+        reqs = [r['guild_id'] for r in db.execute('SELECT guild_id FROM guild_req WHERE user_id=?', (uid,)).fetchall()]
+        return jsonify(ok=True, guild=None, pending=reqs, cost=GUILD_COST, emblems=GUILD_EMBLEMS, colors=GUILD_COLORS)
+    since = clamp_int(b.get('since'), 0, 2 ** 62, 0) / 1000.0
+    msgs = [{'name': r['name'], 'text': r['text'], 't': r['at'], 'me': r['user_id'] == uid} for r in db.execute(
+        'SELECT * FROM guild_msgs WHERE guild_id=? AND at>? ORDER BY at DESC LIMIT 60', (g['id'], since)).fetchall()][::-1]
+    reqs = []
+    if g['role'] == 'leader':
+        reqs = [{'name': r['username'], 'lv': r['level'] or 1} for r in db.execute(
+            'SELECT u.username, s.level FROM guild_req q JOIN users u ON u.user_id=q.user_id LEFT JOIN player_stats s ON s.user_id=q.user_id WHERE q.guild_id=?', (g['id'],)).fetchall()]
+    return jsonify(ok=True, guild=_guild_view(db, g, uid, True), role=g['role'], msgs=msgs, reqs=reqs, emblems=GUILD_EMBLEMS, colors=GUILD_COLORS)
+
+
+@app.route('/api/guild/list', methods=['POST'])
+def guild_list():
+    db = get_db()
+    q = clamp_text((request.get_json(silent=True) or {}).get('q'), 20).strip().lower()
+    rows = (db.execute('SELECT * FROM guilds WHERE name_key LIKE ? ORDER BY xp DESC LIMIT 30', ('%' + q + '%',)).fetchall() if q else
+            db.execute('SELECT * FROM guilds ORDER BY xp DESC LIMIT 30').fetchall())
+    return jsonify(ok=True, guilds=[_guild_view(db, g) for g in rows])
+
+
+@app.route('/api/guild/create', methods=['POST'])
+def guild_create():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    db = get_db()
+    uid = user['user_id']
+    if _guild_of(db, uid):
+        return _bad('이미 길드에 있어요', 409)
+    name = _bad_filter(clamp_text(b.get('name'), GUILD_NAME_MAX).strip())
+    if len(name) < 2 or '*' in name:
+        return _bad('길드 이름은 2~%d자예요' % GUILD_NAME_MAX, 400)
+    if db.execute('SELECT 1 FROM guilds WHERE name_key=?', (name.lower(),)).fetchone():
+        return _bad('같은 이름의 길드가 있어요', 409)
+    em = b.get('emblem') if b.get('emblem') in GUILD_EMBLEMS else GUILD_EMBLEMS[0]
+    col = b.get('color') if b.get('color') in GUILD_COLORS else GUILD_COLORS[0]
+    gs = db.execute('SELECT gold FROM player_stats WHERE user_id=?', (uid,)).fetchone()
+    if not gs or gs['gold'] < GUILD_COST:
+        return _bad('길드를 만들려면 🪙 %s이 필요해요(서버 기록 골드)' % format(GUILD_COST, ','), 409)
+    gid = 'g' + secrets.token_hex(6)
+    now = time.time()
+    db.execute('INSERT INTO guilds (id, name, name_key, emblem, color, descr, leader, open, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+               (gid, name, name.lower(), em, col, _bad_filter(_chat_clean(b.get('descr'))[:60]), uid, 1 if b.get('open', True) else 0, now))
+    db.execute('INSERT INTO guild_members (user_id, guild_id, role, joined_at) VALUES (?, ?, ?, ?)', (uid, gid, 'leader', now))
+    db.execute('DELETE FROM guild_req WHERE user_id=?', (uid,))
+    db.execute('UPDATE player_stats SET gold=gold-? WHERE user_id=?', (GUILD_COST, uid))
+    db.commit()
+    return jsonify(ok=True, took=GUILD_COST, id=gid)
+
+
+def _guild_add(db, uid, g):
+    db.execute('INSERT INTO guild_members (user_id, guild_id, role, joined_at) VALUES (?, ?, ?, ?)', (uid, g['id'], 'member', time.time()))
+    db.execute('DELETE FROM guild_req WHERE user_id=?', (uid,))
+
+
+@app.route('/api/guild/join', methods=['POST'])
+def guild_join():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    gid = clamp_text((request.get_json(silent=True) or {}).get('id'), 20)
+    db = get_db()
+    uid = user['user_id']
+    if _guild_of(db, uid):
+        return _bad('이미 길드에 있어요', 409)
+    g = db.execute('SELECT * FROM guilds WHERE id=?', (gid,)).fetchone()
+    if not g:
+        return _bad('길드를 찾지 못했어요', 404)
+    n = db.execute('SELECT COUNT(*) AS c FROM guild_members WHERE guild_id=?', (gid,)).fetchone()['c']
+    if n >= _guild_cap(g['xp']):
+        return _bad('길드 인원이 꽉 찼어요', 409)
+    if g['open']:
+        _guild_add(db, uid, g)
+        db.commit()
+        return jsonify(ok=True, joined=True)
+    if not db.execute('SELECT 1 FROM guild_req WHERE user_id=? AND guild_id=?', (uid, gid)).fetchone():
+        db.execute('INSERT INTO guild_req (user_id, guild_id, at) VALUES (?, ?, ?)', (uid, gid, time.time()))
+        mail_send(db, g['leader'], '🏰 길드 가입 신청', '%s님이 「%s」에 들어오고 싶어 해요. 길드 창에서 받아 주세요.' % (user['username'], g['name']), sender='길드')
+        db.commit()
+    return jsonify(ok=True, joined=False, requested=True)
+
+
+def _guild_lead(db, user):
+    g = _guild_of(db, user['user_id'])
+    if not g or g['role'] != 'leader':
+        return None
+    return g
+
+
+@app.route('/api/guild/respond', methods=['POST'])
+def guild_respond():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    db = get_db()
+    g = _guild_lead(db, user)
+    if not g:
+        return _bad('길드장만 할 수 있어요', 403)
+    tid, tname = _uid_by_name(db, b.get('name') or '')
+    if not tid or not db.execute('SELECT 1 FROM guild_req WHERE user_id=? AND guild_id=?', (tid, g['id'])).fetchone():
+        return _bad('신청이 없어요', 404)
+    if b.get('ok') and not _guild_of(db, tid):
+        n = db.execute('SELECT COUNT(*) AS c FROM guild_members WHERE guild_id=?', (g['id'],)).fetchone()['c']
+        if n >= _guild_cap(g['xp']):
+            return _bad('길드 인원이 꽉 찼어요', 409)
+        _guild_add(db, tid, g)
+        mail_send(db, tid, '🏰 길드 가입!', '「%s」 길드에 들어왔어요. 환영해요!' % g['name'], sender='길드')
+    else:
+        db.execute('DELETE FROM guild_req WHERE user_id=? AND guild_id=?', (tid, g['id']))
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/guild/leave', methods=['POST'])
+def guild_leave():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    uid = user['user_id']
+    g = _guild_of(db, uid)
+    if not g:
+        return _bad('길드에 없어요', 400)
+    db.execute('DELETE FROM guild_members WHERE user_id=?', (uid,))
+    rest = db.execute('SELECT user_id FROM guild_members WHERE guild_id=? ORDER BY donated DESC, joined_at ASC', (g['id'],)).fetchall()
+    if not rest:
+        db.execute('DELETE FROM guilds WHERE id=?', (g['id'],))
+        db.execute('DELETE FROM guild_msgs WHERE guild_id=?', (g['id'],))
+        db.execute('DELETE FROM guild_req WHERE guild_id=?', (g['id'],))
+    elif g['role'] == 'leader':
+        db.execute("UPDATE guild_members SET role='leader' WHERE user_id=?", (rest[0]['user_id'],))
+        db.execute('UPDATE guilds SET leader=? WHERE id=?', (rest[0]['user_id'], g['id']))
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/guild/manage', methods=['POST'])
+def guild_manage():
+    """길드장: act = kick(name) · lead(name, 길드장 넘기기) · edit(descr, emblem, color, open)"""
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    db = get_db()
+    g = _guild_lead(db, user)
+    if not g:
+        return _bad('길드장만 할 수 있어요', 403)
+    act = b.get('act')
+    if act in ('kick', 'lead'):
+        tid, _ = _uid_by_name(db, b.get('name') or '')
+        m = db.execute('SELECT guild_id FROM guild_members WHERE user_id=?', (tid,)).fetchone() if tid else None
+        if not m or m['guild_id'] != g['id'] or tid == user['user_id']:
+            return _bad('길드원이 아니에요', 404)
+        if act == 'kick':
+            db.execute('DELETE FROM guild_members WHERE user_id=?', (tid,))
+        else:
+            db.execute("UPDATE guild_members SET role='member' WHERE user_id=?", (user['user_id'],))
+            db.execute("UPDATE guild_members SET role='leader' WHERE user_id=?", (tid,))
+            db.execute('UPDATE guilds SET leader=? WHERE id=?', (tid, g['id']))
+    elif act == 'edit':
+        em = b.get('emblem') if b.get('emblem') in GUILD_EMBLEMS else g['emblem']
+        col = b.get('color') if b.get('color') in GUILD_COLORS else g['color']
+        db.execute('UPDATE guilds SET descr=?, emblem=?, color=?, open=? WHERE id=?', (_bad_filter(_chat_clean(b.get('descr'))[:60]), em, col, 1 if b.get('open') else 0, g['id']))
+    db.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/guild/attend', methods=['POST'])
+def guild_attend():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    g = _guild_of(db, user['user_id'])
+    if not g:
+        return _bad('길드에 없어요', 400)
+    day = time.strftime('%Y-%m-%d', time.gmtime())
+    m = db.execute('SELECT last_att FROM guild_members WHERE user_id=?', (user['user_id'],)).fetchone()
+    if m['last_att'] == day:
+        return _bad('오늘은 이미 출석했어요', 409)
+    lv = _guild_lv(g['xp'])
+    gold = 200 + lv * 30
+    db.execute('UPDATE guild_members SET last_att=? WHERE user_id=?', (day, user['user_id']))
+    db.execute('UPDATE guilds SET xp=xp+20 WHERE id=?', (g['id'],))
+    db.execute('INSERT INTO pvp_ledger (id, user_id, delta, note, created_at) VALUES (?, ?, ?, ?, ?)', (secrets.token_hex(8), user['user_id'], gold, '길드 출석', time.time()))
+    db.commit()
+    return jsonify(ok=True, gold=gold)
+
+
+@app.route('/api/guild/donate', methods=['POST'])
+def guild_donate():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    amt = clamp_int((request.get_json(silent=True) or {}).get('amt'), 0, 1_000_000, 0)
+    if amt < 100:
+        return _bad('100골드부터 기부할 수 있어요', 400)
+    db = get_db()
+    uid = user['user_id']
+    g = _guild_of(db, uid)
+    if not g:
+        return _bad('길드에 없어요', 400)
+    gs = db.execute('SELECT gold FROM player_stats WHERE user_id=?', (uid,)).fetchone()
+    if not gs or gs['gold'] < amt:
+        return _bad('서버에 기록된 골드가 모자라요. 잠시 뒤 다시 해 주세요', 409)
+    db.execute('UPDATE player_stats SET gold=gold-? WHERE user_id=?', (amt, uid))
+    db.execute('UPDATE guilds SET gold=gold+?, xp=xp+? WHERE id=?', (amt, amt // 50, g['id']))
+    db.execute('UPDATE guild_members SET donated=donated+? WHERE user_id=?', (amt, uid))
+    db.commit()
+    return jsonify(ok=True, took=amt, xp=amt // 50)
+
+
+@app.route('/api/guild/chat', methods=['POST'])
+def guild_chat():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    uid = user['user_id']
+    g = _guild_of(db, uid)
+    if not g:
+        return _bad('길드에 없어요', 400)
+    if _muted(db, uid):
+        return _bad('지금은 채팅을 쓸 수 없어요', 403)
+    text = _bad_filter(_chat_clean((request.get_json(silent=True) or {}).get('text'))[:120].strip())
+    if not text:
+        return _bad('내용을 써 주세요', 400)
+    now = time.time()
+    if db.execute('SELECT 1 FROM guild_msgs WHERE user_id=? AND at>?', (uid, now - 1.2)).fetchone():
+        return _bad('조금 천천히 보내 주세요', 429)
+    db.execute('INSERT INTO guild_msgs (id, guild_id, user_id, name, text, at) VALUES (?, ?, ?, ?, ?, ?)', ('c' + secrets.token_hex(8), g['id'], uid, user['username'], text, now))
+    old = db.execute('SELECT at FROM guild_msgs WHERE guild_id=? ORDER BY at DESC LIMIT 1 OFFSET 200', (g['id'],)).fetchone()
+    if old:
+        db.execute('DELETE FROM guild_msgs WHERE guild_id=? AND at<=?', (g['id'], old['at']))
     db.commit()
     return jsonify(ok=True)
 
