@@ -117,7 +117,7 @@
      return '<div class="cd t'+i+'" style="--fr:url('+frame(i)+');--tc:'+TIERS[i].c+'">'+(TIERS[i].n?'<em>'+TIERS[i].n+'</em>':'')+'<div class="nm">'+nm[i]+'</div>'+
       '<div class="cv">'+(p[2]?'<b class="dc"><span>'+Math.round((1-p[1]/p[2])*100)+'%</span>할인</b>':'')+'<canvas class="ar" width="'+(A?A.W*2:144)+'" height="'+(A?A.H*2:104)+'"></canvas>'+(mul>1?'<u>가성비 ×'+fmt(mul)+'</u>':'')+'</div>'+
       '<div class="am"><i class="'+(ig?'ig':'id')+'"></i>'+fmt(p[0])+'</div><button class="by'+(ig?' bd':'')+'" data-i="'+i+'"></button></div>'}).join('')+'</div>'+
-   '<div class="ft">'+(ig?'다이아로 골드를 사요. 가격 단추를 한 번 더 누르면 사져요.':'결제가 끝나면 다이아가 바로 들어와요. 창을 닫아도 다음에 상점을 열면 받아요.'+(window.BB_APP?'<br>앱에서는 아직 살 수 없어요.':window.BB_FREE?'<br>지금은 무료 버전이라 판매하지 않아요.':''))+'</div><div class="ms"></div></div>';
+   '<div class="ft">'+(ig?'다이아로 골드를 사요. 가격 단추를 한 번 더 누르면 사져요.':'결제가 끝나면 다이아가 바로 들어와요. 창을 닫아도 다음에 상점을 열면 받아요.'+(window.BB_APP?(window.BB_PLAY?'<br>구글 플레이로 결제해요.':'<br>앱을 최신으로 업데이트하면 구글 플레이로 살 수 있어요.'):window.BB_FREE?'<br>지금은 무료 버전이라 판매하지 않아요.':''))+'</div><div class="ms"></div></div>';
   box.querySelector('.x').onclick=close;box.querySelectorAll('.tb button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;arm=-1;try{gmSfx('ok')}catch(e){}render()});
   box.querySelectorAll('.by').forEach(b=>b.onclick=()=>buy(+b.dataset.i));
   box.querySelectorAll('i.ig').forEach(e=>e.appendChild(icon(COIN,PG)));box.querySelectorAll('i.id').forEach(e=>e.appendChild(icon(GEM,gemPal(200))));

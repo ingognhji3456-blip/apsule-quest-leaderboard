@@ -30099,6 +30099,15 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  const LV=40,XPL=1000;
  const FREE=Array.from({length:LV},(_,i)=>{const l=i+1;if(l===LV)return {dia:60};if(l%5===0)return {dia:20};if(l%2)return {gold:300+l*20};return {gold:200+l*15}});
  const PREM=Array.from({length:LV},(_,i)=>{const l=i+1;if(l===LV)return {dia:300};if(l%5===0)return {dia:80};if(l%2===0)return {dia:15};return {gold:700+l*40}});
+ /* v161: 프리미엄 20단계 = 유물 무기, 40단계 = 유물 캐릭터(다이아에 더해서). 이미 가졌으면 그 값만큼 골드 */
+ PREM[19]=Object.assign({},PREM[19],{gear:['wp','신살의 대검']});PREM[39]=Object.assign({},PREM[39],{gear:['ch','아르테온']});
+ const gearIdx=g=>{try{const L=g[0]==='wp'?WEAPONS:CHARS;return L.findIndex(x=>x&&x.name===g[1])}catch(e){return -1}};
+ function giveGear(r){if(!r||!r.gear)return '';const [k,nm]=r.gear,i=gearIdx(r.gear);if(i<0)return '';const inv=shopInv(),a=inv.inv[k]||(inv.inv[k]=[]);
+  if(a.includes(i)){const L=k==='wp'?WEAPONS:CHARS,g=(L[i]&&L[i].price)||5000;give(g,0,0);return nm+'(이미 있어서 🪙'+num(g)+')'}a.push(i);try{saveNow()}catch(e){}return nm+' 획득!'}
+ const TH={};function gearThumb(g){const key=g.join('|');if(TH[key])return TH[key];const i=gearIdx(g);if(i<0)return '';try{const cv=document.createElement('canvas');cv.width=96;cv.height=96;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;const now=performance.now();
+   if(g[0]==='ch'){const inv=shopInv(),sv=inv.eq.ch;inv.eq.ch=i;try{drawKnight(c,26,40,4,false,null,0)}finally{inv.eq.ch=sv}}
+   else{const w=WEAPONS[i],sp=WSPR[w.type]||WSPR.sword,n=sp.r.length,sc=Math.min(4,70/(n*.72)),ang=-.82,L=(n-1)*sc*.72,hx=48-Math.cos(ang)*(L/2-sp.g*sc*.72),hy=48-Math.sin(ang)*(L/2-sp.g*sc*.72);wsWeaponCopy(c,w,hx,hy,ang,sc,now,0,0,96,96)}
+   return TH[key]=cv.toDataURL()}catch(e){return ''}}
  const lvOf=xp=>Math.min(LV,Math.floor(xp/XPL));
  function addXp(n){const o=S();const before=lvOf(o.ps.xp);o.ps.xp+=Math.max(0,Math.round(n));const after=lvOf(o.ps.xp);if(after>before)toast('시즌 패스 '+after+'단계!');save();dot()}
  const PRICE_KRW=5500,premPid=()=>'pass_'+season();
@@ -30431,6 +30440,18 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  #dp153 .pc .pimg{position:absolute;left:6%;right:6%;top:6px;bottom:22px;background:var(--pile) center/contain no-repeat;image-rendering:pixelated}
  #dp153 .pc b{position:relative;display:flex;align-items:center;gap:2px;padding:0 6px;border-radius:999px;background:#000a}
  #dp153 .pc b i.px149{width:11px!important;height:11px!important}
+ #dp153 .pc.gear.p,#dp153 .pc.gear{border:2px solid #ff9a5a;box-shadow:0 0 14px #ff8a5a99,inset 0 0 18px #ff8a5a55;background:radial-gradient(circle at 30% 50%,#6a3014,#1e0c04 70%)}
+ #dp153 .pc.gear.p::before{background:linear-gradient(90deg,#ffd84a,#ff8a5a);content:'특별 보상'}
+ html.lpP #dp153 .pc.gear .pimg{flex:0 0 44px!important;height:48px!important}html.lpP #dp153 .pc.gear b.gn{font-size:11.5px!important;padding:1px 5px!important;white-space:nowrap}html.lpP #dp153 .pc.gear .gt .plb{font-size:8.5px!important}
+ html.lpL #dp153 .pc.gear .gt .plb{display:none!important}html.lpL #dp153 .pc.gear b.gn{font-size:9px;padding:0 3px;white-space:nowrap;max-width:100%;overflow:hidden}html.lpL #dp153 .pc.gear .pimg{top:13px;bottom:27px;left:0;right:0}html.lpL #dp153 .pc.gear.p::before{font-size:7.5px;top:2px}html.lpL #dp153 .pc.gear .gd{font-size:8px}
+ #dp153 .pc.gear .pimg{background-position:center;background-size:contain;background-repeat:no-repeat;image-rendering:pixelated;animation:dp161 1.6s ease-in-out infinite}
+ @keyframes dp161{50%{transform:translateY(-2px);filter:drop-shadow(0 0 6px #ffb07a)}}
+ #dp153 .pc.gear .gt{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.15}
+ #dp153 .pc.gear .gt .plb{display:block!important;position:static!important;font-size:9.5px!important;color:#ffc89a!important;letter-spacing:.3px;white-space:nowrap}#dp153 .pc.gear b.gn{font-size:12px;color:#fff;background:#000a;text-shadow:0 0 6px #ff8a5a}
+ #dp153 .pc.gear .gd{display:flex;align-items:center;gap:1px;font-size:9.5px;color:#9fe8ff}#dp153 .pc.gear .gd i.px149{width:10px!important;height:10px!important}
+ html.lpP #dp153 .pc.gear,html:not(.lp) #dp153 .pc.gear{min-height:78px}html.lpP #dp153 .pc.gear .pimg,html:not(.lp) #dp153 .pc.gear .pimg{flex:0 0 70px;height:66px}
+ html.lpP #dp153 .pc.gear .gt,html:not(.lp) #dp153 .pc.gear .gt{align-items:flex-start}html.lpP #dp153 .pc.gear b.gn,html:not(.lp) #dp153 .pc.gear b.gn{font-size:15px;padding:1px 8px}
+ #dp153 .pp2 .gx{color:#ffb07a}
  #dp153 .pc.p{background:linear-gradient(180deg,#2a1e06,#140e04);border-color:#ffc04a66;color:#ffe2a0}
  #dp153 .pc.ok{border:2px solid #ffd84a;box-shadow:0 0 12px #ffd84a77;cursor:pointer;animation:dp153h 1.2s infinite}
  #dp153 .pc.got .pimg,#dp153 .pc.got b{opacity:.35}
@@ -30549,10 +30570,10 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    body='<div class="qsub"><button data-sub="d" class="'+(showW?'':'on')+'">일일 <small>'+dn+'/'+dl.length+'</small></button><button data-sub="w" class="'+(showW?'on':'')+'">주간 <small>'+wn+'/'+wl.length+'</small></button></div>'+
     '<div class="qcols'+(showW?' sw':'')+'">'+col('일일 미션',hr+'시간 뒤 새 미션',dl,D,D.got,'md',chest(dn,dl.length,D.box,'dbox',10,200))+col('주간 미션',wkLeft+'일 뒤 새 미션',wl,W,W.got,'mw',chest(wn,wl.length,W.box,'wbox',50,500))+'</div><div class="msg">'+E(msg)+'</div>'}
   else{const xp=o.ps.xp,L=lvOf(xp),pm=hasPrem(),inLv=L>=LV?XPL:xp%XPL;
-   const rc=(r,cls,act,l,st)=>'<button class="pc '+cls+' '+st+'" data-a="'+act+'" data-l="'+l+'" style="--pile:var(--'+(r.dia?'chest-dia':'pile-coin')+')"><span class="pimg"></span><span class="plb">'+(r.dia?'보석':'골드')+'</span><b>'+(r.dia?ic('dia153'):ic('coin'))+num(r.dia||r.gold)+'</b></button>';
+   const rc=(r,cls,act,l,st)=>r.gear?'<button class="pc gear '+cls+' '+st+'" data-a="'+act+'" data-l="'+l+'"><span class="pimg" style="background-image:url('+gearThumb(r.gear)+')"></span><span class="gt"><span class="plb">★ 유물 '+(r.gear[0]==='wp'?'무기':'캐릭터')+'</span><b class="gn">'+E(r.gear[1])+'</b><small class="gd">+'+ic('dia153')+num(r.dia||0)+'</small></span></button>':'<button class="pc '+cls+' '+st+'" data-a="'+act+'" data-l="'+l+'" style="--pile:var(--'+(r.dia?'chest-dia':'pile-coin')+')"><span class="pimg"></span><span class="plb">'+(r.dia?'보석':'골드')+'</span><b>'+(r.dia?ic('dia153'):ic('coin'))+num(r.dia||r.gold)+'</b></button>';
    body='<div class="ph"><div class="phl"><span class="shd">'+L+'</span><small>단계</small></div><div class="phm"><b>SEASON '+E(o.ps.s)+'</b><small>'+daysLeft()+'일 남음 · 미션 · 출석으로 경험치</small><div class="pxb"><u style="width:'+Math.round(inLv/XPL*100)+'%"></u><span>'+(L>=LV?'최고 단계!':num(inLv)+' / '+num(XPL)+' XP')+'</span></div></div></div>'+
     (pm?'<div class="pp2 own">'+ic('crown')+'<b>프리미엄 패스 사용 중</b><small>금색 줄 보상도 모두 받을 수 있어요</small></div>':
-     '<div class="pp2">'+ic('crown')+'<div><b>프리미엄 패스</b><small>금색 줄 보상 · 💎 총 '+num(PREM.reduce((a,r)=>a+(r.dia||0),0))+' · 지난 단계도 바로 받기</small></div><div class="ppb"><button class="d" data-a="buyd">'+ic('dia153')+num(diaPrice())+'</button>'+((window.BB_APP||window.BB_FREE)?'':'<button class="w" data-a="buyw">₩ '+num(PRICE_KRW)+'</button>')+'</div></div>')+
+     '<div class="pp2">'+ic('crown')+'<div><b>프리미엄 패스</b><small>금색 줄 보상 · 💎 총 '+num(PREM.reduce((a,r)=>a+(r.dia||0),0))+' · <b class="gx">20단계 유물 무기 · 40단계 유물 캐릭터</b> · 지난 단계도 바로 받기</small></div><div class="ppb"><button class="d" data-a="buyd">'+ic('dia153')+num(diaPrice())+'</button>'+((window.BB_APP?!window.BB_PLAY:window.BB_FREE)?'':'<button class="w" data-a="buyw">'+(window.BB_APP?'G Play ':'')+'₩ '+num(PRICE_KRW)+'</button>')+'</div></div>')+
     (passReady()?'<button class="all" data-a="all">받을 수 있는 보상 모두 받기</button>':'')+
     '<div class="trk"><div class="tlab"><span>'+ic('gift')+'무료</span><span></span><span class="g">'+ic('crown')+'프리미엄'+(pm?'':ic('lock'))+'</span></div><div class="tsc"><div class="tin" style="--n:'+LV+'">'+
     Array.from({length:LV},(_,i)=>{const l=i+1,r=l<=L,fg=o.ps.f[l],pg=o.ps.p[l],big=l%5===0;
@@ -30576,8 +30597,8 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   else if(a==='dbox'){if(o.day.box||!dailyList().every(m=>o.day.got[m[0]]))return;o.day.box=1;o.wk.c.dayall=(o.wk.c.dayall||0)+1;give(0,10,200);msg='💎 10 · 패스 +200';sfx('ok')}
   else if(a==='wbox'){if(o.wk.box||!weekList().every(m=>o.wk.got[m[0]]))return;o.wk.box=1;give(0,50,500);msg='💎 50 · 패스 +500';sfx('ok')}
   else if(a==='pf'||a==='pp'){const l=+b.dataset.l,L=lvOf(o.ps.xp);if(l>L){msg=l+'단계에 오르면 받을 수 있어요';draw();return}
-   if(a==='pp'&&!hasPrem()){msg='프리미엄 패스가 있어야 받아요';draw();return}const G=a==='pf'?o.ps.f:o.ps.p,r=(a==='pf'?FREE:PREM)[l-1];if(G[l])return;G[l]=1;give(r.gold||0,r.dia||0,0);msg=l+'단계 보상 받았어요';sfx('ok')}
-  else if(a==='all'){const L=lvOf(o.ps.xp),pm=hasPrem();let g=0,d=0;for(let l=1;l<=L;l++){if(!o.ps.f[l]){o.ps.f[l]=1;g+=FREE[l-1].gold||0;d+=FREE[l-1].dia||0}if(pm&&!o.ps.p[l]){o.ps.p[l]=1;g+=PREM[l-1].gold||0;d+=PREM[l-1].dia||0}}give(g,d,0);msg='🪙 '+num(g)+' · 💎 '+num(d)+' 받았어요';sfx('ok')}
+   if(a==='pp'&&!hasPrem()){msg='프리미엄 패스가 있어야 받아요';draw();return}const G=a==='pf'?o.ps.f:o.ps.p,r=(a==='pf'?FREE:PREM)[l-1];if(G[l])return;G[l]=1;give(r.gold||0,r.dia||0,0);const gm=giveGear(r);msg=l+'단계 보상 받았어요'+(gm?' · '+gm:'');sfx('ok')}
+  else if(a==='all'){const L=lvOf(o.ps.xp),pm=hasPrem(),gs=[];let g=0,d=0;for(let l=1;l<=L;l++){if(!o.ps.f[l]){o.ps.f[l]=1;g+=FREE[l-1].gold||0;d+=FREE[l-1].dia||0}if(pm&&!o.ps.p[l]){o.ps.p[l]=1;g+=PREM[l-1].gold||0;d+=PREM[l-1].dia||0;const gm=giveGear(PREM[l-1]);if(gm)gs.push(gm)}}give(g,d,0);msg='🪙 '+num(g)+' · 💎 '+num(d)+' 받았어요'+(gs.length?' · '+gs.join(' · '):'');sfx('ok')}
   else if(a==='buyd'){if(hasPrem())return;if(!window.DIA80){msg='다이아를 쓸 수 없어요';draw();return}
    if(!b.dataset.sure){b.dataset.sure=1;b.textContent='정말 살까요? 한 번 더';setTimeout(()=>{delete b.dataset.sure;lastH='';draw()},2500);return}
    const r=DIA80.buy({pid:premPid(),price:PRICE_KRW,kind:'pass'});if(r&&r.err)msg=r.err;else{msg='프리미엄 패스를 샀어요!';sfx('ok');try{saveNow()}catch(e){}}}
@@ -31834,7 +31855,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
      return '<div class="cd t'+i+'" style="--fr:url('+frame(i)+');--tc:'+TIERS[i].c+'">'+(TIERS[i].n?'<em>'+TIERS[i].n+'</em>':'')+'<div class="nm">'+nm[i]+'</div>'+
       '<div class="cv">'+(p[2]?'<b class="dc"><span>'+Math.round((1-p[1]/p[2])*100)+'%</span>할인</b>':'')+'<canvas class="ar" width="'+(A?A.W*2:144)+'" height="'+(A?A.H*2:104)+'"></canvas>'+(mul>1?'<u>가성비 ×'+fmt(mul)+'</u>':'')+'</div>'+
       '<div class="am"><i class="'+(ig?'ig':'id')+'"></i>'+fmt(p[0])+'</div><button class="by'+(ig?' bd':'')+'" data-i="'+i+'"></button></div>'}).join('')+'</div>'+
-   '<div class="ft">'+(ig?'다이아로 골드를 사요. 가격 단추를 한 번 더 누르면 사져요.':'결제가 끝나면 다이아가 바로 들어와요. 창을 닫아도 다음에 상점을 열면 받아요.'+(window.BB_APP?'<br>앱에서는 아직 살 수 없어요.':window.BB_FREE?'<br>지금은 무료 버전이라 판매하지 않아요.':''))+'</div><div class="ms"></div></div>';
+   '<div class="ft">'+(ig?'다이아로 골드를 사요. 가격 단추를 한 번 더 누르면 사져요.':'결제가 끝나면 다이아가 바로 들어와요. 창을 닫아도 다음에 상점을 열면 받아요.'+(window.BB_APP?(window.BB_PLAY?'<br>구글 플레이로 결제해요.':'<br>앱을 최신으로 업데이트하면 구글 플레이로 살 수 있어요.'):window.BB_FREE?'<br>지금은 무료 버전이라 판매하지 않아요.':''))+'</div><div class="ms"></div></div>';
   box.querySelector('.x').onclick=close;box.querySelectorAll('.tb button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;arm=-1;try{gmSfx('ok')}catch(e){}render()});
   box.querySelectorAll('.by').forEach(b=>b.onclick=()=>buy(+b.dataset.i));
   box.querySelectorAll('i.ig').forEach(e=>e.appendChild(icon(COIN,PG)));box.querySelectorAll('i.id').forEach(e=>e.appendChild(icon(GEM,gemPal(200))));
@@ -32171,4 +32192,45 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(key==='d5')vign(wk);const o=cv.getContext('2d');o.imageSmoothingEnabled=false;o.drawImage(WK,0,0,cv.width,cv.height)}
  window.CSART={W,H,art,paint,K,COINF,GEMSM,cp,gp};
 }catch(e){console.error('v159 shop art',e)}})();
+/* ================= v162 구글 플레이 결제 (PLAY162) =================
+   - 구글 플레이 앱(TWA, window.BB_APP)에서는 토스 대신 구글 플레이 결제로 산다. 웹(브라우저)은 그대로 토스.
+   - 파는 것: 다이아 묶음 dia_<개수> 6개 · 프리미엄 패스 pass_premium(한 상품, 이번 달 패스로 들어감).
+     구글 플레이 콘솔의 「인앱 상품」 번호가 이것과 같아야 한다. 스킨 같은 다른 상품은 앱에서 다이아로 산다.
+   - 흐름: getDigitalGoodsService → PaymentRequest(구글 플레이 결제창) → 서버 /api/play/verify(구글에 직접 확인 · 주문 장부에 넣음)
+     → 다이아는 /api/shop/dia/claim(CS159), 패스는 PAY58.refresh로 보유에 들어옴 → 마지막에 consume(다시 살 수 있게).
+   - 앱을 켤 때 「결제는 됐는데 서버 확인 전에 꺼진」 결제(listPurchases)를 찾아 마저 확인한다.
+   - window.BB_PLAY = 구글 플레이 결제를 쓸 수 있는 앱인지(재화 상점 · 패스의 ₩ 단추를 보여 줄지). */
+(()=>{try{
+ const METHOD='https://play.google.com/billing';
+ let svc=null,ready=null;const DET={};
+ function skuOf(pid){if(/^dia_\d+$/.test(pid))return pid;if(/^pass_\d{4}-\d{2}$/.test(pid))return 'pass_premium';return null}
+ async function init(){if(!window.BB_APP||!('getDigitalGoodsService' in window))return null;try{svc=await window.getDigitalGoodsService(METHOD)}catch(e){svc=null}
+  if(!svc)return null;window.BB_PLAY=true;
+  try{const L=(window.CS159?CS159.DIA_PACKS.map(p=>'dia_'+p[0]):[]).concat(['pass_premium']);(await svc.getDetails(L)).forEach(d=>{DET[d.itemId]=d})}catch(e){}
+  setTimeout(recover,3000);return svc}
+ /* BB_APP은 99999가 정하므로 조금 뒤에 시작 */setTimeout(()=>{ready=init()},1200);
+ const api=(p,b)=>window.DUO85&&DUO85.api?DUO85.api(p,'POST',b):Promise.resolve({s:0,j:{}});
+ async function verify(sku,token,season){const r=await api('/api/play/verify',{sku,token,season});return r}
+ async function after(pid){try{await PAY58.refresh()}catch(e){}if(/^dia_/.test(pid)){try{window.CS159&&await CS159.claim()}catch(e){}}try{PAY58.apply()}catch(e){}}
+ async function consume(token){try{svc&&await svc.consume(token)}catch(e){}}
+ /* 결제 */
+ async function buy(pid,cb){cb=cb||(()=>{});const sku=skuOf(pid);if(!sku){cb({err:'앱에서는 이 상품을 다이아로 살 수 있어요.'});return}
+  try{if(!(window.DUO85&&DUO85.acc().token)){cb({need:'login'});return}}catch(e){}
+  if(!svc){try{await(ready||init())}catch(e){}}if(!svc){cb({err:'구글 플레이 결제를 쓸 수 없어요. 앱을 최신으로 업데이트해 주세요.'});return}
+  if(!DET[sku]){try{(await svc.getDetails([sku])).forEach(d=>{DET[d.itemId]=d})}catch(e){}if(!DET[sku]){cb({err:'구글 플레이에 아직 등록되지 않은 상품이에요.'});return}}
+  let res;try{const req=new PaymentRequest([{supportedMethods:METHOD,data:{sku}}],{total:{label:'Total',amount:{currency:'KRW',value:'0'}}});cb({opened:true});res=await req.show()}
+  catch(e){cb(e&&e.name==='AbortError'?{cancel:true}:{err:'결제창을 열지 못했어요.'});return}
+  const token=res&&res.details&&res.details.purchaseToken;if(!token){try{await res.complete('fail')}catch(e){}cb({fail:true});return}
+  const season=sku==='pass_premium'?pid.slice(5):undefined;let r;try{r=await verify(sku,token,season)}catch(e){r={s:0,j:{}}}
+  if(r.s===200&&r.j&&r.j.ok){try{await res.complete('success')}catch(e){}await consume(token);await after(pid);cb({ok:true})}
+  else{try{await res.complete('fail')}catch(e){}/* 결제는 됐을 수 있으니 다음에 앱을 켤 때 다시 확인(recover) */cb({err:(r.j&&r.j.error)||'결제 확인이 늦어지고 있어요. 앱을 다시 켜면 들어와요.'})}}
+ /* 끝나지 않은 결제 마저 처리 */
+ async function recover(){if(!svc)return;try{if(!(window.DUO85&&DUO85.acc().token))return}catch(e){return}let L=[];try{L=await svc.listPurchases()}catch(e){return}
+  for(const p of L){const sku=p.itemId,token=p.purchaseToken;if(!sku||!token)continue;const pid=sku==='pass_premium'?'pass_'+(saveData.dp153&&saveData.dp153.ps&&saveData.dp153.ps.s||''):sku;
+   const r=await verify(sku,token,sku==='pass_premium'?pid.slice(5):undefined).catch(()=>({s:0}));if(r.s===200&&r.j&&r.j.ok){await consume(token);await after(pid)}}}
+ /* PAY58.buy: 앱이면 구글 플레이로 */
+ if(window.PAY58&&PAY58.buy){const f=PAY58.buy;PAY58.buy=function(pid,cb){if(window.BB_APP&&skuOf(pid)&&('getDigitalGoodsService' in window))return buy(pid,cb);return f.apply(this,arguments)}}
+ /* 로그인 뒤에도 한 번 */setInterval(()=>{try{if(svc&&DUO85.acc().token&&!recover._t){recover._t=1;recover()}}catch(e){}},5000);
+ window.PLAY162={buy,recover,details:()=>DET,skuOf};
+}catch(e){console.error('v162 play billing',e)}})();
 </script></body></html>
