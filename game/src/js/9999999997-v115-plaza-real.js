@@ -68,7 +68,7 @@
   for(const r of [58,120,172]){o.strokeStyle='rgba(20,18,16,.85)';o.lineWidth=3;o.beginPath();o.ellipse(F.x,F.y,r,r/1.6,0,0,TAU);o.stroke();o.strokeStyle='rgba(220,200,170,.35)';o.lineWidth=1.2;o.beginPath();o.ellipse(F.x,F.y-1,r,r/1.6,0,Math.PI,TAU);o.stroke()}
   /* 탑 문에서 분수까지 사암 판석 */for(let y=TOPY+10;y<F.y-F.r/1.6-4;y+=9)for(let x=448;x<512;x+=rr(14,20)){const w=Math.min(rr(12,18),512-x);o.fillStyle=hsl(rr(30,40),rr(22,32),rr(44,54));o.fillRect(x+.6,y+.6,w-1.2,7.8);o.fillStyle='rgba(255,240,210,.25)';o.fillRect(x+.6,y+.6,w-1.2,1);o.fillStyle='rgba(0,0,0,.25)';o.fillRect(x+.6,y+7.6,w-1.2,.8)}
   /* 닳은 길(밝게) · 구석 때(어둡게) */for(const [x,y,rx,ry] of [[480,500,120,60],[300,380,90,50],[660,380,90,50],[480,230,40,50]]){const g=o.createRadialGradient(x,y,0,x,y,rx);g.addColorStop(0,'rgba(255,230,200,.07)');g.addColorStop(1,'rgba(255,230,200,0)');o.fillStyle=g;o.beginPath();o.ellipse(x,y,rx,ry,0,0,TAU);o.fill()}
-  for(const [x,y] of [[0,WH],[WW,WH],[0,TOPY],[WW,TOPY]]){const g=o.createRadialGradient(x,y,0,x,y,180);g.addColorStop(0,'rgba(0,0,0,.4)');g.addColorStop(1,'rgba(0,0,0,0)');o.fillStyle=g;o.fillRect(x-180,y-180,360,360)}
+  for(const [x,y] of (Z().B&&Z().B.x0<0?[]:[[0,WH],[WW,WH],[0,TOPY],[WW,TOPY]])){/* v156: 넓은 광장이면 가장자리 그늘 없음(이음매가 얼룩져 보임) */const g=o.createRadialGradient(x,y,0,x,y,180);g.addColorStop(0,'rgba(0,0,0,.4)');g.addColorStop(1,'rgba(0,0,0,0)');o.fillStyle=g;o.fillRect(x-180,y-180,360,360)}
   /* 이끼 · 풀(줄눈 사이) */for(let i=0;i<700;i++){const x=rnd()<.5?rr(0,140):rr(WW-140,WW),y=rr(TOPY,WH);if(inRing(x,y))continue;o.fillStyle=hsl(rr(80,120),rr(30,50),rr(18,30),rr(.5,.9));o.fillRect(x,y,rr(.8,2),rr(.6,1.4))}
   /* 웅덩이: 하늘 비침 */for(const [x,y,w,h] of [[220,520,26,7],[760,300,20,6],[620,540,30,8]]){const g=o.createLinearGradient(0,y-h,0,y+h);g.addColorStop(0,'#141a2c');g.addColorStop(.55,'#2a2c44');g.addColorStop(1,'#5a4250');o.globalAlpha=.7;o.fillStyle=g;o.beginPath();
    for(let k=0;k<=24;k++){const a=k/24*TAU,rw=w*(1+.18*Math.sin(a*3+x)),rh=h*(1+.2*Math.cos(a*2+y));k?o.lineTo(x+Math.cos(a)*rw,y+Math.sin(a)*rh):o.moveTo(x+Math.cos(a)*rw,y+Math.sin(a)*rh)}o.fill();o.globalAlpha=.35;o.strokeStyle='#c8c0c8';o.lineWidth=.5;o.stroke();o.globalAlpha=.25;o.fillStyle='#e8d0c0';o.fillRect(x-w*.4,y-h*.3,w*.5,.6);o.globalAlpha=1}
@@ -88,7 +88,7 @@
   if(back){o.fillStyle='#1e1e24';o.fillRect(x-14,y-15,2,11);o.fillRect(x+12,y-15,2,11);for(let i=0;i<2;i++){const g=o.createLinearGradient(0,y-15+i*3,0,y-13+i*3);g.addColorStop(0,'#9a6a3a');g.addColorStop(1,'#5a3a1c');o.fillStyle=g;o.fillRect(x-17,y-15+i*3.4,34,2.2)}}}
  /* ---------- 나무: 잎 덩어리를 미리 그려 둠 ---------- */
  const TC={};
- function treeImg(i){if(TC[i])return TC[i];sd=101+i*7;const S2=3,w=90,h=96,cv=document.createElement('canvas');cv.width=w*S2;cv.height=h*S2;const o=cv.getContext('2d');o.scale(S2,S2);const cx=w/2,cy=40;
+ function treeImg(i){i=i%12;/* v156: 나무가 많아져도 그림은 12가지만 */if(TC[i])return TC[i];sd=101+i*7;const S2=3,w=90,h=96,cv=document.createElement('canvas');cv.width=w*S2;cv.height=h*S2;const o=cv.getContext('2d');o.scale(S2,S2);const cx=w/2,cy=40;
   /* 줄기 */let g=o.createLinearGradient(cx-5,0,cx+5,0);g.addColorStop(0,'#2a1a10');g.addColorStop(.35,'#6a4628');g.addColorStop(1,'#1e120a');o.fillStyle=g;o.beginPath();o.moveTo(cx-4,h-6);o.lineTo(cx-3,cy+8);o.lineTo(cx+3,cy+8);o.lineTo(cx+5,h-6);o.closePath();o.fill();
   o.fillStyle='#3a2414';o.beginPath();o.ellipse(cx-6,h-6,4,1.6,0,0,TAU);o.ellipse(cx+7,h-6,4,1.6,0,0,TAU);o.fill();for(let k=0;k<10;k++){o.fillStyle='rgba(0,0,0,.25)';o.fillRect(cx+rr(-3,3),rr(cy+10,h-8),rr(.6,1.2),rr(2,5))}
   /* 잎: 아래 · 안쪽은 어둡게, 위 왼쪽은 밝게 */const blobs=[];for(let k=0;k<70;k++){const a=rr(0,TAU),d=Math.sqrt(rnd())*30;blobs.push([cx+Math.cos(a)*d*1.15,cy-6+Math.sin(a)*d*.85,rr(6,11)])}
@@ -98,15 +98,15 @@
   TC[i]={cv,w,h,ax:cx,ay:h-6};return TC[i]}
  /* ---------- 비둘기 ---------- */
  const BIRDS=[];let lastT=0;
- function birdsInit(){const z=Z();if(BIRDS.length)return;for(let i=0;i<9;i++)BIRDS.push(spawnBird(z,true))}
- function spawnBird(z,ground){const F=z.FOUNT;let x,y;do{x=rr(60,900);y=rr(z.TOPY+20,580)}while(Math.hypot(x-F.x,(y-F.y)*1.6)<F.r+20);
+ function birdsInit(){const z=Z();if(BIRDS.length)return;for(let i=0;i<(z.B&&z.B.x0<0?22:9);i++)BIRDS.push(spawnBird(z,true))}
+ function spawnBird(z,ground){const F=z.FOUNT,B=z.B||{x0:0,x1:960,y1:600};let x,y,n=0;do{x=rr(B.x0+60,B.x1-60);y=rr(z.TOPY+20,B.y1-20)}while(++n<40&&(Math.hypot(x-F.x,(y-F.y)*1.6)<F.r+20||(z.blocked&&z.blocked(x,y))));
   return {x,y,tx:x,ty:y,st:ground?'walk':'land',t:rr(0,3),fx:rnd()<.5?-1:1,h:ground?0:60,vx:0,vy:0,peck:0,col:rr(-6,6)}}
  function birdsTick(dt){const z=Z();if(!z)return;const S=z.S,pts=[[P.x,P.y]];for(const k in S.O){const M=S.O[k];if(M.sx!=null)pts.push([M.sx,M.sy])}
   for(let i=0;i<BIRDS.length;i++){const b=BIRDS[i];b.t+=dt;
    if(b.st==='walk'){const near=pts.some(([x,y])=>Math.hypot(x-b.x,(y-b.y)*1.3)<34);if(near){b.st='fly';b.vx=(b.x<P.x?-1:1)*rr(60,90);b.vy=-rr(40,70);b.fx=Math.sign(b.vx);try{sfx(900,.05,'triangle',.008,1400)}catch(e){}continue}
-    if(b.peck>0){b.peck-=dt;continue}const dx=b.tx-b.x,dy=b.ty-b.y,d=Math.hypot(dx,dy);if(d<1.5){if(rnd()<.5)b.peck=rr(.6,1.6);else{b.tx=b.x+rr(-30,30);b.ty=Math.max(z.TOPY+16,Math.min(585,b.y+rr(-16,16)))}}
+    if(b.peck>0){b.peck-=dt;continue}const dx=b.tx-b.x,dy=b.ty-b.y,d=Math.hypot(dx,dy);if(d<1.5){if(rnd()<.5)b.peck=rr(.6,1.6);else{b.tx=b.x+rr(-30,30);b.ty=Math.max(z.TOPY+16,Math.min((z.B?z.B.y1:600)-15,b.y+rr(-16,16)))}}
     else{b.x+=dx/d*14*dt;b.y+=dy/d*14*dt;b.fx=dx<0?-1:1}}
-   else if(b.st==='fly'){b.x+=b.vx*dt;b.h+=-b.vy*dt;b.vy*=.995;if(b.h>140||b.x<-30||b.x>990)BIRDS[i]=Object.assign(spawnBird(z,false),{st:'land',h:140})}
+   else if(b.st==='fly'){b.x+=b.vx*dt;b.h+=-b.vy*dt;b.vy*=.995;if(b.h>140||b.x<(z.B?z.B.x0:0)-30||b.x>(z.B?z.B.x1:960)+30)BIRDS[i]=Object.assign(spawnBird(z,false),{st:'land',h:140})}
    else if(b.st==='land'){b.h-=50*dt;if(b.h<=0){b.h=0;b.st='walk'}}}}
  function drawBird(c,b,now){const y=b.y-b.h,fl=b.fx<0,flap=b.st!=='walk'?Math.sin(now/45+b.x)*1:0;
   if(b.h>0){c.fillStyle='rgba(0,0,0,'+Math.max(.05,.3-b.h/300)+')';c.beginPath();c.ellipse(b.x,b.y+1,5,1.6,0,0,TAU);c.fill()}else{c.fillStyle='rgba(0,0,0,.3)';c.beginPath();c.ellipse(b.x,b.y+1,5.4,1.7,0,0,TAU);c.fill()}
@@ -138,28 +138,33 @@
    c.quadraticCurveTo(x+Math.cos(a)*8,y-52,x+Math.cos(a)*14,y-27+Math.sin(a)*4);c.stroke();c.fillStyle='rgba(230,248,255,.7)';const bx=x+Math.cos(a)*14*q,by=y-40-Math.sin(q*Math.PI)*12+q*13+Math.sin(a)*4*q;c.fillRect(bx,by,1.2,1.2)}
   for(let i=0;i<16;i++){const a=i/16*TAU,q=(t*1.5+i*.37)%1,ex=x+Math.cos(a)*16,ey=y-26+Math.sin(a)*4.6;c.strokeStyle='rgba(190,230,255,'+(.3*(1-q*.5))+')';c.beginPath();c.moveTo(ex,ey);c.lineTo(ex+Math.cos(a)*q*3,ey+q*22);c.stroke()}
   for(let i=0;i<20;i++){const q=(t*.9+i*.29)%1,a=i*1.9;c.fillStyle='rgba(220,240,255,'+(.4*(1-q))+')';c.fillRect(x+Math.cos(a)*(16+q*8),y-4+Math.sin(a)*6-q*6,1,1)}c.restore()}
- function lamp(c,x,y,now){const f=.85+.15*Math.sin(now/90+x)*Math.sin(now/37+y);
+ function lamp(c,x,y,now,ff){const f=ff!=null?ff:.85+.15*Math.sin(now/90+x)*Math.sin(now/37+y);
   let g=c.createLinearGradient(x-2,0,x+2,0);g.addColorStop(0,'#141418');g.addColorStop(.5,'#4a4a56');g.addColorStop(1,'#101014');c.fillStyle='#18181e';c.fillRect(x-4,y-3,8,4);c.fillRect(x-3,y-6,6,3);c.fillStyle=g;c.fillRect(x-1.4,y-34,2.8,30);
   c.fillStyle='#18181e';c.fillRect(x-3,y-36,6,2.4);c.beginPath();c.moveTo(x-5,y-48);c.lineTo(x+5,y-48);c.lineTo(x+3,y-36);c.lineTo(x-3,y-36);c.closePath();c.fill();
   g=c.createLinearGradient(0,y-47,0,y-37);g.addColorStop(0,'rgba(255,240,190,'+f+')');g.addColorStop(1,'rgba(255,170,80,'+f+')');c.fillStyle=g;c.beginPath();c.moveTo(x-3.8,y-47);c.lineTo(x+3.8,y-47);c.lineTo(x+2.4,y-38);c.lineTo(x-2.4,y-38);c.closePath();c.fill();
   c.fillStyle='#18181e';c.fillRect(x-.4,y-47,.8,9);c.beginPath();c.moveTo(x-6,y-48);c.lineTo(x,y-53);c.lineTo(x+6,y-48);c.closePath();c.fill();c.beginPath();c.arc(x,y-54,1.2,0,TAU);c.fill()}
  function torch(c,x,y,now){c.fillStyle='#2a2420';c.fillRect(x-1,y,2,8);c.fillStyle='#4a3a2a';c.fillRect(x-2.4,y-1,4.8,2);for(let i=0;i<6;i++){const q=(now/160+i/6)%1;c.fillStyle='rgba(255,'+Math.round(200-q*140)+',60,'+(1-q)+')';c.beginPath();c.arc(x+Math.sin(now/80+i)*1.2*q,y-2-q*8,2.4*(1-q)+.6,0,TAU);c.fill()}}
  function objs(now){const z=Z(),t=now/1000,L=[];const dt=Math.min(.05,Math.max(0,(now-(lastT||now))/1000));lastT=now;birdsInit();birdsTick(dt);
-  L.push({y:z.FOUNT.y,fn:()=>fountain(ctx,now)});
+  const X=window.PXL;/* v158: 도트로 */
+  L.push({y:z.FOUNT.y,fn:()=>{if(!X)return fountain(ctx,now);const F=z.FOUNT,[k,tm]=X.fr(now,20/3,32);X.stamp(ctx,'fo'+k,F.x-64,F.y-64,128,110,0,0,o=>fountain(o,tm))}});
   const ppl=[[P.x,P.y]];for(const k in z.S.O){const M=z.S.O[k];if(M.sx!=null)ppl.push([M.sx,M.sy])}
-  z.TREES.forEach(([x,y],i)=>L.push({y,fn:()=>{const T=treeImg(i),sw=Math.sin(t*1.1+i)*.6,hid=ppl.some(([px,py])=>py<y-2&&py>y-80&&Math.abs(px-x)<40);/* 뒤에 사람이 있으면 잎을 비치게 */ctx.save();if(hid)ctx.globalAlpha=.55;ctx.translate(x,y);ctx.transform(1,0,sw*.012,1,0,0);ctx.drawImage(T.cv,-T.ax,-T.ay,T.w,T.h);ctx.restore()}}));
-  for(const [x,y] of z.LAMPS)L.push({y,fn:()=>lamp(ctx,x,y,now)});
-  L.push({y:176,fn:()=>{torch(ctx,446,138,now);torch(ctx,514,138,now)}});
-  for(const b of BIRDS)L.push({y:b.y,fn:()=>drawBird(ctx,b,now)});
+  const cm=z.S.cam,vis=(x,y,m)=>x>cm.x-m&&x<cm.x+W+m&&y>cm.y-m&&y<cm.y+H+m*1.6;/* v156: 보이는 것만 */
+  z.TREES.forEach(([x,y],i)=>vis(x,y,60)&&L.push({y,fn:()=>{const T=treeImg(i),sw=Math.sin(t*1.1+i)*.6,hid=ppl.some(([px,py])=>py<y-2&&py>y-80&&Math.abs(px-x)<40);/* 뒤에 사람이 있으면 잎을 비치게 */ctx.save();if(hid)ctx.globalAlpha=.55;ctx.translate(x,y);ctx.transform(1,0,sw*.012,1,0,0);const im=X?X.img(T):T.cv;ctx.imageSmoothingEnabled=!X;ctx.drawImage(im,-T.ax,-T.ay,T.w,T.h);ctx.restore()}}));
+  for(const [x,y] of z.LAMPS)if(vis(x,y,20))L.push({y,fn:()=>{if(!X)return lamp(ctx,x,y,now);const f=.85+.15*Math.sin(now/90+x)*Math.sin(now/37+y),q=Math.max(0,Math.min(3,Math.round((f-.7)/.1)));X.stamp(ctx,'lp'+q,-8,-58,16,62,x,y,o=>lamp(o,0,0,0,.7+q*.1))}});
+  L.push({y:176,fn:()=>{if(!X){torch(ctx,446,138,now);torch(ctx,514,138,now);return}const [k,tm]=X.fr(now,.16,6);for(const tx of [446,514])X.stamp(ctx,'to'+k,-5,-13,10,22,tx,138,o=>torch(o,0,0,tm))}});
+  for(const b of BIRDS)if(vis(b.x,b.y,30))L.push({y:b.y,fn:()=>{if(!X)return drawBird(ctx,b,now);const wk=b.st==='walk',TP=Math.PI*2;
+   const pq=wk&&b.peck>0?Math.floor(((now/90)%Math.PI)/Math.PI*3):0,aq=wk?0:Math.floor((((now/45+b.x)%TP)+TP)%TP/TP*4);
+   ctx.fillStyle='rgba(0,0,0,'+(b.h>0?Math.max(.05,.3-b.h/300):.3)+')';ctx.fillRect(Math.round(b.x-5),Math.round(b.y),10,2);
+   X.stamp(ctx,'bd'+(wk?'w':'f')+(b.fx<0?1:0)+pq+aq+(wk&&b.peck>0?1:0),-12,-15,24,17,b.x,b.y-b.h,o=>drawBird(o,{x:0,y:0,h:0,st:wk?'walk':'fly',fx:b.fx,peck:wk&&b.peck>0?1:0,col:0},wk?(pq+.5)/3*Math.PI*90:(aq+.5)/4*TP*45))}});
   return L}
  /* 떨어지는 잎 */const LEAF=[];
  function over(c,now,cam){const z=Z();
   /* 저녁 빛: 살짝 푸르스름하게 어둡게(곱하기) */c.save();c.globalCompositeOperation='multiply';c.fillStyle='#cfc6dc';c.fillRect(cam.x,cam.y,W,H);c.restore();
-  /* 빛 번짐 */c.save();c.globalCompositeOperation='lighter';for(const [x,y] of z.LAMPS){const f=.85+.15*Math.sin(now/90+x)*Math.sin(now/37+y),g=c.createRadialGradient(x,y-42,0,x,y-42,26);g.addColorStop(0,'rgba(255,220,150,'+(.55*f)+')');g.addColorStop(1,'rgba(255,170,90,0)');c.fillStyle=g;c.fillRect(x-26,y-68,52,52)}
+  /* 빛 번짐 */c.save();c.globalCompositeOperation='lighter';for(const [x,y] of z.LAMPS){if(x<cam.x-30||x>cam.x+W+30||y<cam.y-20||y>cam.y+H+70)continue;const f=.85+.15*Math.sin(now/90+x)*Math.sin(now/37+y),g=c.createRadialGradient(x,y-42,0,x,y-42,26);g.addColorStop(0,'rgba(255,220,150,'+(.55*f)+')');g.addColorStop(1,'rgba(255,170,90,0)');c.fillStyle=g;c.fillRect(x-26,y-68,52,52)}
   for(const tx of [446,514]){const g=c.createRadialGradient(tx,132,0,tx,132,30);g.addColorStop(0,'rgba(255,160,70,.45)');g.addColorStop(1,'rgba(255,140,60,0)');c.fillStyle=g;c.fillRect(tx-30,102,60,60)}
   for(const [wx,wy] of [[442,40],[518,40],[442,86],[518,86]]){const g=c.createRadialGradient(wx,wy,0,wx,wy,22);g.addColorStop(0,'rgba(255,200,120,.3)');g.addColorStop(1,'rgba(255,200,120,0)');c.fillStyle=g;c.fillRect(wx-22,wy-22,44,44)}c.restore();
   /* 잎 */if(LEAF.length<14&&Math.random()<.03){const [tx,ty]=z.TREES[Math.floor(Math.random()*z.TREES.length)];LEAF.push({x:tx+rr(-20,20),y:ty-40,vx:rr(4,14),vy:rr(8,14),r:rr(0,6),h:hsl(rr(20,45),70,rr(35,50)),t:now})}
   for(let i=LEAF.length-1;i>=0;i--){const l=LEAF[i],a=(now-l.t)/1000;if(a>6){LEAF.splice(i,1);continue}const x=l.x+l.vx*a+Math.sin(a*2+l.r)*6,y=l.y+l.vy*a;c.save();c.globalAlpha=Math.min(1,(6-a)/1.5);c.translate(x,y);c.rotate(a*2+l.r);c.fillStyle=l.h;c.beginPath();c.ellipse(0,0,1.8,.9,0,0,TAU);c.fill();c.restore()}
   /* 가장자리 어둡게 */const g=c.createRadialGradient(cam.x+W/2,cam.y+H/2,H*.45,cam.x+W/2,cam.y+H/2,W*.62);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(5,5,20,.42)');c.fillStyle=g;c.fillRect(cam.x,cam.y,W,H)}
- window.PLZART={build,under,objs,over,R};
+ window.PLZART={build,under,objs,over,R,kit:{stones,cobble,bed,bench,arch,treeImg,lamp,torch,hsl,rr,rnd}};
 }catch(e){console.error('v115 plaza art',e)}})();
