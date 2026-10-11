@@ -24530,13 +24530,14 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    row('✨','조명 쇼','로비 무대 조명 바꾸기','lt',H.classList.contains('lt98'))+
    ($('gmRank')?row('🏆','랭킹','점수 · 레벨 · 탑 · 골드 · 결투','rk'):'')+
    ($('rplBtn')?row('🎬','영상관','보스전 다시 보기','rpl'):'')+
-   (window.MR163?row('✉','우편함','보상 · 공지 받기','mail')+row('🚫','차단 목록','차단한 사람 보기 · 풀기','blk'):'');/* v163 */
+   (window.MR163?row('✉','우편함','보상 · 공지 받기','mail')+row('🚫','차단 목록','차단한 사람 보기 · 풀기','blk'):'')+/* v163 */
+   (window.BE168?row('🛠','보스 만들기','나만의 보스 · 인기 보스 도전','be'):'')+(window.TA165?row('⏱','타임어택','보스 10명 연속 · 기록 순위','ta'):'');/* v169 */
   panel.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const v=b.dataset.df;try{gmSfx('ok')}catch(e){}try{$('diffSel').value=v;updDiff()}catch(e){}try{gmHud()}catch(e){}draw()});
   panel.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
    if(a==='snd'){click('gmSound');setTimeout(draw,30);return}
    if(a==='fs'){click('mbFs');setTimeout(draw,300);return}
    if(a==='lt'){const on=!H.classList.contains('lt98');H.classList.toggle('lt98',on);ls('bb-lt98',on?'1':'0');try{gmSfx('ok')}catch(e){}draw();return}
-   close();if(a==='rk')click('gmRank');else if(a==='rpl')click('rplBtn');else if(a==='mail')MR163.open();else if(a==='blk')MR163.blockList()})}
+   close();if(a==='rk')click('gmRank');else if(a==='rpl')click('rplBtn');else if(a==='mail')MR163.open();else if(a==='blk')MR163.blockList();else if(a==='be')BE168.open('hot');else if(a==='ta')TA165.open()})}
  addEventListener('resize',()=>{if(!panel.hidden)place()});
  /* 메뉴 화면을 바꾸면 닫기 */
  {const f=gmShow;gmShow=function(){close();return f.apply(this,arguments)}}
@@ -32491,7 +32492,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   win.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{W.c=+b.dataset.c;load()});
   const s=win.querySelector('.st');if(s)s.onclick=()=>{if(W.diff!==curDiff()){try{$('diffSel').value=W.diff;updDiff()}catch(e){}}startRun(W.c)}}
  /* 보스 러시 화면에 단추 */
- setInterval(()=>{try{const s=$('gmRush');if(!s||$('ta165Open'))return;const b=document.createElement('button');b.id='ta165Open';b.className='gmBtn';b.textContent='⏱ 타임어택';b.onclick=e=>{e.stopPropagation();openWin()};s.appendChild(b)}catch(e){}},700);
+ /* 보스 러시 화면 단추는 v169부터 168 파일의 #rx168 줄에 함께 있음 */
  const st=document.createElement('style');st.textContent=`
  #ta165,#tam165{position:fixed;inset:0;z-index:9430;display:flex;align-items:center;justify-content:center;background:#000b;font-family:inherit;color:#eef0ff}#ta165[hidden],#tam165[hidden]{display:none}
  #ta165 .tp,#tam165 .mc{width:min(860px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow-y:auto;border-radius:8px;background:linear-gradient(180deg,#1a1430,#0c0a1a);box-shadow:0 0 0 3px #000,0 0 0 5px #ffb04a,0 0 0 7px #000,0 20px 60px #000d}
@@ -33083,7 +33084,11 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* 우편 도전장의 「도전하기」 */
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.cb168');if(!b)return;e.stopPropagation();e.preventDefault();try{$('mail163').hidden=true}catch(_){}openPanel('hot');byCode(b.dataset.cb)},true);
  /* 보스 러시 창에 단추 */
- setInterval(()=>{try{const s=$('gmRush');if(!s||$('be168Open'))return;const b=document.createElement('button');b.id='be168Open';b.className='gmBtn';b.textContent='🛠 보스 만들기';b.onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}openPanel('hot')};s.appendChild(b)}catch(e){}},700);
+ /* v169: 보스 러시 화면(새 디자인)은 덧붙인 단추가 가려져서 안 보였음 → 「전투 시작」 줄 바로 아래에 한 줄(타임어택 · 보스 만들기) */
+ setInterval(()=>{try{const f=$('gmFight');if(!f||!f.parentNode)return;const row0=f.parentNode;let r=$('rx168');if(r&&r.previousElementSibling===row0)return;if(r)r.remove();
+  r=document.createElement('div');r.id='rx168';r.innerHTML='<button class="gmBtn bm" type="button"><i>🛠</i><span><b>보스 만들기</b><small>나만의 보스 · 인기 보스 도전</small></span></button>'+(window.TA165?'<button class="gmBtn ta" type="button"><i>⏱</i><span><b>타임어택</b><small>10명 연속 · 기록 순위</small></span></button>':'');
+  r.querySelector('.bm').onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}openPanel('hot')};const t=r.querySelector('.ta');if(t)t.onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}TA165.open()};
+  row0.after(r)}catch(e){}},500);
 
  const st=document.createElement('style');st.textContent=`
  #be168{position:fixed;inset:0;z-index:9300;display:grid;place-items:center;background:#000b;backdrop-filter:blur(3px);color:#eef0f6;font-family:inherit}#be168[hidden]{display:none}
@@ -33131,6 +33136,10 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  #be168 .tip{font-size:11px;color:#a8988a}#be168 .msg{min-height:16px;margin-top:6px;text-align:center;font-size:12px;color:#ffe79a}
  .be168r{display:flex;flex-direction:column;align-items:center;gap:6px}.be168r canvas{width:140px;height:110px;image-rendering:pixelated}.be168r>b{font-size:20px;color:#ffe0b0}.be168r>small{opacity:.75}
  .be168r .rs{display:flex;gap:10px;font-size:12px}.be168r .rs b{color:#fff}.be168r .g{padding:6px 12px;border-radius:10px;background:#2a2410;color:#ffe79a;font-weight:900}.be168r .g.l{background:#2a0e14;color:#ff9aaa}.be168r .g.rc{background:#2a1a3a;color:#e0c0ff}.be168r .st{font-size:11.5px;opacity:.8}
+ #rx168{display:flex;gap:8px;margin:8px 0 2px;pointer-events:auto}#rx168 button{flex:1;display:flex;align-items:center;gap:8px;padding:8px 10px!important;border-radius:12px!important;text-align:left;cursor:pointer;min-width:0}
+ #rx168 i{font-style:normal;font-size:20px}#rx168 span{display:flex;flex-direction:column;min-width:0}#rx168 b{font-size:14px;font-weight:900;white-space:nowrap}#rx168 small{font-size:10.5px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #rx168 .bm{background:linear-gradient(180deg,#ffd08a,#ff7a2a)!important;color:#2a0e04!important;border:0!important;box-shadow:0 0 0 2px #000,0 0 14px #ff8a3a55!important}
+ #rx168 .ta{background:linear-gradient(180deg,#c8f4ff,#5ab8e8)!important;color:#04121a!important;border:0!important;box-shadow:0 0 0 2px #000!important}
  #mail163 .cb168{display:inline-block;margin:4px 0;font:inherit;font-weight:900;font-size:12px;padding:6px 10px;border-radius:9px;border:0;cursor:pointer;background:linear-gradient(180deg,#ffd08a,#ff7a2a);color:#2a0e04}
  @media (max-width:700px){#be168 .ed,#be168 .cv{grid-template-columns:1fr}#be168 .ed{overflow:auto}#be168 .op{overflow:visible}#be168 .pv canvas.big{max-height:150px;object-fit:contain}#be168 .ls{grid-template-columns:1fr}}
  html.lpL #be168 .ed{grid-template-columns:200px 1fr}html.lpL #be168 .cv{grid-template-columns:200px 1fr}html.lpL #be168 .pn{padding:8px 10px}`;document.head.appendChild(st);

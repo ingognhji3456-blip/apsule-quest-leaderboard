@@ -136,7 +136,11 @@
  /* 우편 도전장의 「도전하기」 */
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.cb168');if(!b)return;e.stopPropagation();e.preventDefault();try{$('mail163').hidden=true}catch(_){}openPanel('hot');byCode(b.dataset.cb)},true);
  /* 보스 러시 창에 단추 */
- setInterval(()=>{try{const s=$('gmRush');if(!s||$('be168Open'))return;const b=document.createElement('button');b.id='be168Open';b.className='gmBtn';b.textContent='🛠 보스 만들기';b.onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}openPanel('hot')};s.appendChild(b)}catch(e){}},700);
+ /* v169: 보스 러시 화면(새 디자인)은 덧붙인 단추가 가려져서 안 보였음 → 「전투 시작」 줄 바로 아래에 한 줄(타임어택 · 보스 만들기) */
+ setInterval(()=>{try{const f=$('gmFight');if(!f||!f.parentNode)return;const row0=f.parentNode;let r=$('rx168');if(r&&r.previousElementSibling===row0)return;if(r)r.remove();
+  r=document.createElement('div');r.id='rx168';r.innerHTML='<button class="gmBtn bm" type="button"><i>🛠</i><span><b>보스 만들기</b><small>나만의 보스 · 인기 보스 도전</small></span></button>'+(window.TA165?'<button class="gmBtn ta" type="button"><i>⏱</i><span><b>타임어택</b><small>10명 연속 · 기록 순위</small></span></button>':'');
+  r.querySelector('.bm').onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}openPanel('hot')};const t=r.querySelector('.ta');if(t)t.onclick=e=>{e.stopPropagation();try{gmSfx('ok')}catch(_){}TA165.open()};
+  row0.after(r)}catch(e){}},500);
 
  const st=document.createElement('style');st.textContent=`
  #be168{position:fixed;inset:0;z-index:9300;display:grid;place-items:center;background:#000b;backdrop-filter:blur(3px);color:#eef0f6;font-family:inherit}#be168[hidden]{display:none}
@@ -184,6 +188,10 @@
  #be168 .tip{font-size:11px;color:#a8988a}#be168 .msg{min-height:16px;margin-top:6px;text-align:center;font-size:12px;color:#ffe79a}
  .be168r{display:flex;flex-direction:column;align-items:center;gap:6px}.be168r canvas{width:140px;height:110px;image-rendering:pixelated}.be168r>b{font-size:20px;color:#ffe0b0}.be168r>small{opacity:.75}
  .be168r .rs{display:flex;gap:10px;font-size:12px}.be168r .rs b{color:#fff}.be168r .g{padding:6px 12px;border-radius:10px;background:#2a2410;color:#ffe79a;font-weight:900}.be168r .g.l{background:#2a0e14;color:#ff9aaa}.be168r .g.rc{background:#2a1a3a;color:#e0c0ff}.be168r .st{font-size:11.5px;opacity:.8}
+ #rx168{display:flex;gap:8px;margin:8px 0 2px;pointer-events:auto}#rx168 button{flex:1;display:flex;align-items:center;gap:8px;padding:8px 10px!important;border-radius:12px!important;text-align:left;cursor:pointer;min-width:0}
+ #rx168 i{font-style:normal;font-size:20px}#rx168 span{display:flex;flex-direction:column;min-width:0}#rx168 b{font-size:14px;font-weight:900;white-space:nowrap}#rx168 small{font-size:10.5px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #rx168 .bm{background:linear-gradient(180deg,#ffd08a,#ff7a2a)!important;color:#2a0e04!important;border:0!important;box-shadow:0 0 0 2px #000,0 0 14px #ff8a3a55!important}
+ #rx168 .ta{background:linear-gradient(180deg,#c8f4ff,#5ab8e8)!important;color:#04121a!important;border:0!important;box-shadow:0 0 0 2px #000!important}
  #mail163 .cb168{display:inline-block;margin:4px 0;font:inherit;font-weight:900;font-size:12px;padding:6px 10px;border-radius:9px;border:0;cursor:pointer;background:linear-gradient(180deg,#ffd08a,#ff7a2a);color:#2a0e04}
  @media (max-width:700px){#be168 .ed,#be168 .cv{grid-template-columns:1fr}#be168 .ed{overflow:auto}#be168 .op{overflow:visible}#be168 .pv canvas.big{max-height:150px;object-fit:contain}#be168 .ls{grid-template-columns:1fr}}
  html.lpL #be168 .ed{grid-template-columns:200px 1fr}html.lpL #be168 .cv{grid-template-columns:200px 1fr}html.lpL #be168 .pn{padding:8px 10px}`;document.head.appendChild(st);
