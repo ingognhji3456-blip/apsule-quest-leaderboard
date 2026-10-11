@@ -345,6 +345,24 @@ def init_db():
             n           INTEGER NOT NULL DEFAULT 0
         )
     ''')
+    # v170: 경쟁 · 기록 — 주간 리그 · 노데미지 전당 · 업적 점수 · 스피드런 · 예측 · 명예 · 시즌 보상
+    for ddl in (
+        """CREATE TABLE IF NOT EXISTS league_scores (week TEXT NOT NULL, user_id TEXT NOT NULL, name TEXT NOT NULL, pts BIGINT NOT NULL,
+           score BIGINT NOT NULL, ms BIGINT NOT NULL, hits INTEGER NOT NULL, diff TEXT NOT NULL, ch INTEGER NOT NULL DEFAULT 0,
+           ghost TEXT NOT NULL DEFAULT '', created_at DOUBLE PRECISION NOT NULL, PRIMARY KEY (week, user_id))""",
+        """CREATE TABLE IF NOT EXISTS league_month (month TEXT NOT NULL, user_id TEXT NOT NULL, name TEXT NOT NULL, pts BIGINT NOT NULL,
+           PRIMARY KEY (month, user_id))""",
+        """CREATE TABLE IF NOT EXISTS league_awards (month TEXT NOT NULL, user_id TEXT NOT NULL, rank INTEGER NOT NULL, PRIMARY KEY (month, user_id))""",
+        """CREATE TABLE IF NOT EXISTS league_done (month TEXT PRIMARY KEY, at DOUBLE PRECISION NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS nohit (user_id TEXT NOT NULL, bkey TEXT NOT NULL, diff TEXT NOT NULL, boss TEXT NOT NULL, name TEXT NOT NULL,
+           ms BIGINT NOT NULL, created_at DOUBLE PRECISION NOT NULL, PRIMARY KEY (user_id, bkey, diff))""",
+        """CREATE TABLE IF NOT EXISTS ach_points (user_id TEXT PRIMARY KEY, name TEXT NOT NULL, pts INTEGER NOT NULL, cnt INTEGER NOT NULL, updated_at DOUBLE PRECISION NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS speedrun (user_id TEXT NOT NULL, cat TEXT NOT NULL, name TEXT NOT NULL, ms BIGINT NOT NULL, diff TEXT NOT NULL,
+           created_at DOUBLE PRECISION NOT NULL, PRIMARY KEY (user_id, cat))""",
+        """CREATE TABLE IF NOT EXISTS predict (week TEXT NOT NULL, user_id TEXT NOT NULL, pick TEXT NOT NULL, done INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (week, user_id))""",
+        """CREATE TABLE IF NOT EXISTS honor (user_id TEXT PRIMARY KEY, pts INTEGER NOT NULL, got TEXT NOT NULL DEFAULT '', updated_at DOUBLE PRECISION NOT NULL)""",
+    ):
+        db.execute(ddl)
     # v102: 랭킹에 보여 줄 장착 모습(캐릭터 · 무기 · 펫 · 스킨). 계정마다 한 줄, JSON 글
     db.execute('''
         CREATE TABLE IF NOT EXISTS player_look (
@@ -1682,6 +1700,7 @@ def duo_leave():
                 other = next((p['uid'] for p in r['players'] if p['uid'] != user['user_id']), None)
                 if other:
                     _pvp_settle(r, other, user['user_id'], '상대 기권')
+                    _honor_add_new([user['user_id']], -5)  # v170 빠른 대전 도중 나감
             gone = next((p for p in r['players'] if p['uid'] == user['user_id']), None)
             r['players'] = [p for p in r['players'] if p['uid'] != user['user_id']]
             r['seq'] += 1
@@ -1865,6 +1884,10 @@ def _pvp_settle(r, winner, loser, note):
                 db.execute('INSERT INTO pvp_stats (user_id, wins, losses, gold_won, updated_at) VALUES (?, ?, ?, ?, ?)',
                            (uid, w, 1 - w, delta if w else 0, now))
         _arena_settle(db, r, winner)  # v166 관객 내기 정산(우편)
+        if r.get('ranked'):  # v170 명예: 끝까지 한 판 +2
+            _honor_add(db, winner, 2)
+            if note != '상대 기권':
+                _honor_add(db, loser, 2)
         db.commit()
     finally:
         db.close()
@@ -2242,6 +2265,7 @@ def _team_settle(r, wt, note):
                 db.execute('INSERT INTO pvp_ledger (id, user_id, delta, note, created_at) VALUES (?, ?, ?, ?, ?)',
                            (secrets.token_hex(8), uid, gold, '팀 결투 ' + ('승리' if w else '참가') + (' · ' + note if note else ''), now))
             r['settled']['gold'][uid] = gold
+            _honor_add(db, uid, 2 if uid in here else -5)  # v170 명예: 끝까지 +2 · 도중에 나감 -5
         db.commit()
     finally:
         db.close()
@@ -2965,6 +2989,7 @@ def report_user():
         return _bad('오늘은 신고를 너무 많이 했어요', 429)
     db.execute('INSERT INTO user_reports (id, reporter_id, target_id, reason, place, detail, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
                ('r' + secrets.token_hex(8), uid, tid, reason, place, detail, now))
+    _honor_add(db, tid, -3)  # v170 신고받으면 명예 -3
     n = db.execute("SELECT COUNT(DISTINCT reporter_id) AS c FROM user_reports WHERE target_id = ? AND created_at > ? AND reason IN ('abuse', 'spam')",
                    (tid, now - 86400)).fetchone()['c']
     if n >= 5 and not _muted(db, tid):
@@ -3934,6 +3959,349 @@ def cboss_challenge():
               sender=user['username'], mid=key)
     db.commit()
     return jsonify(ok=True, to=to_name)
+
+
+# ---------------- v170 경쟁 · 기록 ----------------
+# 주간 리그: 주(ISO 주, UTC)마다 1·2장 보스 하나를 모두가 같은 보스로. 이기면 점수 = 보스전 점수 × 난이도 + 노데미지 2000 + 시간 보너스.
+# 내 주간 최고가 오르면 그 차이만큼 이달 점수(league_month)에 더함 → 지난달 TOP 10은 챔피언 오라(league_awards) + 우편.
+# 고스트: 최고 기록 때의 움직임(0.1초마다 x,y + 공격)을 함께 저장, 다른 사람이 같은 보스에서 함께 달릴 수 있음.
+LEAGUE_DM = {'easy': 0.6, 'normal': 1.0, 'hard': 1.4, 'extreme': 1.8}
+LEAGUE_MAX_SCORE, LEAGUE_GHOST_MAX = 3_000_000, 60000
+HONOR_STEPS = [(20, 1000, 0, '좋은 매너'), (50, 3000, 10, '훌륭한 매너'), (100, 6000, 30, '명예로운 기사'), (200, 12000, 60, '전설의 신사')]
+
+
+def _week(t=None):
+    return time.strftime('%G-W%V', time.gmtime(time.time() if t is None else t))
+
+
+def _week_boss(week):
+    return int(hashlib.sha256(('league|' + week).encode()).hexdigest(), 16) % 20
+
+
+def _week_ends(t=None):
+    t = time.time() if t is None else t
+    g = time.gmtime(t)
+    start_today = t - (g.tm_hour * 3600 + g.tm_min * 60 + g.tm_sec)
+    return start_today + (7 - g.tm_wday) * 86400  # 다음 월요일 0시(UTC)
+
+
+def _league_month(week):
+    y, w = week.split('-W')
+    t = time.mktime(time.strptime(y + ' ' + w + ' 1', '%G %V %u'))
+    return time.strftime('%Y-%m', time.gmtime(t + 43200))
+
+
+def _honor_add(db, uid, d):
+    """명예 점수 더하기(0 아래로는 안 감) + 단계 보상(우편, 한 번씩). 커밋은 부르는 쪽"""
+    if not uid or not d:
+        return
+    row = db.execute('SELECT pts, got FROM honor WHERE user_id=?', (uid,)).fetchone()
+    now = time.time()
+    pts = max(0, (row['pts'] if row else 0) + d)
+    got = set((row['got'] if row else '').split(',')) - {''}
+    for need, gold, dia, nm in HONOR_STEPS:
+        if pts >= need and str(need) not in got:
+            got.add(str(need))
+            mail_send(db, uid, '🎖 명예 등급 · ' + nm, '매너 좋게 끝까지 함께해 준 덕분에 「%s」 등급이 되었어요! 고마워요.' % nm, gold=gold, dia=dia, sender='운영팀')
+    if row:
+        db.execute('UPDATE honor SET pts=?, got=?, updated_at=? WHERE user_id=?', (pts, ','.join(sorted(got)), now, uid))
+    else:
+        db.execute('INSERT INTO honor (user_id, pts, got, updated_at) VALUES (?, ?, ?, ?)', (uid, pts, ','.join(sorted(got)), now))
+
+
+def _honor_add_new(uids, d):
+    db = DB()
+    try:
+        for u in uids:
+            _honor_add(db, u, d)
+        db.commit()
+    finally:
+        db.close()
+
+
+def _league_finalize(db):
+    """지난달 리그 TOP 10에 챔피언 오라 + 우편(한 번만)"""
+    last = time.strftime('%Y-%m', time.gmtime(time.time() - 86400 * (time.gmtime().tm_mday)))
+    if db.execute('SELECT 1 FROM league_done WHERE month=?', (last,)).fetchone():
+        return
+    db.execute('INSERT INTO league_done (month, at) VALUES (?, ?)', (last, time.time()))
+    rows = db.execute('SELECT user_id, name, pts FROM league_month WHERE month=? ORDER BY pts DESC LIMIT 10', (last,)).fetchall()
+    for i, r in enumerate(rows):
+        db.execute('INSERT INTO league_awards (month, user_id, rank) VALUES (?, ?, ?)', (last, r['user_id'], i + 1))
+        gold, dia = (20000, 100) if i == 0 else (10000, 50) if i < 3 else (5000, 20)
+        mail_send(db, r['user_id'], '👑 %s 리그 %d위!' % (last, i + 1), '이달 주간 리그 TOP 10 보상이에요. 「챔피언 오라」가 생겼어요 — 기록 센터에서 켤 수 있어요.',
+                  gold=gold, dia=dia, sender='운영팀')
+    db.commit()
+
+
+def _league_rows(db, week, n=50):
+    return db.execute('SELECT user_id, name, pts, score, ms, hits, diff, ch, LENGTH(ghost) AS gl FROM league_scores WHERE week=? ORDER BY pts DESC, ms ASC LIMIT ?',
+                      (week, n)).fetchall()
+
+
+@app.route('/api/league/info', methods=['POST'])
+def league_info():
+    user = _duo_user()
+    db = get_db()
+    uid = user['user_id'] if user else ''
+    wk = _week()
+    try:
+        _league_finalize(db)
+    except Exception:
+        pass
+    rows = _league_rows(db, wk)
+    top = [{'rank': i + 1, 'name': r['name'], 'pts': int(r['pts']), 'score': int(r['score']), 'ms': int(r['ms']), 'hits': r['hits'], 'diff': r['diff'],
+            'ch': r['ch'], 'ghost': bool(r['gl']), 'me': r['user_id'] == uid} for i, r in enumerate(rows)]
+    me = None
+    if uid:
+        r = db.execute('SELECT pts, ms, hits, diff FROM league_scores WHERE week=? AND user_id=?', (wk, uid)).fetchone()
+        if r:
+            better = db.execute('SELECT COUNT(*) AS c FROM league_scores WHERE week=? AND pts>?', (wk, r['pts'])).fetchone()['c']
+            me = {'pts': int(r['pts']), 'ms': int(r['ms']), 'hits': r['hits'], 'diff': r['diff'], 'rank': better + 1}
+    pw = _week(time.time() - 7 * 86400)
+    prev = [{'name': r['name'], 'pts': int(r['pts'])} for r in _league_rows(db, pw, 3)]
+    # 예측: 지난주 것 결과 확인(맞으면 보상 우편 한 번)
+    pred = {'open': _week_ends() - time.time() > 86400, 'pick': None, 'last': None}
+    if uid:
+        p = db.execute('SELECT pick FROM predict WHERE week=? AND user_id=?', (wk, uid)).fetchone()
+        pred['pick'] = p['pick'] if p else None
+        lp = db.execute('SELECT pick, done FROM predict WHERE week=? AND user_id=?', (pw, uid)).fetchone()
+        if lp:
+            win = prev[0]['name'] if prev else None
+            ok = bool(win) and lp['pick'].lower() == win.lower()
+            pred['last'] = {'week': pw, 'pick': lp['pick'], 'winner': win, 'hit': ok}
+            if not lp['done']:
+                db.execute('UPDATE predict SET done=1 WHERE week=? AND user_id=?', (pw, uid))
+                if ok:
+                    mail_send(db, uid, '🔮 예측 성공!', '지난주 리그 1등(%s)을 맞혔어요!' % win, gold=2000, dia=10, sender='운영팀')
+                db.commit()
+    month = _league_month(wk)
+    mrow = db.execute('SELECT pts FROM league_month WHERE month=? AND user_id=?', (month, uid)).fetchone() if uid else None
+    mtop = [{'name': r['name'], 'pts': int(r['pts'])} for r in db.execute('SELECT name, pts FROM league_month WHERE month=? ORDER BY pts DESC LIMIT 10', (month,)).fetchall()]
+    aw = [{'month': r['month'], 'rank': r['rank']} for r in db.execute('SELECT month, rank FROM league_awards WHERE user_id=? ORDER BY month DESC', (uid,)).fetchall()] if uid else []
+    return jsonify(ok=True, week=wk, boss=_week_boss(wk), ends=_week_ends(), top=top, me=me, prev={'week': pw, 'top': prev}, predict=pred,
+                   month=month, month_pts=int(mrow['pts']) if mrow else 0, month_top=mtop, awards=aw)
+
+
+@app.route('/api/league/submit', methods=['POST'])
+def league_submit():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    wk = _week()
+    if clamp_text(b.get('week'), 12) != wk:
+        return _bad('리그 주가 바뀌었어요. 새 보스로 다시 도전해 주세요', 409)
+    score = clamp_int(b.get('score'), 0, LEAGUE_MAX_SCORE, 0)
+    ms = clamp_int(b.get('ms'), 0, 3_600_000, 0)
+    hits = clamp_int(b.get('hits'), 0, 9999, 0)
+    diff = b.get('diff') if b.get('diff') in LEAGUE_DM else 'normal'
+    if ms < 8000:
+        return _bad('기록이 이상해요', 400)
+    ghost = clamp_text(b.get('ghost'), LEAGUE_GHOST_MAX)
+    if ghost and not re.match(r'^[0-9a-z,;.\-]*$', ghost):
+        ghost = ''
+    pts = int(score * LEAGUE_DM[diff]) + (2000 if hits == 0 else 0) + max(0, 240000 - ms) // 100
+    db = get_db()
+    uid = user['user_id']
+    now = time.time()
+    old = db.execute('SELECT pts FROM league_scores WHERE week=? AND user_id=?', (wk, uid)).fetchone()
+    best = False
+    if not old or pts > old['pts']:
+        best = True
+        ch = clamp_int(b.get('ch'), 0, 999, 0)
+        if old:
+            db.execute('UPDATE league_scores SET name=?, pts=?, score=?, ms=?, hits=?, diff=?, ch=?, ghost=?, created_at=? WHERE week=? AND user_id=?',
+                       (user['username'], pts, score, ms, hits, diff, ch, ghost, now, wk, uid))
+        else:
+            db.execute('INSERT INTO league_scores (week, user_id, name, pts, score, ms, hits, diff, ch, ghost, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                       (wk, uid, user['username'], pts, score, ms, hits, diff, ch, ghost, now))
+        month = _league_month(wk)
+        add = pts - (old['pts'] if old else 0)
+        m = db.execute('SELECT pts FROM league_month WHERE month=? AND user_id=?', (month, uid)).fetchone()
+        if m:
+            db.execute('UPDATE league_month SET pts=pts+?, name=? WHERE month=? AND user_id=?', (add, user['username'], month, uid))
+        else:
+            db.execute('INSERT INTO league_month (month, user_id, name, pts) VALUES (?, ?, ?, ?)', (month, uid, user['username'], add))
+    db.commit()
+    r = db.execute('SELECT pts FROM league_scores WHERE week=? AND user_id=?', (wk, uid)).fetchone()
+    rank = db.execute('SELECT COUNT(*) AS c FROM league_scores WHERE week=? AND pts>?', (wk, r['pts'])).fetchone()['c'] + 1
+    return jsonify(ok=True, pts=pts, best=best, my_best=int(r['pts']), rank=rank)
+
+
+@app.route('/api/league/ghost', methods=['POST'])
+def league_ghost():
+    b = request.get_json(silent=True) or {}
+    db = get_db()
+    wk = clamp_text(b.get('week'), 12) or _week()
+    name = clamp_text(b.get('name'), 40).strip().lower()
+    q = 'SELECT name, pts, ms, ch, ghost, diff FROM league_scores WHERE week=? AND ghost != \'\' '
+    row = (db.execute(q + 'AND LOWER(name)=?', (wk, name)).fetchone() if name else
+           db.execute(q + 'ORDER BY pts DESC LIMIT 1', (wk,)).fetchone())
+    if not row:
+        return _bad('고스트 기록이 없어요', 404)
+    return jsonify(ok=True, name=row['name'], pts=int(row['pts']), ms=int(row['ms']), ch=row['ch'], diff=row['diff'], ghost=row['ghost'], week=wk, boss=_week_boss(wk))
+
+
+@app.route('/api/predict', methods=['POST'])
+def predict_set():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    pick = clamp_text((request.get_json(silent=True) or {}).get('pick'), 40).strip()
+    if not pick:
+        return _bad('누구를 고를지 정해 주세요', 400)
+    if _week_ends() - time.time() < 86400:
+        return _bad('마지막 날에는 예측을 바꿀 수 없어요', 409)
+    db = get_db()
+    wk = _week()
+    uid = user['user_id']
+    if db.execute('SELECT 1 FROM predict WHERE week=? AND user_id=?', (wk, uid)).fetchone():
+        db.execute('UPDATE predict SET pick=? WHERE week=? AND user_id=?', (pick, wk, uid))
+    else:
+        db.execute('INSERT INTO predict (week, user_id, pick) VALUES (?, ?, ?)', (wk, uid, pick))
+    db.commit()
+    return jsonify(ok=True, pick=pick)
+
+
+@app.route('/api/nohit/submit', methods=['POST'])
+def nohit_submit():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    key = clamp_text(b.get('key'), 24)
+    boss = clamp_text(b.get('boss'), 40)
+    diff = b.get('diff') if b.get('diff') in LEAGUE_DM else 'normal'
+    ms = clamp_int(b.get('ms'), 0, 3_600_000, 0)
+    if not key or not boss or ms < 8000:
+        return _bad('기록이 이상해요', 400)
+    db = get_db()
+    uid = user['user_id']
+    old = db.execute('SELECT ms FROM nohit WHERE user_id=? AND bkey=? AND diff=?', (uid, key, diff)).fetchone()
+    first = not old
+    if not old:
+        db.execute('INSERT INTO nohit (user_id, bkey, diff, boss, name, ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                   (uid, key, diff, boss, user['username'], ms, time.time()))
+    elif ms < old['ms']:
+        db.execute('UPDATE nohit SET ms=?, name=?, created_at=? WHERE user_id=? AND bkey=? AND diff=?', (ms, user['username'], time.time(), uid, key, diff))
+    db.commit()
+    n = db.execute('SELECT COUNT(*) AS c FROM nohit WHERE user_id=?', (uid,)).fetchone()['c']
+    return jsonify(ok=True, first=first, count=n)
+
+
+@app.route('/api/nohit/list', methods=['POST'])
+def nohit_list():
+    db = get_db()
+    recent = [{'name': r['name'], 'boss': r['boss'], 'diff': r['diff'], 'ms': int(r['ms']), 't': r['created_at']}
+              for r in db.execute('SELECT name, boss, diff, ms, created_at FROM nohit ORDER BY created_at DESC LIMIT 40').fetchall()]
+    top = [{'name': r['name'], 'n': r['n'], 'hard': r['h']} for r in db.execute(
+        "SELECT MAX(name) AS name, COUNT(*) AS n, SUM(CASE WHEN diff IN ('hard','extreme') THEN 1 ELSE 0 END) AS h FROM nohit GROUP BY user_id ORDER BY n DESC, h DESC LIMIT 30").fetchall()]
+    return jsonify(ok=True, recent=recent, top=top)
+
+
+@app.route('/api/ach/sync', methods=['POST'])
+def ach_sync():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    pts = clamp_int(b.get('pts'), 0, 30000, 0)
+    cnt = clamp_int(b.get('cnt'), 0, 1000, 0)
+    db = get_db()
+    uid = user['user_id']
+    if db.execute('SELECT 1 FROM ach_points WHERE user_id=?', (uid,)).fetchone():
+        db.execute('UPDATE ach_points SET name=?, pts=?, cnt=?, updated_at=? WHERE user_id=?', (user['username'], pts, cnt, time.time(), uid))
+    else:
+        db.execute('INSERT INTO ach_points (user_id, name, pts, cnt, updated_at) VALUES (?, ?, ?, ?, ?)', (uid, user['username'], pts, cnt, time.time()))
+    db.commit()
+    rank = db.execute('SELECT COUNT(*) AS c FROM ach_points WHERE pts>?', (pts,)).fetchone()['c'] + 1
+    return jsonify(ok=True, rank=rank)
+
+
+@app.route('/api/ach/top', methods=['POST'])
+def ach_top():
+    db = get_db()
+    return jsonify(ok=True, top=[{'name': r['name'], 'pts': r['pts'], 'cnt': r['cnt']}
+                                 for r in db.execute('SELECT name, pts, cnt FROM ach_points ORDER BY pts DESC LIMIT 50').fetchall()])
+
+
+SPEEDRUN_MIN = {'10': 40000, '100': 600000}
+
+
+@app.route('/api/speedrun/submit', methods=['POST'])
+def speedrun_submit():
+    user = _current_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    b = request.get_json(silent=True) or {}
+    cat = b.get('cat') if b.get('cat') in SPEEDRUN_MIN else None
+    ms = clamp_int(b.get('ms'), 0, 360_000_000, 0)
+    diff = b.get('diff') if b.get('diff') in LEAGUE_DM else 'normal'
+    if not cat or ms < SPEEDRUN_MIN[cat]:
+        return _bad('기록이 이상해요', 400)
+    db = get_db()
+    uid = user['user_id']
+    old = db.execute('SELECT ms FROM speedrun WHERE user_id=? AND cat=?', (uid, cat)).fetchone()
+    best = not old or ms < old['ms']
+    if not old:
+        db.execute('INSERT INTO speedrun (user_id, cat, name, ms, diff, created_at) VALUES (?, ?, ?, ?, ?, ?)', (uid, cat, user['username'], ms, diff, time.time()))
+    elif best:
+        db.execute('UPDATE speedrun SET ms=?, name=?, diff=?, created_at=? WHERE user_id=? AND cat=?', (ms, user['username'], diff, time.time(), uid, cat))
+    db.commit()
+    mine = db.execute('SELECT ms FROM speedrun WHERE user_id=? AND cat=?', (uid, cat)).fetchone()['ms']
+    rank = db.execute('SELECT COUNT(*) AS c FROM speedrun WHERE cat=? AND ms<?', (cat, mine)).fetchone()['c'] + 1
+    return jsonify(ok=True, best=best, my_ms=int(mine), rank=rank)
+
+
+@app.route('/api/speedrun/top', methods=['POST'])
+def speedrun_top():
+    cat = (request.get_json(silent=True) or {}).get('cat')
+    cat = cat if cat in SPEEDRUN_MIN else '10'
+    db = get_db()
+    return jsonify(ok=True, cat=cat, top=[{'name': r['name'], 'ms': int(r['ms']), 'diff': r['diff']}
+                                          for r in db.execute('SELECT name, ms, diff FROM speedrun WHERE cat=? ORDER BY ms ASC LIMIT 50', (cat,)).fetchall()])
+
+
+@app.route('/api/honor/me', methods=['POST'])
+def honor_me():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    r = db.execute('SELECT pts FROM honor WHERE user_id=?', (user['user_id'],)).fetchone()
+    pts = r['pts'] if r else 0
+    grade = '새싹'
+    nxt = None
+    for need, gold, dia, nm in HONOR_STEPS:
+        if pts >= need:
+            grade = nm
+        elif nxt is None:
+            nxt = {'need': need, 'name': nm, 'gold': gold, 'dia': dia}
+    top = [{'name': x['username'], 'pts': x['pts']} for x in db.execute(
+        'SELECT u.username, h.pts FROM honor h JOIN users u ON u.user_id=h.user_id ORDER BY h.pts DESC LIMIT 20').fetchall()]
+    return jsonify(ok=True, pts=pts, grade=grade, next=nxt, steps=[{'need': a, 'name': d, 'gold': b2, 'dia': c} for a, b2, c, d in HONOR_STEPS], top=top)
+
+
+@app.route('/api/ranking/friends', methods=['POST'])
+def ranking_friends():
+    """친구 + 나만 모은 순위(레벨 · 탑 · 골드 · 업적 · 이번 주 리그 · 명예)"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    db = get_db()
+    uid = user['user_id']
+    ids = [uid] + [r['friend_id'] for r in db.execute("SELECT friend_id FROM friends WHERE user_id=? AND status='accepted'", (uid,)).fetchall()]
+    q = ','.join('?' * len(ids))
+    wk = _week()
+    rows = db.execute(
+        'SELECT u.user_id, u.username, s.level, s.floor, s.gold, a.pts AS ach, l.pts AS lg, h.pts AS hon FROM users u '
+        'LEFT JOIN player_stats s ON s.user_id=u.user_id LEFT JOIN ach_points a ON a.user_id=u.user_id '
+        'LEFT JOIN league_scores l ON l.user_id=u.user_id AND l.week=? LEFT JOIN honor h ON h.user_id=u.user_id '
+        'WHERE u.user_id IN (%s)' % q, [wk] + ids).fetchall()
+    out = [{'name': r['username'], 'me': r['user_id'] == uid, 'level': r['level'] or 1, 'floor': r['floor'] or 1, 'gold': int(r['gold'] or 0),
+            'ach': r['ach'] or 0, 'league': int(r['lg'] or 0), 'honor': r['hon'] or 0} for r in rows]
+    return jsonify(ok=True, rows=out)
 
 
 if __name__ == '__main__':
