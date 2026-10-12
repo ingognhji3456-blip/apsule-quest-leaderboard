@@ -210,7 +210,7 @@
  function ultTick(){const U=T.U,now=performance.now();
   while(U.k<U.hits.length&&now-U.t0>=U.hits[U.k]){const k=U.k++,last=k===U.hits.length-1,n=U.hits.length,wd=(curWp()||{}).dmg||1;
    for(const m of T.mobs){if(m.hp<=0)continue;const share=(U.type==='p61'?(last?.3:.7/(n-1||1)):1/n),d=Math.max(1,Math.round(m.max*(m.elite?.6:1.25)*share*Math.min(1.6,wd)));
-    m.hp-=d;m.hitT=T.clk;if(T.duo&&T.duo.role==='guest')try{DUO85.hitSent(m,d,0)}catch(e){}addPop(m.x+rnd(-8,8),m.y-14-rnd(0,10),'-'+d,k%2?'#ffffff':U.col);burst(m.x,m.y,8,U.col,150);if(m.hp<=0)kill(m)}
+    {const sh0=m.sh||0;const d2=shieldGate(m,d,true);m.hitT=T.clk;if(d2<=0){if(T.duo&&T.duo.role==='guest')try{DUO85.hitSent(m,0,sh0-(m.sh||0))}catch(e){}continue}m.hp-=d2;if(T.duo&&T.duo.role==='guest')try{DUO85.hitSent(m,d2,sh0-(m.sh||0))}catch(e){}addPop(m.x+rnd(-8,8),m.y-14-rnd(0,10),'-'+d2,k%2?'#ffffff':U.col)}burst(m.x,m.y,8,U.col,150);if(m.hp<=0)kill(m)}
    U.sp.done.push(now);if(U.U){try{U.U.hit(k,last)}catch(e){}}else{try{sfx((U.hitF||400)*(1+k*.05),.18,'square',.06,(U.hitF||400)*.4);sfx(90,.2,'sawtooth',.05,40)}catch(e){}}
    T.shake=Math.max(T.shake||0,last?.8:.35);if(U.type==='scythe'&&last){P.hp=Math.min(P.maxhp,P.hp+15);addPop(P.x,P.y-30,'+15','#7dffa8')}}
   if(now>=U.end)T.U=null}
@@ -715,7 +715,15 @@
    const g=o.createRadialGradient(cv.width/2,cv.height*.8,2,cv.width/2,cv.height*.8,cv.width*.55);g.addColorStop(0,(el?'#ffd166':p.c)+'44');g.addColorStop(1,'rgba(0,0,0,0)');o.fillStyle=g;o.fillRect(0,0,cv.width,cv.height);
    o.fillStyle='#00000066';o.beginPath();o.ellipse(cv.width/2,cv.height*.86,cv.width*.26,cv.height*.06,0,0,6.28);o.fill();if(fr)o.drawImage(fr,0,0,fr.width,fr.height,0,0,cv.width,cv.height)}catch(e){}})}
  /* v81: 다른 파일(CB81)이 잡몹을 때리고 이펙트를 쓰도록 */
- TW.hitMob=(m,d,col,tx)=>{if(!m||m.hp<=0||m.born>0)return;d=Math.max(1,Math.round(d));m.hp-=d;if(T.duo&&T.duo.role==='guest')try{DUO85.hitSent(m,d,0)}catch(e){}m.hitT=T.clk;addPop(m.x+rnd(-5,5),m.y-14-rnd(0,6),(tx||'')+d,col||'#ffffff');if(m.hp<=0)kill(m)};
+ /* v173: 방패 · 보호막 — 기본 공격 말고 다른 피해(스킬 · 궁극기 · 화상/독 · 펫 공격 …)도 방패를 지킨다.
+    맞을 때마다 방패 칸이 1개(궁극기 중엔 3개) 줄고, 방패가 남아 있으면 무기의 꿰뚫기 비율만큼만 몸에 들어간다(궁극기는 최소 50%). */
+ function shieldGate(m,d,ult){if(!(m.sh>0))return d;let pc=0;try{pc=window.CB81?CB81.shieldHit(1).pierce:0}catch(e){}if(ult)pc=Math.max(pc,.5);
+  m.sh=Math.max(0,m.sh-(ult?3:1));const out=Math.round(d*pc);
+  if(m.sh<=0){m.stunT=T.clk+.9;m.shRegen=T.clk+8;addPop(m.x,m.y-30,m.bubble?'보호막 깨짐!':'SHIELD BREAK!','#8dcdf5');burst(m.x,m.y-6,18,'#8dcdf5',150);try{sfx(300,.25,'square',.05,90)}catch(e){}}
+  else if(!out)addPop(m.x+rnd(-4,4),m.y-14,'막힘 '+m.sh+'/'+m.shMax,'#8dcdf5');return out}
+ TW.shieldGate=shieldGate;
+ TW.hitMob=(m,d,col,tx)=>{if(!m||m.hp<=0||m.born>0)return;d=Math.max(1,Math.round(d));const sh0=m.sh||0,ult=!!(T.U&&performance.now()<T.U.end+300);d=shieldGate(m,d,ult);
+  if(d<=0){m.hitT=T.clk;if(T.duo&&T.duo.role==='guest'&&sh0!==(m.sh||0))try{DUO85.hitSent(m,0,sh0-(m.sh||0))}catch(e){}return}m.hp-=d;if(T.duo&&T.duo.role==='guest')try{DUO85.hitSent(m,d,sh0-(m.sh||0))}catch(e){}m.hitT=T.clk;addPop(m.x+rnd(-5,5),m.y-14-rnd(0,6),(tx||'')+d,col||'#ffffff');if(m.hp<=0)kill(m)};
  TW.addPop=addPop;TW.burst=burst;TW.kill=kill;TW.nextFloor=nextFloor;TW.goBoss=goBoss;TW.buildFloor=buildFloor;TW.hurt=(d)=>hurt(d);TW.pool=pool;TW.nearest=nearest;TW.SP=SP;
  TW.T=T;TW.bossStart=bossStart;TW.grant=grant;/* v126 이스터에그(777F)가 씀 */TW.ult=()=>{T.ult=100;ult()};TW.beatGood=beatGood;TW.music=music;TW.sv=sv;TW.bossOf=bossOf;TW.zoneOf=zoneOf;TW.speciesOf=speciesOf;
 }catch(e){console.error('v71 tower',e)}})();
