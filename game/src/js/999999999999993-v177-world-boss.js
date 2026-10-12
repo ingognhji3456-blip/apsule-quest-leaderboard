@@ -108,6 +108,7 @@
  ELN.wb_egg='드래곤의 알';ELN.wb_baby='불꽃 아기 용';ELN.wb_dragon='대형 드래곤';
  const R={on:false,run:null,t0:0,acc:0,my:0,ph:0,saved:null,end:false,kill:false,sending:0,fx:[],last:0};
  function newMob(sp,x,y,extra){const T=TW71.T;const m=Object.assign({sp,elite:false,x,y,vx:0,vy:0,hp:TSP[sp].hp,max:TSP[sp].hp,s:1,born:.8,bornMax:.8,st:'idle',st0:0,cd:1,face:1,hitT:-9,stunT:-9,ang:0,seed:Math.random()*99,id:(T.mid=(T.mid||0)+1)},extra||{});T.mobs.push(m);return m}
+ const ember=()=>({sp:'wisp',elite:false,hp:Math.round(TSP.wisp.hp*TW71.TF(FL)*DM()*.6)});
  const baby=()=>({sp:'wb_baby',elite:false,hp:Math.round(TSP.wb_baby.hp*TW71.TF(FL)*DM())});
  const FPAL=()=>{const z=TW71.ZPAL;return Object.assign({},(z&&z[2])||{},{n:'용의 둥지',a:'#ff9a4a',b:'#3a0a06',c:'#ff6a2a'})};
 
@@ -117,7 +118,7 @@
   m.cd-=dt;if(m.cd<=0){m.cd=3.2+Math.random()*1.2;if(Math.random()<.55){TW71.eTel({k:'c',x:m.x,y:m.y,r:70,dmg:10},1.1);m.pulseT=T.clk+1.1;TW71.addPop(m.x,m.y-86,'★ 열기 폭발!','#ffb060');try{sfx(90,.5,'sine',.05,180)}catch(e){}}
    else{for(let i=0;i<2;i++)T.queue.push({sp:'wisp',elite:false,hp:Math.round(TSP.wisp.hp*TW71.TF(FL)*DM()*.6)});TW71.addPop(m.x,m.y-86,'★ 불씨가 깨어난다!','#ffd070')}}
   return [0,0]}
- function hatchOut(m){const T=TW71.T;R.hatch={x:m.x,y:m.y,t:performance.now()};m.wbc=0;T.queue=[];for(let i=0;i<5;i++)T.queue.push(baby());T.nextSpawn=0;T.cap=6;
+ function hatchOut(m){const T=TW71.T;R.hatch={x:m.x,y:m.y,t:performance.now()};m.wbc=0;T.queue=[];for(let i=0;i<8;i++)T.queue.push(baby());T.nextSpawn=0;T.cap=10;
   T.mobs=T.mobs.filter(q=>q!==m);for(let i=0;i<3;i++)TW71.burst(m.x,m.y-30,14,['#ffd070','#ff6a2a','#fff0c0'][i],180);T.shake=Math.max(T.shake||0,.9);
   try{sfx(60,.9,'sawtooth',.08,30);sfx(880,.4,'triangle',.05,1760)}catch(e){}TW71.addPop(m.x,m.y-90,'알이 깨졌다!','#fff0c0');R.ph=1}
  /* ---------- 아기 드래곤 ---------- */
@@ -280,12 +281,12 @@
   if(!r||r.s!==200||!r.j||!r.j.ok){toast('입장할 수 없어요',(r&&r.j&&(r.j.error||r.j.msg))||'서버에 연결할 수 없어요');pull();return}WS.st=r.j;WS.at=performance.now();begin(r.j.run,r.j.phase)}
  function begin(run,ph){const s=saveData.tw71||(saveData.tw71={});R.saved={floor:s.floor,best:s.best};Object.assign(R,{on:true,fled:0,run,t0:performance.now(),acc:0,my:0,ph,end:false,kill:false,fx:[],hatch:null,last:performance.now(),pz:0,res:null});
   window.__nosr=1;try{PLZ111.leave()}catch(e){}try{TW71.start(1)}catch(e){console.error(e)}setup(ph,true);try{sfx(110,.8,'sawtooth',.06,55)}catch(e){}}
- function setup(ph,fresh){const T=TW71.T;try{TW71.buildFloor(FL)}catch(e){}T.ext=EXT;T.pal=FPAL();T.queue=[];T.mobs=[];T.cap=6;T.nextSpawn=.3;T.total=0;R.ph=ph;
+ function setup(ph,fresh){const T=TW71.T;try{TW71.buildFloor(FL)}catch(e){}T.ext=EXT;T.pal=FPAL();T.queue=[];T.mobs=[];T.cap=10;T.nextSpawn=.3;T.total=0;R.ph=ph;
   if(ph===0)newMob('wb_egg',AX+AW/2,AY+108);else if(ph===1){for(let i=0;i<5;i++)T.queue.push(baby())}else if(ph===2)newMob('wb_dragon',AX+AW/2,AY+142,{arrive:!fresh});
   T.trans={t:0,txt:['드래곤의 알','아기 드래곤 무리','대형 드래곤'][Math.min(2,ph)],sub:'용의 둥지 · 월드 보스 · '+(ph+1)+'단계'};try{$('bvTitle').textContent='BEAT BLADE · 용의 둥지'}catch(e){}}
  function transition(ph){const T=TW71.T;if(ph===1&&R.ph===0){const egg=T.mobs.find(m=>m.sp==='wb_egg');if(egg&&egg.hatchT==null){egg.hatchT=T.clk;TW71.addPop(egg.x,egg.y-90,'…알이 흔들린다!','#ffd070');try{sfx(70,1.4,'sine',.07,140)}catch(e){}}else if(!egg){R.ph=1;for(let i=0;i<5;i++)T.queue.push(baby())}return}
   if(ph===2&&R.ph<2){R.ph=2;T.queue=[];for(const m of T.mobs){if(m.sp==='wb_baby')m.flee=1;if(m.sp==='wb_egg')m._rm=1}newMob('wb_dragon',AX+AW/2,AY+142,{arrive:true});TW71.addPop(AX+AW/2,AY+60,'하늘이 어두워진다…','#ffb060')}}
- function scan(){const T=TW71.T;for(const m of T.mobs){if(!m.wbc){m._lh=null;continue}if(m._lh==null){m._lh=m.hp;continue}if(m.hp<m._lh){const d=m._lh-Math.max(0,m.hp);R.acc+=d;R.my+=d}m._lh=m.hp;if(m.max>=1e8&&m.hp<m.max*.6){m.hp+=m.max*.3;m._lh=m.hp}}
+ function scan(){const T=TW71.T;for(const m of T.mobs){if(m.wbc==null&&(m.sp==='wisp'||m.sp==='wb_baby'))m.wbc=1;/* v179: 불씨 · 아기 드래곤 피해도 셈 */if(!m.wbc){m._lh=null;continue}if(m._lh==null){m._lh=m.hp;continue}if(m.hp<m._lh){const d=m._lh-Math.max(0,m.hp);R.acc+=d;R.my+=d}m._lh=m.hp;if(m.max>=1e8&&m.hp<m.max*.6){m.hp+=m.max*.3;m._lh=m.hp}}
   if(T.mobs.some(m=>m._rm))T.mobs=T.mobs.filter(m=>!m._rm)}
  async function sync(final){if(R.sending&&!final)return null;const d=Math.floor(R.acc);R.acc-=d;R.sending=1;let r=null;try{r=await api('/api/wb/hit',{run:R.run,dmg:d,end:!!final})}catch(e){}R.sending=0;
   if(!r||r.s!==200||!r.j||!r.j.ok){R.acc+=d;return null}WS.st=r.j;WS.at=performance.now();R.runDmg=r.j.runDmg;if(R.on&&!R.end)onState(r.j);return r.j}
@@ -312,6 +313,7 @@
   return AC[k]=cv}
  function bar(x,y,w,h,q,c1,c2){ctx.fillStyle='#000c';ctx.fillRect(x-2,y-2,w+4,h+4);ctx.fillStyle='#2a0806';ctx.fillRect(x,y,w,h);const g=ctx.createLinearGradient(x,0,x+w,0);g.addColorStop(0,c1);g.addColorStop(1,c2);ctx.fillStyle=g;ctx.fillRect(x,y,w*Math.max(0,Math.min(1,q)),h);ctx.fillStyle='#ffffff44';ctx.fillRect(x,y,w*Math.max(0,Math.min(1,q)),2)}
  const EXT={arena,mark(){return 'NEST'},under(){},
+  gap(){return .2+Math.random()*.3}/* v179: 몬스터가 빨리 나옴(탑은 0.9~1.6초) */,ultSpawn:1/* 궁극기 중에도 계속 나옴 */,
   hud(now){const st=WS.st,ph=Math.min(2,st?st.phase:R.ph);ctx.save();ctx.textBaseline='middle';
    /* 왼쪽 위: 이번 판 시간 · 도망까지 · 내 피해 */const el=(performance.now()-R.t0)/1000,fl=st?st.ends-srvNow():0;ctx.fillStyle='#05070acc';ctx.fillRect(AX,4,170,24);ctx.fillStyle='#ff6a2a';ctx.fillRect(AX,4,3,24);
    ctx.font='900 11px sans-serif';ctx.fillStyle='#fff';ctx.fillText(clk(el),AX+8,16);
@@ -325,7 +327,7 @@
  {const f=frame;frame=function(){const r=f.apply(this,arguments);try{if(R.on&&!R.end){const T=TW71.T,now=performance.now();
     if(mode!=='tower'||T.ext!==EXT){if(mode!=='tower'&&mode!=='menu'){}if(T.ext!==EXT&&mode==='tower'){R.on=false;restore()}}
     else{if(paused)R.t0+=now-(R.last||now);R.last=now;scan();
-     if(R.ph===1&&!R.kill){const alive=T.mobs.filter(m=>m.sp==='wb_baby'&&!m.flee&&m.hp>0).length;if(alive+T.queue.filter(q=>q.sp==='wb_baby').length<4)T.queue.push(baby())}
+     /* v179: 몬스터를 늘 채워 둠 — 알 단계 불씨 5 · 아기 드래곤 단계 8 · 대형 드래곤 단계 아기 드래곤 3 */if(!R.kill){const want=R.ph===0?['wisp',5]:R.ph===1?['wb_baby',8]:['wb_baby',3];const n=T.mobs.filter(m=>m.sp===want[0]&&!m.flee&&m.hp>0).length+T.queue.filter(q=>q.sp===want[0]).length;if(n<want[1])T.queue.push(want[0]==='wisp'?ember():baby())}
      if(now-(R.sentAt||0)>3000){R.sentAt=now;sync(false)}
      overlay(now)}}}catch(e){}return r}}
  if(typeof toLobby==='function'){const f=toLobby;toLobby=function(){if(R.on&&!R.end){R.end=true;R.on=false;try{api('/api/wb/hit',{run:R.run,dmg:Math.floor(R.acc),end:true})}catch(e){}restore()}return f.apply(this,arguments)}}

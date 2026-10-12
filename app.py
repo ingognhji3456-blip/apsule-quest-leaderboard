@@ -3127,9 +3127,9 @@ def ta_board():
 # 알(0) → 아기 드래곤(1) → 대형 드래곤(2) → 토벌(3). 잡거나 WB_LIFE_H시간이 지나 도망가면 회차가 끝나고,
 # 그 뒤 WB_REST_H시간 쉬었다가 다음 드래곤이 나타난다. 한 판에 시간 제한 · 하루 입장 횟수는 없다(쓰러지면 다시 들어오면 됨).
 # 회차가 끝나면 피해를 넣은 사람 모두에게 우편으로 보상(토벌 보상 또는 참여 보상 + 순위 보상).
-WB_HP = [int(os.environ.get('WB_EGG_HP', '1500000')), int(os.environ.get('WB_BABY_HP', '2500000')), int(os.environ.get('WB_DRAGON_HP', '6000000'))]
-WB_LIFE_H = float(os.environ.get('WB_LIFE_H', '3'))      # 나타난 뒤 이 시간 안에 못 잡으면 도망감
-WB_REST_H = float(os.environ.get('WB_REST_H', '3'))      # 끝난 뒤 다음 드래곤까지 쉬는 시간
+WB_HP = [int(os.environ.get('WB_EGG_HP', '200000')), int(os.environ.get('WB_BABY_HP', '400000')), int(os.environ.get('WB_DRAGON_HP', '1000000'))]  # v179: 더 빨리 잡히게 줄임
+WB_LIFE_H = float(os.environ.get('WB_LIFE_H', '1'))      # 나타난 뒤 이 시간 안에 못 잡으면 도망감
+WB_REST_H = float(os.environ.get('WB_REST_H', '0.5'))      # 끝난 뒤 다음 드래곤까지 쉬는 시간
 WB_DPS_CAP = int(os.environ.get('WB_DPS_CAP', '4000'))   # 1초에 넣을 수 있는 최대 피해(부정 방지)
 WB_CLEAR = (3000, 50)       # 토벌 성공: 참여자 모두
 WB_JOIN = (1000, 10)        # 토벌 실패(도망감): 참여자 모두
@@ -3174,6 +3174,16 @@ def _wb_cur(db, now=None):
         if not int(r['settled']):
             _wb_settle(db, r['week'])
         return _wb_new(db, now)
+    # v179: 체력 설정을 줄였으면 지금 살아 있는 드래곤에도 바로 적용(남은 체력도 새 최대치를 넘지 않게)
+    if r['killed_at'] is None and any(int(r['max%d' % i]) > WB_HP[i] for i in range(3)):
+        mx = [min(int(r['max%d' % i]), WB_HP[i]) for i in range(3)]
+        hp = [min(int(r['hp%d' % i]), mx[i]) for i in range(3)]
+        try:
+            db.execute('UPDATE wb_week SET max0 = ?, max1 = ?, max2 = ?, hp0 = ?, hp1 = ?, hp2 = ? WHERE week = ?', (mx[0], mx[1], mx[2], hp[0], hp[1], hp[2], r['week']))
+            db.commit()
+        except Exception:
+            db.rollback()
+        r = db.execute('SELECT * FROM wb_week WHERE week = ?', (r['week'],)).fetchone()
     return r
 
 
