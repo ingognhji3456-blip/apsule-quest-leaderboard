@@ -279,7 +279,7 @@
  /* ================= 판 진행 ================= */
  async function enter(){if(R.on||R.starting)return;if(!logged()){toast('로그인이 필요해요','광장에서 로그인한 뒤 들어올 수 있어요');return}R.starting=1;let r=null;try{r=await api('/api/wb/start')}catch(e){}R.starting=0;
   if(!r||r.s!==200||!r.j||!r.j.ok){toast('입장할 수 없어요',(r&&r.j&&(r.j.error||r.j.msg))||'서버에 연결할 수 없어요');pull();return}WS.st=r.j;WS.at=performance.now();begin(r.j.run,r.j.phase)}
- function begin(run,ph){const s=saveData.tw71||(saveData.tw71={});R.saved={floor:s.floor,best:s.best};Object.assign(R,{on:true,fled:0,bon:[],ai:0,run,t0:performance.now(),acc:0,my:0,ph,end:false,kill:false,fx:[],hatch:null,last:performance.now(),pz:0,res:null});
+ function begin(run,ph){const s=saveData.tw71||(saveData.tw71={});R.saved={floor:s.floor,best:s.best};Object.assign(R,{on:true,fled:0,bon:[],run,t0:performance.now(),acc:0,my:0,ph,end:false,kill:false,fx:[],hatch:null,last:performance.now(),pz:0,res:null});
   window.__nosr=1;try{PLZ111.leave()}catch(e){}try{TW71.start(1)}catch(e){console.error(e)}setup(ph,true);try{sfx(110,.8,'sawtooth',.06,55)}catch(e){}}
  function setup(ph,fresh){const T=TW71.T;try{TW71.buildFloor(FL)}catch(e){}T.ext=EXT;T.pal=FPAL();T.queue=[];T.mobs=[];T.cap=10;T.nextSpawn=.3;T.total=0;R.ph=ph;
   if(ph===0)newMob('wb_egg',AX+AW/2,AY+108);else if(ph===1){for(let i=0;i<5;i++)T.queue.push(baby())}else if(ph===2)newMob('wb_dragon',AX+AW/2,AY+142,{arrive:!fresh});
@@ -288,8 +288,8 @@
   if(ph===2&&R.ph<2){R.ph=2;T.queue=[];for(const m of T.mobs){if(m.sp==='wb_baby')m.flee=1;if(m.sp==='wb_egg')m._rm=1}newMob('wb_dragon',AX+AW/2,AY+142,{arrive:true});TW71.addPop(AX+AW/2,AY+60,'하늘이 어두워진다…','#ffb060')}}
  function scan(){const T=TW71.T;for(const m of T.mobs){if(m.wbc==null&&(m.sp==='wisp'||m.sp==='wb_baby'))m.wbc=1;/* v179: 불씨 · 아기 드래곤 피해도 셈 */if(!m.wbc){m._lh=null;continue}if(m._lh==null){m._lh=m.hp;continue}if(m.hp<m._lh){const d=m._lh-Math.max(0,m.hp);R.acc+=d;R.my+=d}m._lh=m.hp;if(m.max>=1e8&&m.hp<m.max*.6){m.hp+=m.max*.3;m._lh=m.hp}}
   if(T.mobs.some(m=>m._rm))T.mobs=T.mobs.filter(m=>!m._rm)}
- async function sync(final){if(R.sending&&!final)return null;const d=Math.floor(R.acc);R.acc-=d;const ai=Math.floor(R.ai||0);R.ai=(R.ai||0)-ai;/* v181: AI 동료 피해는 따로(공동 체력만) */R.sending=1;let r=null;try{r=await api('/api/wb/hit',{run:R.run,dmg:d,ai,end:!!final})}catch(e){}R.sending=0;
-  if(!r||r.s!==200||!r.j||!r.j.ok){R.acc+=d;R.ai=(R.ai||0)+ai;return null}WS.st=r.j;WS.at=performance.now();R.runDmg=r.j.runDmg;try{gotBonus(r.j.bonus||[])}catch(e){}if(R.on&&!R.end)onState(r.j);return r.j}
+ async function sync(final){if(R.sending&&!final)return null;const d=Math.floor(R.acc);R.acc-=d;R.sending=1;let r=null;try{r=await api('/api/wb/hit',{run:R.run,dmg:d,end:!!final})}catch(e){}R.sending=0;
+  if(!r||r.s!==200||!r.j||!r.j.ok){R.acc+=d;return null}WS.st=r.j;WS.at=performance.now();R.runDmg=r.j.runDmg;try{gotBonus(r.j.bonus||[])}catch(e){}if(R.on&&!R.end)onState(r.j);return r.j}
  /* v180: 단계를 넘긴 마지막 한 방 보상(알 깨기 · 아기 드래곤 정리 · 막타) — 우편으로 옴 */
  const BN={egg:['🥚 알 깨기 보상!','#ffe08a'],baby:['🐲 아기 드래곤 정리 보상!','#ffb070'],kill:['⚔ 막타 보상!','#ffd166']};
  function gotBonus(L){for(const k of L){const b=BN[k];if(!b)continue;const v=((WS.st&&WS.st.rw&&WS.st.rw.bonus)||{})[k]||[0,0];R.bon=(R.bon||[]).concat(k);try{TW71.addPop(AX+AW/2,AY+96,b[0]+' 🪙'+num(v[0])+' 💎'+v[1],b[1])}catch(e){}toast(b[0],'🪙 '+num(v[0])+' · 💎 '+v[1]+' — 우편함으로 왔어요');try{sfx(784,.3,'triangle',.06,1568)}catch(e){}}}
@@ -393,5 +393,5 @@
  #wb177q .me{margin:8px 2px;font-size:13px}#wb177q .me b{color:#ffd166}#wb177q .rw{font-size:11px;color:#c8a888;line-height:1.5;margin:0 2px 10px}#wb177q .rw>b{display:block;color:#ffb060;font-size:12px;margin-bottom:2px}#wb177q .rw>div{padding:1px 0}#wb177q .rw em{font-style:normal;color:#ffe9a8;white-space:nowrap}
  #wb177q .r{display:flex;gap:8px}#wb177q button{flex:1;font:inherit;font-weight:900;padding:11px;border-radius:11px;border:0;cursor:pointer}#wb177q .no{background:#3a2a22;color:#e8d8c8}#wb177q .go{background:linear-gradient(180deg,#ff8a3a,#d8361a);color:#fff;box-shadow:0 0 14px #ff4a1a88}#wb177q .go:disabled{background:#4a3a34;color:#a89888;box-shadow:none}
  #wb177t{position:fixed;left:50%;top:16%;transform:translateX(-50%);z-index:9800;display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 22px;border-radius:16px;background:radial-gradient(120% 120% at 50% 0%,#5a1a08,#160806);border:2px solid #ff8a4a;color:#fff;pointer-events:none}#wb177t[hidden]{display:none}#wb177t b{font-size:17px;color:#ffd8a8}#wb177t small{font-size:12px;color:#d8c0a8}`;document.head.appendChild(css);
- window.WB177={EXT,TSP,gotBonus:L=>gotBonus(L),VD,FP,DPAL,dPose,pulse,R,W:WS,DG,enter,begin,setup,transition,onState,finish,pull,askEnter,PX,PY,force:k=>{DG.force=k;DG.cd=0}};
+ window.WB177={gotBonus:L=>gotBonus(L),VD,FP,DPAL,dPose,pulse,R,W:WS,DG,enter,begin,setup,transition,onState,finish,pull,askEnter,PX,PY,force:k=>{DG.force=k;DG.cd=0}};
 }catch(e){console.error('v177 world boss',e)}})();
