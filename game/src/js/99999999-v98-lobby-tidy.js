@@ -38,13 +38,13 @@
    ($('gmRank')?row('🏆','랭킹','점수 · 레벨 · 탑 · 골드 · 결투','rk'):'')+
    ($('rplBtn')?row('🎬','영상관','보스전 다시 보기','rpl'):'')+
    (window.MR163?row('✉','우편함','보상 · 공지 받기','mail')+row('🚫','차단 목록','차단한 사람 보기 · 풀기','blk'):'')+/* v163 */
-   (window.BE168?row('🛠','보스 만들기','나만의 보스 · 인기 보스 도전','be'):'')+(window.TA165?row('⏱','타임어택','보스 10명 연속 · 기록 순위','ta'):'');/* v169 */
+   (window.BE168?row('🛠','보스 만들기','나만의 보스 · 인기 보스 도전','be'):'')+(window.TA165?row('⏱','타임어택','보스 10명 연속 · 기록 순위','ta'):'')+(window.DB183?row('🐉','내가 드래곤','AI 용사 30명 막기','db'):'');/* v169 · v183 */
   panel.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const v=b.dataset.df;try{gmSfx('ok')}catch(e){}try{$('diffSel').value=v;updDiff()}catch(e){}try{gmHud()}catch(e){}draw()});
   panel.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
    if(a==='snd'){click('gmSound');setTimeout(draw,30);return}
    if(a==='fs'){click('mbFs');setTimeout(draw,300);return}
    if(a==='lt'){const on=!H.classList.contains('lt98');H.classList.toggle('lt98',on);ls('bb-lt98',on?'1':'0');try{gmSfx('ok')}catch(e){}draw();return}
-   close();if(a==='rk')click('gmRank');else if(a==='rpl')click('rplBtn');else if(a==='mail')MR163.open();else if(a==='blk')MR163.blockList();else if(a==='be')BE168.open('hot');else if(a==='ta')TA165.open()})}
+   close();if(a==='rk')click('gmRank');else if(a==='rpl')click('rplBtn');else if(a==='mail')MR163.open();else if(a==='blk')MR163.blockList();else if(a==='be')BE168.open('hot');else if(a==='ta')TA165.open();else if(a==='db')DB183.open()})}
  addEventListener('resize',()=>{if(!panel.hidden)place()});
  /* 메뉴 화면을 바꾸면 닫기 */
  {const f=gmShow;gmShow=function(){close();return f.apply(this,arguments)}}

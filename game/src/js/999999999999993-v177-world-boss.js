@@ -371,8 +371,8 @@
    '<div class="tp">'+((st&&st.top.length)?st.top.slice(0,5).map((t,i)=>'<div><b>'+(i+1)+'</b> '+esc(t.name)+'<em>'+num(t.dmg)+'</em></div>').join(''):'<div class="no">아직 아무도 싸우지 않았어요</div>')+'</div>'+
    '<div class="me">내 피해 <b>'+num(me.dmg)+'</b>'+(me.rank?' · '+me.rank+'위':'')+' · 시간 제한 · 입장 횟수 없음</div>'+
    rwHtml(st)+
-   '<div class="r"><button class="no">닫기</button><button class="go"'+(done||!st?' disabled':'')+'>'+(!st?'연결 중…':done?(killed?'토벌 완료 · ':'')+'다음 드래곤 '+hm(st.next-srvNow())+' 뒤':'⚔ 입장')+'</button></div></div>';
-  document.body.appendChild(ov);ov.querySelector('.no').onclick=()=>ov.remove();ov.querySelector('.go').onclick=()=>{ov.remove();enter()};ov.addEventListener('click',e=>{if(e.target===ov)ov.remove()})}
+   (window.DB183?'<button class="db">🐉 내가 드래곤 되기 — AI 용사 30명 막기</button>':'')+'<div class="r"><button class="no">닫기</button><button class="go"'+(done||!st?' disabled':'')+'>'+(!st?'연결 중…':done?(killed?'토벌 완료 · ':'')+'다음 드래곤 '+hm(st.next-srvNow())+' 뒤':'⚔ 입장')+'</button></div></div>';
+  document.body.appendChild(ov);ov.querySelector('.no').onclick=()=>ov.remove();ov.querySelector('.go').onclick=()=>{ov.remove();enter()};{const b=ov.querySelector('.db');if(b)b.onclick=()=>{ov.remove();DB183.open()}}ov.addEventListener('click',e=>{if(e.target===ov)ov.remove()})}
  /* 보상표(서버 st.rw — WB_REWARD_MUL이 곱해진 값) */
  function rwHtml(st){const w=st&&st.rw;if(!w)return '<p class="rw">보상은 우편으로 와요</p>';const gd=v=>'🪙'+num(v[0])+(v[1]?' 💎'+v[1]:'');
   return '<div class="rw"><b>보상(우편)</b><div>토벌 성공 · 참여자 모두 <em>'+gd(w.clear)+'</em> (도망가면 '+gd(w.join)+')</div>'+
@@ -391,7 +391,7 @@
  #wb177q .mt{display:flex;justify-content:space-between;font-size:12px;color:#d8c4b4;margin:8px 2px}#wb177q .mt b{color:#fff}
  #wb177q .tp{background:#00000044;border-radius:10px;padding:6px 10px;font-size:12px}#wb177q .tp div{display:flex;gap:8px;padding:2px 0}#wb177q .tp b{width:14px;color:#ffd166}#wb177q .tp em{margin-left:auto;font-style:normal;color:#ffb080}#wb177q .tp .no{color:#a89888}
  #wb177q .me{margin:8px 2px;font-size:13px}#wb177q .me b{color:#ffd166}#wb177q .rw{font-size:11px;color:#c8a888;line-height:1.5;margin:0 2px 10px}#wb177q .rw>b{display:block;color:#ffb060;font-size:12px;margin-bottom:2px}#wb177q .rw>div{padding:1px 0}#wb177q .rw em{font-style:normal;color:#ffe9a8;white-space:nowrap}
- #wb177q .r{display:flex;gap:8px}#wb177q button{flex:1;font:inherit;font-weight:900;padding:11px;border-radius:11px;border:0;cursor:pointer}#wb177q .no{background:#3a2a22;color:#e8d8c8}#wb177q .go{background:linear-gradient(180deg,#ff8a3a,#d8361a);color:#fff;box-shadow:0 0 14px #ff4a1a88}#wb177q .go:disabled{background:#4a3a34;color:#a89888;box-shadow:none}
+ #wb177q .db{display:block;width:100%;margin:0 0 8px;background:linear-gradient(180deg,#5a1a6a,#2a0a3a)!important;color:#ffd8ff!important;border:1px solid #c88aff88!important}#wb177q .r{display:flex;gap:8px}#wb177q button{flex:1;font:inherit;font-weight:900;padding:11px;border-radius:11px;border:0;cursor:pointer}#wb177q .no{background:#3a2a22;color:#e8d8c8}#wb177q .go{background:linear-gradient(180deg,#ff8a3a,#d8361a);color:#fff;box-shadow:0 0 14px #ff4a1a88}#wb177q .go:disabled{background:#4a3a34;color:#a89888;box-shadow:none}
  #wb177t{position:fixed;left:50%;top:16%;transform:translateX(-50%);z-index:9800;display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 22px;border-radius:16px;background:radial-gradient(120% 120% at 50% 0%,#5a1a08,#160806);border:2px solid #ff8a4a;color:#fff;pointer-events:none}#wb177t[hidden]{display:none}#wb177t b{font-size:17px;color:#ffd8a8}#wb177t small{font-size:12px;color:#d8c0a8}`;document.head.appendChild(css);
- window.WB177={gotBonus:L=>gotBonus(L),VD,FP,DPAL,dPose,pulse,R,W:WS,DG,enter,begin,setup,transition,onState,finish,pull,askEnter,PX,PY,force:k=>{DG.force=k;DG.cd=0}};
+ window.WB177={EXT,gotBonus:L=>gotBonus(L),VD,FP,DPAL,dPose,pulse,R,W:WS,DG,enter,begin,setup,transition,onState,finish,pull,askEnter,PX,PY,force:k=>{DG.force=k;DG.cd=0}};
 }catch(e){console.error('v177 world boss',e)}})();
