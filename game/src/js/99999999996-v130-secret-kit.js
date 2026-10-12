@@ -70,7 +70,7 @@
   P.lungeT=now;P.lungeA=Math.atan2(cy-P.y,cx-P.x);P.lungeDur=260;try{banner('필살! '+name)}catch(e){}}
  function tickUlt(now){const A=U.act;if(!A)return;
   while(A.k<A.hits.length&&now-A.t0>=A.hits[A.k]){const k=A.k++,last=k===A.hits.length-1,n=A.hits.length,w=curWp()||{},wd=w.dmg||1,share=A.type==='p61'?(last?.3:.7/(n-1||1)):1/n;let pet=0;try{pet=(PETS[shopInv().eq.pt]||{}).dmg||0}catch(e){}
-   for(const o of enemies()){let d;if(o.isBoss)d=Math.round(34*wd*(1+pet)*30*share);else d=Math.round((o.max||100)*(o.elite?.6:1.25)*share*Math.min(1.6,wd));hitMob(o,Math.max(1,d),k%2?'#ffffff':A.col,'')}
+   for(const o of enemies()){let d;if(o.isBoss)d=Math.round(34*wd*(1+pet)*30*share*(A.type==='p61'&&window.SP178?SP178.ult():1));else d=Math.round((o.max||100)*(o.elite?.6:1.25)*share*Math.min(1.6,wd));hitMob(o,Math.max(1,d),k%2?'#ffffff':A.col,'')}
    A.sp.done.push(now);if(A.UU){try{A.UU.hit(k,last)}catch(e){}}else{try{sfx((A.hitF||400)*(1+k*.05),.18,'square',.06,(A.hitF||400)*.4);sfx(90,.2,'sawtooth',.05,40)}catch(e){}}}
   if(now>=A.end)U.act=null}
  function drawUlt(now){const A=U.act;if(!A)return;const og=(typeof G!=='undefined')?G:null;
