@@ -116,6 +116,8 @@
   /* v79: 층 시계(T.clk)가 0으로 돌아가니 지난 층의 시각 기록도 지운다 — 남아 있으면 「방금 때림」으로 읽혀 화면이 크게 확대됐다 */
   T.punch=null;P.parryT=null;
   P.x=AX+AW/2;P.y=AY+AH-24;P.face={x:0,y:-1};P.dash=null;P.lungeT=0;P.slowT=0;try{prewarm()}catch(e){}}
+ /* 대기열에서 몬스터 꺼내기 — 간격은 T.ext.gap()이 있으면 그 값(v179 월드 보스: 빠르게) */
+ function spawnTick(dt){if(T.queue&&T.queue.length&&!T.dead){T.nextSpawn-=dt;const alive=T.mobs.filter(m=>m.hp>0).length;if(T.nextSpawn<=0&&alive<T.cap){spawnOne();T.nextSpawn=alive===0?.3:(T.ext&&T.ext.gap?T.ext.gap():rnd(.9,1.6))}}}
  function spawnOne(){const q=T.queue.shift();if(!q)return;let x,y,tries=0;do{x=rnd(AX+30,AX+AW-30);y=rnd(AY+40,AY+AH-30);tries++}while(tries<30&&Math.hypot(x-P.x,y-P.y)<85);
   T.mobs.push({sp:q.sp,elite:q.elite,x,y,vx:0,vy:0,hp:q.hp,max:q.hp,s:q.elite?1.5:1,born:q.elite?1.1:.8,bornMax:q.elite?1.1:.8,st:'idle',st0:0,cd:rnd(.8,1.8),face:1,hitT:-9,stunT:-9,ang:Math.random()*6.28,seed:Math.random()*99});
   /* v81 방패: 방패병은 큰 방패, 31층부터 정예는 보호막. 방패가 있으면 공격력과 상관없이 「한 대에 1칸(PERFECT 2칸)」만 깎여서, 다 부숴야 몸에 피해가 들어간다 */
@@ -304,12 +306,12 @@
   /* 몸 박치기 */const touch=!T._proxy&&Math.hypot(m.x-P.x,m.y-(P.y-6))<r+6;{const ms=sp.ai||m.sp;if(touch&&!stun&&!sp.noTouch&&!['archer','mage','drone','wisp','wraith'].includes(ms))hurt(sp.touch||(ms==='boar'&&m.st==='run'?12:ms==='golem'?10:ms==='gear'?9:6))}}
 
  function update(now,dt){T.clk+=dt;try{sched(now)}catch(e){}/* v95: 탑 브금 — 골라 둔 곡을 박자에 맞춰 실제로 연주(전에는 빠져 있어서 소리가 안 났음) */if(T.warm&&T.warm.length){const t0=performance.now();while(T.warm.length&&performance.now()-t0<(T.trans?14:5)){const j=T.warm.shift();mobFrame(j[0],mpal(j[0]),j[1],j[2],j[3],j[4])}}if(T.stop&&now<T.stop)return;
-  if(T.U){ultTick();T.shake=Math.max(0,(T.shake||0)-dt*2.2);if(!T.dead){stepPlayer(dt,now,(dx,dy)=>{P.x=clampN(P.x+dx,AX+8,AX+AW-8);P.y=clampN(P.y+dy,AY+22,AY+AH-3)},40)}T.mobs=T.mobs.filter(m=>m.hp>0||T.clk-(m.dieT||0)<.35);return}
+  if(T.U){ultTick();/* v179: T.ext.ultSpawn이면 궁극기 중에도 몬스터가 계속 나옴(월드 보스) */try{if(T.ext&&T.ext.ultSpawn&&!(T.duo&&T.duo.role==='guest'))spawnTick(dt)}catch(e){}T.shake=Math.max(0,(T.shake||0)-dt*2.2);if(!T.dead){stepPlayer(dt,now,(dx,dy)=>{P.x=clampN(P.x+dx,AX+8,AX+AW-8);P.y=clampN(P.y+dy,AY+22,AY+AH-3)},40)}T.mobs=T.mobs.filter(m=>m.hp>0||T.clk-(m.dieT||0)<.35);return}
   if(T.bossCard){T.bossCard.t+=dt;if(T.bossCard.t>2.9)launchBoss();return}
   if(T.trans){T.trans.t+=dt;if(T.trans.t>1.3)T.trans=null}
   if(!T.dead){const sp=(P.slowT&&T.clk<P.slowT)?62:105;stepPlayer(dt,now,(dx,dy)=>{P.x=clampN(P.x+dx,AX+8,AX+AW-8);P.y=clampN(P.y+dy,AY+22,AY+AH-3)},sp)}
   const DG=T.duo&&T.duo.role==='guest';/* v85 듀오: 게스트는 잡몹을 직접 돌리지 않고 방장의 화면을 받아 그림 */
-  if(!DG&&T.queue&&T.queue.length&&!T.dead){T.nextSpawn-=dt;const alive=T.mobs.filter(m=>m.hp>0).length;if(T.nextSpawn<=0&&alive<T.cap){spawnOne();T.nextSpawn=alive===0?.3:rnd(.9,1.6)}}
+  if(!DG)spawnTick(dt);
   if(DG){try{window.DUO85&&DUO85.guestMobs(dt)}catch(e){}}
   else for(const m of T.mobs)if(m.hp>0){const mt=T.duo&&T.duo.mate;if(mt&&!mt.down&&mt.x!=null&&Math.hypot(mt.x-m.x,mt.y-m.y)<Math.hypot(P.x-m.x,P.y-m.y)){const px=P.x,py=P.y;P.x=mt.x;P.y=mt.y;T._proxy=1;try{updMob(m,dt)}finally{P.x=px;P.y=py;T._proxy=0}}else updMob(m,dt)}
   for(const w of (T.waves||[])){const r=w.r+(T.clk-w.t0)*170;w.cur=r;if(!w.hit&&Math.abs(Math.hypot(P.x-w.x,(P.y-w.y)*1.4)-r)<6){w.hit=1;hurt(w.dmg)}}T.waves=(T.waves||[]).filter(w=>w.cur==null||w.cur<w.max);
