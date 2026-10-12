@@ -3131,6 +3131,8 @@ WB_HP = [int(os.environ.get('WB_EGG_HP', '200000')), int(os.environ.get('WB_BABY
 WB_LIFE_H = float(os.environ.get('WB_LIFE_H', '1'))      # 나타난 뒤 이 시간 안에 못 잡으면 도망감
 WB_REST_H = float(os.environ.get('WB_REST_H', '0.5'))      # 끝난 뒤 다음 드래곤까지 쉬는 시간
 WB_DPS_CAP = int(os.environ.get('WB_DPS_CAP', '4000'))   # 1초에 넣을 수 있는 최대 피해(부정 방지)
+WB_AI_DPS = int(os.environ.get('WB_AI_DPS', '2500'))     # v181: 함께 싸우는 AI 동료 29명이 1초에 넣을 수 있는 피해 합(공동 체력만 깎음, 내 순위 · 보상엔 안 셈)
+_WB_AI = {}  # 판 번호 → AI 동료가 넣은 피해 합(메모리)
 # v180: 보상을 늘리고 추가 보상(막타 · 알 깨기 · 아기 드래곤 정리 · 피해 단계)을 더함. WB_REWARD_MUL로 전부 한꺼번에 늘리거나 줄일 수 있음
 WB_REWARD_MUL = float(os.environ.get('WB_REWARD_MUL', '1'))
 WB_CLEAR = (6000, 80)       # 토벌 성공: 참여자 모두
@@ -3336,6 +3338,7 @@ def wb_hit():
     body = request.get_json(silent=True) or {}
     run_id = str(body.get('run') or '')[:40]
     add = clamp_int(body.get('dmg'), 0, 10 ** 9, 0)
+    ai = clamp_int(body.get('ai'), 0, 10 ** 9, 0)
     db = get_db()
     with _wb_lock:
         run = db.execute('SELECT * FROM wb_runs WHERE run_id = ? AND user_id = ?', (run_id, uid)).fetchone()
@@ -3373,6 +3376,28 @@ def wb_hit():
                         bonus.append(k)
                 db.execute('UPDATE wb_runs SET dmg = dmg + ? WHERE run_id = ?', (took, run_id))
                 db.execute('UPDATE wb_dmg SET dmg = dmg + ?, updated_at = ? WHERE week = ? AND user_id = ?', (took, now, week, uid))
+        # v181: AI 동료 피해 — 공동 체력만 깎는다(순위 · 마지막 한 방 보상 없음)
+        ai_took = 0
+        if ai > 0 and not int(run['ended']):
+            r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
+            if _wb_alive(r, now):
+                if len(_WB_AI) > 2000:
+                    _WB_AI.clear()
+                used = _WB_AI.get(run_id, 0)
+                ai_took = max(0, min(ai, int(el * WB_AI_DPS) + 3000 - used))
+                ph = int(r['phase'])
+                hp = [int(r['hp0']), int(r['hp1']), int(r['hp2'])]
+                ai_took = min(ai_took, hp[ph]) if ph < 3 else 0
+                if ai_took > 0:
+                    _WB_AI[run_id] = used + ai_took
+                    hp[ph] -= ai_took
+                    killed = None
+                    while ph < 3 and hp[ph] <= 0:
+                        ph += 1
+                    if ph >= 3:
+                        killed = now
+                    db.execute('UPDATE wb_week SET phase = ?, hp0 = ?, hp1 = ?, hp2 = ?, phase_at = ?, killed_at = ? WHERE week = ?',
+                               (ph, hp[0], hp[1], hp[2], now if ph != int(r['phase']) else r['phase_at'], killed, week))
         if body.get('end') or not _wb_alive(r, now):
             db.execute('UPDATE wb_runs SET ended = 1 WHERE run_id = ?', (run_id,))
         db.commit()
@@ -3381,7 +3406,7 @@ def wb_hit():
             _wb_settle(db, week)
             r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
     run = db.execute('SELECT dmg FROM wb_runs WHERE run_id = ?', (run_id,)).fetchone()
-    return jsonify(ok=True, took=took, bonus=bonus, runDmg=int(run['dmg']) if run else 0, **_wb_state(db, r, uid))
+    return jsonify(ok=True, took=took, aiTook=ai_took, bonus=bonus, runDmg=int(run['dmg']) if run else 0, **_wb_state(db, r, uid))
 
 
 @app.route('/api/plaza/sync', methods=['POST'])
