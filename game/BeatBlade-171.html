@@ -21393,7 +21393,11 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* v75: 난이도는 체력 · 공격력만 올린다(공격 속도는 그대로). 층이 오를수록 체력이 오르고(TF), 보스도 같은 비율 */
  function hpMul(){return {easy:.8,normal:1,hard:1.5,extreme:2.2}[diff]||1}
  function dmgMul(){return {easy:.7,normal:1,hard:1.6,extreme:2.3}[diff]||1}
- const TF=f=>1+(Math.max(1,f)-1)*.006;TW.TF=TF;
+ /* v171: 층이 오를수록 훨씬 가파르게 — 잡몹 체력 TF(100층 ×3.9 · 300층 ×13 · 700층 ×40), 잡몹 피해 MDF(100층 ×1.65 · 700층 ×6.8),
+    보스 체력도 TF를 따름(1장 보스 체력 × TF, 챕터 기본보다 작아지지 않게), 보스 피해 BD(100층 ×1.5 · 700층 ×5.3) */
+ const TF=f=>{const x=Math.max(1,f)-1;return 1+x*.02+Math.pow(x/100,1.7)*.9};TW.TF=TF;
+ const MDF=f=>{const x=Math.max(1,f)-1;return Math.min(7,1+x*.005+Math.pow(x/100,1.4)*.15)};TW.MDF=MDF;
+ const BD=f=>{const x=Math.max(1,f)-1;return Math.min(6,1+x*.004+Math.pow(x/100,1.3)*.12)};TW.BD=BD;
  const tierOf=()=>({easy:0,normal:1,hard:2,extreme:3}[diff]||0);
  /* 잡몹마다 고유 색 (구역 색은 빛 · 강조에만 조금) */
  const SPC={slime:['#7ed957','#2e6b2a'],bat:['#9a6ad8','#3a2266'],archer:['#c8a46a','#5a4020'],boar:['#d8844a','#6a3416'],gear:['#d8b04a','#6a4e14'],mage:['#6a8ad8','#22306a'],
@@ -21409,7 +21413,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  TW.vetsOf=vetsOf;TW.vetPool=vetPool;
  function buildFloor(f){const z=zoneOf(f),k=((f-1)%10)+1,tier=Math.floor(z/70),pal=palOf(z),[s1,s2]=speciesOf(z);
   Object.assign(T,{f,z,k,pal,hfx:[],mobs:[],shots:[],tels:[],parts:[],pops:[],slash:[],clk:0,clear:false,clearT:0,doorK:0,trans:{t:0,txt:f+'F',sub:pal.n+' 구역 · '+TW.zoneMobs(z).join(' · ')+(vetsOf(z,k).length?'  +  다시 나온 '+vetsOf(z,k).map(q=>SP[q].n).join(' · '):'')},dead:false,spawned:false});
-  const n=3+Math.floor(k/3)+Math.min(3,Math.floor(z/8))+tier,hpz=TF(f)*(1+tier*.8)*hpMul();
+  const n=3+Math.floor(k/3)+Math.min(3,Math.floor(z/8))+tier+Math.min(8,Math.floor(f/60))/* v171: 60층마다 +1(최대 +8) */,hpz=TF(f)*(1+tier*.8)*hpMul();
   const list=[];for(let i=0;i<n;i++)list.push({sp:i%3===2?s2:s1,elite:false});
   const vets=vetsOf(z,k);vets.forEach((q,i)=>{const c=1+((k+i)%2);for(let j=0;j<c;j++)list.push({sp:q,elite:false});if(k===9&&i===0)list.push({sp:q,elite:true})});T.vets=vets;
   /* v81: 새 잡몹 · 방패병 섞기 — 11층부터 독두꺼비, 21층부터 기력 망령, 31층부터 방패병이 자주 */
@@ -21417,9 +21421,11 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
   if(z>=2){list.push({sp:'wraith',elite:false});if(k>=7)list.push({sp:'wraith',elite:false})}
   if(z>=3&&k>=4&&!list.some(q=>q.sp==='knight'))list.push({sp:'knight',elite:false});
   if(k===5)list.push({sp:s2,elite:true});if(k===9){list.push({sp:s1,elite:true});list.push({sp:s2,elite:true})}
+  /* v171: 높은 층은 정예가 더 자주 — 100층부터 7번째 층, 250층부터 3번째 층, 400층부터 9번째 층에 정예 한 마리 더 */
+  if(f>=100&&k===7)list.push({sp:s1,elite:true});if(f>=250&&k===3)list.push({sp:s2,elite:true});if(f>=400&&k===9)list.push({sp:(vets[0]||s1),elite:true});
   /* v75: 한꺼번에 나오지 않고 소환진에서 하나씩. 일반을 섞고 정예는 맨 뒤 */
-  const norm=list.filter(m=>!m.elite).sort(()=>Math.random()-.5),els=list.filter(m=>m.elite);T.queue=norm.concat(els).map(m=>({sp:m.sp,elite:m.elite,hp:Math.round(SP[m.sp].hp*hpz*(m.elite?3.5:1))}));
-  T.cap=Math.min(5,2+Math.floor(k/3)+(z>=3?1:0));T.nextSpawn=.7;T.total=T.queue.length;T.waves=[];
+  const norm=list.filter(m=>!m.elite).sort(()=>Math.random()-.5),els=list.filter(m=>m.elite);T.queue=norm.concat(els).map(m=>({sp:m.sp,elite:m.elite,hp:Math.round(SP[m.sp].hp*hpz*(m.elite?3.5+Math.min(2.5,f/200):1))}));
+  T.cap=Math.min(8,2+Math.floor(k/3)+(z>=3?1:0)+Math.floor(f/150));T.nextSpawn=.7;T.total=T.queue.length;T.waves=[];
   /* v79: 층 시계(T.clk)가 0으로 돌아가니 지난 층의 시각 기록도 지운다 — 남아 있으면 「방금 때림」으로 읽혀 화면이 크게 확대됐다 */
   T.punch=null;P.parryT=null;
   P.x=AX+AW/2;P.y=AY+AH-24;P.face={x:0,y:-1};P.dash=null;P.lungeT=0;P.slowT=0;try{prewarm()}catch(e){}}
@@ -21455,7 +21461,9 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  /* ---------- 보스 전투가 끝나면 탑으로 ---------- */
  /* v75: 보스 체력도 층에 맞춰(잡몹과 같은 비율 TF). 9994가 보스 체력을 맞춘 뒤 한 번 더 곱한다 */
  {const _ds=drawScene;drawScene=function(now){const r=_ds.apply(this,arguments);try{if(G&&G.tw71&&!G._tw75&&G.maxHp>0&&G.state!=='result'){G._twF=(G._twF||0)+1;if(G._hp54||G._twF>3){G._tw75=1;const g=G.tw71.g%70,W0=window.HP54?HP54.WANT:null;
-   if(W0){const want=W0(0)*TF(G.tw71.f)*(g%10===9?1.3:1)*(1+Math.floor((G.tw71.f-1)/700)*.5),mult=Math.max(1,want/W0(g));G.hp=Math.round(G.hp*mult);G.maxHp=Math.round(G.maxHp*mult);G.hpShow=G.hp/G.maxHp;G._barLast=undefined}}}}catch(e){}return r}}
+   if(W0){const f0=G.tw71.f,want=Math.max(W0(0)*TF(f0),W0(g))*(g%10===9?1.3:1)*(1+Math.floor((f0-1)/700)*.5),mult=Math.max(1,want/W0(g));G.hp=Math.round(G.hp*mult);G.maxHp=Math.round(G.maxHp*mult);G.hpShow=G.hp/G.maxHp;G._barLast=undefined}}}}catch(e){}return r}}
+ /* v171: 탑 보스가 때리는 피해도 층에 맞춰 세게(PvP · 관전은 그대로) */
+ {const _hp=hurtP;hurtP=function(dmg,now){try{if(mode==='boss'&&G&&G.tw71&&!(window.PVP92&&PVP92.on&&PVP92.on()))dmg=dmg*BD(G.tw71.f)}catch(e){}return _hp.call(this,dmg,now)}}
  {const _fe=fightEnd;fightEnd=function(won){const tw=G&&G.tw71;const r=_fe.apply(this,arguments);
   if(tw&&!tw.watch){tw.watch=1;const t0=performance.now();const poll=()=>{if(!G||G.tw71!==tw)return;const ov=!$('overlay').hidden;
     if((G.state==='result'&&(ov||performance.now()-t0>2600))||performance.now()-t0>15000){bossDone(!!G.won,tw);return}setTimeout(poll,250)};setTimeout(poll,300)}
@@ -21530,7 +21538,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  addEventListener('keydown',e=>{if(mode!=='tower'||paused||e.repeat)return;if(e.code==='KeyF'||e.code==='KeyL'){e.preventDefault();parry()}else if(e.code==='KeyC'){e.preventDefault();ult()}});
 
  /* ---------- 피해 ---------- */
- function hurt(dmg,src){const now=performance.now();dmg=+dmg||6;/* v88: 피해값이 빠져도 체력이 NaN이 되지 않게 */if(now<P.inv||T.dead||T.clear)return;try{if(window.CB81){dmg=CB81.onHurt(dmg);if(dmg<=0)return}}catch(e){}dmg=Math.max(1,Math.round(dmg*dmgMul()*(1+(T.f-1)*.002)));P.hp-=dmg;P.inv=now+900;T.combo=0;T.shake=Math.max(T.shake||0,.35);T.flash=.35;
+ function hurt(dmg,src){const now=performance.now();dmg=+dmg||6;/* v88: 피해값이 빠져도 체력이 NaN이 되지 않게 */if(now<P.inv||T.dead||T.clear)return;try{if(window.CB81){dmg=CB81.onHurt(dmg);if(dmg<=0)return}}catch(e){}dmg=Math.max(1,Math.round(dmg*dmgMul()*MDF(T.f)));P.hp-=dmg;P.inv=now+900;T.combo=0;T.shake=Math.max(T.shake||0,.35);T.flash=.35;
   addPop(P.x,P.y-26,'-'+dmg,'#ff4d6d');try{sfx(140,.2,'sawtooth',.05,60)}catch(e){}
   if(P.hp<=0){P.hp=0;die()}}
  function die(){try{if(T.duo&&window.DUO85&&DUO85.onDie())return}catch(e){}T.dead=true;const s=sv(),cp=Math.max(1,zoneOf(T.f)*10+1);s.floor=cp;try{saveNow()}catch(e){};try{stopMusic()}catch(e){}
@@ -21539,6 +21547,31 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
 
  /* ---------- 잡몹 움직임 ---------- */
  function shoot(m,a,v,dmg,r,col,kind){m.hitPose=T.clk;T.shots.push({x:m.x,y:m.y-4,vx:Math.cos(a)*v,vy:Math.sin(a)*v,dmg,r:r||3,col:col||T.pal.c,t:T.clk,web:m.sp==='spider',kind:kind||({archer:'arrow',mage:'orb',wisp:'fire',spider:'web',gear:'saw',bat:'sonic'})[m.sp]||'dot',home:m.sp==='mage'?1:0,poison:kind==='poison'?1:0})}
+ /* v171: 정예 몬스터 전용 기술 — 4.5~6초마다 0.75초 멈춰 금빛으로 기를 모은 뒤(기술 이름 · 금빛 예고) 종류별 다른 공격.
+    eTel: 금빛 예고(warn) + 그 순간 들어가는 판정을 한 번에 넣는다 */
+ function eTel(o,w){const n=T.clk;T.tels.push(Object.assign({},o,{t0:n,t1:n+w,t2:n+w,dmg:0,warn:1,gold:1}));T.tels.push(Object.assign({},o,{t1:n+w,t2:n+w+.15}))}
+ function ring(m,n,v,dmg,r,col,kind,off){for(let i=0;i<n;i++)shoot(m,(off||0)+i/n*6.28,v,dmg,r,col,kind)}
+ const W8=.75,EA={
+  slime:['점액 폭우',m=>{eTel({k:'c',x:P.x,y:P.y,r:17,dmg:8},W8);for(let i=0;i<4;i++){const b=Math.random()*6.28,r=rnd(28,56);eTel({k:'c',x:clampN(P.x+Math.cos(b)*r,AX+10,AX+AW-10),y:clampN(P.y+Math.sin(b)*r,AY+24,AY+AH-8),r:17,dmg:8},W8+.15*i)}},m=>ring(m,8,80,5,4,SPC.slime[0])],
+  bat:['초음파 폭풍',null,m=>{ring(m,12,95,5,4,'#e8d8ff','sonic');ring(m,6,60,5,4,'#e8d8ff','sonic',.26)}],
+  archer:['화살비',m=>{for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)eTel({k:'c',x:P.x+i*26,y:P.y+j*18,r:13,dmg:9},W8+.1*(Math.abs(i)+Math.abs(j)))},null],
+  boar:['대지 돌진',m=>eTel({k:'l',x:m.x,y:m.y,a:m.ea,len:300,w:14,dmg:12},W8),m=>{m.st='run';m.st0=T.clk;m.ra=m.ea;m.hitPose=T.clk;T.waves.push({x:m.x,y:m.y,r:20,max:110,t0:T.clk,dmg:7,col:'#ffd166'});T.shake=Math.max(T.shake||0,.3)}],
+  gear:['톱니 폭풍',null,m=>{ring(m,8,115,7,4,'#e8c870','saw',m.ea)}],
+  mage:['마법진 감옥',m=>{for(let i=0;i<6;i++){const b=i/6*6.28;eTel({k:'c',x:P.x+Math.cos(b)*36,y:P.y+Math.sin(b)*24,r:15,dmg:9},W8)}eTel({k:'c',x:P.x,y:P.y,r:20,dmg:11},W8+.5)},null],
+  bomb:['연쇄 폭발',m=>{for(let i=1;i<=4;i++)eTel({k:'c',x:m.x+Math.cos(m.ea)*30*i,y:m.y+Math.sin(m.ea)*30*i,r:24,dmg:12,boom:1},.45+.2*i)},null],
+  golem:['대지 균열',m=>{for(const o of [-.45,0,.45])eTel({k:'l',x:m.x,y:m.y,a:m.ea+o,len:260,w:12,dmg:12},W8+.1)},m=>{T.shake=Math.max(T.shake||0,.4);try{sfx(55,.35,'square',.05,25)}catch(e){}}],
+  wisp:['불꽃 나선',null,m=>{ring(m,16,75,6,3,null,'fire',m.ang)}],
+  drone:['십자 레이저',m=>{for(let k=0;k<4;k++)eTel({k:'l',x:m.x,y:m.y,a:m.ea+k*1.5708,len:420,w:8,dmg:12},W8+.2)},null],
+  spider:['거미줄 그물',null,m=>{for(const o of [-.5,-.25,0,.25,.5])shoot(m,m.ea+o,95,4,5,'#e8e8f0')}],
+  toad:['독 소나기',null,m=>{for(const o of [-.6,-.3,0,.3,.6])shoot(m,m.ea+o,100,6,4,'#8aff5a','poison')}],
+  wraith:['영혼 흡수',m=>{for(const o of [-.35,0,.35])eTel({k:'l',x:m.x,y:m.y,a:m.ea+o,len:260,w:6,dmg:5,drain:1,col:'#b48aff'},W8+.1)},null],
+  knight:['회전 베기',m=>eTel({k:'c',x:m.x,y:m.y,r:48,dmg:14},W8),m=>{m.hitPose=T.clk;try{sfx(240,.2,'square',.05,90)}catch(e){}}],
+  _:['정예의 분노',null,m=>ring(m,10,85,6,4,'#ffd166')]};
+ function eliteAct(m,a,d,dt){const E=EA[m.sp]||EA._;
+  if(m.es==='w'){if(T.clk>=m.et){m.es=null;m.ecd=rnd(4.5,6)*(T.z>=3?.85:1);try{E[2]&&E[2](m)}catch(e){}try{sfx(420,.12,'square',.05,180)}catch(e){}}return true}
+  m.ecd=(m.ecd==null?rnd(2,3.5):m.ecd)-dt;
+  if(m.ecd<=0&&d<230&&m.st!=='run'&&m.st!=='fuse'){m.es='w';m.et=T.clk+W8;m.ea=a;m.hitPose=T.clk+W8-.1;addPop(m.x,m.y-52,'★ '+E[0]+'!','#ffe79a');try{E[1]&&E[1](m)}catch(e){}try{sfx(330,.5,'sine',.05,880)}catch(e){}return true}
+  return false}
  function updMob(m,dt){const sp=SP[m.sp],px=P.x,py=P.y-6,dx=px-m.x,dy=py-m.y,d=Math.hypot(dx,dy)||1,a=Math.atan2(dy,dx),el=m.elite?.75:1,stun=T.clk<m.stunT+1.1;
   if(m.born>0){m.born-=dt;return}
   if(m.shMax&&m.sh<=0&&m.shRegen&&T.clk>m.shRegen){m.sh=m.shMax;addPop(m.x,m.y-26,m.bubble?'보호막 재생':'방패 재생','#8dcdf5')}
@@ -21575,6 +21608,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
     else{tvx=(tx-m.x)*1.6;tvy=(ty-m.y)*1.6;if(m.cd<=0&&d<200){m.st='aim';m.st0=T.clk;m.la=a;T.tels.push({k:'l',x:m.x,y:m.y,a,len:260,w:6,t0:T.clk,t1:T.clk+.75,t2:T.clk+.75,dmg:0,warn:1,own:m,col:'#b48aff'})}}break}
    case 'knight':if(m.st==='wind'){if(t>.45){T.tels.push({k:'c',x:m.x+Math.cos(m.ra)*14,y:m.y+Math.sin(m.ra)*14,r:22*m.s,t1:T.clk,t2:T.clk+.12,dmg:12,arc:m.ra});m.hitPose=T.clk;m.st='idle';m.cd=1.6*el;try{sfx(260,.1,'square',.04,120)}catch(e){}}}
     else{tvx=Math.cos(a)*38;tvy=Math.sin(a)*38;if(d<30&&m.cd<=0){m.st='wind';m.st0=T.clk;m.ra=a}}break}
+  if(m.elite&&!stun&&eliteAct(m,a,d,dt)){tvx=0;tvy=0}
   m.vx+=(tvx-m.vx)*Math.min(1,dt*8);m.vy+=(tvy-m.vy)*Math.min(1,dt*8);if(m.chillT>T.clk){m.vx*=.55;m.vy*=.55}if(m.sp==='gear'&&!stun){m.vx=tvx;m.vy=tvy}
   m.x+=m.vx*dt;m.y+=m.vy*dt;
   const r=sp.r*m.s;if(m.x<AX+r){m.x=AX+r;if(m.bx)m.bx=Math.abs(m.bx)}if(m.x>AX+AW-r){m.x=AX+AW-r;if(m.bx)m.bx=-Math.abs(m.bx)}
@@ -21642,6 +21676,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  TW.mobFrame=mobFrame;
  const FLY={bat:1,wisp:1,drone:1,wraith:1};
  function drawMob(m){const sp=SP[m.sp],us=(m.elite?1.85:1.3);let al=1,sx=1,sy=1;
+  /* v171: 정예가 기술을 모으는 동안 금빛 고리 · 기둥 */if(m.es==='w'&&m.hp>0){const q=clampN(1-(m.et-T.clk)/W8,0,1),pr=sp.r*m.s;ctx.save();A(.35+.4*q);ctx.strokeStyle='#ffd166';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(m.x,m.y+pr*.6,pr+10-6*q,(pr+10-6*q)*.45,0,0,6.28);ctx.stroke();A(.18*q+.06);ctx.fillStyle='#ffe79a';ctx.fillRect(m.x-pr*.6,m.y-pr*3,pr*1.2,pr*3.4);ctx.restore();A(1)}
   const sp2=Math.hypot(m.vx,m.vy),strike=m.hitPose!=null&&T.clk-m.hitPose<.28&&T.clk>=m.hitPose,wind=(m.st==='wind'||m.st==='aim'||m.st==='fuse'||m.st==='cast'),pose=strike?'s':wind?'a':sp2>10?'w':'i';
   /* 방향: 공격할 땐 플레이어 쪽, 아니면 움직이는 쪽 */let dx=m.vx,dy=m.vy;if(pose==='a'||pose==='s'||sp2<=10){dx=P.x-m.x;dy=(P.y-6)-m.y}
   if(pose==='w'||pose==='a'||pose==='s'||!m.view){m.view=Math.abs(dy)>Math.abs(dx)*1.15?(dy>0?'front':'back'):'side'}if(Math.abs(dx)>2)m.face=dx>=0?1:-1;
@@ -21684,7 +21719,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
    case 'sonic':ctx.rotate(a);ctx.strokeStyle=c;for(let i=0;i<3;i++){A(1-i*.28);ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(-i*3,0,4+i*1.5,-1,1);ctx.stroke()}ctx.lineWidth=1;break;
    default:ctx.fillStyle=c;ctx.beginPath();ctx.arc(0,0,s.r,0,6.28);ctx.fill();ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(0,0,s.r*.45,0,6.28);ctx.fill()}
   ctx.restore();A(1)}
- function drawTels(){for(const z of T.tels){if(z.warn){const q=clampN((T.clk-z.t0)/(z.t1-z.t0),0,1);A(.18+q*.3);ctx.fillStyle='#ff2d55';ctx.strokeStyle='#ff4d6d';
+ function drawTels(){for(const z of T.tels){if(z.warn){const q=clampN((T.clk-z.t0)/(z.t1-z.t0),0,1);A(.18+q*.3);ctx.fillStyle=z.gold?'#ffb020':'#ff2d55';ctx.strokeStyle=z.gold?'#ffe79a':'#ff4d6d';
     if(z.k==='c'){ctx.beginPath();ctx.ellipse(z.x,z.y,z.r,z.r*.6,0,0,6.28);ctx.fill();A(.8);ctx.beginPath();ctx.ellipse(z.x,z.y,z.r*q,z.r*.6*q,0,0,6.28);ctx.stroke()}
     else{ctx.save();ctx.translate(z.x,z.y);ctx.rotate(z.a);ctx.fillRect(0,-z.w*q*.5,z.len,z.w*q);A(.7);ctx.fillRect(0,-.5,z.len,1);ctx.restore()}}
    else if(T.clk>=z.t1){const q=clampN((T.clk-z.t1)/((z.t2-z.t1)+.25),0,1);A(1-q);
