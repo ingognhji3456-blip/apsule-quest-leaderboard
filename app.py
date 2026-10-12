@@ -2815,6 +2815,42 @@ def mail_send(db, uid, title, body, gold=0, dia=0, sender='운영팀', days=MAIL
                 max(0, int(gold)), max(0, int(dia)), now, now + days * 86400))
 
 
+# v176: 업데이트 보상 — 서버에 올라간 최신 게임 파일 번호(BeatBlade-NN.html)가 바뀌면, 각 계정이 우편함을 열 때 그 버전 보상 우편을 한 번 넣는다
+UPDATE_REWARD_GOLD = int(os.environ.get('UPDATE_REWARD_GOLD', '1000'))
+UPDATE_REWARD_DIA = int(os.environ.get('UPDATE_REWARD_DIA', '20'))
+_UPD_VER = {'t': 0, 'n': 0}
+
+
+def _game_version():
+    """최신 게임 파일 번호(60초 기억)"""
+    now = time.time()
+    if now - _UPD_VER['t'] > 60:
+        try:
+            name = _latest_game_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'game'))
+            m = re.fullmatch(r'BeatBlade-(\d+)\.html', name)
+            _UPD_VER['n'] = int(m.group(1)) if m else 0
+        except Exception:
+            pass
+        _UPD_VER['t'] = now
+    return _UPD_VER['n']
+
+
+def _mail_update_fill(db, uid):
+    n = _game_version()
+    if n <= 0 or (UPDATE_REWARD_GOLD <= 0 and UPDATE_REWARD_DIA <= 0):
+        return
+    mid = 'upd%d:%s' % (n, uid)
+    if db.execute('SELECT 1 FROM mail WHERE id = ?', (mid,)).fetchone():
+        return
+    try:
+        mail_send(db, uid, 'v%d 업데이트 보상' % n,
+                  '새 버전 v%d 업데이트를 기념하는 선물이에요! 앞으로도 업데이트할 때마다 보상이 우편함으로 와요. 새로워진 게임을 즐겨 주세요.' % n,
+                  UPDATE_REWARD_GOLD, UPDATE_REWARD_DIA, sender='운영팀', mid=mid)
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
 def _mail_bc_fill(db, uid):
     """전체 우편 중 아직 이 계정 우편함에 안 넣은 것을 넣는다(가입보다 나중에 보낸 것만이 아니라 기간 안의 모든 것)"""
     now = time.time()
@@ -2843,6 +2879,7 @@ def mail_list():
         return _bad('로그인이 필요해요', 401)
     db = get_db()
     _mail_bc_fill(db, user['user_id'])
+    _mail_update_fill(db, user['user_id'])
     L = _mail_rows(db, user['user_id'])
     return jsonify(ok=True, mails=L, unread=sum(1 for m in L if not m['read'] or ((m['gold'] or m['dia']) and not m['got'])))
 
