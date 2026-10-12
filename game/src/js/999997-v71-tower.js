@@ -222,7 +222,7 @@
  {const f=doDash;doDash=function(){if(mode==='tower'){if(!paused)dash();return}return f.apply(this,arguments)}}
  if(typeof tryParry==='function'){const f=tryParry;tryParry=function(){if(mode==='tower'){if(!paused)parry();return}return f.apply(this,arguments)}}
  if(typeof tryUlt==='function'){const f=tryUlt;tryUlt=function(){if(mode==='tower'){if(!paused)ult();return}return f.apply(this,arguments)}}
- addEventListener('keydown',e=>{if(mode!=='tower'||paused||e.repeat)return;if(e.code==='KeyF'||e.code==='KeyL'){e.preventDefault();parry()}else if(e.code==='KeyC'){e.preventDefault();ult()}});
+ addEventListener('keydown',e=>{if(mode!=='tower'||paused||e.repeat)return;if(e.code==='KeyF'||e.code==='KeyL'){e.preventDefault();parry()}else if(e.code==='KeyC'){e.preventDefault();/* v174.1: 폰 단추처럼 tryUlt로 — 무기 궁극기(ULT139) · 결투 · 스킨 이름 감싸기를 모두 거침(전에는 ult()를 바로 불러 건너뜀) */tryUlt()}});
 
  /* ---------- 피해 ---------- */
  function hurt(dmg,src){const now=performance.now();dmg=+dmg||6;/* v88: 피해값이 빠져도 체력이 NaN이 되지 않게 */if(now<P.inv||T.dead||T.clear)return;try{if(window.CB81){dmg=CB81.onHurt(dmg);if(dmg<=0)return}}catch(e){}dmg=Math.max(1,Math.round(dmg*dmgMul()*MDF(T.f)));P.hp-=dmg;P.inv=now+900;T.combo=0;T.shake=Math.max(T.shake||0,.35);T.flash=.35;
