@@ -279,7 +279,7 @@
  /* ================= 판 진행 ================= */
  async function enter(){if(R.on||R.starting)return;if(!logged()){toast('로그인이 필요해요','광장에서 로그인한 뒤 들어올 수 있어요');return}R.starting=1;let r=null;try{r=await api('/api/wb/start')}catch(e){}R.starting=0;
   if(!r||r.s!==200||!r.j||!r.j.ok){toast('입장할 수 없어요',(r&&r.j&&(r.j.error||r.j.msg))||'서버에 연결할 수 없어요');pull();return}WS.st=r.j;WS.at=performance.now();begin(r.j.run,r.j.phase)}
- function begin(run,ph){const s=saveData.tw71||(saveData.tw71={});R.saved={floor:s.floor,best:s.best};Object.assign(R,{on:true,fled:0,run,t0:performance.now(),acc:0,my:0,ph,end:false,kill:false,fx:[],hatch:null,last:performance.now(),pz:0,res:null});
+ function begin(run,ph){const s=saveData.tw71||(saveData.tw71={});R.saved={floor:s.floor,best:s.best};Object.assign(R,{on:true,fled:0,bon:[],run,t0:performance.now(),acc:0,my:0,ph,end:false,kill:false,fx:[],hatch:null,last:performance.now(),pz:0,res:null});
   window.__nosr=1;try{PLZ111.leave()}catch(e){}try{TW71.start(1)}catch(e){console.error(e)}setup(ph,true);try{sfx(110,.8,'sawtooth',.06,55)}catch(e){}}
  function setup(ph,fresh){const T=TW71.T;try{TW71.buildFloor(FL)}catch(e){}T.ext=EXT;T.pal=FPAL();T.queue=[];T.mobs=[];T.cap=10;T.nextSpawn=.3;T.total=0;R.ph=ph;
   if(ph===0)newMob('wb_egg',AX+AW/2,AY+108);else if(ph===1){for(let i=0;i<5;i++)T.queue.push(baby())}else if(ph===2)newMob('wb_dragon',AX+AW/2,AY+142,{arrive:!fresh});
@@ -289,7 +289,10 @@
  function scan(){const T=TW71.T;for(const m of T.mobs){if(m.wbc==null&&(m.sp==='wisp'||m.sp==='wb_baby'))m.wbc=1;/* v179: 불씨 · 아기 드래곤 피해도 셈 */if(!m.wbc){m._lh=null;continue}if(m._lh==null){m._lh=m.hp;continue}if(m.hp<m._lh){const d=m._lh-Math.max(0,m.hp);R.acc+=d;R.my+=d}m._lh=m.hp;if(m.max>=1e8&&m.hp<m.max*.6){m.hp+=m.max*.3;m._lh=m.hp}}
   if(T.mobs.some(m=>m._rm))T.mobs=T.mobs.filter(m=>!m._rm)}
  async function sync(final){if(R.sending&&!final)return null;const d=Math.floor(R.acc);R.acc-=d;R.sending=1;let r=null;try{r=await api('/api/wb/hit',{run:R.run,dmg:d,end:!!final})}catch(e){}R.sending=0;
-  if(!r||r.s!==200||!r.j||!r.j.ok){R.acc+=d;return null}WS.st=r.j;WS.at=performance.now();R.runDmg=r.j.runDmg;if(R.on&&!R.end)onState(r.j);return r.j}
+  if(!r||r.s!==200||!r.j||!r.j.ok){R.acc+=d;return null}WS.st=r.j;WS.at=performance.now();R.runDmg=r.j.runDmg;try{gotBonus(r.j.bonus||[])}catch(e){}if(R.on&&!R.end)onState(r.j);return r.j}
+ /* v180: 단계를 넘긴 마지막 한 방 보상(알 깨기 · 아기 드래곤 정리 · 막타) — 우편으로 옴 */
+ const BN={egg:['🥚 알 깨기 보상!','#ffe08a'],baby:['🐲 아기 드래곤 정리 보상!','#ffb070'],kill:['⚔ 막타 보상!','#ffd166']};
+ function gotBonus(L){for(const k of L){const b=BN[k];if(!b)continue;const v=((WS.st&&WS.st.rw&&WS.st.rw.bonus)||{})[k]||[0,0];R.bon=(R.bon||[]).concat(k);try{TW71.addPop(AX+AW/2,AY+96,b[0]+' 🪙'+num(v[0])+' 💎'+v[1],b[1])}catch(e){}toast(b[0],'🪙 '+num(v[0])+' · 💎 '+v[1]+' — 우편함으로 왔어요');try{sfx(784,.3,'triangle',.06,1568)}catch(e){}}}
  function onState(st){if(st.killed&&!R.kill){R.kill=true;const d=TW71.T.mobs.find(m=>m.sp==='wb_dragon');if(d){DG.st='die';DG.t0=TW71.T.clk;d.wbc=0}TW71.addPop(AX+AW/2,AY+70,'🐉 대형 드래곤 토벌!','#ffd166');try{sfx(523,.3,'triangle',.06,1046);setTimeout(()=>sfx(784,.5,'triangle',.06,1568),200)}catch(e){}setTimeout(()=>finish('kill'),3200);return}
   if(st.alive===false&&!st.killed){if(R.fled)return;R.fled=1;TW71.addPop(AX+AW/2,AY+70,'드래곤이 날아가 버렸어요…','#ffb0a0');setTimeout(()=>finish('fled'),1500);return}
   if(st.phase>R.ph&&st.phase<3)transition(st.phase)}
@@ -297,7 +300,7 @@
  async function finish(why){if(!R.on||R.end)return;R.end=true;const my=Math.round(R.my);let st=null;for(let i=0;i<3&&!st;i++)st=await sync(true);R.on=false;restore();try{stopMusic()}catch(e){}
   const S2=st||WS.st||{},me=S2.me||{},killed=st?st.killed:R.kill,again=!killed&&S2.alive!==false;
   setTimeout(()=>{try{showOverlay('🐉 용의 둥지',why==='kill'?'대형 드래곤 토벌!':why==='dead'?'쓰러졌어요':why==='fled'?'드래곤이 날아갔어요':'나왔어요',
-   '<b style="color:#ffd166;font-size:1.25em">이번 판 피해 '+num(st?st.runDmg:my)+'</b><br>이번 드래곤 내 피해 '+num(me.dmg)+(me.rank?' · <b>'+me.rank+'위</b>':'')+'<br>'+(killed?'토벌 보상은 우편함으로 와요!':again?'몇 번이든 다시 들어갈 수 있어요 · 드래곤이 도망가기까지 <b>'+hm(S2.ends-srvNow())+'</b>':'보상은 우편함으로 와요 · 다음 드래곤은 <b>'+hm((S2.next||0)-srvNow())+'</b> 뒤')+(st?'':'<br><small>서버에 마지막 피해를 보내지 못했어요</small>'),
+   '<b style="color:#ffd166;font-size:1.25em">이번 판 피해 '+num(st?st.runDmg:my)+'</b>'+((R.bon||[]).length?'<br><b style="color:#ffe08a">⭐ '+R.bon.map(k=>(BN[k]||[''])[0].replace('!','')).join(' · ')+' — 우편함으로 왔어요</b>':'')+'<br>이번 드래곤 내 피해 '+num(me.dmg)+(me.rank?' · <b>'+me.rank+'위</b>':'')+'<br>'+(killed?'토벌 보상은 우편함으로 와요!':again?'몇 번이든 다시 들어갈 수 있어요 · 드래곤이 도망가기까지 <b>'+hm(S2.ends-srvNow())+'</b>':'보상은 우편함으로 와요 · 다음 드래곤은 <b>'+hm((S2.next||0)-srvNow())+'</b> 뒤')+(st?'':'<br><small>서버에 마지막 피해를 보내지 못했어요</small>'),
    [['광장으로',toPlaza,true]].concat(again?[['↺ 다시 도전',()=>{$('overlay').hidden=true;enter()},false]]:[]))}catch(e){console.error(e)}},600)}
  function toPlaza(){try{$('overlay').hidden=true}catch(e){}try{toLobby()}catch(e){}setTimeout(()=>{try{PLZ111.enter();setTimeout(()=>{try{P.x=PX;P.y=PY+46;armed=false}catch(e){}},60)}catch(e){}},300)}
  /* ---------- 경기장 그림 · 위쪽 정보 ---------- */
@@ -367,9 +370,15 @@
    '<div class="mt"><span>참여 <b>'+(st?st.players:0)+'</b>명</span><span>'+(!st?'':done?'다음 드래곤 <b>'+hm(st.next-srvNow())+'</b> 뒤':'도망까지 <b>'+hm(st.ends-srvNow())+'</b>')+'</span></div>'+
    '<div class="tp">'+((st&&st.top.length)?st.top.slice(0,5).map((t,i)=>'<div><b>'+(i+1)+'</b> '+esc(t.name)+'<em>'+num(t.dmg)+'</em></div>').join(''):'<div class="no">아직 아무도 싸우지 않았어요</div>')+'</div>'+
    '<div class="me">내 피해 <b>'+num(me.dmg)+'</b>'+(me.rank?' · '+me.rank+'위':'')+' · 시간 제한 · 입장 횟수 없음</div>'+
-   '<p class="rw">보상(우편): 토벌하면 참여자 모두 🪙3,000 💎50 · 피해 1위 🪙+10,000 💎+200 · 2~3위 · 10위 · 100위 안 추가</p>'+
+   rwHtml(st)+
    '<div class="r"><button class="no">닫기</button><button class="go"'+(done||!st?' disabled':'')+'>'+(!st?'연결 중…':done?(killed?'토벌 완료 · ':'')+'다음 드래곤 '+hm(st.next-srvNow())+' 뒤':'⚔ 입장')+'</button></div></div>';
   document.body.appendChild(ov);ov.querySelector('.no').onclick=()=>ov.remove();ov.querySelector('.go').onclick=()=>{ov.remove();enter()};ov.addEventListener('click',e=>{if(e.target===ov)ov.remove()})}
+ /* 보상표(서버 st.rw — WB_REWARD_MUL이 곱해진 값) */
+ function rwHtml(st){const w=st&&st.rw;if(!w)return '<p class="rw">보상은 우편으로 와요</p>';const gd=v=>'🪙'+num(v[0])+(v[1]?' 💎'+v[1]:'');
+  return '<div class="rw"><b>보상(우편)</b><div>토벌 성공 · 참여자 모두 <em>'+gd(w.clear)+'</em> (도망가면 '+gd(w.join)+')</div>'+
+   '<div>피해 순위 '+w.rank.map(r=>(r[0]===r[1]?r[0]+'위':r[0]+'~'+r[1]+'위')+' <em>+'+gd([r[2],r[3]])+'</em>').join(' · ')+'</div>'+
+   '<div>⭐ 추가 · 마지막 한 방: 알 깨기 <em>'+gd(w.bonus.egg)+'</em> · 아기 드래곤 정리 <em>'+gd(w.bonus.baby)+'</em> · 막타 <em>'+gd(w.bonus.kill)+'</em></div>'+
+   '<div>⭐ 추가 · 내 피해 단계: '+w.step.map(t=>num(t[0])+' <em>+'+gd([t[1],t[2]])+'</em>').join(' · ')+'</div></div>'}
  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
  const tb=document.createElement('div');tb.id='wb177t';tb.hidden=true;document.body.appendChild(tb);let tbT=0;
  function toast(a,b){tb.innerHTML='<b>'+a+'</b><small>'+(b||'')+'</small>';tb.hidden=false;clearTimeout(tbT);tbT=setTimeout(()=>{tb.hidden=true},3200)}
@@ -381,8 +390,8 @@
  #wb177q .ph.cur{background:#ff6a2a22;box-shadow:inset 0 0 0 1px #ff8a4a99}#wb177q .ph.dn{opacity:.55}#wb177q .ph i{display:block;height:8px;border-radius:5px;background:#2a0806;overflow:hidden}#wb177q .ph s{display:block;height:100%;background:linear-gradient(90deg,#ff3a1a,#ffd166)}#wb177q .ph em{font-style:normal;text-align:right;color:#ffd8b0;font-weight:800}
  #wb177q .mt{display:flex;justify-content:space-between;font-size:12px;color:#d8c4b4;margin:8px 2px}#wb177q .mt b{color:#fff}
  #wb177q .tp{background:#00000044;border-radius:10px;padding:6px 10px;font-size:12px}#wb177q .tp div{display:flex;gap:8px;padding:2px 0}#wb177q .tp b{width:14px;color:#ffd166}#wb177q .tp em{margin-left:auto;font-style:normal;color:#ffb080}#wb177q .tp .no{color:#a89888}
- #wb177q .me{margin:8px 2px;font-size:13px}#wb177q .me b{color:#ffd166}#wb177q .rw{font-size:11px;color:#c8a888;line-height:1.5;margin:0 2px 10px}
+ #wb177q .me{margin:8px 2px;font-size:13px}#wb177q .me b{color:#ffd166}#wb177q .rw{font-size:11px;color:#c8a888;line-height:1.5;margin:0 2px 10px}#wb177q .rw>b{display:block;color:#ffb060;font-size:12px;margin-bottom:2px}#wb177q .rw>div{padding:1px 0}#wb177q .rw em{font-style:normal;color:#ffe9a8;white-space:nowrap}
  #wb177q .r{display:flex;gap:8px}#wb177q button{flex:1;font:inherit;font-weight:900;padding:11px;border-radius:11px;border:0;cursor:pointer}#wb177q .no{background:#3a2a22;color:#e8d8c8}#wb177q .go{background:linear-gradient(180deg,#ff8a3a,#d8361a);color:#fff;box-shadow:0 0 14px #ff4a1a88}#wb177q .go:disabled{background:#4a3a34;color:#a89888;box-shadow:none}
  #wb177t{position:fixed;left:50%;top:16%;transform:translateX(-50%);z-index:9800;display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 22px;border-radius:16px;background:radial-gradient(120% 120% at 50% 0%,#5a1a08,#160806);border:2px solid #ff8a4a;color:#fff;pointer-events:none}#wb177t[hidden]{display:none}#wb177t b{font-size:17px;color:#ffd8a8}#wb177t small{font-size:12px;color:#d8c0a8}`;document.head.appendChild(css);
- window.WB177={VD,FP,DPAL,dPose,pulse,R,W:WS,DG,enter,begin,setup,transition,onState,finish,pull,askEnter,PX,PY,force:k=>{DG.force=k;DG.cd=0}};
+ window.WB177={gotBonus:L=>gotBonus(L),VD,FP,DPAL,dPose,pulse,R,W:WS,DG,enter,begin,setup,transition,onState,finish,pull,askEnter,PX,PY,force:k=>{DG.force=k;DG.cd=0}};
 }catch(e){console.error('v177 world boss',e)}})();

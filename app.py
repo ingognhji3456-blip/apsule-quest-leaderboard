@@ -3131,9 +3131,15 @@ WB_HP = [int(os.environ.get('WB_EGG_HP', '200000')), int(os.environ.get('WB_BABY
 WB_LIFE_H = float(os.environ.get('WB_LIFE_H', '1'))      # 나타난 뒤 이 시간 안에 못 잡으면 도망감
 WB_REST_H = float(os.environ.get('WB_REST_H', '0.5'))      # 끝난 뒤 다음 드래곤까지 쉬는 시간
 WB_DPS_CAP = int(os.environ.get('WB_DPS_CAP', '4000'))   # 1초에 넣을 수 있는 최대 피해(부정 방지)
-WB_CLEAR = (3000, 50)       # 토벌 성공: 참여자 모두
-WB_JOIN = (1000, 10)        # 토벌 실패(도망감): 참여자 모두
-WB_RANK = [(1, 1, 10000, 200), (2, 3, 6000, 120), (4, 10, 3000, 60), (11, 100, 1000, 20)]
+# v180: 보상을 늘리고 추가 보상(막타 · 알 깨기 · 아기 드래곤 정리 · 피해 단계)을 더함. WB_REWARD_MUL로 전부 한꺼번에 늘리거나 줄일 수 있음
+WB_REWARD_MUL = float(os.environ.get('WB_REWARD_MUL', '1'))
+WB_CLEAR = (6000, 80)       # 토벌 성공: 참여자 모두
+WB_JOIN = (2000, 20)        # 토벌 실패(도망감): 참여자 모두
+WB_RANK = [(1, 1, 25000, 300), (2, 3, 15000, 200), (4, 10, 8000, 120), (11, 100, 3000, 40)]
+WB_STEP = [(10000, 1000, 0), (30000, 2000, 10), (60000, 3000, 20), (100000, 5000, 40)]   # 내 피해 단계 보상(넘은 단계는 모두 더함)
+WB_BONUS = {'egg': ('🥚 알 깨기 보상', '드래곤의 알을 깨뜨리는 마지막 한 방을 넣었어요!', 3000, 50),
+            'baby': ('🐲 아기 드래곤 정리 보상', '아기 드래곤 무리의 마지막 한 방을 넣었어요!', 4000, 60),
+            'kill': ('⚔ 막타 보상', '대형 드래곤에게 마지막 한 방을 넣었어요!', 10000, 150)}
 WB_PHASE_NAME = ['드래곤의 알', '아기 드래곤 무리', '대형 드래곤']
 _wb_lock = threading.Lock()
 
@@ -3192,6 +3198,19 @@ def _wb_alive(r, now=None):
     return r['killed_at'] is None and now < _wb_end_t(r)
 
 
+def _wb_rw(g, d):
+    return int(round(g * WB_REWARD_MUL)), int(round(d * WB_REWARD_MUL))
+
+
+def _wb_mail_once(db, uid, title, body, g, d, mid):
+    """같은 우편 번호(mid)는 한 번만"""
+    if db.execute('SELECT 1 FROM mail WHERE id = ?', (mid,)).fetchone():
+        return False
+    g, d = _wb_rw(g, d)
+    mail_send(db, uid, title, body, g, d, sender='용의 둥지', mid=mid)
+    return True
+
+
 def _wb_settle(db, week):
     """보상 우편 보내기(한 번만). 토벌했으면 토벌 보상, 아니면 참여 보상 + 순위 보상"""
     r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
@@ -3211,10 +3230,21 @@ def _wb_settle(db, week):
                 d_ += ed
                 extra = ' · 피해 순위 %d위 보상 포함' % rank
                 break
+        steps = 0
+        for need, sg, sd in WB_STEP:
+            if int(row['dmg']) >= need:
+                g_ += sg
+                d_ += sd
+                steps += 1
+        if steps:
+            extra += ' · 피해 단계 보상 %d개 포함' % steps
+        g_, d_ = _wb_rw(g_, d_)
         title = '🐉 월드 보스 토벌 보상' if killed else '🐉 월드 보스 참여 보상'
         body = ('모두의 힘으로 대형 드래곤을 쓰러뜨렸어요!' if killed else '드래곤이 도망쳤어요. 함께 싸워 줘서 고마워요!') + \
                ' 내 피해 %s (%d위)%s' % ('{:,}'.format(int(row['dmg'])), rank, extra)
-        mail_send(db, row['user_id'], title, body, g_, d_, sender='용의 둥지', mid='wb%s:%s' % (week, row['user_id']))
+        mid = 'wb%s:%s' % (week, row['user_id'])
+        if not db.execute('SELECT 1 FROM mail WHERE id = ?', (mid,)).fetchone():
+            mail_send(db, row['user_id'], title, body, g_, d_, sender='용의 둥지', mid=mid)
     db.commit()
 
 
@@ -3240,7 +3270,9 @@ def _wb_state(db, r, uid=None):
           'hp': [int(r['hp0']), int(r['hp1']), int(r['hp2'])], 'max': [int(r['max0']), int(r['max1']), int(r['max2'])],
           'killed': r['killed_at'] is not None, 'alive': alive, 'fled': (not alive) and r['killed_at'] is None,
           'ends': end_t, 'next': end_t + WB_REST_H * 3600, 'lifeH': WB_LIFE_H, 'restH': WB_REST_H, 'players': int(n),
-          'top': [{'name': t['username'], 'dmg': int(t['dmg'])} for t in top], 'now': now}
+          'top': [{'name': t['username'], 'dmg': int(t['dmg'])} for t in top], 'now': now,
+          'rw': {'clear': _wb_rw(*WB_CLEAR), 'join': _wb_rw(*WB_JOIN), 'rank': [[lo, hi] + list(_wb_rw(g, d)) for lo, hi, g, d in WB_RANK],
+                 'step': [[n] + list(_wb_rw(g, d)) for n, g, d in WB_STEP], 'bonus': {k: list(_wb_rw(v[2], v[3])) for k, v in WB_BONUS.items()}}}
     if uid:
         m = db.execute('SELECT * FROM wb_dmg WHERE week = ? AND user_id = ?', (week, uid)).fetchone()
         dmg = int(m['dmg']) if m else 0
@@ -3316,6 +3348,7 @@ def wb_hit():
         now = time.time()
         el = now - float(run['t0'])
         took = 0
+        bonus = []
         if not int(run['ended']) and _wb_alive(r, now) and add > 0:
             cap = int(el * WB_DPS_CAP) + 2000
             took = max(0, min(add, cap - int(run['dmg'])))
@@ -3332,6 +3365,12 @@ def wb_hit():
                     ph = 3
                 db.execute('UPDATE wb_week SET phase = ?, hp0 = ?, hp1 = ?, hp2 = ?, phase_at = ?, killed_at = ? WHERE week = ?',
                            (ph, hp[0], hp[1], hp[2], now if ph != int(r['phase']) else r['phase_at'], killed, week))
+                # v180: 단계를 넘긴 마지막 한 방 보상(알 깨기 · 아기 드래곤 정리 · 막타)
+                for i0 in range(int(r['phase']), ph):
+                    k = ['egg', 'baby', 'kill'][i0]
+                    t_, b_, g0, d0 = WB_BONUS[k]
+                    if _wb_mail_once(db, uid, t_, b_, g0, d0, 'wb%s%s' % ('EBK'[i0], week)):
+                        bonus.append(k)
                 db.execute('UPDATE wb_runs SET dmg = dmg + ? WHERE run_id = ?', (took, run_id))
                 db.execute('UPDATE wb_dmg SET dmg = dmg + ?, updated_at = ? WHERE week = ? AND user_id = ?', (took, now, week, uid))
         if body.get('end') or not _wb_alive(r, now):
@@ -3342,7 +3381,7 @@ def wb_hit():
             _wb_settle(db, week)
             r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
     run = db.execute('SELECT dmg FROM wb_runs WHERE run_id = ?', (run_id,)).fetchone()
-    return jsonify(ok=True, took=took, runDmg=int(run['dmg']) if run else 0, **_wb_state(db, r, uid))
+    return jsonify(ok=True, took=took, bonus=bonus, runDmg=int(run['dmg']) if run else 0, **_wb_state(db, r, uid))
 
 
 @app.route('/api/plaza/sync', methods=['POST'])
