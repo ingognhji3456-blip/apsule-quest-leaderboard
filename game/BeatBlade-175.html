@@ -21535,7 +21535,7 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  {const f=doDash;doDash=function(){if(mode==='tower'){if(!paused)dash();return}return f.apply(this,arguments)}}
  if(typeof tryParry==='function'){const f=tryParry;tryParry=function(){if(mode==='tower'){if(!paused)parry();return}return f.apply(this,arguments)}}
  if(typeof tryUlt==='function'){const f=tryUlt;tryUlt=function(){if(mode==='tower'){if(!paused)ult();return}return f.apply(this,arguments)}}
- addEventListener('keydown',e=>{if(mode!=='tower'||paused||e.repeat)return;if(e.code==='KeyF'||e.code==='KeyL'){e.preventDefault();parry()}else if(e.code==='KeyC'){e.preventDefault();ult()}});
+ addEventListener('keydown',e=>{if(mode!=='tower'||paused||e.repeat)return;if(e.code==='KeyF'||e.code==='KeyL'){e.preventDefault();parry()}else if(e.code==='KeyC'){e.preventDefault();/* v174.1: 폰 단추처럼 tryUlt로 — 무기 궁극기(ULT139) · 결투 · 스킨 이름 감싸기를 모두 거침(전에는 ult()를 바로 불러 건너뜀) */tryUlt()}});
 
  /* ---------- 피해 ---------- */
  function hurt(dmg,src){const now=performance.now();dmg=+dmg||6;/* v88: 피해값이 빠져도 체력이 NaN이 되지 않게 */if(now<P.inv||T.dead||T.clear)return;try{if(window.CB81){dmg=CB81.onHurt(dmg);if(dmg<=0)return}}catch(e){}dmg=Math.max(1,Math.round(dmg*dmgMul()*MDF(T.f)));P.hp-=dmg;P.inv=now+900;T.combo=0;T.shake=Math.max(T.shake||0,.35);T.flash=.35;
@@ -33915,21 +33915,88 @@ try{const _pz=pause;pause=function(){if(mode==='journey')return;return _pz.apply
  try{WSPR.clavis174={g:7,pal:KEYPAL,r:["..ooooo..",".oXXXXXo.","oXXoooXXo","oXo.T.oXo","oXXoooXXo",".oXXXXXo.","..ooCoo..","...oGo...","...ogo...","...oGo...","...ogo...","oooCCCooo","oCCcTcCCo",".ooCCCoo.",
    "..oLBDo..","..oLBDo..","..oLFDo..","..oLBDo..","..oLBDo..","..oLTDo..","..oLBDo..","..oLBDo..","..oLFDo..","..oLBDo..","..oLBDoo.","..oLBDXo.","..oLBDoo.","..oLBDXXo","..oLBDoo.","...oLo...","....o...."]}}catch(e){}
  const CL_IDX=WEAPONS.length;
- WEAPONS.push({name:'클라비스의 검',type:'clavis174',ult:'clavis174',price:10000,dmg:2.24,crit:.18,range:8,grogi:.15,abl:{keythrow:1,keyspin:1},col:'#ffd84a',hilt:'#4a2a6a',trail:'#ffe9a8',
+ /* ult는 예전 궁극기(듀오 · 결투 등 ULT139가 안 쓰이는 곳)에서 쓰는 대신 종류 — 시간 멈춤(chrono) */
+ WEAPONS.push({name:'클라비스의 검',type:'clavis174',ult:'chrono',price:10000,dmg:2.24,crit:.18,range:8,grogi:.15,abl:{keythrow:1,keyspin:1},col:'#ffd84a',hilt:'#4a2a6a',trail:'#ffe9a8',
   sp:'봉인 해제 · 천 개의 열쇠',desc:'열쇠지기 클라비스가 남긴 열쇠 검. 🗝 열쇠 투척 · 열쇠 회오리. ⚡궁극기 「봉인 해제 · 천 개의 열쇠」 시간을 잠그고 하늘에서 열쇠가 쏟아진 뒤 모든 자물쇠가 한꺼번에 풀리며 터져요.',hitF:520,myth:1,v100:1,grade:'myth',secret174:1});
- /* 전용 궁극기 (ULT139 형식) */
- try{const U=ULT139.U,ea=k=>1-Math.pow(1-Math.max(0,Math.min(1,k)),3),fd=(t,a,b)=>t<a||t>b?0:Math.sin((t-a)/(b-a)*Math.PI);
-  U.clavis174={n:'봉인 해제 · 천 개의 열쇠',c:'#ffd84a',m:1.4,freeze:1,s:[330,.5,'sine',.07,990],tn:['#1a0a2a',.4],
-   h:[[420,.12,'all','stun'],[760,.14,'rand'],[960,.14,'rand'],[1160,.14,'rand'],[1600,.46,'all','exec']],
-   fx(o,S,t){const cx=AX+AW/2,cy=AY+AH/2;o.save();
-    /* ① 거대한 자물쇠 문양이 열리며 시간이 잠김 */const q1=ea(t/420),a1=fd(t,0,1900);if(a1>0){o.globalAlpha=a1*.8;o.strokeStyle='#ffd84a';o.lineWidth=2;o.beginPath();o.arc(cx,cy,90*q1,0,TAU);o.stroke();o.beginPath();o.arc(cx,cy,72*q1,0,TAU);o.stroke();
-     for(let i=0;i<12;i++){const a=i/12*TAU+t/900;o.save();o.translate(cx+Math.cos(a)*81*q1,cy+Math.sin(a)*81*q1);o.rotate(a);o.fillStyle='#ffd84a';o.fillRect(-3,-1,6,2);o.restore()}
-     o.globalAlpha=a1*.5;o.fillStyle='#c9a8ff';o.font='900 10px serif';o.textAlign='center';o.fillText('✦ SEAL · RELEASE ✦',cx,cy-96*q1)}
-    /* ② 하늘에서 열쇠 비 */for(let i=0;i<26;i++){const st=380+i*38,k=(t-st)/420;if(k<0||k>1.2)continue;const x=AX+((i*97)%AW),y=AY-10+(AH+20)*Math.min(1,k);o.globalAlpha=Math.min(1,(1.2-k)*3);o.save();o.translate(x,y);o.rotate(Math.PI/2);o.fillStyle='#ffe9a8';o.fillRect(-8,-1,12,2);o.beginPath();o.arc(-10,0,3,0,TAU);o.fill();o.fillRect(2,0,2,3);o.fillRect(-2,0,2,2);o.restore()}
-    /* ③ 사슬 · 마지막에 한꺼번에 풀리며 터짐 */const a3=fd(t,1100,1700);if(a3>0){o.globalAlpha=a3;o.strokeStyle='#c9a8ff';o.lineWidth=1.5;for(let i=0;i<6;i++){const a=i*TAU/6;o.beginPath();for(let j=0;j<10;j++){const r=j*14;o.lineTo(cx+Math.cos(a)*r+(j%2?2:-2),cy+Math.sin(a)*r)}o.stroke()}}
-    const a4=fd(t,1550,2100);if(a4>0){o.globalAlpha=a4;const g=o.createRadialGradient(cx,cy,4,cx,cy,220*ea((t-1550)/300));g.addColorStop(0,'#ffffff');g.addColorStop(.4,'#ffe9a8');g.addColorStop(1,'rgba(201,168,255,0)');o.fillStyle=g;o.fillRect(AX,AY,AW,AH)}
-    o.restore()}};
-  ULT139.DESC.clavis174='시간을 잠그고(적이 멈춤) 하늘에서 열쇠가 쏟아진 뒤, 모든 자물쇠가 한꺼번에 풀리며 화면 전체가 터져요. 남은 체력이 적은 적은 바로 쓰러져요.'}catch(e){console.error('fd174 ult',e)}
+ /* 전용 궁극기 (ULT139 형식) — v174.1: 단계별 연출을 새로 그림
+    ① 0~0.45초 나에게서 빛기둥 · 열쇠 불꽃이 솟아 경기장 가운데로 → ② 바닥에 거대한 봉인진(바깥 고리 열쇠 구멍 12개 · 눈금 · 문양 · 육각별) + 떠 있는 큰 열쇠 구멍
+    ③ 0.36~1.25초 하늘에서 금빛 열쇠들이 쏟아져 적에게 꽂힘(꽂힌 열쇠는 남음) ④ 0.42초 적마다 자물쇠가 걸리고 1.0초부터 보랏빛 사슬이 봉인진과 이어짐
+    ⑤ 1.42~1.55초 꽂힌 열쇠가 모두 「찰칵」 돌아감 ⑥ 1.55초 「봉인 해제」 — 자물쇠가 한꺼번에 튀어 열리고 사슬이 끊기며 흰 섬광 · 충격파 · 빛줄기 · 금가루 */
+ try{const U=ULT139.U,cl=(v,a,b)=>Math.max(a,Math.min(b,v)),ea=k=>1-Math.pow(1-cl(k,0,1),3),fd=(t,a,b)=>t<a||t>b?0:Math.sin((t-a)/(b-a)*Math.PI),
+   hh=(i,k)=>{const x=Math.sin(i*12.9898+k*78.233)*43758.5453;return x-Math.floor(x)},GOLD='#ffd84a',VIO='#c9a8ff',T_UN=1550;
+  const tgList=S=>{try{if(S.sc==='tower')return TW71.T.mobs.filter(m=>m.hp>0&&!(m.born>0));if(S.sc==='secret')return SK130.enemies();if(S.sc==='boss'&&S.tg)return [S.tg]}catch(e){}return []};
+  const ding=(f,d,w,v,e)=>{try{sfx(f,d,w,v,e)}catch(_){}};
+  /* 열쇠 한 개: 끝(이빨)이 각도 a 쪽 */
+  function keyShape(o,x,y,a,s,al,hot){if(al<=0)return;o.save();o.translate(x,y);o.rotate(a);o.scale(s,s);o.globalAlpha=al;const g=o.createLinearGradient(0,-3,0,3);g.addColorStop(0,'#fff6c0');g.addColorStop(.5,GOLD);g.addColorStop(1,'#a8762a');
+   o.fillStyle='#2a1606';o.fillRect(-7.6,-1.7,15.2,3.4);o.fillRect(2.9,.8,4.7,3.6);o.beginPath();o.arc(-10.2,0,4.8,0,TAU);o.fill();
+   o.fillStyle=g;o.fillRect(-7,-1.1,14,2.2);o.fillRect(3.5,1,1.4,2.9);o.fillRect(5.7,1,1.4,1.9);o.beginPath();o.arc(-10.2,0,4,0,TAU);o.fill();
+   o.fillStyle='#3a1a4a';for(let k=0;k<4;k++){o.beginPath();o.arc(-10.2+Math.cos(k*1.571)*1.35,Math.sin(k*1.571)*1.35,1.05,0,TAU);o.fill()}
+   o.fillStyle='#fff8d0';o.fillRect(-5.6,-1.1,.8,2.2);o.fillRect(-4,-1.1,.8,2.2);o.fillStyle='rgba(255,255,255,.75)';o.fillRect(-6.6,-1,12.4,.6);
+   if(hot>0){o.globalCompositeOperation='lighter';o.globalAlpha=al*hot;const r=o.createRadialGradient(-3,0,0,-3,0,15);r.addColorStop(0,'rgba(255,230,140,.95)');r.addColorStop(1,'rgba(255,200,80,0)');o.fillStyle=r;o.fillRect(-18,-15,32,30)}o.restore()}
+  /* 자물쇠: op 0 잠김 → 1 고리가 튀어 열림 */
+  function lockShape(o,x,y,s,al,op){if(al<=0)return;o.save();o.translate(x,y);o.scale(s,s);o.globalAlpha=al;
+   o.save();o.translate(4,-1);o.rotate(-op*1.1);o.translate(-4,1-op*3.5);o.lineCap='round';for(const [w,c] of [[3,'#2a1606'],[1.7,GOLD]]){o.lineWidth=w;o.strokeStyle=c;o.beginPath();o.moveTo(-4,-.5);o.lineTo(-4,-4);o.arc(0,-4,4,Math.PI,0);o.lineTo(4,-.5);o.stroke()}o.restore();
+   const g=o.createLinearGradient(0,-1,0,8);g.addColorStop(0,'#fff0a0');g.addColorStop(.45,GOLD);g.addColorStop(1,'#9a6a1a');o.fillStyle='#2a1606';o.fillRect(-6.2,-1.7,12.4,10.4);o.fillStyle=g;o.fillRect(-5.5,-1,11,9);
+   o.fillStyle='rgba(255,255,255,.7)';o.fillRect(-5,-.6,10,.7);o.fillStyle='#3a1a4a';o.beginPath();o.arc(0,2.6,1.4,0,TAU);o.fill();o.fillRect(-.6,2.6,1.2,2.8);o.restore()}
+  /* 사슬: 고리가 번갈아 누운 모양 · sag만큼 처짐 */
+  function chain(o,x0,y0,x1,y1,sag,al){const L=Math.hypot(x1-x0,y1-y0),n=Math.max(2,Math.floor(L/5)),a=Math.atan2(y1-y0,x1-x0),nx=-Math.sin(a),ny=Math.cos(a);o.save();o.globalAlpha=al;
+   for(let i=0;i<=n;i++){const q=i/n,sg=Math.sin(q*Math.PI)*sag,x=x0+(x1-x0)*q+nx*sg,y=y0+(y1-y0)*q+ny*sg;o.save();o.translate(x,y);o.rotate(a);
+    if(i%2===0){o.lineWidth=2.4;o.strokeStyle='#1a0a2a';o.beginPath();o.ellipse(0,0,3,1.7,0,0,TAU);o.stroke();o.lineWidth=1.1;o.strokeStyle=VIO;o.stroke()}else{o.fillStyle='#1a0a2a';o.fillRect(-3,-.9,6,1.8);o.fillStyle='#e8dcff';o.fillRect(-2.6,-.4,5.2,.8)}o.restore()}o.restore()}
+  /* 바닥 봉인진 */
+  function sigil(o,C,t,q,al,boom){if(al<=0||q<=0)return;const fy=.5,R=96*q*(1+boom*.7),rot=t/1000;o.save();o.globalCompositeOperation='lighter';
+   const ring=(r,w,c,a2)=>{o.globalAlpha=al*a2;o.strokeStyle=c;o.lineWidth=w;o.beginPath();o.ellipse(C.x,C.y,r,r*fy,0,0,TAU);o.stroke()};
+   ring(R,5,'rgba(255,200,80,.25)',1);ring(R,1.6,GOLD,1);ring(R*.93,.8,'#fff0b0',.8);ring(R*.77,1.2,GOLD,.9);ring(R*.42,1.4,VIO,.9);
+   /* 바깥 고리의 열쇠 구멍 12개 */for(let i=0;i<12;i++){const g=i/12*TAU+rot*.35,x=C.x+Math.cos(g)*R*.965,y=C.y+Math.sin(g)*R*.965*fy;o.globalAlpha=al;o.fillStyle='#1a0a2a';o.beginPath();o.arc(x,y-1,2.6,0,TAU);o.fill();o.fillStyle=GOLD;o.beginPath();o.arc(x,y-1,1.9,0,TAU);o.fill();o.fillStyle='#1a0a2a';o.beginPath();o.arc(x,y-1.3,.8,0,TAU);o.fill();o.fillRect(x-.4,y-1.3,.8,1.8)}
+   /* 눈금 · 문양 띠 */o.strokeStyle='#fff0b0';o.lineWidth=.7;for(let i=0;i<48;i++){const g=i/48*TAU-rot*.6,r0=R*.8,r1=R*(i%4?.83:.87);o.globalAlpha=al*.85;o.beginPath();o.moveTo(C.x+Math.cos(g)*r0,C.y+Math.sin(g)*r0*fy);o.lineTo(C.x+Math.cos(g)*r1,C.y+Math.sin(g)*r1*fy);o.stroke()}
+   for(let i=0;i<16;i++){const g=i/16*TAU+rot*.9,x=C.x+Math.cos(g)*R*.6,y=C.y+Math.sin(g)*R*.6*fy;o.globalAlpha=al*.8;keyShape(o,x,y,g+Math.PI/2,.32,al*.8,0)}
+   /* 안쪽 육각별 */o.globalAlpha=al*.85;o.strokeStyle=VIO;o.lineWidth=1.2;for(const off of [0,Math.PI/3]){o.beginPath();for(let k=0;k<=3;k++){const g=off+k*TAU/3-rot*.8;const x=C.x+Math.cos(g)*R*.4,y=C.y+Math.sin(g)*R*.4*fy;k?o.lineTo(x,y):o.moveTo(x,y)}o.stroke()}
+   const lg=o.createRadialGradient(C.x,C.y,2,C.x,C.y,R);lg.addColorStop(0,'rgba(201,168,255,.35)');lg.addColorStop(.6,'rgba(255,216,74,.12)');lg.addColorStop(1,'rgba(0,0,0,0)');o.globalAlpha=al;o.fillStyle=lg;o.beginPath();o.ellipse(C.x,C.y,R,R*fy,0,0,TAU);o.fill();o.restore()}
+  /* 떠 있는 큰 열쇠 구멍 */
+  function keyhole(o,x,y,s,al,glow){if(al<=0)return;o.save();o.translate(x,y);o.scale(s,s);o.globalAlpha=al;o.globalCompositeOperation='lighter';const r=o.createRadialGradient(0,0,2,0,0,34);r.addColorStop(0,'rgba(255,240,180,'+(.5*glow)+')');r.addColorStop(1,'rgba(201,168,255,0)');o.fillStyle=r;o.fillRect(-34,-34,68,68);
+   o.globalCompositeOperation='source-over';const hole=()=>{o.beginPath();o.arc(0,-5,7,0,TAU);o.moveTo(-3,-1);o.lineTo(3,-1);o.lineTo(5.5,14);o.lineTo(-5.5,14);o.closePath()};
+   o.lineWidth=5;o.strokeStyle='#2a1606';hole();o.stroke();o.lineWidth=2.6;o.strokeStyle=GOLD;hole();o.stroke();o.fillStyle='rgba(26,10,42,.9)';hole();o.fill();
+   o.globalCompositeOperation='lighter';o.fillStyle='rgba(201,168,255,'+(.35+.4*glow)+')';o.beginPath();o.arc(0,-5,3.5,0,TAU);o.fill();o.restore()}
+  U.clavis174={n:'봉인 해제 · 천 개의 열쇠',c:GOLD,m:1.4,freeze:1,tail:950,s:[330,.5,'sine',.07,990],
+   h:[[420,.12,'all','stun','shbreak'],[760,.14,'rand'],[960,.14,'rand'],[1160,.14,'rand'],[T_UN,.46,'all','exec']],
+   start(S){const C={x:AX+AW/2,y:AY+AH/2+10},L=tgList(S).slice(0,14),T=L.map(m=>({m,x:m.x,y:m.y,big:!!(m.boss||m.isBoss||m.sp==='fd_boss')}));
+    if(!T.length)for(let i=0;i<5;i++)T.push({m:null,x:C.x+Math.cos(i*1.26)*90,y:C.y+Math.sin(i*1.26)*45,big:false});
+    const K=[],n=Math.max(18,Math.min(32,T.length*5));for(let i=0;i<n;i++){const tg=T[i%T.length],ts=360+i*(880/n);K.push({tg,ts,ta:ts+250+hh(i,2)*90,x0:AX+20+hh(i,1)*(AW-40),y0:AY-30-hh(i,3)*30,ox:(hh(i,4)-.5)*(tg.big?40:14),oy:(hh(i,5)-.5)*(tg.big?30:8)-10,s:1.15+hh(i,6)*.5,stay:i<T.length*2})}
+    const bs=S.sc==='boss';/* 보스전: 보스가 가운데에 있어 열쇠 구멍은 왼쪽 위 · 큰 글자는 아래쪽 */S.cv={C,T,K,f:{},hx:P.x,hy:P.y,kx:bs?C.x-140:C.x,ky:bs?C.y-40:C.y-58,ty:bs?C.y+78:C.y-96};ding(523,.25,'triangle',.05,1046);setTimeout(()=>ding(784,.25,'triangle',.05,1568),90);setTimeout(()=>ding(1046,.35,'triangle',.05,2093),180)},
+   fx(o,S,t){const V=S.cv;if(!V)return;const C=V.C,un=t>=T_UN,ku=(t-T_UN)/450;
+    /* 폰 세로(PV76)는 내 둘레만 크게 보여 주므로, 연출 가운데를 보이는 곳 가운데로 */try{if(window.PV76&&PV76.V&&PV76.V.on){const x=PV76.V.cx;C.x=x;V.kx=S.sc==='boss'?x-60:x;if(S.sc!=='boss')V.ty=C.y-64}}catch(e){}
+    for(const q of V.T)if(q.m&&q.m.hp>0&&t<T_UN){q.x=q.m.x;q.y=q.m.y}
+    /* 단발 소리 · 흔들림 */const once=(k,fn)=>{if(!V.f[k]){V.f[k]=1;try{fn()}catch(e){}}};
+    if(t>=1420)once('twist',()=>{ding(900,.05,'square',.05,1400);setTimeout(()=>ding(1200,.05,'square',.05,1800),60)});
+    if(un)once('boom',()=>{ding(196,.7,'sawtooth',.08,49);for(const [i,f] of [[0,523],[1,659],[2,784],[3,1046]])setTimeout(()=>ding(f,.6,'triangle',.05,f*1.01),i*45);try{if(S.sc==='tower')TW71.T.shake=Math.max(TW71.T.shake||0,1);else if(S.sc==='boss')G.shake=Math.max(G.shake||0,.65)}catch(e){}});
+    /* ⓐ 화면 어둡게 · 가장자리 보랏빛 */{const al=cl(t/250,0,1)*(1-cl((t-2050)/450,0,1));if(al>0){o.save();o.globalAlpha=al;const g=o.createRadialGradient(C.x,C.y,40,C.x,C.y,300);g.addColorStop(0,'rgba(12,6,30,.28)');g.addColorStop(1,'rgba(8,2,20,.82)');o.fillStyle=g;o.fillRect(AX,AY,AW,AH);o.restore()}}
+    /* ⓑ 나에게서 빛기둥 · 열쇠 불꽃 */{const al=fd(t,0,520);if(al>0){o.save();o.globalCompositeOperation='lighter';const g=o.createLinearGradient(0,V.hy-160,0,V.hy);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.6,'rgba(255,216,74,.55)');g.addColorStop(1,'#ffffff');o.globalAlpha=al;o.fillStyle=g;o.fillRect(V.hx-7-al*4,V.hy-160,14+al*8,160);o.restore();
+      for(let i=0;i<10;i++){const q=cl((t-i*30)/420,0,1),x=V.hx+(C.x-V.hx)*ea(q)+Math.sin(q*9+i)*14*(1-q),y=V.hy-10+(C.y-60-V.hy+10)*ea(q)-Math.sin(q*Math.PI)*40;keyShape(o,x,y,-Math.PI/2+q*6+i,.35,(1-q)*.9,.6)}}}
+    /* ⓒ 봉인진 */sigil(o,C,t,ea((t-150)/380),fd(t,120,T_UN+520)*(un?1-cl(ku,0,1):1)+(un?0:0),un?ea(ku):0);
+    /* ⓓ 떠 있는 큰 열쇠 구멍 */{const q=ea((t-200)/350),al=t<T_UN?q:1-cl(ku*1.6,0,1);keyhole(o,V.kx,V.ky+Math.sin(t/260)*2,1.25*q*(un?1+ku*.6:1),al,.5+.5*Math.sin(t/120)+(t>1000&&t<T_UN?.6:0))}
+    /* ⓔ 사슬: 봉인진 가운데 → 자물쇠 */if(t>=1000&&t<T_UN+80){const k=ea((t-1000)/300);for(const q of V.T){const lx=q.x,ly=q.y-(q.big?50:32)+3;const ex=C.x+(lx-C.x)*k,ey=V.ky+(ly-C.y+58)*k;chain(o,V.kx,V.ky,ex,ey,(1-k)*16+Math.sin(t/60)*1.2,un?1-(t-T_UN)/80:.95)}}
+    /* 끊어진 사슬 조각 */if(un&&ku<1.2)for(const q of V.T){const ly=q.y-(q.big?50:32)+3;for(let i=0;i<6;i++){const f=(i+.5)/6,x=V.kx+(q.x-V.kx)*f,y=V.ky+(ly-C.y+58)*f,a=hh(i,q.x)*TAU,d=ku*28;o.save();o.globalAlpha=cl(1-ku,0,1);o.fillStyle=VIO;o.translate(x+Math.cos(a)*d,y+Math.sin(a)*d+ku*ku*20);o.rotate(a+ku*6);o.fillRect(-2.5,-.8,5,1.6);o.restore()}}
+    /* ⓕ 자물쇠 */for(const q of V.T){const ap=ea((t-420)/220);if(ap<=0)continue;const lx=q.x,ly=q.y-(q.big?50:32)+Math.sin(t/200+q.x)*1.2,s=q.big?1.9:1.35;
+      if(!un){lockShape(o,lx,ly,s*(1+(1-ap)*.8),ap,t>1420?cl((t-1420)/130,0,1)*.15:0);if(t<700){o.save();o.globalCompositeOperation='lighter';o.globalAlpha=1-ap;o.strokeStyle=GOLD;o.lineWidth=1.5;o.beginPath();o.arc(lx,ly+3,10+ap*12,0,TAU);o.stroke();o.restore()}}
+      else{const k=cl(ku,0,1);/* 고리는 튀어 오르고 몸통은 둘로 갈라져 떨어짐 */lockShape(o,lx,ly-k*22,s,1-k,1);o.save();o.globalAlpha=1-k;o.fillStyle=GOLD;for(const sd of [-1,1]){o.save();o.translate(lx+sd*(2+k*16),ly+3+k*k*30);o.rotate(sd*k*2.4);o.fillRect(-2.8*s,-4*s,5.6*s,8.5*s);o.restore()}o.restore();
+       if(k<.6){o.save();o.globalCompositeOperation='lighter';o.globalAlpha=1-k/.6;const g=o.createRadialGradient(lx,ly,1,lx,ly,26*s);g.addColorStop(0,'#ffffff');g.addColorStop(1,'rgba(255,216,74,0)');o.fillStyle=g;o.fillRect(lx-26*s,ly-26*s,52*s,52*s);o.restore()}}}
+    /* ⓖ0 화면 전체에 쏟아지는 열쇠 비(장식) */if(t>340&&t<1500)for(let i=0;i<44;i++){const ts=360+hh(i,12)*820,q=(t-ts)/560;if(q<=0||q>=1)continue;const x=AX+8+hh(i,13)*(AW-16)+Math.sin(q*5+i)*6,y=AY-20+(AH*.95)*q*q;keyShape(o,x,y,Math.PI/2+Math.sin(q*4+i)*.25,.55+hh(i,14)*.35,Math.sin(q*Math.PI)*.6,.35)}
+    /* ⓖ 열쇠 비 · 꽂힌 열쇠(찰칵 돌아감) */for(const k of V.K){if(t<k.ts)continue;const tx=k.tg.x+k.ox,ty=k.tg.y+k.oy;
+      if(t<k.ta){const q=(t-k.ts)/(k.ta-k.ts),qq=q*q,x=k.x0+(tx-k.x0)*qq,y=k.y0+(ty-k.y0)*qq,a=Math.atan2(ty-k.y0,tx-k.x0);
+       for(let g=3;g>=1;g--){const q2=Math.max(0,q-g*.06),x2=k.x0+(tx-k.x0)*q2*q2,y2=k.y0+(ty-k.y0)*q2*q2;keyShape(o,x2,y2,a,k.s,.18*(4-g)*Math.min(1,q*3),0)}
+       o.save();o.globalCompositeOperation='lighter';o.globalAlpha=.5;o.strokeStyle='#fff0b0';o.lineWidth=1.4;o.beginPath();o.moveTo(x-Math.cos(a)*26,y-Math.sin(a)*26);o.lineTo(x,y);o.stroke();o.restore();keyShape(o,x,y,a,k.s,Math.min(1,q*4),.7)}
+      else{const e=t-k.ta,a=Math.atan2(ty-k.y0,tx-k.x0),tw=t>1420&&!un?cl((t-1420)/120,0,1)*Math.PI/2:un?Math.PI/2:0;
+       if(e<260){o.save();o.globalCompositeOperation='lighter';o.globalAlpha=1-e/260;o.strokeStyle='#fff0b0';o.lineWidth=1.6;o.beginPath();o.ellipse(tx,ty,6+e/12,(6+e/12)*.6,0,0,TAU);o.stroke();for(let i=0;i<6;i++){const g=i/6*TAU+k.ts;o.fillStyle=i%2?GOLD:'#ffffff';o.fillRect(tx+Math.cos(g)*e/10-1,ty+Math.sin(g)*e/14-1,2,2)}o.restore()}
+       const al=k.stay?(un?1-cl(ku*1.4,0,1):1):1-cl(e/240,0,1);if(al>0){/* 꽂힌 열쇠: 끝이 몸에 박혀 있고, 풀릴 때 손잡이가 돌아감 */const L=k.s*7;o.save();o.translate(tx,ty);o.rotate(a);o.scale(1,Math.cos(tw)||.05);keyShape(o,-L*.5,0,0,k.s,al,un?1-cl(ku,0,1):.25);o.restore()}}}
+    /* ⓗ 봉인 해제 폭발 */if(un&&ku<1.6){const k=cl(ku,0,1);o.save();o.globalCompositeOperation='lighter';
+      if(t<T_UN+160){o.globalAlpha=1-(t-T_UN)/160;o.fillStyle='#ffffff';o.fillRect(AX,AY,AW,AH)}
+      for(const [r0,w,c] of [[1,6,'rgba(255,216,74,.55)'],[.86,2,'#ffffff'],[.62,1.5,VIO]]){const R=20+ea(k)*300*r0;o.globalAlpha=1-k;o.lineWidth=w*(1-k*.6);o.strokeStyle=c;o.beginPath();o.ellipse(C.x,C.y,R,R*.5,0,0,TAU);o.stroke()}
+      for(let i=0;i<14;i++){const g=i/14*TAU+t/900,L=60+ea(k)*260;o.globalAlpha=(1-k)*.55;const gg=o.createLinearGradient(V.kx,V.ky,V.kx+Math.cos(g)*L,V.ky+Math.sin(g)*L);gg.addColorStop(0,'rgba(255,248,220,.9)');gg.addColorStop(1,'rgba(255,216,74,0)');o.fillStyle=gg;o.beginPath();o.moveTo(V.kx,V.ky);o.lineTo(V.kx+Math.cos(g-.05)*L,V.ky+Math.sin(g-.05)*L);o.lineTo(V.kx+Math.cos(g+.05)*L,V.ky+Math.sin(g+.05)*L);o.closePath();o.fill()}
+      for(let i=0;i<24;i++){const g=hh(i,7)*TAU,d=ea(k)*(60+hh(i,8)*140);keyShape(o,V.kx+Math.cos(g)*d,V.ky+Math.sin(g)*d*.7+k*k*30,g,.45,(1-k)*.9,.5)}o.restore()}
+    /* ⓘ 큰 글자 「봉인 해제」 */if(un&&t<T_UN+800){const k=(t-T_UN)/800,sc=k<.15?1.5-k/.15*.5:1,al=k<.1?k/.1:k>.7?1-(k-.7)/.3:1;o.save();o.translate(C.x,V.ty);o.scale(sc,sc);o.globalAlpha=al;o.textAlign='center';o.textBaseline='middle';o.font='900 24px serif';
+      o.lineWidth=5;o.strokeStyle='#1a0a2a';o.strokeText('봉인 해제',0,0);const g=o.createLinearGradient(0,-12,0,12);g.addColorStop(0,'#ffffff');g.addColorStop(.5,'#ffe9a8');g.addColorStop(1,'#d89a2a');o.fillStyle=g;o.fillText('봉인 해제',0,0);
+      o.font='700 8px serif';o.fillStyle=VIO;o.fillText('✦ U N S E A L ✦',0,16);o.restore()}
+    /* ⓙ 금가루 */if(t>T_UN){for(let i=0;i<40;i++){const q=cl((t-T_UN-hh(i,9)*200)/900,0,1);if(q<=0||q>=1)continue;const x=AX+hh(i,10)*AW,y=AY+hh(i,11)*AH*.5+q*90;o.save();o.globalCompositeOperation='lighter';o.globalAlpha=Math.sin(q*Math.PI)*.9;o.fillStyle=i%3?GOLD:'#ffffff';o.fillRect(x,y,1.6,1.6);o.restore()}}}};
+  ULT139.DESC.clavis174='먼저 모든 적의 방패를 풀고 기절시킨 뒤(시간 멈춤), 하늘에서 열쇠가 쏟아져 꽂히고, 적마다 걸린 자물쇠가 한꺼번에 「찰칵」 풀리며 화면 전체가 터져요. 남은 체력이 적은 적은 바로 쓰러져요.'}catch(e){console.error('fd174 ult',e)}
  /* 공방 카드: 정복 전에는 숨기고, 정복하면 「✪ 비밀」로 맨 앞에 */
  const unlocked=()=>{try{return (SV().clear|0)>0||shopInv().inv.wp.includes(CL_IDX)}catch(e){return false}};
  setInterval(()=>{try{const cv=document.querySelector('#shopGrid canvas[data-k="wp"][data-i="'+CL_IDX+'"]');if(!cv)return;let el=cv;while(el.parentElement&&el.parentElement.id!=='shopGrid')el=el.parentElement;
