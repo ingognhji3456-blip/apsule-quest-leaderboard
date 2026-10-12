@@ -301,6 +301,44 @@ def init_db():
             PRIMARY KEY (user_id, course, diff)
         )
     ''')
+    # v177: 월드 보스(용의 둥지) — 주마다 한 마리, 알 → 아기 드래곤 → 대형 드래곤 단계별 공동 체력
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS wb_week (
+            week        TEXT PRIMARY KEY,
+            phase       INTEGER NOT NULL DEFAULT 0,
+            hp0         BIGINT NOT NULL,
+            hp1         BIGINT NOT NULL,
+            hp2         BIGINT NOT NULL,
+            max0        BIGINT NOT NULL,
+            max1        BIGINT NOT NULL,
+            max2        BIGINT NOT NULL,
+            phase_at    DOUBLE PRECISION NOT NULL,
+            killed_at   DOUBLE PRECISION,
+            settled     INTEGER NOT NULL DEFAULT 0
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS wb_dmg (
+            week        TEXT NOT NULL,
+            user_id     TEXT NOT NULL,
+            dmg         BIGINT NOT NULL DEFAULT 0,
+            runs        INTEGER NOT NULL DEFAULT 0,
+            day         TEXT NOT NULL DEFAULT '',
+            day_runs    INTEGER NOT NULL DEFAULT 0,
+            updated_at  DOUBLE PRECISION NOT NULL,
+            PRIMARY KEY (week, user_id)
+        )
+    ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS wb_runs (
+            run_id      TEXT PRIMARY KEY,
+            user_id     TEXT NOT NULL,
+            week        TEXT NOT NULL,
+            t0          DOUBLE PRECISION NOT NULL,
+            dmg         BIGINT NOT NULL DEFAULT 0,
+            ended       INTEGER NOT NULL DEFAULT 0
+        )
+    ''')
     # v167: 2:2 팀 결투 전적(오늘 보상 받은 판 수 day_n — 하루 TEAM_DAY_CAP판까지만 골드)
     db.execute('''
         CREATE TABLE IF NOT EXISTS team_stats (
@@ -3082,6 +3120,190 @@ def ta_board():
             mine[r['course']] = int(r['ms'])
     return jsonify(ok=True, top=[{'name': r['username'], 'ms': int(r['ms']), 't': r['created_at'], 'me': bool(user) and r['user_id'] == user['user_id']} for r in rows],
                    me=me, mine=mine)
+
+
+# ================= v177 월드 보스 · 용의 둥지 =================
+# 주(월요일 0시 UTC ~ 일요일)마다 드래곤 한 마리. 서버 전체가 같은 체력을 깎는다: 알(0) → 아기 드래곤(1) → 대형 드래곤(2) → 토벌(3).
+# 한 판은 WB_RUN_SEC초, 하루 WB_DAY_RUNS판. 게임은 몇 초마다 /api/wb/hit로 쌓인 피해를 보내고 지금 단계 · 체력을 받는다.
+# 끝나면(토벌하거나 주가 바뀌면) 피해를 넣은 사람 모두에게 우편으로 보상(토벌 보상 또는 참여 보상 + 순위 보상).
+WB_HP = [int(os.environ.get('WB_EGG_HP', '1500000')), int(os.environ.get('WB_BABY_HP', '2500000')), int(os.environ.get('WB_DRAGON_HP', '6000000'))]
+WB_RUN_SEC = 90
+WB_DAY_RUNS = int(os.environ.get('WB_DAY_RUNS', '3'))
+WB_DPS_CAP = int(os.environ.get('WB_DPS_CAP', '4000'))     # 1초에 넣을 수 있는 최대 피해(부정 방지)
+WB_CLEAR = (3000, 50)       # 토벌 성공: 참여자 모두
+WB_JOIN = (1000, 10)        # 토벌 실패(주가 끝남): 참여자 모두
+WB_RANK = [(1, 1, 10000, 200), (2, 3, 6000, 120), (4, 10, 3000, 60), (11, 100, 1000, 20)]
+WB_PHASE_NAME = ['드래곤의 알', '아기 드래곤 무리', '대형 드래곤']
+_wb_lock = threading.Lock()
+
+
+def _wb_week(t=None):
+    import datetime
+    d = datetime.datetime.utcfromtimestamp(t if t is not None else time.time())
+    y, w, _ = d.isocalendar()
+    return '%d-W%02d' % (y, w)
+
+
+def _wb_ends(t=None):
+    """이번 주가 끝나는 시각(다음 월요일 0시 UTC)"""
+    import datetime
+    now = t if t is not None else time.time()
+    d = datetime.datetime.utcfromtimestamp(now)
+    monday = datetime.datetime(d.year, d.month, d.day) - datetime.timedelta(days=d.weekday())
+    return (monday + datetime.timedelta(days=7) - datetime.datetime(1970, 1, 1)).total_seconds()
+
+
+def _wb_row(db, week):
+    r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
+    if not r:
+        try:
+            db.execute('INSERT INTO wb_week (week, phase, hp0, hp1, hp2, max0, max1, max2, phase_at) VALUES (?, 0, ?, ?, ?, ?, ?, ?, ?)',
+                       (week, WB_HP[0], WB_HP[1], WB_HP[2], WB_HP[0], WB_HP[1], WB_HP[2], time.time()))
+            db.commit()
+        except Exception:
+            db.rollback()
+        r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
+    return r
+
+
+def _wb_settle(db, week):
+    """보상 우편 보내기(한 번만). 토벌했으면 토벌 보상, 아니면 참여 보상 + 순위 보상"""
+    r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
+    if not r or int(r['settled']):
+        return
+    db.execute('UPDATE wb_week SET settled = 1 WHERE week = ?', (week,))
+    killed = r['killed_at'] is not None
+    rows = db.execute('SELECT user_id, dmg FROM wb_dmg WHERE week = ? AND dmg > 0 ORDER BY dmg DESC', (week,)).fetchall()
+    base = WB_CLEAR if killed else WB_JOIN
+    for i, row in enumerate(rows):
+        rank = i + 1
+        g_, d_ = base
+        extra = ''
+        for lo, hi, eg, ed in WB_RANK:
+            if lo <= rank <= hi:
+                g_ += eg
+                d_ += ed
+                extra = ' · 피해 순위 %d위 보상 포함' % rank
+                break
+        title = '🐉 월드 보스 토벌 보상' if killed else '🐉 월드 보스 참여 보상'
+        body = ('모두의 힘으로 대형 드래곤을 쓰러뜨렸어요!' if killed else '이번 주 드래곤은 도망쳤어요. 함께 싸워 줘서 고마워요!') + \
+               ' 내 피해 %s (%d위)%s' % ('{:,}'.format(int(row['dmg'])), rank, extra)
+        mail_send(db, row['user_id'], title, body, g_, d_, sender='용의 둥지', mid='wb%s:%s' % (week, row['user_id']))
+    db.commit()
+
+
+def _wb_settle_old(db):
+    week = _wb_week()
+    for r in db.execute('SELECT week FROM wb_week WHERE settled = 0 AND week <> ?', (week,)).fetchall():
+        try:
+            _wb_settle(db, r['week'])
+        except Exception:
+            db.rollback()
+
+
+def _wb_state(db, r, uid=None):
+    week = r['week']
+    top = db.execute('SELECT d.dmg, u.username FROM wb_dmg d JOIN users u ON u.user_id = d.user_id WHERE d.week = ? AND d.dmg > 0 ORDER BY d.dmg DESC LIMIT 10', (week,)).fetchall()
+    n = db.execute('SELECT COUNT(*) AS c FROM wb_dmg WHERE week = ? AND dmg > 0', (week,)).fetchone()['c']
+    st = {'week': week, 'phase': int(r['phase']), 'names': WB_PHASE_NAME,
+          'hp': [int(r['hp0']), int(r['hp1']), int(r['hp2'])], 'max': [int(r['max0']), int(r['max1']), int(r['max2'])],
+          'killed': r['killed_at'] is not None, 'ends': _wb_ends(), 'players': int(n), 'runSec': WB_RUN_SEC, 'dayRuns': WB_DAY_RUNS,
+          'top': [{'name': t['username'], 'dmg': int(t['dmg'])} for t in top], 'now': time.time()}
+    if uid:
+        m = db.execute('SELECT * FROM wb_dmg WHERE week = ? AND user_id = ?', (week, uid)).fetchone()
+        dmg = int(m['dmg']) if m else 0
+        day = time.strftime('%Y-%m-%d', time.gmtime())
+        used = int(m['day_runs']) if m and m['day'] == day else 0
+        rank = (db.execute('SELECT COUNT(*) AS c FROM wb_dmg WHERE week = ? AND dmg > ?', (week, dmg)).fetchone()['c'] + 1) if dmg > 0 else None
+        st['me'] = {'dmg': dmg, 'rank': rank, 'left': max(0, WB_DAY_RUNS - used), 'runs': int(m['runs']) if m else 0}
+    return st
+
+
+@app.route('/api/wb/state', methods=['POST'])
+def wb_state():
+    user = _duo_user()
+    db = get_db()
+    _wb_settle_old(db)
+    r = _wb_row(db, _wb_week())
+    return jsonify(ok=True, **_wb_state(db, r, user['user_id'] if user else None))
+
+
+@app.route('/api/wb/start', methods=['POST'])
+def wb_start():
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    db = get_db()
+    week = _wb_week()
+    with _wb_lock:
+        r = _wb_row(db, week)
+        if r['killed_at'] is not None:
+            return _bad('이번 주 드래곤은 이미 토벌됐어요. 다음 주 월요일에 새 드래곤이 나타나요', 409)
+        day = time.strftime('%Y-%m-%d', time.gmtime())
+        m = db.execute('SELECT * FROM wb_dmg WHERE week = ? AND user_id = ?', (week, uid)).fetchone()
+        used = int(m['day_runs']) if m and m['day'] == day else 0
+        if used >= WB_DAY_RUNS:
+            return _bad('오늘 입장 횟수를 다 썼어요(하루 %d번)' % WB_DAY_RUNS, 429)
+        now = time.time()
+        if m:
+            db.execute('UPDATE wb_dmg SET runs = runs + 1, day = ?, day_runs = ?, updated_at = ? WHERE week = ? AND user_id = ?', (day, used + 1, now, week, uid))
+        else:
+            db.execute('INSERT INTO wb_dmg (week, user_id, dmg, runs, day, day_runs, updated_at) VALUES (?, ?, 0, 1, ?, 1, ?)', (week, uid, day, now))
+        run = 'r' + secrets.token_hex(8)
+        db.execute('INSERT INTO wb_runs (run_id, user_id, week, t0, dmg, ended) VALUES (?, ?, ?, ?, 0, 0)', (run, uid, week, now))
+        db.commit()
+        r = _wb_row(db, week)
+    return jsonify(ok=True, run=run, **_wb_state(db, r, uid))
+
+
+@app.route('/api/wb/hit', methods=['POST'])
+def wb_hit():
+    """이번 판에서 새로 넣은 피해(dmg)를 지금 단계 체력에서 깎는다. end=true면 판 끝"""
+    user = _duo_user()
+    if not user:
+        return _bad('로그인이 필요해요', 401)
+    uid = user['user_id']
+    body = request.get_json(silent=True) or {}
+    run_id = str(body.get('run') or '')[:40]
+    add = clamp_int(body.get('dmg'), 0, 10 ** 9, 0)
+    db = get_db()
+    with _wb_lock:
+        run = db.execute('SELECT * FROM wb_runs WHERE run_id = ? AND user_id = ?', (run_id, uid)).fetchone()
+        if not run:
+            return _bad('판을 찾을 수 없어요', 404)
+        week = run['week']
+        r = _wb_row(db, week)
+        now = time.time()
+        el = now - float(run['t0'])
+        took = 0
+        if not int(run['ended']) and el <= WB_RUN_SEC + 20 and r['killed_at'] is None and add > 0:
+            cap = int(min(el, WB_RUN_SEC) * WB_DPS_CAP) + 2000
+            took = max(0, min(add, cap - int(run['dmg'])))
+            if took > 0:
+                ph = int(r['phase'])
+                hp = [int(r['hp0']), int(r['hp1']), int(r['hp2'])]
+                took = min(took, hp[ph])  # 이 단계에 남은 체력보다 넘친 피해는 버림(순위에도 안 셈)
+                hp[ph] = max(0, hp[ph] - took)
+                killed = None
+                while ph < 3 and hp[ph] <= 0:
+                    ph += 1
+                if ph >= 3:
+                    killed = now
+                    ph = 3
+                db.execute('UPDATE wb_week SET phase = ?, hp0 = ?, hp1 = ?, hp2 = ?, phase_at = ?, killed_at = ? WHERE week = ?',
+                           (ph, hp[0], hp[1], hp[2], now if ph != int(r['phase']) else r['phase_at'], killed, week))
+                db.execute('UPDATE wb_runs SET dmg = dmg + ? WHERE run_id = ?', (took, run_id))
+                db.execute('UPDATE wb_dmg SET dmg = dmg + ?, updated_at = ? WHERE week = ? AND user_id = ?', (took, now, week, uid))
+        if body.get('end') or el > WB_RUN_SEC + 20:
+            db.execute('UPDATE wb_runs SET ended = 1 WHERE run_id = ?', (run_id,))
+        db.commit()
+        r = _wb_row(db, week)
+        if r['killed_at'] is not None and not int(r['settled']):
+            _wb_settle(db, week)
+            r = _wb_row(db, week)
+    run = db.execute('SELECT dmg FROM wb_runs WHERE run_id = ?', (run_id,)).fetchone()
+    return jsonify(ok=True, took=took, runDmg=int(run['dmg']) if run else 0, **_wb_state(db, r, uid))
 
 
 @app.route('/api/plaza/sync', methods=['POST'])
