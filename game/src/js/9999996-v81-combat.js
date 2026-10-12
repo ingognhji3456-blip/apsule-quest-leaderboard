@@ -50,9 +50,9 @@
   v_aurora:{n:'무지개 가호',d:'맞을 때 20% 확률로 피해를 막는 무지개 보호막',aurora:.2,col:'#ffb0ff'}};
  /* 세트 효과: 같은 세트의 스킨 + 검을 함께 장착 */
  const SETB={
-  void:{n:'공허 세트',d:'방패를 60% 더 꿰뚫음 · 적을 쓰러뜨리면 공허 폭발(주변 피해) · 보스전 반격 +10%',pierce:.6,boom:1,bossMul:1.1,col:'#9a66ff'},
-  clock:{n:'태엽 세트',d:'대시 1칸 더 · 대시 충전 30% 빠름 · 궁극기 게이지 25% 빨리',dash:1,regen:1.3,ult:1.25,col:'#ffcf5a'},
-  neon:{n:'네온 세트',d:'PERFECT 판정 범위 40% 넓음 · 콤보마다 피해 +3%(최대 +45%)',win:1.4,combo:.03,col:'#ff3ad6'}};
+  void:{n:'공허 세트',d:'방패를 완전히 꿰뚫음 · 적을 쓰러뜨리면 큰 공허 폭발(주변 피해) · 보스전 반격 +25%',pierce:1,boom:1,boomR:56,boomD:40,bossMul:1.25,col:'#9a66ff'},
+  clock:{n:'태엽 세트',d:'대시 2칸 더 · 대시 충전 70% 빠름 · 궁극기 게이지 70% 빨리 · 보스전 반격 +15%',dash:2,regen:1.7,ult:1.7,bossMul:1.15,col:'#ffcf5a'},
+  neon:{n:'네온 세트',d:'PERFECT 판정 범위 60% 넓음 · 콤보마다 피해 +5%(최대 +75%) · 보스전 반격 +15%',win:1.6,combo:.05,comboMax:.75,bossMul:1.15,col:'#ff3ad6'}};
  const perk=()=>PERK[skinId()]||null;
  const setb=()=>SETB[setOn()]||null;
 
@@ -68,7 +68,7 @@
  /* ---------- 공격 · 방패 ---------- */
  function critAdd(){const p=perk();return (p&&p.crit||0)+sumF('critAdd')}
  function forceCrit(){if(ST.kaiCrit){ST.kaiCrit=false;return true}return false}
- function dmgMul(combo){let m=1+sumF('dmgAdd');const p=perk(),b=setb();if(p&&p.luna&&P.hp<=P.maxhp*.3)m*=1.25;if(b&&b.combo)m*=1+Math.min(.45,(combo||0)*b.combo);return m}
+ function dmgMul(combo){let m=1+sumF('dmgAdd');const p=perk(),b=setb();if(p&&p.luna&&P.hp<=P.maxhp*.3)m*=1.25;if(b&&b.combo)m*=1+Math.min(b.comboMax||.45,(combo||0)*b.combo);return m}
  function shieldHit(bg){const t=WT[wpType()]||{},b=setb();let hit=(bg===2?2:1)*(t.shBreak||1)*(1+sumF('shBreak'));let pierce=(t.pierce||0)+sumF('pierce')+(b&&b.pierce||0);if(bg===2&&t.perfPierce)pierce=Math.max(pierce,t.perfPierce);
   return {hit:Math.max(1,Math.round(hit)),pierce:Math.min(1,pierce)}}
  function applyOn(kind,m){const t=T();if(kind==='burn'){m.burnT=t.clk+3;m.burnDps=Math.max(4,Math.round(m.max*.025))}else if(kind==='chill')m.chillT=t.clk+1.5;else if(kind==='poison'){m.poisT=t.clk+3;m.poisDps=Math.max(3,Math.round(m.max*.02))}}
@@ -77,7 +77,7 @@
   if(p){if(p.onHit)applyOn(p.onHit,m);if(p.chill)applyOn('chill',m);
    if(p.chain&&bg===2){near(m.x,m.y,90,m).slice(0,2).forEach((o,i)=>{FX.push({k:'bolt',x0:m.x,y0:m.y-6,x1:o.x,y1:o.y-6,t0:now0()+i*60,dur:220,col:p.col});setTimeout(()=>hitM(o,dmg*.4,p.col,'⚡'),i*60)});try{sfx(1800,.12,'square',.03,600)}catch(e){}}
    if(p.spark&&crit){const o=near(m.x,m.y,80,m)[0];if(o){FX.push({k:'bolt',x0:m.x,y0:m.y-6,x1:o.x,y1:o.y-6,t0:now0(),dur:220,col:p.col});hitM(o,dmg*.3,p.col,'✦')}}}}
- function onKill(m){const b=setb();if(b&&b.boom&&!m._boom){m._boom=1;FX.push({k:'ring',x:m.x,y:m.y-6,t0:now0(),dur:420,r:38,col:b.col});setTimeout(()=>{for(const o of near(m.x,m.y,38,m))hitM(o,22,b.col,'공허 ')},60);try{sfx(90,.3,'sawtooth',.04,40)}catch(e){}}}
+ function onKill(m){const b=setb();if(b&&b.boom&&!m._boom){m._boom=1;FX.push({k:'ring',x:m.x,y:m.y-6,t0:now0(),dur:420,r:b.boomR||38,col:b.col});setTimeout(()=>{for(const o of near(m.x,m.y,b.boomR||38,m))hitM(o,b.boomD||22,b.col,'공허 ')},60);try{sfx(90,.3,'sawtooth',.04,40)}catch(e){}}}
 
  /* ---------- 대시 ---------- */
  function onDash(){const p=perk(),n=now0();if(!p)return;

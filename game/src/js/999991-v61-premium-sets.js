@@ -27,7 +27,7 @@
   const S=ultSet();if(!S||mode!=='boss'||!G||!G.vuln)return base.apply(this,arguments);
   if(typeof Q19!=='undefined'&&Q19&&Q19.practice)return; /* 연습 모드는 원래처럼 막음 */
   const U=ULT[S],now=performance.now(),w=curWp(),prem=!!(window.SWORD59&&SWORD59.list.some(x=>x.type===w.type)),idx=WEAPONS.indexOf(w),wi=prem||idx<0?WEAPONS.length-1:idx,g=bgeo();G.spUsed=true;G.spMeter=0;try{initAudio()}catch(e){}
-  const total=G.maxHp*(.07+.015*wi)*(1+((curPet()||{}).dmg||0)),hits=U.hits(),dur=Math.max(...hits)+U.tail;
+  const total=G.maxHp*(.07+.015*wi)*(1+((curPet()||{}).dmg||0))*(window.SP178?SP178.ult():1)/* v178 세트 궁극기 강화 */,hits=U.hits(),dur=Math.max(...hits)+U.tail;
   G.sp={type:'p61',set:S,t0:now,dur,name:U.name,col:U.c,cx:g.x,cy:g.coreY,done:[],hits};
   G.vuln.t1=Math.max(G.vuln.t1,G.beat+dur/G.ms+1);G.clickTarget=null;G.nextCircle=now+dur;
   banner('필살! '+U.name);G.flash=Math.max(G.flash,.5);G.hitstop=now+140;U.start();P.lungeT=now;P.lungeA=Math.atan2(g.coreY-P.y,g.x-P.x);P.lungeDur=260;

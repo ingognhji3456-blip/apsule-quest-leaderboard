@@ -209,7 +209,7 @@
   P.lungeT=now;P.lungeA=Math.atan2(cy-P.y,cx-P.x);P.lungeDur=260;try{banner('필살! '+name)}catch(e){}}
  function ultTick(){const U=T.U,now=performance.now();
   while(U.k<U.hits.length&&now-U.t0>=U.hits[U.k]){const k=U.k++,last=k===U.hits.length-1,n=U.hits.length,wd=(curWp()||{}).dmg||1;
-   for(const m of T.mobs){if(m.hp<=0)continue;const share=(U.type==='p61'?(last?.3:.7/(n-1||1)):1/n),d=Math.max(1,Math.round(m.max*(m.elite?.6:1.25)*share*Math.min(1.6,wd)));
+   for(const m of T.mobs){if(m.hp<=0)continue;const share=(U.type==='p61'?(last?.3:.7/(n-1||1)):1/n),d=Math.max(1,Math.round(m.max*(m.elite?.6:1.25)*share*Math.min(1.6,wd)*(U.type==='p61'&&window.SP178?SP178.ult():1)));
     {const sh0=m.sh||0;const d2=shieldGate(m,d,true);m.hitT=T.clk;if(d2<=0){if(T.duo&&T.duo.role==='guest')try{DUO85.hitSent(m,0,sh0-(m.sh||0))}catch(e){}continue}m.hp-=d2;if(T.duo&&T.duo.role==='guest')try{DUO85.hitSent(m,d2,sh0-(m.sh||0))}catch(e){}addPop(m.x+rnd(-8,8),m.y-14-rnd(0,10),'-'+d2,k%2?'#ffffff':U.col)}burst(m.x,m.y,8,U.col,150);if(m.hp<=0)kill(m)}
    U.sp.done.push(now);if(U.U){try{U.U.hit(k,last)}catch(e){}}else{try{sfx((U.hitF||400)*(1+k*.05),.18,'square',.06,(U.hitF||400)*.4);sfx(90,.2,'sawtooth',.05,40)}catch(e){}}
    T.shake=Math.max(T.shake||0,last?.8:.35);if(U.type==='scythe'&&last){P.hp=Math.min(P.maxhp,P.hp+15);addPop(P.x,P.y-30,'+15','#7dffa8')}}

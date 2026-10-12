@@ -301,7 +301,7 @@ def init_db():
             PRIMARY KEY (user_id, course, diff)
         )
     ''')
-    # v177: 월드 보스(용의 둥지) — 주마다 한 마리, 알 → 아기 드래곤 → 대형 드래곤 단계별 공동 체력
+    # v177: 월드 보스(용의 둥지) — 회차마다 한 마리(v178: 몇 시간마다, week 칸 = 'R<등장 시각>'), 알 → 아기 드래곤 → 대형 드래곤 단계별 공동 체력
     db.execute('''
         CREATE TABLE IF NOT EXISTS wb_week (
             week        TEXT PRIMARY KEY,
@@ -3122,48 +3122,64 @@ def ta_board():
                    me=me, mine=mine)
 
 
-# ================= v177 월드 보스 · 용의 둥지 =================
-# 주(월요일 0시 UTC ~ 일요일)마다 드래곤 한 마리. 서버 전체가 같은 체력을 깎는다: 알(0) → 아기 드래곤(1) → 대형 드래곤(2) → 토벌(3).
-# 한 판은 WB_RUN_SEC초, 하루 WB_DAY_RUNS판. 게임은 몇 초마다 /api/wb/hit로 쌓인 피해를 보내고 지금 단계 · 체력을 받는다.
-# 끝나면(토벌하거나 주가 바뀌면) 피해를 넣은 사람 모두에게 우편으로 보상(토벌 보상 또는 참여 보상 + 순위 보상).
+# ================= v177 월드 보스 · 용의 둥지 (v178: 몇 시간마다 등장 · 시간 제한 · 입장 횟수 없음) =================
+# 드래곤 한 마리(= 한 "회차", 표 wb_week의 week 칸에 'R<등장 시각>')가 나타나면 서버 전체가 같은 체력을 깎는다:
+# 알(0) → 아기 드래곤(1) → 대형 드래곤(2) → 토벌(3). 잡거나 WB_LIFE_H시간이 지나 도망가면 회차가 끝나고,
+# 그 뒤 WB_REST_H시간 쉬었다가 다음 드래곤이 나타난다. 한 판에 시간 제한 · 하루 입장 횟수는 없다(쓰러지면 다시 들어오면 됨).
+# 회차가 끝나면 피해를 넣은 사람 모두에게 우편으로 보상(토벌 보상 또는 참여 보상 + 순위 보상).
 WB_HP = [int(os.environ.get('WB_EGG_HP', '1500000')), int(os.environ.get('WB_BABY_HP', '2500000')), int(os.environ.get('WB_DRAGON_HP', '6000000'))]
-WB_RUN_SEC = 90
-WB_DAY_RUNS = int(os.environ.get('WB_DAY_RUNS', '3'))
-WB_DPS_CAP = int(os.environ.get('WB_DPS_CAP', '4000'))     # 1초에 넣을 수 있는 최대 피해(부정 방지)
+WB_LIFE_H = float(os.environ.get('WB_LIFE_H', '3'))      # 나타난 뒤 이 시간 안에 못 잡으면 도망감
+WB_REST_H = float(os.environ.get('WB_REST_H', '3'))      # 끝난 뒤 다음 드래곤까지 쉬는 시간
+WB_DPS_CAP = int(os.environ.get('WB_DPS_CAP', '4000'))   # 1초에 넣을 수 있는 최대 피해(부정 방지)
 WB_CLEAR = (3000, 50)       # 토벌 성공: 참여자 모두
-WB_JOIN = (1000, 10)        # 토벌 실패(주가 끝남): 참여자 모두
+WB_JOIN = (1000, 10)        # 토벌 실패(도망감): 참여자 모두
 WB_RANK = [(1, 1, 10000, 200), (2, 3, 6000, 120), (4, 10, 3000, 60), (11, 100, 1000, 20)]
 WB_PHASE_NAME = ['드래곤의 알', '아기 드래곤 무리', '대형 드래곤']
 _wb_lock = threading.Lock()
 
 
-def _wb_week(t=None):
-    import datetime
-    d = datetime.datetime.utcfromtimestamp(t if t is not None else time.time())
-    y, w, _ = d.isocalendar()
-    return '%d-W%02d' % (y, w)
+def _wb_t0(r):
+    """회차가 나타난 시각(키 'R<시각>'). 예전 주 단위 키는 phase_at을 씀"""
+    k = str(r['week'])
+    if k.startswith('R') and k[1:].isdigit():
+        return float(k[1:])
+    return float(r['phase_at'])
 
 
-def _wb_ends(t=None):
-    """이번 주가 끝나는 시각(다음 월요일 0시 UTC)"""
-    import datetime
-    now = t if t is not None else time.time()
-    d = datetime.datetime.utcfromtimestamp(now)
-    monday = datetime.datetime(d.year, d.month, d.day) - datetime.timedelta(days=d.weekday())
-    return (monday + datetime.timedelta(days=7) - datetime.datetime(1970, 1, 1)).total_seconds()
+def _wb_end_t(r):
+    """회차가 끝나는(끝난) 시각: 토벌 시각 또는 도망가는 시각"""
+    if r['killed_at'] is not None:
+        return float(r['killed_at'])
+    return _wb_t0(r) + WB_LIFE_H * 3600
 
 
-def _wb_row(db, week):
-    r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
+def _wb_new(db, t0):
+    key = 'R%010d' % int(t0)
+    try:
+        db.execute('INSERT INTO wb_week (week, phase, hp0, hp1, hp2, max0, max1, max2, phase_at) VALUES (?, 0, ?, ?, ?, ?, ?, ?, ?)',
+                   (key, WB_HP[0], WB_HP[1], WB_HP[2], WB_HP[0], WB_HP[1], WB_HP[2], float(int(t0))))
+        db.commit()
+    except Exception:
+        db.rollback()
+    return db.execute('SELECT * FROM wb_week WHERE week = ?', (key,)).fetchone()
+
+
+def _wb_cur(db, now=None):
+    """지금 회차(살아 있거나 가장 최근에 끝난 것). 쉬는 시간이 끝났으면 새 드래곤을 만든다"""
+    now = now if now is not None else time.time()
+    r = db.execute("SELECT * FROM wb_week WHERE week >= 'R' AND week < 'S' ORDER BY week DESC LIMIT 1").fetchone()
     if not r:
-        try:
-            db.execute('INSERT INTO wb_week (week, phase, hp0, hp1, hp2, max0, max1, max2, phase_at) VALUES (?, 0, ?, ?, ?, ?, ?, ?, ?)',
-                       (week, WB_HP[0], WB_HP[1], WB_HP[2], WB_HP[0], WB_HP[1], WB_HP[2], time.time()))
-            db.commit()
-        except Exception:
-            db.rollback()
-        r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
+        return _wb_new(db, now)
+    if now >= _wb_end_t(r) + WB_REST_H * 3600:
+        if not int(r['settled']):
+            _wb_settle(db, r['week'])
+        return _wb_new(db, now)
     return r
+
+
+def _wb_alive(r, now=None):
+    now = now if now is not None else time.time()
+    return r['killed_at'] is None and now < _wb_end_t(r)
 
 
 def _wb_settle(db, week):
@@ -3186,45 +3202,57 @@ def _wb_settle(db, week):
                 extra = ' · 피해 순위 %d위 보상 포함' % rank
                 break
         title = '🐉 월드 보스 토벌 보상' if killed else '🐉 월드 보스 참여 보상'
-        body = ('모두의 힘으로 대형 드래곤을 쓰러뜨렸어요!' if killed else '이번 주 드래곤은 도망쳤어요. 함께 싸워 줘서 고마워요!') + \
+        body = ('모두의 힘으로 대형 드래곤을 쓰러뜨렸어요!' if killed else '드래곤이 도망쳤어요. 함께 싸워 줘서 고마워요!') + \
                ' 내 피해 %s (%d위)%s' % ('{:,}'.format(int(row['dmg'])), rank, extra)
         mail_send(db, row['user_id'], title, body, g_, d_, sender='용의 둥지', mid='wb%s:%s' % (week, row['user_id']))
     db.commit()
 
 
-def _wb_settle_old(db):
-    week = _wb_week()
-    for r in db.execute('SELECT week FROM wb_week WHERE settled = 0 AND week <> ?', (week,)).fetchall():
-        try:
-            _wb_settle(db, r['week'])
-        except Exception:
-            db.rollback()
+def _wb_settle_old(db, now=None):
+    """끝났는데 아직 보상을 안 보낸 회차(도망간 것 · 예전 주 단위 기록) 정산"""
+    now = now if now is not None else time.time()
+    for r in db.execute('SELECT * FROM wb_week WHERE settled = 0').fetchall():
+        if not str(r['week']).startswith('R') or not _wb_alive(r, now):
+            try:
+                _wb_settle(db, r['week'])
+            except Exception:
+                db.rollback()
 
 
 def _wb_state(db, r, uid=None):
     week = r['week']
+    now = time.time()
     top = db.execute('SELECT d.dmg, u.username FROM wb_dmg d JOIN users u ON u.user_id = d.user_id WHERE d.week = ? AND d.dmg > 0 ORDER BY d.dmg DESC LIMIT 10', (week,)).fetchall()
     n = db.execute('SELECT COUNT(*) AS c FROM wb_dmg WHERE week = ? AND dmg > 0', (week,)).fetchone()['c']
+    alive = _wb_alive(r, now)
+    end_t = _wb_end_t(r)
     st = {'week': week, 'phase': int(r['phase']), 'names': WB_PHASE_NAME,
           'hp': [int(r['hp0']), int(r['hp1']), int(r['hp2'])], 'max': [int(r['max0']), int(r['max1']), int(r['max2'])],
-          'killed': r['killed_at'] is not None, 'ends': _wb_ends(), 'players': int(n), 'runSec': WB_RUN_SEC, 'dayRuns': WB_DAY_RUNS,
-          'top': [{'name': t['username'], 'dmg': int(t['dmg'])} for t in top], 'now': time.time()}
+          'killed': r['killed_at'] is not None, 'alive': alive, 'fled': (not alive) and r['killed_at'] is None,
+          'ends': end_t, 'next': end_t + WB_REST_H * 3600, 'lifeH': WB_LIFE_H, 'restH': WB_REST_H, 'players': int(n),
+          'top': [{'name': t['username'], 'dmg': int(t['dmg'])} for t in top], 'now': now}
     if uid:
         m = db.execute('SELECT * FROM wb_dmg WHERE week = ? AND user_id = ?', (week, uid)).fetchone()
         dmg = int(m['dmg']) if m else 0
-        day = time.strftime('%Y-%m-%d', time.gmtime())
-        used = int(m['day_runs']) if m and m['day'] == day else 0
         rank = (db.execute('SELECT COUNT(*) AS c FROM wb_dmg WHERE week = ? AND dmg > ?', (week, dmg)).fetchone()['c'] + 1) if dmg > 0 else None
-        st['me'] = {'dmg': dmg, 'rank': rank, 'left': max(0, WB_DAY_RUNS - used), 'runs': int(m['runs']) if m else 0}
+        st['me'] = {'dmg': dmg, 'rank': rank, 'runs': int(m['runs']) if m else 0}
     return st
+
+
+def _wb_fmt_left(sec):
+    sec = max(0, int(sec))
+    h, m = sec // 3600, sec % 3600 // 60
+    return ('%d시간 %d분' % (h, m)) if h else ('%d분' % max(1, m))
 
 
 @app.route('/api/wb/state', methods=['POST'])
 def wb_state():
     user = _duo_user()
     db = get_db()
-    _wb_settle_old(db)
-    r = _wb_row(db, _wb_week())
+    with _wb_lock:
+        r = _wb_cur(db)
+        _wb_settle_old(db)
+        r = db.execute('SELECT * FROM wb_week WHERE week = ?', (r['week'],)).fetchone()
     return jsonify(ok=True, **_wb_state(db, r, user['user_id'] if user else None))
 
 
@@ -3235,25 +3263,24 @@ def wb_start():
         return _bad('로그인이 필요해요', 401)
     uid = user['user_id']
     db = get_db()
-    week = _wb_week()
     with _wb_lock:
-        r = _wb_row(db, week)
-        if r['killed_at'] is not None:
-            return _bad('이번 주 드래곤은 이미 토벌됐어요. 다음 주 월요일에 새 드래곤이 나타나요', 409)
-        day = time.strftime('%Y-%m-%d', time.gmtime())
-        m = db.execute('SELECT * FROM wb_dmg WHERE week = ? AND user_id = ?', (week, uid)).fetchone()
-        used = int(m['day_runs']) if m and m['day'] == day else 0
-        if used >= WB_DAY_RUNS:
-            return _bad('오늘 입장 횟수를 다 썼어요(하루 %d번)' % WB_DAY_RUNS, 429)
+        r = _wb_cur(db)
         now = time.time()
+        if not _wb_alive(r, now):
+            _wb_settle_old(db, now)
+            return _bad('지금은 드래곤이 없어요. %s 뒤에 새 드래곤이 나타나요' % _wb_fmt_left(_wb_end_t(r) + WB_REST_H * 3600 - now), 409)
+        week = r['week']
+        m = db.execute('SELECT * FROM wb_dmg WHERE week = ? AND user_id = ?', (week, uid)).fetchone()
         if m:
-            db.execute('UPDATE wb_dmg SET runs = runs + 1, day = ?, day_runs = ?, updated_at = ? WHERE week = ? AND user_id = ?', (day, used + 1, now, week, uid))
+            db.execute('UPDATE wb_dmg SET runs = runs + 1, updated_at = ? WHERE week = ? AND user_id = ?', (now, week, uid))
         else:
-            db.execute('INSERT INTO wb_dmg (week, user_id, dmg, runs, day, day_runs, updated_at) VALUES (?, ?, 0, 1, ?, 1, ?)', (week, uid, day, now))
+            db.execute('INSERT INTO wb_dmg (week, user_id, dmg, runs, day, day_runs, updated_at) VALUES (?, ?, 0, 1, ?, 0, ?)', (week, uid, '', now))
+        # 한 사람은 판 하나만: 예전 판은 닫는다(여러 판을 동시에 열어 피해 상한을 늘리지 못하게)
+        db.execute('UPDATE wb_runs SET ended = 1 WHERE user_id = ? AND ended = 0', (uid,))
         run = 'r' + secrets.token_hex(8)
         db.execute('INSERT INTO wb_runs (run_id, user_id, week, t0, dmg, ended) VALUES (?, ?, ?, ?, 0, 0)', (run, uid, week, now))
         db.commit()
-        r = _wb_row(db, week)
+        r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
     return jsonify(ok=True, run=run, **_wb_state(db, r, uid))
 
 
@@ -3273,12 +3300,14 @@ def wb_hit():
         if not run:
             return _bad('판을 찾을 수 없어요', 404)
         week = run['week']
-        r = _wb_row(db, week)
+        r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
+        if not r:
+            return _bad('판을 찾을 수 없어요', 404)
         now = time.time()
         el = now - float(run['t0'])
         took = 0
-        if not int(run['ended']) and el <= WB_RUN_SEC + 20 and r['killed_at'] is None and add > 0:
-            cap = int(min(el, WB_RUN_SEC) * WB_DPS_CAP) + 2000
+        if not int(run['ended']) and _wb_alive(r, now) and add > 0:
+            cap = int(el * WB_DPS_CAP) + 2000
             took = max(0, min(add, cap - int(run['dmg'])))
             if took > 0:
                 ph = int(r['phase'])
@@ -3295,13 +3324,13 @@ def wb_hit():
                            (ph, hp[0], hp[1], hp[2], now if ph != int(r['phase']) else r['phase_at'], killed, week))
                 db.execute('UPDATE wb_runs SET dmg = dmg + ? WHERE run_id = ?', (took, run_id))
                 db.execute('UPDATE wb_dmg SET dmg = dmg + ?, updated_at = ? WHERE week = ? AND user_id = ?', (took, now, week, uid))
-        if body.get('end') or el > WB_RUN_SEC + 20:
+        if body.get('end') or not _wb_alive(r, now):
             db.execute('UPDATE wb_runs SET ended = 1 WHERE run_id = ?', (run_id,))
         db.commit()
-        r = _wb_row(db, week)
-        if r['killed_at'] is not None and not int(r['settled']):
+        r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
+        if not _wb_alive(r, now) and not int(r['settled']):
             _wb_settle(db, week)
-            r = _wb_row(db, week)
+            r = db.execute('SELECT * FROM wb_week WHERE week = ?', (week,)).fetchone()
     run = db.execute('SELECT dmg FROM wb_runs WHERE run_id = ?', (run_id,)).fetchone()
     return jsonify(ok=True, took=took, runDmg=int(run['dmg']) if run else 0, **_wb_state(db, r, uid))
 
