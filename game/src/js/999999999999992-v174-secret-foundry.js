@@ -388,6 +388,9 @@
  /* ult는 예전 궁극기(듀오 · 결투 등 ULT139가 안 쓰이는 곳)에서 쓰는 대신 종류 — 시간 멈춤(chrono) */
  WEAPONS.push({name:'클라비스의 검',type:'clavis174',ult:'chrono',price:10000,dmg:2.24,crit:.18,range:8,grogi:.15,abl:{keythrow:1,keyspin:1},col:'#ffd84a',hilt:'#4a2a6a',trail:'#ffe9a8',
   sp:'봉인 해제 · 천 개의 열쇠',desc:'열쇠지기 클라비스가 남긴 열쇠 검. 🗝 열쇠 투척 · 열쇠 회오리. ⚡궁극기 「봉인 해제 · 천 개의 열쇠」 시간을 잠그고 하늘에서 열쇠가 쏟아진 뒤 모든 자물쇠가 한꺼번에 풀리며 터져요.',hitF:520,myth:1,v100:1,grade:'myth',secret174:1});
+ /* v176: 장비 강화(ENH94)도 얹기 — 99999996보다 뒤에 넣은 칸이라 MYTH100 wrapNew처럼 칸 읽기를 감쌈(강화 단계마다 피해가 오른 복사본) */
+ try{const base=WEAPONS[CL_IDX],cache={},EF=(window.ENH94&&ENH94.EFF)||{wp:.06};Object.defineProperty(WEAPONS,CL_IDX,{configurable:true,enumerable:true,get(){let lv=0;try{lv=window.ENH94?ENH94.lvOf('wp',CL_IDX):0}catch(e){}if(!lv)return base;
+   if(!cache[lv]){const n=Object.assign(Object.create(base),base);n.dmg=+(((base.dmg||1)*(1+EF.wp*lv)).toFixed(3));n.__enh=lv;cache[lv]=n}return cache[lv]},set(v){}})}catch(e){console.error('fd174 enh',e)}
  /* 전용 궁극기 (ULT139 형식) — v174.1: 단계별 연출을 새로 그림
     ① 0~0.45초 나에게서 빛기둥 · 열쇠 불꽃이 솟아 경기장 가운데로 → ② 바닥에 거대한 봉인진(바깥 고리 열쇠 구멍 12개 · 눈금 · 문양 · 육각별) + 떠 있는 큰 열쇠 구멍
     ③ 0.36~1.25초 하늘에서 금빛 열쇠들이 쏟아져 적에게 꽂힘(꽂힌 열쇠는 남음) ④ 0.42초 적마다 자물쇠가 걸리고 1.0초부터 보랏빛 사슬이 봉인진과 이어짐
